@@ -1,0 +1,92 @@
+{
+  "monsters": {
+    "m01": {
+      "512": "monsters/m01.png",
+      "256": "monsters/m01_256.png"
+    },
+    "m02": {
+      "512": "monsters/m02.png",
+      "256": "monsters/m02_256.png"
+    },
+    "m03": {
+      "512": "monsters/m03.png",
+      "256": "monsters/m03_256.png"
+    },
+    "m04": {
+      "512": "monsters/m04.png",
+      "256": "monsters/m04_256.png"
+    },
+    "m05": {
+      "512": "monsters/m05.png",
+      "256": "monsters/m05_256.png"
+    },
+    "m06": {
+      "512": "monsters/m06.png",
+      "256": "monsters/m06_256.png"
+    },
+    "m07": {
+      "512": "monsters/m07.png",
+      "256": "monsters/m07_256.png"
+    },
+    "m08": {
+      "512": "monsters/m08.png",
+      "256": "monsters/m08_256.png"
+    },
+    "m09": {
+      "512": "monsters/m09.png",
+      "256": "monsters/m09_256.png"
+    },
+    "m10": {
+      "512": "monsters/m10.png",
+      "256": "monsters/m10_256.png"
+    }
+  },
+  "buildings": {
+    "townhall": {
+      "512": "buildings/townhall.png",
+      "256": "buildings/townhall_256.png"
+    },
+    "goldmine": {
+      "512": "buildings/goldmine.png",
+      "256": "buildings/goldmine_256.png"
+    },
+    "training": {
+      "512": "buildings/training.png",
+      "256": "buildings/training_256.png"
+    }
+  },
+  "frames": {
+    "0": "frames/rarity_0.png",
+    "1": "frames/rarity_1.png",
+    "2": "frames/rarity_2.png",
+    "3": "frames/rarity_3.png",
+    "4": "frames/rarity_4.png",
+    "5": "frames/rarity_5.png",
+    "6": "frames/rarity_6.png",
+    "7": "frames/rarity_7.png",
+    "8": "frames/rarity_8.png",
+    "9": "frames/rarity_9.png"
+  },
+  "icons": {
+    "gold": "icons/gold.png",
+    "gems": "icons/gems.png",
+    "essence": "icons/essence.png",
+    "tickets": "icons/tickets.png",
+    "type_fire": "icons/type_fire.png",
+    "type_water": "icons/type_water.png",
+    "type_plant": "icons/type_plant.png",
+    "type_earth": "icons/type_earth.png",
+    "star": "icons/star.png",
+    "star_empty": "icons/star_empty.png",
+    "lock": "icons/lock.png",
+    "speed_1x": "icons/speed_1x.png",
+    "speed_2x": "icons/speed_2x.png",
+    "speed_4x": "icons/speed_4x.png",
+    "settings": "icons/settings.png",
+    "nav_city": "icons/nav_city.png",
+    "nav_team": "icons/nav_team.png",
+    "nav_monsters": "icons/nav_monsters.png",
+    "nav_portal": "icons/nav_portal.png",
+    "nav_campaign": "icons/nav_campaign.png"
+  }
+}

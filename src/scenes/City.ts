@@ -11,6 +11,7 @@ import {
 import { go, session } from '../session'
 import { coach, mineFill, monsterByUid, portalOpen, trainingQuote, trainingReadyAt, unlockLabel, upgradeInfo } from '../state'
 import type { BuildingId } from '../types'
+import { BUILDING_FOOT, buildingTextureKey } from '../artLayout'
 import { GOLD, INK, MUTED, W, button, floatText, openModal, panel, text } from '../ui'
 
 export class CityScene extends Phaser.Scene {
@@ -59,69 +60,26 @@ export class CityScene extends Phaser.Scene {
   }
 
   private drawStructures(): void {
-    this.structure(230, 400, 'training', () => this.openBuilding('training'))
-    this.structure(640, 360, 'townhall', () => this.openBuilding('townhall'))
-    this.structure(1030, 400, 'goldmine', () => this.openBuilding('goldmine'))
+    this.structure(230, 'training', () => this.openBuilding('training'))
+    this.structure(640, 'townhall', () => this.openBuilding('townhall'))
+    this.structure(1030, 'goldmine', () => this.openBuilding('goldmine'))
     this.portal(460, 210)
     this.gate(820, 210)
     button(this, 1148, 586, 150, 40, 'Aufgaben', () => this.openQuests(), { fill: 0x3d4b6e, color: INK, size: 15 })
   }
 
-  private structure(x: number, y: number, id: BuildingId, onClick: () => void): void {
-    const g = this.add.graphics()
-    if (id === 'townhall') this.paintHall(g, x, y)
-    if (id === 'goldmine') this.paintMine(g, x, y)
-    if (id === 'training') this.paintYard(g, x, y)
-    const hit = this.add.rectangle(x, y, id === 'townhall' ? 220 : 190, 180, 0xffffff, 0.001)
+  private structure(x: number, id: BuildingId, onClick: () => void): void {
+    const display = id === 'townhall' ? 236 : 214
+    const feet = id === 'townhall' ? 432 : 458
+    const originY = BUILDING_FOOT[id]
+    const key = buildingTextureKey(id, true)
+    if (this.textures.exists(key)) {
+      this.add.image(x, feet, key).setOrigin(0.5, originY).setDisplaySize(display, display)
+    }
+    const hitH = display * originY * 0.86
+    const hit = this.add.rectangle(x, feet - hitH / 2, display * 0.88, hitH, 0xffffff, 0.001)
     hit.setInteractive({ useHandCursor: true })
     hit.on('pointerup', onClick)
-  }
-
-  private paintHall(g: Phaser.GameObjects.Graphics, x: number, y: number): void {
-    g.fillStyle(0x6d5a78, 1)
-    g.fillRect(x - 70, y + 20, 140, 18)
-    g.fillStyle(0xd7c4a3, 1)
-    g.fillRoundedRect(x - 58, y - 50, 116, 78, 6)
-    g.fillStyle(0x8d6e63, 1)
-    g.fillRect(x - 70, y - 62, 18, 70)
-    g.fillRect(x + 52, y - 62, 18, 70)
-    g.fillStyle(0xc45c4a, 1)
-    g.fillTriangle(x - 78, y - 48, x, y - 110, x + 78, y - 48)
-    g.fillStyle(0x5d4037, 1)
-    g.fillRoundedRect(x - 14, y - 8, 28, 36, 4)
-    g.fillStyle(0xf0c14a, 1)
-    g.fillCircle(x, y - 78, 8)
-    g.fillRect(x + 40, y - 100, 4, 28)
-    g.fillTriangle(x + 44, y - 100, x + 64, y - 92, x + 44, y - 84)
-  }
-
-  private paintMine(g: Phaser.GameObjects.Graphics, x: number, y: number): void {
-    g.fillStyle(0x6d5846, 1)
-    g.fillEllipse(x, y + 10, 170, 90)
-    g.fillStyle(0x3e3228, 1)
-    g.fillEllipse(x, y + 6, 70, 58)
-    g.fillStyle(0x8d6e63, 1)
-    g.fillRect(x - 40, y - 10, 10, 50)
-    g.fillRect(x + 30, y - 10, 10, 50)
-    g.fillRect(x - 40, y - 16, 80, 10)
-    g.fillStyle(0xf0c14a, 1)
-    g.fillCircle(x - 48, y + 24, 8)
-    g.fillCircle(x + 52, y + 18, 6)
-    g.fillCircle(x + 36, y + 36, 5)
-  }
-
-  private paintYard(g: Phaser.GameObjects.Graphics, x: number, y: number): void {
-    g.fillStyle(0xc4a574, 1)
-    g.fillEllipse(x, y + 16, 150, 70)
-    g.fillStyle(0x8d6e63, 1)
-    g.fillRect(x - 60, y - 40, 8, 60)
-    g.fillRect(x + 52, y - 40, 8, 60)
-    g.fillStyle(0xe15b64, 1)
-    g.fillTriangle(x - 52, y - 40, x + 20, y - 40, x - 16, y - 70)
-    g.fillStyle(0xd7ccc8, 1)
-    g.fillRoundedRect(x + 10, y - 8, 22, 36, 6)
-    g.fillStyle(0x5d4037, 1)
-    g.fillCircle(x + 21, y - 16, 8)
   }
 
   private portal(x: number, y: number): void {
@@ -187,7 +145,7 @@ export class CityScene extends Phaser.Scene {
       this.tweens.add({ targets: mark, y: mark.y - 6, yoyo: true, repeat: -1, duration: 500 })
     }
     if (mineFill(save) >= 0.25) {
-      const coin = text(this, 1030, 300, `${formatInt(save.buildings.goldmine.stored)}`, 14, GOLD, [0.5, 0.5])
+      const coin = text(this, 1030, 248, `${formatInt(save.buildings.goldmine.stored)}`, 14, GOLD, [0.5, 0.5])
       this.dynamic.add(coin)
     }
     this.dynamic.add(text(this, 460, 268, 'Portal', 14, INK, [0.5, 0]))
