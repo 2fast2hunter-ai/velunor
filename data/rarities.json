@@ -1,0 +1,25 @@
+{
+  "levels": [
+    { "index": 0, "name": "Gewöhnlich", "mult": 1.0, "spdFactor": 1.0, "maxLevel": 20, "color": "#9e9e9e", "essence": 5 },
+    { "index": 1, "name": "Ungewöhnlich", "mult": 1.15, "spdFactor": 1.02, "maxLevel": 25, "color": "#4caf50", "essence": 10 },
+    { "index": 2, "name": "Selten", "mult": 1.3, "spdFactor": 1.04, "maxLevel": 30, "color": "#2196f3", "essence": 25 },
+    { "index": 3, "name": "Episch", "mult": 1.5, "spdFactor": 1.06, "maxLevel": 35, "color": "#9c27b0", "essence": 60 },
+    { "index": 4, "name": "Heroisch", "mult": 1.75, "spdFactor": 1.08, "maxLevel": 40, "color": "#ff9800", "essence": 150 },
+    { "index": 5, "name": "Legendär", "mult": 2.05, "spdFactor": 1.1, "maxLevel": 45, "color": "#ffc107", "essence": 400 },
+    { "index": 6, "name": "Mythisch", "mult": 2.4, "spdFactor": 1.12, "maxLevel": 50, "color": "#f44336", "essence": 1000 },
+    { "index": 7, "name": "Göttlich", "mult": 2.8, "spdFactor": 1.14, "maxLevel": 55, "color": "#fff4c2", "essence": 2500 },
+    { "index": 8, "name": "Kosmisch", "mult": 3.25, "spdFactor": 1.16, "maxLevel": 60, "color": "#00bcd4", "essence": 6000 },
+    { "index": 9, "name": "Ursprung", "mult": 3.75, "spdFactor": 1.18, "maxLevel": 70, "color": "#ff80ab", "essence": 15000 }
+  ],
+  "ascension": [
+    { "from": 0, "to": 1, "essence": 50, "gold": 500 },
+    { "from": 1, "to": 2, "essence": 120, "gold": 1200 },
+    { "from": 2, "to": 3, "essence": 300, "gold": 3000 },
+    { "from": 3, "to": 4, "essence": 700, "gold": 7000 },
+    { "from": 4, "to": 5, "essence": 1500, "gold": 15000 },
+    { "from": 5, "to": 6, "essence": 3500, "gold": 35000 },
+    { "from": 6, "to": 7, "essence": 8000, "gold": 80000 },
+    { "from": 7, "to": 8, "essence": 18000, "gold": 180000 },
+    { "from": 8, "to": 9, "essence": 40000, "gold": 400000 }
+  ]
+}

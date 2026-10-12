@@ -1,0 +1,27 @@
+{
+  "start": { "gems": 300, "gold": 500, "starters": ["m01", "m02", "m03"] },
+  "townhallGemsPerLevel": 100,
+  "firstEpicGems": 100,
+  "firstLegendaryGems": 300,
+  "login": { "gems": 50, "gold": 200, "streakTicketDay": 7 },
+  "quests": {
+    "win3": { "need": 3, "gems": 20 },
+    "mine2": { "need": 2, "gems": 20 },
+    "train1": { "need": 1, "gems": 20 },
+    "all": { "gems": 40, "gold": 500, "essence": 30 }
+  },
+  "tutorialMineGold": 200,
+  "stage": {
+    "firstGoldBase": 100,
+    "firstGoldPer": 40,
+    "expBase": 30,
+    "expPer": 15,
+    "firstGems": 30,
+    "bossGems": 100,
+    "threeStarGems": 20,
+    "repeatGoldFraction": 0.5,
+    "bossEssence": 100,
+    "bossTickets": 1
+  },
+  "dailyResetHour": 4
+}

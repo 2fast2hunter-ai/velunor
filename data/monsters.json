@@ -1,0 +1,224 @@
+[
+  {
+    "id": "m01",
+    "name": "Funkfuchs",
+    "type": "fire",
+    "baseRarity": 0,
+    "role": "back",
+    "base": { "hp": 110, "atk": 28, "def": 10, "spd": 108 },
+    "blurb": "Ein flinker Fuchs, der Funken aus dem Schweif schlägt.",
+    "skill": {
+      "id": "ember_strike",
+      "name": "Glutstoß",
+      "description": "150 % ATK auf das Standardziel. 40 % Chance auf Verbrennung (2 Runden).",
+      "cooldown": 3,
+      "initialCooldown": 2,
+      "target": "default",
+      "effects": [
+        { "kind": "damage", "atkMult": 1.5 },
+        { "kind": "status", "status": "burn", "chance": 0.4, "duration": 2, "value": 0.3 }
+      ]
+    },
+    "sprite": "m01"
+  },
+  {
+    "id": "m02",
+    "name": "Tropfmolch",
+    "type": "water",
+    "baseRarity": 0,
+    "role": "front",
+    "base": { "hp": 160, "atk": 18, "def": 18, "spd": 92 },
+    "blurb": "Trägt einen Wassertropfen wie einen Schild.",
+    "skill": {
+      "id": "water_shield",
+      "name": "Wasserschild",
+      "description": "Schild = 15 % eigene Max-HP auf sich und den Verbündeten mit dem niedrigsten HP-% (2 Runden).",
+      "cooldown": 4,
+      "initialCooldown": 2,
+      "target": "self_and_ally_lowest_hp_pct",
+      "effects": [
+        { "kind": "shield", "maxHpPctOfCaster": 0.15, "duration": 2 }
+      ]
+    },
+    "sprite": "m02"
+  },
+  {
+    "id": "m03",
+    "name": "Knospling",
+    "type": "plant",
+    "baseRarity": 0,
+    "role": "back",
+    "base": { "hp": 120, "atk": 20, "def": 12, "spd": 100 },
+    "blurb": "Eine kleine Knospe, die Licht in Heilung verwandelt.",
+    "skill": {
+      "id": "photosynthesis",
+      "name": "Photosynthese",
+      "description": "Heilt den Verbündeten mit dem niedrigsten HP-% um 150 % ATK.",
+      "cooldown": 3,
+      "initialCooldown": 2,
+      "target": "ally_lowest_hp_pct",
+      "effects": [
+        { "kind": "heal", "atkMult": 1.5 }
+      ]
+    },
+    "sprite": "m03"
+  },
+  {
+    "id": "m04",
+    "name": "Lehmbrocken",
+    "type": "earth",
+    "baseRarity": 0,
+    "role": "front",
+    "base": { "hp": 180, "atk": 16, "def": 22, "spd": 80 },
+    "blurb": "Ein wandelnder Lehmklumpen, der Schläge einsteckt.",
+    "skill": {
+      "id": "clay_wall",
+      "name": "Lehmwall",
+      "description": "Spott für 2 Runden und eigene DEF +30 % (2 Runden).",
+      "cooldown": 4,
+      "initialCooldown": 1,
+      "target": "self",
+      "effects": [
+        { "kind": "status", "status": "taunt", "chance": 1, "duration": 2 },
+        { "kind": "status", "status": "def_up", "chance": 1, "duration": 2, "value": 0.3 }
+      ]
+    },
+    "sprite": "m04"
+  },
+  {
+    "id": "m05",
+    "name": "Aschewiesel",
+    "type": "fire",
+    "baseRarity": 1,
+    "role": "front",
+    "base": { "hp": 150, "atk": 26, "def": 14, "spd": 112 },
+    "blurb": "Wirbelt durch die Frontreihe und lässt Asche zurück.",
+    "skill": {
+      "id": "flame_swirl",
+      "name": "Flammenwirbel",
+      "description": "90 % ATK auf alle Gegner der Frontreihe (sonst Hinterreihe).",
+      "cooldown": 3,
+      "initialCooldown": 2,
+      "target": "enemy_front_all",
+      "effects": [
+        { "kind": "damage", "atkMult": 0.9 }
+      ]
+    },
+    "sprite": "m05"
+  },
+  {
+    "id": "m06",
+    "name": "Moospanzer",
+    "type": "plant",
+    "baseRarity": 1,
+    "role": "front",
+    "base": { "hp": 190, "atk": 17, "def": 20, "spd": 76 },
+    "blurb": "Ein Panzer aus Moos und Dornen.",
+    "skill": {
+      "id": "thorn_armor",
+      "name": "Dornenpanzer",
+      "description": "2 Runden Dornen: Angreifer erleiden 30 % des Schadens, den sie diesem Monster zufügen.",
+      "cooldown": 4,
+      "initialCooldown": 1,
+      "target": "self",
+      "effects": [
+        { "kind": "status", "status": "thorns", "chance": 1, "duration": 2, "value": 0.3 }
+      ]
+    },
+    "sprite": "m06"
+  },
+  {
+    "id": "m07",
+    "name": "Strudelotter",
+    "type": "water",
+    "baseRarity": 2,
+    "role": "back",
+    "base": { "hp": 130, "atk": 30, "def": 12, "spd": 110 },
+    "blurb": "Zieht den schwächsten Gegner der Hinterreihe in den Strudel.",
+    "skill": {
+      "id": "tide_strike",
+      "name": "Gezeitenschlag",
+      "description": "140 % ATK auf den Gegner der Hinterreihe mit den niedrigsten HP. Ist die Hinterreihe leer, gilt das Standardziel.",
+      "cooldown": 3,
+      "initialCooldown": 2,
+      "target": "enemy_back_lowest_hp",
+      "effects": [
+        { "kind": "damage", "atkMult": 1.4 }
+      ]
+    },
+    "sprite": "m07"
+  },
+  {
+    "id": "m08",
+    "name": "Sandviper",
+    "type": "earth",
+    "baseRarity": 2,
+    "role": "back",
+    "base": { "hp": 135, "atk": 29, "def": 13, "spd": 106 },
+    "blurb": "Lauert im Sand und lähmt, wer zu nah kommt.",
+    "skill": {
+      "id": "quicksand",
+      "name": "Treibsand",
+      "description": "110 % ATK auf das Standardziel. 40 % Chance auf Betäubung (1 Zug).",
+      "cooldown": 4,
+      "initialCooldown": 2,
+      "target": "default",
+      "effects": [
+        { "kind": "damage", "atkMult": 1.1 },
+        { "kind": "status", "status": "stun", "chance": 0.4, "duration": 1 }
+      ]
+    },
+    "sprite": "m08"
+  },
+  {
+    "id": "m09",
+    "name": "Dornendryade",
+    "type": "plant",
+    "baseRarity": 3,
+    "role": "back",
+    "base": { "hp": 140, "atk": 30, "def": 14, "spd": 104 },
+    "blurb": "Schlingt Wurzeln um jedes gegnerische Bein.",
+    "skill": {
+      "id": "root_weave",
+      "name": "Wurzelgeflecht",
+      "description": "70 % ATK auf alle Gegner und DEF −20 % (2 Runden).",
+      "cooldown": 4,
+      "initialCooldown": 3,
+      "target": "enemy_all",
+      "effects": [
+        { "kind": "damage", "atkMult": 0.7 },
+        { "kind": "status", "status": "def_down", "chance": 1, "duration": 2, "value": 0.2 }
+      ]
+    },
+    "sprite": "m09"
+  },
+  {
+    "id": "m10",
+    "name": "Sonnenphönix",
+    "type": "fire",
+    "baseRarity": 5,
+    "role": "back",
+    "base": { "hp": 170, "atk": 36, "def": 16, "spd": 118 },
+    "blurb": "Verbrennt das Feld und erhebt sich einmal aus der Asche.",
+    "skill": {
+      "id": "sunfire",
+      "name": "Sonnenfeuer",
+      "description": "100 % ATK auf alle Gegner. 50 % Chance auf Verbrennung je Ziel (2 Runden).",
+      "cooldown": 4,
+      "initialCooldown": 3,
+      "target": "enemy_all",
+      "effects": [
+        { "kind": "damage", "atkMult": 1.0 },
+        { "kind": "status", "status": "burn", "chance": 0.5, "duration": 2, "value": 0.3 }
+      ]
+    },
+    "passive": {
+      "id": "rebirth",
+      "name": "Wiedergeburt",
+      "description": "Beim ersten K.O. pro Kampf belebt sich der Phönix am Ende der Aktion mit 40 % Max-HP. Statuseffekte werden entfernt.",
+      "hpPct": 0.4,
+      "usesPerBattle": 1
+    },
+    "sprite": "m10"
+  }
+]

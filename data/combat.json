@@ -1,0 +1,28 @@
+{
+  "dmgScale": 1.5,
+  "critChance": 0.1,
+  "critMult": 1.5,
+  "varianceMin": 0.9,
+  "varianceMax": 1.1,
+  "roundLimit": 20,
+  "positionBonus": 0.1,
+  "levelStat": 0.08,
+  "levelSpd": 0.01,
+  "spdPerRarity": 0.02,
+  "lossExpFraction": 0.25,
+  "inventoryCap": 60,
+  "actionMs": 600,
+  "modMin": -0.5,
+  "modMax": 1.0,
+  "burnAtkFraction": 0.3,
+  "synergy": [
+    { "count": 2, "atk": 0.05, "hp": 0 },
+    { "count": 3, "atk": 0.1, "hp": 0.05 },
+    { "count": 4, "atk": 0.15, "hp": 0.1 },
+    { "count": 5, "atk": 0.2, "hp": 0.15 }
+  ],
+  "elementCircleSpd": 0.08,
+  "bossHpMult": 1.5,
+  "expBase": 20,
+  "expPower": 1.5
+}

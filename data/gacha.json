@@ -1,0 +1,20 @@
+{
+  "costs": { "single": 100, "multi10": 900 },
+  "rates": [50, 28, 14, 5.5, 1.8, 0.55, 0.12, 0.025, 0.004, 0.001],
+  "pity": {
+    "legendaryPlus": { "fromRarity": 5, "softStart": 60, "softStep": 0.03, "hard": 90, "base": 0.007 },
+    "epicPlus": { "fromRarity": 3, "softStart": 15, "softStep": 0.08, "hard": 20, "baseConditional": 0.0735 }
+  },
+  "legendaryWeights": { "5": 0.55, "6": 0.12, "7": 0.025, "8": 0.004, "9": 0.001 },
+  "epicWeights": { "3": 5.5, "4": 1.8 },
+  "commonWeights": { "0": 50, "1": 28, "2": 14 },
+  "multiGuaranteeMinRarity": 2,
+  "tutorialMulti": { "free": true, "guaranteeMinRarity": 3 },
+  "effective": {
+    "legendaryPlus": 0.0188,
+    "epicPlus": 0.111,
+    "legendaryEvery": 53,
+    "note": "Simulation laut GDD, 2 Mio. Ziehungen. Legendär+ effektiv ca. 1,88 % (Schnitt alle 53 Ziehungen, Median 63, 90 % spätestens nach 69). Episch+ inkl. Legendär+ ca. 11,1 %."
+  },
+  "historyLimit": 100
+}
