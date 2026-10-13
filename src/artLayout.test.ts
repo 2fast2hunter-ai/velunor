@@ -1,7 +1,7 @@
 import { describe, expect, it } from 'vitest'
 import shipped from '../public/assets/manifest.json'
 import manifest from './artManifest.json'
-import { assetUrl, monsterSlotScale, queueArt } from './artLayout'
+import { assetUrl, backgroundTextureKey, frameMonsterFit, frameTextureKey, iconTextureKey, monsterSlotScale, queueArt } from './artLayout'
 
 describe('monster slot scale', () => {
   it('insets the wide motifs and leaves the others at full size', () => {
@@ -13,29 +13,45 @@ describe('monster slot scale', () => {
       expect(monsterSlotScale(id)).toBe(1)
     }
   })
+
+  it('keeps the monster inside the frame, and smaller again for the thick borders', () => {
+    expect(frameMonsterFit(0)).toBeCloseTo(0.7)
+    expect(frameMonsterFit(4)).toBeCloseTo(0.7)
+    expect(frameMonsterFit(6)).toBeLessThan(frameMonsterFit(0))
+    expect(frameMonsterFit(9)).toBeLessThan(frameMonsterFit(0))
+  })
 })
 
 describe('art manifest', () => {
-  it('ships ten monsters and three buildings', () => {
+  it('ships monsters, buildings, frames, icons, and backgrounds', () => {
     expect(shipped).toEqual(manifest)
-    expect(Object.keys(manifest.monsters)).toEqual([
-      'm01', 'm02', 'm03', 'm04', 'm05', 'm06', 'm07', 'm08', 'm09', 'm10'
-    ])
+    expect(Object.keys(manifest.monsters)).toHaveLength(10)
     expect(Object.keys(manifest.buildings)).toEqual(['townhall', 'goldmine', 'training'])
+    expect(Object.keys(manifest.frames)).toHaveLength(10)
+    expect(Object.keys(manifest.icons).length).toBeGreaterThan(20)
+    expect(Object.keys(manifest.backgrounds)).toEqual(['bg_city', 'bg_arena', 'bg_portal'])
   })
 
-  it('preloads monster and building sizes on the pages base path', () => {
+  it('preloads every manifest image on the pages base path', () => {
     const queued: [string, string][] = []
     queueArt({ image: (key, url) => queued.push([key, url]) }, '/velunor/')
-    expect(queued).toHaveLength(26)
+    const monsters = Object.keys(manifest.monsters).length
+    const buildings = Object.keys(manifest.buildings).length
+    const frames = Object.keys(manifest.frames).length
+    const icons = Object.keys(manifest.icons).length
+    const backgrounds = Object.keys(manifest.backgrounds).length
+    expect(queued).toHaveLength(monsters * 2 + buildings * 2 + frames * 2 + icons * 2 + backgrounds)
     const url = Object.fromEntries(queued)
     expect(url['monster-m01']).toBe('/velunor/assets/monsters/m01_256.png')
-    expect(url['monster-m01-lg']).toBe('/velunor/assets/monsters/m01.png')
-    expect(url['monster-m10']).toBe('/velunor/assets/monsters/m10_256.png')
     expect(url['building-townhall-lg']).toBe('/velunor/assets/buildings/townhall.png')
-    expect(url['building-goldmine-lg']).toBe('/velunor/assets/buildings/goldmine.png')
-    expect(url['building-training-lg']).toBe('/velunor/assets/buildings/training.png')
-    expect(queued.some(([key]) => key.startsWith('frame') || key.startsWith('icon'))).toBe(false)
+    expect(url[frameTextureKey(0)]).toBe('/velunor/assets/frames/rarity_0_256.png')
+    expect(url[frameTextureKey(9, true)]).toBe('/velunor/assets/frames/rarity_9.png')
+    expect(url[iconTextureKey('gold')]).toBe('/velunor/assets/icons/gold_128.png')
+    expect(url[iconTextureKey('status_burn', true)]).toBe('/velunor/assets/icons/status_burn.png')
+    expect(url[iconTextureKey('speed_1x')]).toBe('/velunor/assets/icons/speed_1x_128.png')
+    expect(url[backgroundTextureKey('bg_city')]).toBe('/velunor/assets/backgrounds/bg_city.webp')
+    expect(url[backgroundTextureKey('bg_arena')]).toBe('/velunor/assets/backgrounds/bg_arena.webp')
+    expect(url[backgroundTextureKey('bg_portal')]).toBe('/velunor/assets/backgrounds/bg_portal.webp')
     expect(assetUrl('monsters/m05_256.png', '/')).toBe('/assets/monsters/m05_256.png')
   })
 })

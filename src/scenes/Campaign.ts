@@ -4,6 +4,7 @@ import { chapters, hasUnlock, rarityInfo, stages } from '../data'
 import { go, session } from '../session'
 import { canMulti, canSkip, stageUnlocked } from '../state'
 import type { StageDef } from '../types'
+import { openGuide } from '../guide'
 import { INK, MUTED, W, button, openModal, text } from '../ui'
 
 export class CampaignScene extends Phaser.Scene {
@@ -14,6 +15,8 @@ export class CampaignScene extends Phaser.Scene {
   create(): void {
     if (session.save.campaign.cleared['1-10'] && hasUnlock(session.save.buildings.townhall.level, 'campaign_ch2')) this.chapter = 2
     this.paint()
+    const guide = openGuide(this, 'Campaign')
+    if (guide) this.events.once('shutdown', () => guide.close())
   }
 
   private paint(): void {
@@ -90,9 +93,9 @@ export class CampaignScene extends Phaser.Scene {
     }, { fill: 0x3d4b6e, color: INK, size: 15 }))
     modal.root.add(button(this, 530, 470, 160, 44, 'Kämpfen', () => this.start(stage, 1, false)))
     const skip = canSkip(session.save, stage.id)
-    modal.root.add(button(this, 720, 470, 180, 44, skip ? 'Überspringen' : 'Skip gesperrt', () => {
+    modal.root.add(button(this, 720, 470, 200, 44, skip ? 'Überspringen' : 'Skip ab Rathaus 3', () => {
       if (!skip) {
-        session.toast(session.save.campaign.cleared[stage.id] ? 'Schon frei.' : 'Rathaus Stufe 3')
+        session.toast('Überspringen neuer Stages: Rathaus Stufe 3. Gewonnene Stages kannst du dann auch ohne das Rathaus wiederholen.')
         return
       }
       this.start(stage, 1, true)

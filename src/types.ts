@@ -144,7 +144,7 @@ export interface SaveData {
     interstitialHourCount: number
   }
   milestones: { firstEpic: boolean; firstLegendary: boolean; townhallRewards: number[] }
-  tutorial: { mineGranted: boolean; freeTrainUsed: boolean; pullClaimed: boolean }
+  tutorial: { mineGranted: boolean; freeTrainUsed: boolean; pullClaimed: boolean; guideStep: number }
   settings: { battleSpeed: 1 | 2 | 4; sound: boolean }
   sessionStartedAt: number
 }
@@ -173,7 +173,7 @@ export interface BattleLog {
   stars: 0 | 1 | 2 | 3
   events: BattleEvent[]
   koCount: number
-  roster: { id: string; name: string; speciesId: string; maxHp: number; side: Side; slot: SlotId }[]
+  roster: { id: string; name: string; speciesId: string; maxHp: number; side: Side; slot: SlotId; rarity: Rarity }[]
 }
 
 export interface BattleUnitInput {
@@ -199,6 +199,7 @@ export interface PullResult {
   rarity: Rarity
   upgraded: boolean
   uid: string
+  duplicateEssence: number
 }
 
 export interface RewardBundle {

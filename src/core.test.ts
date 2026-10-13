@@ -1,9 +1,9 @@
 import { describe, expect, it } from 'vitest'
 import { simulateBattle } from './battle'
-import { expToNext, expToReach, typeMult } from './data'
+import { expToNext, expToReach, rarityInfo, typeMult } from './data'
 import { pEpic, pLeg, rollMulti, rollRarity } from './gacha'
 import { calcDamage, grantExp, instanceStats } from './stats'
-import { cancelUpgrade, collectMine, createSave, fightStage, pull, startTraining, startUpgrade, tick } from './state'
+import { cancelUpgrade, collectMine, commitFightRewards, createSave, fightStage, portalOpen, portalUnlockText, pull, startTraining, startUpgrade, tick } from './state'
 import type { GachaState } from './types'
 
 describe('types', () => {
@@ -183,6 +183,42 @@ describe('combat', () => {
     expect(casts[2]).toBe('ember_strike')
   })
 
+  it('holds battle rewards until the result is committed', () => {
+    const save = createSave(1_000)
+    const gold = save.currencies.gold
+    const gems = save.currencies.gems
+    let report = fightStage(save, '1-1', 1, 1_000)
+    expect(report.ok).toBe(true)
+    expect(save.currencies.gold).toBe(gold)
+    expect(save.currencies.gems).toBe(gems)
+    expect(save.campaign.cleared['1-1']).toBeUndefined()
+    for (let i = 0; i < 8 && !report.value?.victory; i++) {
+      const retry = createSave(1_000 + i + 1)
+      report = fightStage(retry, '1-1', 1, 1_000)
+      if (report.value?.victory) {
+        const before = retry.currencies.gold
+        commitFightRewards(retry, report.value)
+        expect(retry.currencies.gold).toBeGreaterThan(before)
+        expect(retry.campaign.cleared['1-1']).toBeGreaterThan(0)
+        expect(portalOpen(retry)).toBe(false)
+        const paid = retry.currencies.gold
+        commitFightRewards(retry, report.value)
+        expect(retry.currencies.gold).toBe(paid)
+        return
+      }
+    }
+    expect(report.value?.victory).toBe(true)
+  })
+
+  it('opens the portal only after stage 1-2, even though the townhall lists it', () => {
+    const save = createSave(1_000)
+    expect(portalUnlockText(save)).toBe('Portal nach Stage 1-2')
+    expect(portalOpen(save)).toBe(false)
+    save.campaign.cleared['1-2'] = 3
+    expect(portalOpen(save)).toBe(true)
+    expect(portalUnlockText(save)).toBe('Portal')
+  })
+
   it('revives the phoenix once', () => {
     const log = simulateBattle({
       seed: 2,
@@ -211,5 +247,30 @@ describe('portal costs', () => {
       (result.value?.some((p) => p.rarity >= 5) ? 300 : 0)
     expect(save.currencies.gems).toBe(bonus)
     expect(save.monsters.length).toBe(13)
+  })
+
+  it('pays essence when a pull repeats a species you already own', () => {
+    const save = createSave(5_000)
+    save.campaign.cleared['1-1'] = 3
+    save.campaign.cleared['1-2'] = 3
+    save.currencies.gems = 10000
+    let found = false
+    for (let i = 0; i < 40 && !found; i++) {
+      const owned = new Set(save.monsters.map((monster) => monster.speciesId))
+      const before = save.currencies.essence
+      const result = pull(save, 'single', 'gems', 5_000)
+      const got = result.value?.[0]
+      expect(got).toBeTruthy()
+      if (!got) break
+      if (owned.has(got.speciesId)) {
+        expect(got.duplicateEssence).toBe(rarityInfo(got.rarity).essence)
+        expect(save.currencies.essence).toBe(before + got.duplicateEssence)
+        found = true
+      } else {
+        expect(got.duplicateEssence).toBe(0)
+        expect(save.currencies.essence).toBe(before)
+      }
+    }
+    expect(found).toBe(true)
   })
 })

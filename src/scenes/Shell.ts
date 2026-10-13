@@ -1,10 +1,11 @@
 import Phaser from 'phaser'
 import { monsterToken } from '../art'
 import { queueArt } from '../artLayout'
-import { go, session } from '../session'
-import { ESSENCE, GEM, GOLD, INK, MUTED, TICKET, W, button, confirm, panel, text } from '../ui'
+import { go, session, wipeSave } from '../session'
+import { iconSprite } from '../art'
+import { ESSENCE, GEM, GOLD, INK, MUTED, TICKET, W, button, confirm, hoverTip, panel, text } from '../ui'
 import { formatInt } from '../data'
-import { SAVE_KEY, portalOpen } from '../state'
+import { portalOpen, portalUnlockText } from '../state'
 
 export class BootScene extends Phaser.Scene {
   constructor() { super('Boot') }
@@ -27,11 +28,11 @@ export class PreloadScene extends Phaser.Scene {
     text(this, W / 2, 230, 'VELUNOR', 64, GOLD, [0.5, 0.5])
     text(this, W / 2, 290, 'Stadt · Monster · Portal', 22, INK, [0.5, 0.5])
     ;['m01', 'm02', 'm03'].forEach((id, i) => monsterToken(this, W / 2 - 90 + i * 90, 390, id, 64, 0))
-    text(this, W / 2, 500, 'Stilisierte Fantasy', 16, MUTED, [0.5, 0.5])
-    this.time.delayedCall(700, () => {
+    text(this, W / 2, 480, 'Stilisierte Fantasy', 16, MUTED, [0.5, 0.5])
+    button(this, W / 2, 560, 280, 64, 'Spielen', () => {
       this.scene.launch('HUD')
       this.scene.start('City')
-    })
+    }, { hitPad: 16 })
   }
 }
 
@@ -81,22 +82,23 @@ export class HUDScene extends Phaser.Scene {
     const title = text(this, 24, 32, 'VELUNOR', 22, GOLD, [0, 0.5])
     this.currencies.add([g, title])
     const c = session.save.currencies
-    const bits: [string, string, string][] = [
-      ['Gold', formatInt(c.gold), GOLD],
-      ['Juwelen', formatInt(c.gems), GEM],
-      ['Essenz', formatInt(c.essence), ESSENCE],
-      ['Tickets', formatInt(c.tickets), TICKET]
+    const bits: [string, string, string, string, string][] = [
+      ['gold', 'Gold', formatInt(c.gold), GOLD, 'Gold bezahlt Gebäude, Training und Aufwertung.'],
+      ['gems', 'Juwelen', formatInt(c.gems), GEM, 'Juwelen bezahlen das Portal: 100 für eine Ziehung, 900 für zehn.'],
+      ['essence', 'Essenz', formatInt(c.essence), ESSENCE, 'Essenz wertet die Seltenheit auf. Duplikate, Freilassen und Boss-Siege bringen welche.'],
+      ['tickets', 'Tickets', formatInt(c.tickets), TICKET, 'Ein Ticket ersetzt die Juwelen für eine Ziehung.']
     ]
     bits.forEach((bit, i) => {
-      const x = 250 + i * 180
+      const x = 230 + i * 190
       const chip = this.add.graphics()
       chip.fillStyle(0x2a334c, 1)
-      chip.fillRoundedRect(x, 16, 164, 32, 10)
-      const label = text(this, x + 12, 32, bit[0], 12, MUTED, [0, 0.5])
-      const value = text(this, x + 152, 32, bit[1], 16, bit[2], [1, 0.5])
-      this.currencies.add([chip, label, value])
+      chip.fillRoundedRect(x, 16, 176, 32, 10)
+      const icon = iconSprite(this, x + 20, 32, bit[0], 22)
+      const value = text(this, x + 164, 32, bit[2], 16, bit[3], [1, 0.5])
+      const tip = hoverTip(this, x + 88, 32, 176, 36, bit[4])
+      this.currencies.add(icon ? [chip, icon, value, tip] : [chip, value, tip])
     })
-    const gear = button(this, 1210, 32, 88, 36, 'Menü', () => this.openSettings(), { fill: 0x3d4b6e, color: INK, size: 16 })
+    const gear = button(this, 1210, 32, 108, 40, 'Menü', () => this.openSettings(), { fill: 0x3d4b6e, color: INK, size: 16, icon: 'settings', hitPad: 12 })
     this.currencies.add(gear)
   }
 
@@ -106,25 +108,25 @@ export class HUDScene extends Phaser.Scene {
     g.fillStyle(0x100c1c, 0.94)
     g.fillRect(0, 648, W, 72)
     this.nav.add(g)
-    const items: [string, string, string?][] = [
-      ['Stadt', 'City'],
-      ['Team', 'Team'],
-      ['Monster', 'Monsters'],
-      ['Portal', 'Portal', 'portal'],
-      ['Kampagne', 'Campaign']
+    const items: [string, string, string, string?][] = [
+      ['Stadt', 'City', 'nav_city'],
+      ['Team', 'Team', 'nav_team'],
+      ['Monster', 'Monsters', 'nav_monsters'],
+      ['Portal', 'Portal', 'nav_portal', 'portal'],
+      ['Kampagne', 'Campaign', 'nav_campaign']
     ]
     items.forEach((item, i) => {
       const x = 140 + i * 230
-      const locked = item[2] === 'portal' && !portalOpen(session.save)
+      const locked = item[3] === 'portal' && !portalOpen(session.save)
       const active = this.scene.isActive(item[1])
-      const b = button(this, x, 684, 180, 44, locked ? `${item[0]} 🔒` : item[0], () => {
+      const b = button(this, x, 684, 200, 48, locked ? 'Portal · 1-2' : item[0], () => {
         if (locked) {
-          session.toast('Schließe Stage 1-2 ab')
+          session.toast(portalUnlockText(session.save))
           return
         }
         go(this, item[1])
         this.time.delayedCall(30, () => this.drawNav())
-      }, { fill: active ? 0xf0c14a : 0x2c3654, color: active ? '#2a2112' : INK, size: 16 })
+      }, { fill: active ? 0xf0c14a : 0x2c3654, color: active ? '#2a2112' : INK, size: 16, icon: locked ? 'lock' : item[2], hitPad: 8 })
       this.nav.add(b)
     })
   }
@@ -154,7 +156,7 @@ export class HUDScene extends Phaser.Scene {
   private openSettings(): void {
     const { root, close } = (() => {
       const modalW = 520
-      const modalH = 360
+      const modalH = 440
       const holder = this.add.container(0, 0).setDepth(140)
       const dim = this.add.rectangle(W / 2, 360, W, 720, 0x07060f, 0.66).setInteractive()
       const g = this.add.graphics()
@@ -175,10 +177,16 @@ export class HUDScene extends Phaser.Scene {
         done()
         this.openSettings()
       }, { fill: 0x3d4b6e, color: INK }))
-      holder.add(button(this, W / 2, 440, 280, 46, 'Spielstand löschen', () => {
+      holder.add(button(this, W / 2, 430, 280, 46, 'Anleitung', () => {
+        session.save.tutorial.guideStep = 0
+        session.persist()
+        done()
+        go(this, 'City')
+      }, { fill: 0x3d4b6e, color: INK }))
+      holder.add(button(this, W / 2, 490, 280, 46, 'Spielstand löschen', () => {
         done()
         confirm(this, 'Der lokale Speicherstand wird gelöscht.', () => {
-          localStorage.removeItem(SAVE_KEY)
+          wipeSave()
           location.reload()
         })
       }, { fill: 0xe15b64, color: '#fff' }))

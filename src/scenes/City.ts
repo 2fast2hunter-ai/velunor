@@ -9,19 +9,24 @@ import {
   species
 } from '../data'
 import { go, session } from '../session'
-import { coach, mineFill, monsterByUid, portalOpen, trainingQuote, trainingReadyAt, unlockLabel, upgradeInfo } from '../state'
+import { coach, mineFill, monsterByUid, portalOpen, portalUnlockText, trainingQuote, trainingReadyAt, unlockLabel, upgradeInfo } from '../state'
 import type { BuildingId } from '../types'
 import { BUILDING_FOOT, buildingTextureKey } from '../artLayout'
+import { paintBackground } from '../art'
+import { openGuide } from '../guide'
 import { GOLD, INK, MUTED, W, button, floatText, openModal, panel, text } from '../ui'
 
 export class CityScene extends Phaser.Scene {
   private dynamic!: Phaser.GameObjects.Container
   private modal?: { close: () => void }
+  private inputReady = false
 
   constructor() { super('City') }
 
   create(): void {
-    this.drawSky()
+    this.inputReady = false
+    this.time.delayedCall(350, () => { this.inputReady = true })
+    if (!paintBackground(this, 'city')) this.drawSky()
     this.drawStructures()
     this.dynamic = this.add.container(0, 0)
     const onClock = () => this.refresh()
@@ -35,6 +40,8 @@ export class CityScene extends Phaser.Scene {
     this.refresh()
     const hint = coach(session.save)
     if (hint) this.cameras.main.flash(200, 20, 16, 40)
+    const guide = openGuide(this, 'City')
+    if (guide) this.modal = guide
   }
 
   private drawSky(): void {
@@ -76,10 +83,15 @@ export class CityScene extends Phaser.Scene {
     if (this.textures.exists(key)) {
       this.add.image(x, feet, key).setOrigin(0.5, originY).setDisplaySize(display, display)
     }
+    const hitW = display * 0.88
     const hitH = display * originY * 0.86
-    const hit = this.add.rectangle(x, feet - hitH / 2, display * 0.88, hitH, 0xffffff, 0.001)
-    hit.setInteractive({ useHandCursor: true })
-    hit.on('pointerup', onClick)
+    const hit = this.add.rectangle(x, feet - hitH / 2, hitW, hitH, 0xffffff, 0.001)
+    hit.setInteractive(new Phaser.Geom.Rectangle(0, 0, hitW, hitH), Phaser.Geom.Rectangle.Contains)
+    if (hit.input) hit.input.cursor = 'pointer'
+    hit.on('pointerup', () => {
+      if (!this.inputReady) return
+      onClick()
+    })
   }
 
   private portal(x: number, y: number): void {
@@ -93,8 +105,9 @@ export class CityScene extends Phaser.Scene {
     const hit = this.add.rectangle(x, y, 100, 120, 0xffffff, 0.001)
     hit.setInteractive({ useHandCursor: true })
     hit.on('pointerup', () => {
+      if (!this.inputReady) return
       if (!portalOpen(session.save)) {
-        session.toast('Schließe Stage 1-2 ab')
+        session.toast(portalUnlockText(session.save))
         return
       }
       go(this, 'Portal')
@@ -114,7 +127,10 @@ export class CityScene extends Phaser.Scene {
     g.fillTriangle(x - 8, y - 48, x + 8, y - 48, x, y - 64)
     const hit = this.add.rectangle(x, y, 110, 120, 0xffffff, 0.001)
     hit.setInteractive({ useHandCursor: true })
-    hit.on('pointerup', () => go(this, 'Campaign'))
+    hit.on('pointerup', () => {
+      if (!this.inputReady) return
+      go(this, 'Campaign')
+    })
   }
 
   private refresh(): void {
@@ -217,7 +233,8 @@ export class CityScene extends Phaser.Scene {
       modal.root.add(text(this, left, y, 'Schon frei:', 16, MUTED))
       y += 26
       current.unlocks.forEach((unlock) => {
-        modal.root.add(text(this, left, y, `· ${unlockLabel(unlock)}`, 15, INK))
+        const label = unlock === 'portal' ? portalUnlockText(save) : unlockLabel(unlock)
+        modal.root.add(text(this, left, y, `· ${label}`, 15, INK))
         y += 22
       })
       y += 8

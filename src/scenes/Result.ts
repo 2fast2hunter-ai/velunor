@@ -2,6 +2,7 @@ import Phaser from 'phaser'
 import { rewardedButton } from '../ads'
 import { go, session } from '../session'
 import type { FightReport } from '../state'
+import { iconSprite } from '../art'
 import { INK, MUTED, W, button, panel, text } from '../ui'
 
 interface FightPayload {
@@ -22,15 +23,22 @@ export class ResultScene extends Phaser.Scene {
       return
     }
     const report = payload.report
+    session.commitResult(report)
     const card = this.add.graphics()
-    panel(card, 280, 120, 720, 460)
-    text(this, W / 2, 150, report.victory ? 'Sieg' : 'Niederlage', 40, report.victory ? '#f0c14a' : '#ff8a80', [0.5, 0])
-    const stars = report.victory ? '★'.repeat(report.stars) + '☆'.repeat(3 - report.stars) : 'Keine Sterne'
-    text(this, W / 2, 210, `${report.stageId}   ${stars}`, 22, INK, [0.5, 0])
+    panel(card, 280, 100, 720, 500)
+    text(this, W / 2, 130, report.victory ? 'Sieg' : 'Niederlage', 40, report.victory ? '#f0c14a' : '#ff8a80', [0.5, 0])
+    text(this, W / 2, 190, report.stageId, 22, INK, [0.5, 0])
+    if (report.victory && this.textures.exists('icon-star')) {
+      for (let i = 0; i < 3; i++) iconSprite(this, W / 2 - 36 + i * 36, 230, i < report.stars ? 'star' : 'star_empty', 28)
+    } else if (report.victory) {
+      text(this, W / 2, 230, '★'.repeat(report.stars) + '☆'.repeat(3 - report.stars), 22, '#f0c14a', [0.5, 0.5])
+    } else {
+      text(this, W / 2, 230, 'Keine Sterne', 18, MUTED, [0.5, 0.5])
+    }
     const rewards = report.rewards
     const lines = [
       `+${rewards.gold} Gold`,
-      rewards.gems ? `+${rewards.gems} Juwelen` : 'Keine Juwelen',
+      rewards.gems ? `+${rewards.gems} Juwelen` : (report.victory ? 'Keine Juwelen' : 'Niederlage: keine Juwelen'),
       `+${rewards.exp} EP je Monster im Team`,
       rewards.essence ? `+${rewards.essence} Essenz` : '',
       rewards.tickets ? `+${rewards.tickets} Beschwörungsticket` : '',
@@ -46,9 +54,9 @@ export class ResultScene extends Phaser.Scene {
       tip.setWordWrapWidth(640)
       tip.setAlign('center')
     }
-    button(this, W / 2, 530, 240, 50, 'Weiter zur Stadt', () => {
+    button(this, W / 2, 520, 320, 64, 'Weiter zur Stadt', () => {
       void session.leaveResult(report.victory).then(() => go(this, 'City'))
-    })
+    }, { hitPad: 18 })
     if (report.victory && report.logs.length === 1) {
       const ad = rewardedButton(session.save, 'double_reward', Date.now())
       if (ad.visible) {

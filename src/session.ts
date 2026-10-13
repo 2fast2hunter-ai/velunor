@@ -6,6 +6,8 @@ import {
   closeToCity,
   collectMine,
   createSave,
+  SAVE_KEY,
+  commitFightRewards,
   fightStage,
   loadSave,
   pull,
@@ -39,6 +41,7 @@ class Session {
   }
 
   persist(): void {
+    if (!persistEnabled) return
     prefs.sound = this.save.settings.sound
     writeStorage(this.save)
   }
@@ -114,12 +117,18 @@ class Session {
 
   fight(stageId: string, count: 1 | 3): FightReport | null {
     const result = fightStage(this.save, stageId, count, Date.now())
-    this.take(result)
     if (!result.ok) {
       if (result.reason) this.toast(result.reason)
       return null
     }
     return result.value ?? null
+  }
+
+  commitResult(report: FightReport): void {
+    const messages = commitFightRewards(this.save, report)
+    if (messages.length) this.toasts.push(...messages)
+    this.persist()
+    this.emit()
   }
 
   pull(kind: 'single' | 'multi' | 'tutorial', pay: 'gems' | 'tickets' | 'free') {
@@ -166,12 +175,33 @@ class Session {
 
 export const session = new Session()
 
-export function go(from: Phaser.Scene, key: string): void {
-  if (from.scene.isActive('Battle') && key !== 'Result' && key !== 'City') return
-  const mains = ['City', 'Team', 'Monsters', 'Portal', 'Campaign', 'Battle', 'Result', 'Preload', 'Boot']
-  session.persist()
-  from.scene.launch(key)
-  for (const name of mains) {
-    if (name !== key && from.scene.isActive(name)) from.scene.stop(name)
+let persistEnabled = true
+let switching = false
+
+export function wipeSave(): void {
+  persistEnabled = false
+  try {
+    localStorage.removeItem(SAVE_KEY)
+  } catch {
+    /* private mode */
   }
+}
+
+export function go(from: Phaser.Scene, key: string): void {
+  if (switching) return
+  if (from.scene.isActive('Battle') && key !== 'Result' && key !== 'City') return
+  const plugin = from.scene
+  switching = true
+  // Let the current pointerup finish before the next scene exists, so the
+  // release cannot land on a building and open its modal.
+  window.setTimeout(() => {
+    switching = false
+    const mains = ['City', 'Team', 'Monsters', 'Portal', 'Campaign', 'Battle', 'Result', 'Preload', 'Boot']
+    session.persist()
+    if (plugin.isActive(key)) plugin.stop(key)
+    plugin.launch(key)
+    for (const name of mains) {
+      if (name !== key && plugin.isActive(name)) plugin.stop(name)
+    }
+  }, 0)
 }

@@ -1,3 +1,5 @@
+import Phaser from 'phaser'
+import { iconSprite } from './art'
 import { prefs } from './session'
 
 export const W = 1280
@@ -71,6 +73,9 @@ export interface ButtonOpts {
   fill?: number
   color?: string
   size?: number
+  /** Extra pixels around the visible button. Close controls need this under canvas scaling. */
+  hitPad?: number
+  icon?: string
 }
 
 export function button(
@@ -92,15 +97,26 @@ export function button(
     g.lineStyle(2, 0xfff4cc, 0.35)
     g.strokeRoundedRect(-w / 2, -h / 2, w, h, 14)
   }
+  const icon = opts.icon ? iconSprite(scene, -w / 2 + 22, 0, opts.icon, Math.min(28, h - 10)) : undefined
   const color = opts.disabled ? '#aeb6c9' : (opts.color ?? '#2a2112')
-  const t = text(scene, 0, 0, label, opts.size ?? 18, color, [0.5, 0.5])
-  root.add([g, t])
+  const t = text(scene, icon ? 12 : 0, 0, label, opts.size ?? 18, color, [0.5, 0.5])
+  root.add(icon ? [g, icon, t] : [g, t])
   if (!opts.disabled) {
-    const hit = scene.add.rectangle(0, 0, w, h, 0xffffff, 0.001)
-    hit.setInteractive({ useHandCursor: true })
-    hit.on('pointerover', () => root.setScale(1.04))
-    hit.on('pointerout', () => root.setScale(1))
+    const pad = opts.hitPad ?? 10
+    const hitW = w + pad * 2
+    const hitH = h + pad * 2
+    const hit = scene.add.rectangle(0, 0, hitW, hitH, 0xffffff, 0.001)
+    hit.setInteractive(
+      new Phaser.Geom.Rectangle(0, 0, hitW, hitH),
+      Phaser.Geom.Rectangle.Contains
+    )
+    hit.input!.cursor = 'pointer'
+    let armed = false
+    hit.on('pointerdown', () => { armed = true })
+    hit.on('pointerout', () => { armed = false })
     hit.on('pointerup', () => {
+      if (!armed) return
+      armed = false
       sfx('click')
       onClick()
     })
@@ -133,9 +149,50 @@ export function openModal(
   panel(g, (W - w) / 2, (H - h) / 2, w, h, 0x1a2236)
   const titleText = text(scene, W / 2, (H - h) / 2 + 28, title, 26, GOLD, [0.5, 0])
   const close = () => root.destroy()
-  const closer = button(scene, (W + w) / 2 - 46, (H - h) / 2 + 36, 56, 36, 'X', close, { fill: 0x3d4b6e, color: INK, size: 16 })
+  const closer = button(scene, (W + w) / 2 - 52, (H - h) / 2 + 40, 64, 48, 'X', close, { fill: 0x3d4b6e, color: INK, size: 18, hitPad: 22 })
   root.add([dim, g, titleText, closer])
   return { root, close }
+}
+
+export function attachTip(scene: Phaser.Scene, zone: Phaser.GameObjects.GameObject, x: number, y: number, message: string): void {
+  let tip: Phaser.GameObjects.Container | undefined
+  const hide = () => {
+    tip?.destroy()
+    tip = undefined
+  }
+  zone.on('pointerover', () => {
+    hide()
+    const body = text(scene, 0, 0, message, 14, INK, [0, 0])
+    body.setWordWrapWidth(300)
+    const width = Math.min(340, Math.max(180, body.width + 24))
+    body.setWordWrapWidth(width - 24)
+    const height = body.height + 20
+    const left = Math.min(Math.max(12, x - width / 2), W - width - 12)
+    const top = Math.min(y + 28, H - height - 80)
+    const holder = scene.add.container(left, top).setDepth(220)
+    const g = scene.add.graphics()
+    panel(g, 0, 0, width, height, 0x241848)
+    body.setPosition(12, 10)
+    holder.add([g, body])
+    tip = holder
+  })
+  zone.on('pointerout', hide)
+  zone.once('destroy', hide)
+}
+
+export function hoverTip(
+  scene: Phaser.Scene,
+  x: number,
+  y: number,
+  w: number,
+  h: number,
+  message: string
+): Phaser.GameObjects.Rectangle {
+  const zone = scene.add.rectangle(x, y, w, h, 0xffffff, 0.001).setDepth(180)
+  zone.setInteractive(new Phaser.Geom.Rectangle(0, 0, w, h), Phaser.Geom.Rectangle.Contains)
+  if (zone.input) zone.input.cursor = 'help'
+  attachTip(scene, zone, x, y, message)
+  return zone
 }
 
 export function confirm(scene: Phaser.Scene, message: string, onYes: () => void): void {
