@@ -2,7 +2,7 @@ import Phaser from 'phaser'
 import { monsterToken } from '../art'
 import { chapters, hasUnlock, rarityInfo, stages } from '../data'
 import { go, session } from '../session'
-import { canMulti, canSkip, stageUnlocked } from '../state'
+import { canMulti, canSkip, chapterStars, stageEnemyPower, stageUnlocked } from '../state'
 import type { StageDef } from '../types'
 import { openGuide } from '../guide'
 import { INK, MUTED, W, button, openModal, text } from '../ui'
@@ -27,6 +27,7 @@ export class CampaignScene extends Phaser.Scene {
     g.fillStyle(0x3a6b45, 1)
     g.fillEllipse(640, 430, 1100, 360)
     text(this, 48, 88, 'Kampagne', 32, '#f0c14a')
+    text(this, 1100, 96, `Sterne ${chapterStars(session.save, this.chapter)}/30`, 16, MUTED)
     chapters.forEach((chapter, index) => {
       const locked = chapter.id === 2 && !hasUnlock(session.save.buildings.townhall.level, 'campaign_ch2')
       button(this, 280 + index * 280, 140, 250, 42, locked ? `${chapter.name.split('·')[0]} 🔒` : chapter.name.split('·')[0].trim(), () => {
@@ -34,8 +35,10 @@ export class CampaignScene extends Phaser.Scene {
           session.toast('Rathaus Stufe 4')
           return
         }
+        const changed = chapter.id !== this.chapter
         this.chapter = chapter.id
         this.paint()
+        if (changed) void session.changeChapter()
       }, { fill: this.chapter === chapter.id ? 0xf0c14a : 0x2c3654, color: this.chapter === chapter.id ? '#2a2112' : INK, size: 16 })
     })
     const list = stages.filter((stage) => stage.chapter === this.chapter)
@@ -68,8 +71,16 @@ export class CampaignScene extends Phaser.Scene {
 
   private openStage(stage: StageDef): void {
     const modal = openModal(this, 820, 500, `${stage.id}  ${stage.name}`)
-    modal.root.add(text(this, 280, 180, `Gegner Level ${stage.enemyLevel}`, 16, MUTED))
-    stage.enemies.forEach((enemy, index) => {
+    const enemyKk = stageEnemyPower(stage)
+    const recommended = stage.recommendedKK ?? Math.ceil(enemyKk * 1.1)
+    modal.root.add(text(this, 280, 170, `Gegner-KK ${enemyKk} · Empfohlen ${recommended}${stage.hint ? ` · ${stage.hint}` : ''}`, 14, MUTED))
+    if (stage.stageText) {
+      const note = text(this, 280, 190, stage.stageText, 13, INK)
+      note.setWordWrapWidth(520)
+      modal.root.add(note)
+    }
+    const shown = [...stage.enemies, ...(stage.boss ? [{ slot: stage.boss.slot, speciesId: stage.boss.speciesId, rarity: stage.boss.rarity, boss: true as const }] : [])]
+    shown.forEach((enemy, index) => {
       const rarity = enemy.rarity ?? stage.enemyRarity
       const x = 300 + index * 110
       modal.root.add(monsterToken(this, x, 270, enemy.speciesId, 48, rarity))

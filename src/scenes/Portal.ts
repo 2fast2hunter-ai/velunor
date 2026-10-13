@@ -1,7 +1,7 @@
 import Phaser from 'phaser'
 import { rewardedButton } from '../ads'
 import { monsterToken, paintBackground } from '../art'
-import { gachaCfg, rarityInfo, species } from '../data'
+import { gachaCfg, monsters, rarityInfo, species, typeName } from '../data'
 import { pEpic, pLeg, pullsUntilEpic, pullsUntilLegendary } from '../gacha'
 import { session } from '../session'
 import { canOfferFreePull, canOfferGemBonus } from '../ads'
@@ -119,22 +119,37 @@ export class PortalScene extends Phaser.Scene {
   }
 
   private showRates(): void {
-    const modal = openModal(this, 760, 540, 'Transparente Raten')
+    const modal = openModal(this, 820, 640, 'Transparente Raten')
     gachaCfg.rates.forEach((rate, index) => {
       const col = index < 5 ? 0 : 1
       const row = index % 5
       modal.root.add(text(this, 300 + col * 340, 190 + row * 36, `${rarityInfo(index).name}`, 16, rarityInfo(index).color))
       modal.root.add(text(this, 520 + col * 340, 190 + row * 36, `${rate.toFixed(3)} %`, 16, INK))
     })
-    const note = text(this, W / 2, 400, '10er garantiert mindestens Selten. Pity bleibt dauerhaft gespeichert und wird nie heimlich zurückgesetzt. Legendär+ effektiv ca. 1,88 % (etwa alle 53 Ziehungen). Episch+ inkl. Legendär+ ca. 11,1 %.', 15, MUTED, [0.5, 0])
+    const note = text(this, W / 2, 380, '10er garantiert mindestens Selten. Pity bleibt dauerhaft gespeichert und wird nie heimlich zurückgesetzt. Legendär+ effektiv ca. 1,88 % (etwa alle 53 Ziehungen). Episch+ inkl. Legendär+ ca. 11,1 %.', 15, MUTED, [0.5, 0])
     note.setWordWrapWidth(640)
     note.setAlign('center')
     modal.root.add(note)
+    const active = new Set(session.save.activeTypes)
+    const pool = monsters.filter((monster) => active.has(monster.type))
+    const byRarity = new Map<number, string[]>()
+    for (const monster of pool) {
+      const list = byRarity.get(monster.baseRarity) ?? []
+      list.push(monster.name)
+      byRarity.set(monster.baseRarity, list)
+    }
+    const poolLine = [...byRarity.entries()]
+      .sort((a, b) => a[0] - b[0])
+      .map(([rarity, names]) => `${rarityInfo(rarity).name}: ${names.join(', ')}`)
+      .join(' · ')
+    const poolText = text(this, W / 2, 460, `Aktives Portal (${session.save.activeTypes.map((id) => typeName(id)).join(', ')}): ${poolLine}`, 13, INK, [0.5, 0])
+    poolText.setWordWrapWidth(680)
+    modal.root.add(poolText)
     const history = session.save.gacha.history.slice(0, 5)
     if (history.length) {
-      modal.root.add(text(this, 300, 500, 'Letzte Ziehungen', 14, '#f0c14a'))
+      modal.root.add(text(this, 300, 580, 'Letzte Ziehungen', 14, '#f0c14a'))
       history.forEach((entry, i) => {
-        modal.root.add(text(this, 300, 524 + i * 22, `${species(entry.speciesId).name} · ${rarityInfo(entry.rarity).name}`, 13, MUTED))
+        modal.root.add(text(this, 300, 602 + i * 20, `${species(entry.speciesId).name} · ${rarityInfo(entry.rarity).name}`, 13, MUTED))
       })
     }
   }

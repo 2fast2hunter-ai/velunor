@@ -1,6 +1,8 @@
 import { gachaCfg, monsters, species } from './data'
 import { weightedPick } from './rng'
-import type { GachaState, Rarity } from './types'
+import type { GachaState, Rarity, TypeId } from './types'
+
+const STARTER_TYPES: TypeId[] = ['fire', 'water', 'plant', 'earth']
 
 export function pLeg(n: number): number {
   const pity = gachaCfg.pity.legendaryPlus
@@ -41,15 +43,16 @@ export function rollRarity(state: GachaState, rng: () => number, flags: RollFlag
   return weightedPick(rng, gachaCfg.commonWeights) as Rarity
 }
 
-export function pickSpecies(rarity: Rarity, rng: () => number): { speciesId: string; upgraded: boolean } {
-  const exact = monsters.filter((m) => m.baseRarity === rarity)
+export function pickSpecies(rarity: Rarity, rng: () => number, active: TypeId[] = STARTER_TYPES): { speciesId: string; upgraded: boolean } {
+  const allowed = (list: typeof monsters) => list.filter((monster) => active.includes(monster.type))
+  const exact = allowed(monsters.filter((monster) => monster.baseRarity === rarity))
   if (exact.length) {
     const index = Math.min(exact.length - 1, Math.floor(rng() * exact.length))
     return { speciesId: exact[index].id, upgraded: false }
   }
-  const below = monsters.filter((m) => m.baseRarity < rarity)
-  const maxBase = Math.max(...below.map((m) => m.baseRarity))
-  const pool = below.filter((m) => m.baseRarity === maxBase)
+  const below = allowed(monsters.filter((monster) => monster.baseRarity < rarity))
+  const maxBase = Math.max(...below.map((monster) => monster.baseRarity))
+  const pool = below.filter((monster) => monster.baseRarity === maxBase)
   const index = Math.min(pool.length - 1, Math.floor(rng() * pool.length))
   return { speciesId: pool[index].id, upgraded: true }
 }
@@ -64,7 +67,7 @@ export interface RawPull {
  * Ten pulls in order. If the first nine are all below `minRarity`,
  * the tenth is forced to at least that rarity (legendary/epic rolls still win).
  */
-export function rollMulti(state: GachaState, rng: () => number, minRarity: Rarity): RawPull[] {
+export function rollMulti(state: GachaState, rng: () => number, minRarity: Rarity, active: TypeId[] = STARTER_TYPES): RawPull[] {
   const pulls: RawPull[] = []
   for (let i = 0; i < 10; i++) {
     const needForce = i === 9 && pulls.every((p) => p.rarity < minRarity)
@@ -72,7 +75,7 @@ export function rollMulti(state: GachaState, rng: () => number, minRarity: Rarit
       forceRarePlus: needForce && minRarity <= 2,
       forceEpicPlus: needForce && minRarity >= 3
     })
-    const picked = pickSpecies(rarity, rng)
+    const picked = pickSpecies(rarity, rng, active)
     pulls.push({ speciesId: picked.speciesId, rarity, upgraded: picked.upgraded || rarity > species(picked.speciesId).baseRarity })
   }
   return pulls

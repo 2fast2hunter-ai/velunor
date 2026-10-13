@@ -3,7 +3,9 @@ import { monsterToken } from '../art'
 import { rarityInfo, species, teamSlotLimit, typeName } from '../data'
 import { session } from '../session'
 import { hasUnlock } from '../data'
-import { previewStats, synergyForTeam } from '../stats'
+import { previewStats } from '../stats'
+import { synergyView } from '../synergy'
+import { teamPower } from '../state'
 import { ALL_SLOTS, SLOT_ROW, type SlotId } from '../types'
 import { openGuide } from '../guide'
 import { INK, MUTED, W, attachTip, button, hoverTip, panel, text } from '../ui'
@@ -70,10 +72,12 @@ export class TeamScene extends Phaser.Scene {
       }
     }
     const members = [...open].map((slot) => save.team[slot]).map((uid) => save.monsters.find((m) => m.uid === uid)).filter((m) => m != null)
-    const syn = synergyForTeam(members.map((m) => ({ type: species(m.speciesId).type })))
-    const synText = hasUnlock(save.buildings.townhall.level, 'synergies')
-      ? (syn.lines.join('   ') || 'Noch keine Typ-Synergie.')
-      : 'Typ-Synergien: Rathaus Stufe 2'
+    const syn = synergyView(
+      members.map((m) => ({ type: species(m.speciesId).type, class: species(m.speciesId).class })),
+      hasUnlock(save.buildings.townhall.level, 'synergies'),
+      hasUnlock(save.buildings.townhall.level, 'class_synergies')
+    )
+    const synText = `Kampfkraft ${teamPower(save)} · ${syn.lines.join('   ') || 'Noch keine Synergie.'}`
     const synLabel = text(this, 48, 492, synText, 15, INK)
     synLabel.setWordWrapWidth(1180)
     hoverTip(this, 360, 500, 640, 28, 'Zwei gleiche Typen im Team verstärken sich. Das Rathaus schaltet Typ-Synergien auf Stufe 2 frei.')
@@ -109,8 +113,8 @@ export class TeamScene extends Phaser.Scene {
       text(this, 860, 88, sp.name, 22, rarityInfo(selectedMonster.rarity).color)
       text(this, 860, 120, `${typeName(sp.type)} · ${sp.role === 'front' ? 'Front' : 'Hinten'} · Lv. ${selectedMonster.level}`, 15, MUTED)
       text(this, 860, 150, `HP ${Math.floor(stats.hp)}   ATK ${Math.floor(stats.atk)}   DEF ${Math.floor(stats.def)}   SPD ${Math.floor(stats.spd)}`, 15, INK)
-      text(this, 860, 180, sp.skill.name, 16, '#f0c14a')
-      const desc = text(this, 860, 206, sp.skill.description, 14, MUTED)
+      text(this, 860, 180, sp.skill.name ?? sp.skill.id, 16, '#f0c14a')
+      const desc = text(this, 860, 206, sp.skill.description ?? '', 14, MUTED)
       desc.setWordWrapWidth(380)
     }
   }

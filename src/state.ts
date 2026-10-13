@@ -1,8 +1,12 @@
 import { maybeInterstitial, tryRewarded } from './ads'
+import { SAVE_KEY, loadOrMigrateSave } from './saveMigrate'
 import { simulateBattle, battleTip } from './battle'
 import {
+  adsCfg,
   ascensionCosts,
+  breedingCfg,
   buildings,
+  dailyCfg,
   dayKey,
   hasUnlock,
   maxLevelFor,
@@ -10,14 +14,18 @@ import {
   previousDayKey,
   rarityInfo,
   rewards,
+  skillsCfg,
   species,
   stageById,
   stages,
-  teamSlotLimit
+  starChests,
+  teamSlotLimit,
+  typeUnlocks
 } from './data'
 import { pickSpecies, rollMulti, rollRarity } from './gacha'
 import { freshSeed, nextFloat, nextUint } from './rng'
-import { grantExp, roomToMax } from './stats'
+import { combatPower, grantExp, instanceStats, roomToMax } from './stats'
+import { synergyView } from './synergy'
 import type {
   AdPlacement,
   BattleLog,
@@ -31,11 +39,12 @@ import type {
   SaveData,
   SlotId,
   StageDef,
-  TrainingSlot
+  TrainingSlot,
+  TypeId
 } from './types'
 import { ALL_SLOTS } from './types'
 
-export const SAVE_KEY = 'mstadt.save.v1'
+export { SAVE_KEY }
 
 export interface ActionResult<T = void> {
   ok: boolean
@@ -56,19 +65,24 @@ export function createSave(now = Date.now()): SaveData {
   const starters = rewards.start.starters.map((id) => makeMonster(id, 0, now, true))
   const [fox, newt, sprout] = starters
   return {
-    version: 1,
+    version: 2,
     createdAt: now,
     lastSeen: now,
     rngSeed: freshSeed(),
     currencies: { gold: rewards.start.gold, gems: rewards.start.gems, essence: 0, tickets: 0 },
+    meta: { migratedFrom: null, migratedAt: 0 },
+    activeTypes: ['fire', 'water', 'plant', 'earth'],
     buildings: {
       townhall: { level: 1, upgradeEndsAt: null, upgradePaid: null },
       goldmine: { level: 1, stored: 0, lastTick: now, upgradeEndsAt: null, upgradePaid: null },
-      training: { level: 1, slots: [], upgradeEndsAt: null, upgradePaid: null }
+      training: { level: 1, slots: [], upgradeEndsAt: null, upgradePaid: null },
+      breeding: { level: 0, slots: [], upgradeEndsAt: null, upgradePaid: null }
     },
     monsters: starters,
     team: { F1: newt.uid, F2: sprout.uid, H1: fox.uid, H2: null, H3: null },
-    campaign: { cleared: {} },
+    campaign: { cleared: {}, chestsClaimed: [] },
+    lastBattleResult: null,
+    tutorialDone: false,
     gacha: { pityLeg: 0, pityEpic: 0, totalPulls: 0, history: [] },
     daily: freshDaily(dayKey(now), 1),
     ads: freshAds(dayKey(now)),
@@ -87,7 +101,11 @@ function makeMonster(speciesId: string, rarity: Rarity, now: number, locked = fa
     level: 1,
     exp: 0,
     locked,
-    obtainedAt: now
+    obtainedAt: now,
+    potential: { hp: 0, atk: 0, def: 0 },
+    skills: { sigRank: 1, slot2: null, slot3: null, learned: [], skillOrder: ['sig', 'slot2'] },
+    generation: 0,
+    breedReadyAt: 0
   }
 }
 
@@ -95,37 +113,95 @@ function freshDaily(key: string, streak: number): SaveData['daily'] {
   return {
     dayKey: key,
     loginStreak: streak,
-    quests: { win3: 0, mine2: 0, train1: 0 },
-    claimed: { win3: false, mine2: false, train1: false, all: false }
+    quests: { win3: 0, mine2: 0, train1: 0, levelup1: 0, synergy2: 0, pull1: 0, breed1: 0 },
+    claimed: [],
+    claimedAll: false
   }
 }
 
 function freshAds(key: string): SaveData['ads'] {
   return {
     dayKey: key,
-    counts: { double_reward: 0, gem_bonus: 0, free_pull: 0, mine_boost: 0, build_speed: 0, training_speed: 0 },
+    counts: { double_reward: 0, gem_bonus: 0, free_pull: 0, mine_boost: 0, build_speed: 0, training_speed: 0, breeding_speed: 0 },
     rewardedToday: 0,
     lastRewardedAt: 0,
     lastInterstitialAt: 0,
-    interstitialToday: 0,
-    interstitialHourKey: '',
-    interstitialHourCount: 0
+    interstitialToday: 0
   }
+}
+
+export function migrateSaveData(save: SaveData, _now: number): SaveData {
+  if (!save.meta) save.meta = { migratedFrom: null, migratedAt: 0 }
+  if (!save.tutorial) save.tutorial = { mineGranted: true, freeTrainUsed: true, pullClaimed: true, guideStep: 6 }
+  if (save.tutorial.guideStep == null) {
+    const progressed = Object.keys(save.campaign?.cleared ?? {}).length > 0 || save.tutorial.pullClaimed || (save.monsters?.length ?? 0) > 3
+    save.tutorial.guideStep = progressed ? 6 : 0
+  }
+  if (save.version >= 2 && save.buildings.breeding && save.activeTypes) return save
+  save.version = 2
+  save.activeTypes = save.activeTypes ?? ['fire', 'water', 'plant', 'earth']
+  save.campaign = save.campaign ?? { cleared: {}, chestsClaimed: [] }
+  save.campaign.chestsClaimed = save.campaign.chestsClaimed ?? []
+  save.lastBattleResult = save.lastBattleResult ?? null
+  save.tutorialDone = save.tutorial.guideStep >= 6 || Boolean(save.campaign.cleared['1-5'])
+  if (!save.buildings.breeding) save.buildings.breeding = { level: 0, slots: [], upgradeEndsAt: null, upgradePaid: null }
+  for (const monster of save.monsters ?? []) {
+    monster.potential = monster.potential ?? { hp: 0, atk: 0, def: 0 }
+    monster.skills = monster.skills ?? { sigRank: 1, slot2: null, slot3: null, learned: [], skillOrder: ['sig', 'slot2'] }
+    monster.generation = monster.generation ?? 0
+    monster.breedReadyAt = monster.breedReadyAt ?? 0
+  }
+  for (const slot of save.buildings.training?.slots ?? []) {
+    if (!slot.kind) slot.kind = 'exp'
+  }
+  const quests = (save.daily?.quests ?? {}) as Record<string, number>
+  save.daily = {
+    dayKey: save.daily?.dayKey ?? dayKey(_now),
+    loginStreak: save.daily?.loginStreak ?? 1,
+    quests: {
+      win3: quests.win3 ?? 0,
+      mine2: quests.mine2 ?? 0,
+      train1: quests.train1 ?? 0,
+      levelup1: quests.levelup1 ?? 0,
+      synergy2: quests.synergy2 ?? 0,
+      pull1: quests.pull1 ?? 0,
+      breed1: quests.breed1 ?? 0
+    },
+    claimed: Array.isArray(save.daily?.claimed) ? save.daily.claimed : [],
+    claimedAll: Boolean(save.daily?.claimedAll)
+  }
+  const counts = save.ads?.counts ?? {}
+  save.ads = {
+    dayKey: save.ads?.dayKey ?? save.daily.dayKey,
+    counts: { ...freshAds(save.daily.dayKey).counts, ...counts },
+    rewardedToday: save.ads?.rewardedToday ?? 0,
+    lastRewardedAt: save.ads?.lastRewardedAt ?? 0,
+    lastInterstitialAt: save.ads?.lastInterstitialAt ?? 0,
+    interstitialToday: save.ads?.interstitialToday ?? 0
+  }
+  grantRetroChests(save)
+  for (const stageId of Object.keys(save.campaign.cleared)) unlockTypeFor(save, stageId)
+  return save
+}
+
+export function loadGame(now = Date.now()): SaveData {
+  const storage = {
+    getItem: (key: string) => { try { return localStorage.getItem(key) } catch { return null } },
+    setItem: (key: string, value: string) => { localStorage.setItem(key, value) },
+    removeItem: (key: string) => { localStorage.removeItem(key) }
+  }
+  const save = loadOrMigrateSave(storage, now, { createSave, migrate: migrateSaveData })
+  save.sessionStartedAt = now
+  tick(save, now)
+  return save
 }
 
 export function loadSave(raw: string | null, now = Date.now()): SaveData {
   if (!raw) return createSave(now)
   try {
     const parsed = JSON.parse(raw) as SaveData
-    if (!parsed || parsed.version !== 1 || !parsed.currencies || !parsed.buildings) return createSave(now)
-    parsed.sessionStartedAt = now
-    if (!parsed.tutorial) parsed.tutorial = { mineGranted: true, freeTrainUsed: true, pullClaimed: true, guideStep: 6 }
-    if (parsed.tutorial.guideStep == null) {
-      const progressed = Object.keys(parsed.campaign?.cleared ?? {}).length > 0 || parsed.tutorial.pullClaimed || (parsed.monsters?.length ?? 0) > 3
-      parsed.tutorial.guideStep = progressed ? 6 : 0
-    }
-    tick(parsed, now)
-    return parsed
+    if (!parsed || typeof parsed.version !== 'number' || !parsed.currencies || !parsed.buildings) return createSave(now)
+    return migrateSaveData(parsed, now)
   } catch {
     return createSave(now)
   }
@@ -228,20 +304,23 @@ export function tick(save: SaveData, now: number): string[] {
   messages.push(...resolveUpgrade(save, 'townhall', now))
   messages.push(...resolveMine(save, now))
   messages.push(...resolveUpgrade(save, 'training', now))
+  messages.push(...resolveUpgrade(save, 'breeding', now))
   save.lastSeen = now
   return messages
 }
 
 function rolloverDay(save: SaveData, now: number): string[] {
+  if (now < save.lastSeen) return []
   const key = dayKey(now)
   if (save.daily.dayKey === key && save.ads.dayKey === key) return []
+  const credited = autoClaimQuests(save)
   const continuing = save.daily.dayKey === previousDayKey(key)
   const streak = continuing ? (save.daily.loginStreak >= 7 ? 1 : save.daily.loginStreak + 1) : 1
   save.daily = freshDaily(key, streak)
   save.ads = freshAds(key)
   save.currencies.gems += rewards.login.gems
   save.currencies.gold += rewards.login.gold
-  const messages = [`Täglicher Login: +${rewards.login.gems} Juwelen, +${rewards.login.gold} Gold (Serie Tag ${streak}).`]
+  const messages = [...credited, `Täglicher Login: +${rewards.login.gems} Juwelen, +${rewards.login.gold} Gold (Serie Tag ${streak}).`]
   if (streak === rewards.login.streakTicketDay) {
     save.currencies.tickets += 1
     messages.push('Login-Serie Tag 7: +1 Beschwörungsticket. Die Serie beginnt morgen neu.')
@@ -274,7 +353,7 @@ function produceMine(save: SaveData, until: number): void {
   mine.lastTick = until
 }
 
-function resolveUpgrade(save: SaveData, id: 'townhall' | 'training', now: number): string[] {
+function resolveUpgrade(save: SaveData, id: BuildingId, now: number): string[] {
   const building = save.buildings[id]
   if (building.upgradeEndsAt == null || now < building.upgradeEndsAt) return []
   return finishUpgrade(save, id)
@@ -296,7 +375,7 @@ function finishUpgrade(save: SaveData, id: BuildingId): string[] {
     }
     const unlocks = buildings.townhall.levels[level - 1]?.unlocks ?? []
     if (unlocks.length) messages.push(`Frei: ${unlocks.map(unlockLabel).join(', ')}.`)
-    if (level >= 5) messages.push('Zuchtstation: Bald verfügbar.')
+    if (level >= 5) messages.push('Die Zuchtstation kann gebaut werden.')
   }
   return messages
 }
@@ -311,7 +390,9 @@ export function unlockLabel(id: string): string {
     synergies: 'Typ-Synergien',
     speed_4x: 'Kampf 4×',
     daily_quests: 'Tagesaufgaben',
+    class_synergies: 'Klassen-Synergien',
     team_slots_5: '5. Team-Platz',
+    breeding: 'Zuchtstation',
     ascension: 'Aufwertung',
     skip_uncleared: 'Überspringen neuer Stages',
     release_monster: 'Monster freilassen',
@@ -344,12 +425,15 @@ export function mineFill(save: SaveData): number {
   return def.capacity <= 0 ? 0 : save.buildings.goldmine.stored / def.capacity
 }
 
-function requirementMet(save: SaveData, req: { stageCleared?: string; townhall?: number }): { ok: boolean; reason: string } {
+function requirementMet(save: SaveData, req: { stageCleared?: string; townhall?: number; breeding?: number }): { ok: boolean; reason: string } {
   if (req.stageCleared && !save.campaign.cleared[req.stageCleared]) {
     return { ok: false, reason: `Gewinne zuerst Stage ${req.stageCleared}` }
   }
   if (req.townhall && save.buildings.townhall.level < req.townhall) {
     return { ok: false, reason: `Rathaus Stufe ${req.townhall}` }
+  }
+  if (req.breeding && save.buildings.breeding.level < req.breeding) {
+    return { ok: false, reason: `Zuchtstation Stufe ${req.breeding}` }
   }
   return { ok: true, reason: '' }
 }
@@ -370,7 +454,7 @@ export function upgradeInfo(save: SaveData, id: BuildingId): {
 }
 
 function anyUpgrade(save: SaveData): boolean {
-  return (['townhall', 'goldmine', 'training'] as BuildingId[]).some((id) => save.buildings[id].upgradeEndsAt != null)
+  return (['townhall', 'goldmine', 'training', 'breeding'] as BuildingId[]).some((id) => save.buildings[id].upgradeEndsAt != null)
 }
 
 export function startUpgrade(save: SaveData, id: BuildingId, now: number): ActionResult {
@@ -421,6 +505,7 @@ export function startTraining(save: SaveData, uid: string, minutes: number, now:
   if (save.currencies.gold < quote.gold) return fail(`Nicht genug Gold (${quote.gold}).`)
   save.currencies.gold -= quote.gold
   const slot: TrainingSlot = {
+    kind: 'exp',
     monsterUid: uid,
     startAt: now,
     endsAt: now + minutes * 60_000,
@@ -433,7 +518,179 @@ export function startTraining(save: SaveData, uid: string, minutes: number, now:
   return ok(undefined, [`Training gestartet: ${quote.exp} EP${quote.free ? ' (gratis)' : ` für ${quote.gold} Gold`}.`])
 }
 
+export interface SkillOffer {
+  id: string
+  name: string
+  kind: 'rank' | 'learn' | 'passive'
+  gold: number
+  essence: number
+  minutes: number
+  blocked: string
+}
+
+function rankCost(rank: number): { gold: number; essence: number; minutes: number } {
+  const cost = skillsCfg.signatureRank.cost
+  return {
+    gold: cost.goldPerRankSq * rank * rank,
+    essence: cost.essencePerRankSq * rank * rank,
+    minutes: cost.minutesPerRank * rank
+  }
+}
+
+function tierCost(tier: 1 | 2 | 3 | 'passive'): { gold: number; essence: number; minutes: number; training: number } {
+  if (tier === 1) return skillsCfg.tierCost['1']
+  if (tier === 2) return skillsCfg.tierCost['2']
+  if (tier === 3) return skillsCfg.tierCost['3']
+  return skillsCfg.tierCost.passive
+}
+
+function skillGate(
+  save: SaveData,
+  monster: MonsterInstance,
+  kind: 'rank' | 'learn' | 'passive',
+  skillId: string
+): { name: string; gold: number; essence: number; minutes: number } | { error: string } {
+  if (kind === 'rank') {
+    if (save.buildings.townhall.level < 3) return { error: 'Rathaus Stufe 3' }
+    if (monster.skills.sigRank >= 5) return { error: 'Die Signatur hat den höchsten Rang.' }
+    const rarityCap = skillsCfg.signatureRank.maxRankByRarity[monster.rarity] ?? 2
+    const trainCap = skillsCfg.signatureRank.maxRankByTraining[save.buildings.training.level] ?? 1
+    if (monster.skills.sigRank >= rarityCap) return { error: 'Diese Seltenheit kann den Rang nicht weiter steigern.' }
+    if (monster.skills.sigRank >= trainCap) return { error: 'Das Trainingsgelände ist dafür noch zu niedrig.' }
+    const cost = rankCost(monster.skills.sigRank)
+    return { name: `Signatur-Rang ${monster.skills.sigRank + 1}`, ...cost }
+  }
+  const sp = species(monster.speciesId)
+  if (kind === 'learn') {
+    const skill = skillsCfg.learnSkills.find((row) => row.id === skillId)
+    if (!skill) return { error: 'Unbekannter Skill.' }
+    if (monster.skills.learned.includes(skill.id)) return { error: 'Dieser Skill ist schon gelernt.' }
+    if (skill.typeReq && skill.typeReq !== sp.type) return { error: 'Dieser Skill passt nicht zum Typ.' }
+    if (save.buildings.townhall.level < skillsCfg.slots.slot2.townhall) return { error: 'Rathaus Stufe 3' }
+    if (monster.level < skillsCfg.slots.slot2.monsterLevel) return { error: `Monster-Stufe ${skillsCfg.slots.slot2.monsterLevel}` }
+    const cost = tierCost(skill.tier as 1 | 2 | 3)
+    if (save.buildings.training.level < cost.training) return { error: `Trainingsgelände Stufe ${cost.training}` }
+    return { name: skill.name, gold: cost.gold, essence: cost.essence, minutes: cost.minutes }
+  }
+  const passive = skillsCfg.passives.find((row) => row.id === skillId)
+  if (!passive) return { error: 'Unbekannte Passive.' }
+  if (monster.skills.learned.includes(passive.id)) return { error: 'Diese Passive ist schon gelernt.' }
+  if (passive.typeReq && passive.typeReq !== sp.type) return { error: 'Diese Passive passt nicht zum Typ.' }
+  if (save.buildings.townhall.level < skillsCfg.slots.slot3.townhall) return { error: 'Rathaus Stufe 5' }
+  if (save.buildings.training.level < skillsCfg.slots.slot3.training) return { error: 'Trainingsgelände Stufe 5' }
+  if (monster.level < skillsCfg.slots.slot3.monsterLevel) return { error: `Monster-Stufe ${skillsCfg.slots.slot3.monsterLevel}` }
+  const cost = tierCost('passive')
+  return { name: passive.name, gold: cost.gold, essence: cost.essence, minutes: cost.minutes }
+}
+
+export function skillOffers(save: SaveData, uid: string): SkillOffer[] {
+  const monster = monsterByUid(save, uid)
+  if (!monster) return []
+  const offers: SkillOffer[] = []
+  if (monster.skills.sigRank < 5) {
+    const gate = skillGate(save, monster, 'rank', 'sig')
+    const cost = rankCost(monster.skills.sigRank)
+    offers.push({
+      id: 'sig',
+      name: `Signatur auf Rang ${monster.skills.sigRank + 1}`,
+      kind: 'rank',
+      gold: cost.gold,
+      essence: cost.essence,
+      minutes: cost.minutes,
+      blocked: 'error' in gate ? gate.error : ''
+    })
+  }
+  const sp = species(monster.speciesId)
+  for (const skill of skillsCfg.learnSkills) {
+    if (skill.typeReq && skill.typeReq !== sp.type) continue
+    if (monster.skills.learned.includes(skill.id)) continue
+    const cost = tierCost(skill.tier as 1 | 2 | 3)
+    if (save.buildings.training.level + 1 < cost.training) continue
+    const gate = skillGate(save, monster, 'learn', skill.id)
+    offers.push({
+      id: skill.id,
+      name: skill.name,
+      kind: 'learn',
+      gold: cost.gold,
+      essence: cost.essence,
+      minutes: cost.minutes,
+      blocked: 'error' in gate ? gate.error : ''
+    })
+  }
+  if (save.buildings.training.level >= 4) {
+    for (const passive of skillsCfg.passives) {
+      if (passive.typeReq && passive.typeReq !== sp.type) continue
+      if (monster.skills.learned.includes(passive.id)) continue
+      const cost = tierCost('passive')
+      const gate = skillGate(save, monster, 'passive', passive.id)
+      offers.push({
+        id: passive.id,
+        name: passive.name,
+        kind: 'passive',
+        gold: cost.gold,
+        essence: cost.essence,
+        minutes: cost.minutes,
+        blocked: 'error' in gate ? gate.error : ''
+      })
+    }
+  }
+  return offers
+}
+
+export function startSkillTraining(save: SaveData, uid: string, kind: 'rank' | 'learn' | 'passive', skillId: string, now: number): ActionResult {
+  tick(save, now)
+  const monster = monsterByUid(save, uid)
+  if (!monster) return fail('Monster nicht gefunden.')
+  if (save.buildings.training.slots.some((slot) => slot.monsterUid === uid)) return fail('Dieses Monster trainiert bereits.')
+  const def = buildings.training.levels[save.buildings.training.level - 1]
+  if (!def || save.buildings.training.slots.length >= def.slots) return fail('Keine freien Trainingsplätze.')
+  const gate = skillGate(save, monster, kind, skillId)
+  if ('error' in gate) return fail(gate.error)
+  if (save.currencies.gold < gate.gold) return fail(`Nicht genug Gold (${gate.gold}).`)
+  if (save.currencies.essence < gate.essence) return fail(`Nicht genug Essenz (${gate.essence}).`)
+  save.currencies.gold -= gate.gold
+  save.currencies.essence -= gate.essence
+  save.buildings.training.slots.push({
+    kind: 'skill',
+    monsterUid: uid,
+    startAt: now,
+    endsAt: now + gate.minutes * 60_000,
+    exp: 0,
+    goldPaid: 0,
+    expPerMin: 0,
+    skillJob: { type: kind, skillId: kind === 'rank' ? 'sig' : skillId, goldPaid: gate.gold, essencePaid: gate.essence }
+  })
+  return ok(undefined, [`${gate.name} gestartet (${gate.minutes} Min.).`])
+}
+
+export function equipSkill(save: SaveData, uid: string, skillId: string): ActionResult {
+  const monster = monsterByUid(save, uid)
+  if (!monster) return fail('Monster nicht gefunden.')
+  if (!monster.skills.learned.includes(skillId)) return fail('Dieser Skill ist noch nicht gelernt.')
+  const learn = skillsCfg.learnSkills.find((row) => row.id === skillId)
+  if (learn) {
+    if (save.buildings.townhall.level < skillsCfg.slots.slot2.townhall || monster.level < skillsCfg.slots.slot2.monsterLevel) return fail('Slot 2 ist noch gesperrt.')
+    monster.skills.slot2 = skillId
+    return ok(undefined, [`${learn.name} ausgerüstet.`])
+  }
+  const passive = skillsCfg.passives.find((row) => row.id === skillId)
+  if (!passive) return fail('Unbekannter Skill.')
+  if (save.buildings.townhall.level < skillsCfg.slots.slot3.townhall || save.buildings.training.level < skillsCfg.slots.slot3.training || monster.level < skillsCfg.slots.slot3.monsterLevel) {
+    return fail('Slot 3 ist noch gesperrt.')
+  }
+  monster.skills.slot3 = skillId
+  return ok(undefined, [`${passive.name} ausgerüstet.`])
+}
+
+export function swapSkillOrder(save: SaveData, uid: string): ActionResult {
+  const monster = monsterByUid(save, uid)
+  if (!monster) return fail('Monster nicht gefunden.')
+  monster.skills.skillOrder = monster.skills.skillOrder[0] === 'sig' ? ['slot2', 'sig'] : ['sig', 'slot2']
+  return ok(undefined, [monster.skills.skillOrder[0] === 'sig' ? 'Signatur zuerst.' : 'Lernskill zuerst.'])
+}
+
 export function trainingReadyAt(slot: TrainingSlot, monster: MonsterInstance): number {
+  if (slot.kind === 'skill') return slot.endsAt
   const room = roomToMax(monster)
   if (room >= slot.exp) return slot.endsAt
   if (room <= 0) return slot.startAt
@@ -450,12 +707,33 @@ export function claimTraining(save: SaveData, uid: string, now: number): ActionR
   if (!monster) return fail('Monster fehlt.')
   const ready = trainingReadyAt(slot, monster)
   if (now < ready) return fail('Das Training läuft noch.')
+  if (slot.kind === 'skill' && slot.skillJob) {
+    save.buildings.training.slots.splice(index, 1)
+    const job = slot.skillJob
+    const messages = [...noteQuest(save, 'train1')]
+    if (job.type === 'rank') {
+      monster.skills.sigRank = Math.min(5, monster.skills.sigRank + 1) as 1 | 2 | 3 | 4 | 5
+      messages.unshift(`${species(monster.speciesId).name}: Signatur-Rang ${monster.skills.sigRank}.`)
+    } else if (job.type === 'passive') {
+      if (!monster.skills.learned.includes(job.skillId)) monster.skills.learned.push(job.skillId)
+      if (!monster.skills.slot3) monster.skills.slot3 = job.skillId
+      messages.unshift(`${species(monster.speciesId).name} lernt eine Passive.`)
+    } else {
+      if (!monster.skills.learned.includes(job.skillId)) monster.skills.learned.push(job.skillId)
+      if (!monster.skills.slot2) monster.skills.slot2 = job.skillId
+      messages.unshift(`${species(monster.speciesId).name} lernt einen Skill.`)
+    }
+    return ok(undefined, messages)
+  }
   const settled = settleTraining(slot, monster, ready)
   const granted = grantExp(monster, settled.expGain)
   save.currencies.gold += settled.goldRefund
   save.buildings.training.slots.splice(index, 1)
   const messages = [`${species(monster.speciesId).name} erhält ${granted.gained} EP.`, ...noteQuest(save, 'train1')]
-  if (granted.levels) messages.push(`Level ${monster.level} erreicht.`)
+  if (granted.levels) {
+    messages.push(`Level ${monster.level} erreicht.`)
+    messages.push(...noteQuest(save, 'levelup1'))
+  }
   if (settled.goldRefund) messages.push(`+${settled.goldRefund} Gold zurück (nicht gebrauchte EP).`)
   return ok(undefined, messages)
 }
@@ -467,6 +745,12 @@ export function cancelTraining(save: SaveData, uid: string, now: number): Action
   const slot = save.buildings.training.slots[index]
   const monster = monsterByUid(save, uid)
   if (!monster) return fail('Monster fehlt.')
+  if (slot.kind === 'skill' && slot.skillJob) {
+    save.currencies.gold += slot.skillJob.goldPaid
+    save.currencies.essence += slot.skillJob.essencePaid
+    save.buildings.training.slots.splice(index, 1)
+    return ok(undefined, [`Training abgebrochen. +${slot.skillJob.goldPaid} Gold, +${slot.skillJob.essencePaid} Essenz.`])
+  }
   const settled = settleTraining(slot, monster, Math.min(now, trainingReadyAt(slot, monster)))
   const granted = grantExp(monster, settled.expGain)
   save.currencies.gold += settled.goldRefund
@@ -485,25 +769,109 @@ function settleTraining(slot: TrainingSlot, monster: MonsterInstance, at: number
   return { expGain, goldRefund }
 }
 
-function noteQuest(save: SaveData, key: 'win3' | 'mine2' | 'train1'): string[] {
-  if (!hasUnlock(save.buildings.townhall.level, 'daily_quests')) return []
-  const need = rewards.quests[key].need
-  if (save.daily.claimed[key]) return []
-  save.daily.quests[key] = Math.min(need, save.daily.quests[key] + 1)
-  const messages: string[] = []
-  if (save.daily.quests[key] >= need) {
-    save.daily.claimed[key] = true
-    save.currencies.gems += rewards.quests[key].gems
-    messages.push(`Tagesaufgabe erfüllt: +${rewards.quests[key].gems} Juwelen.`)
+function grantRetroChests(save: SaveData): void {
+  for (const [chapter, chests] of Object.entries(starChests)) {
+    const stars = stages.filter((stage) => stage.chapter === Number(chapter)).reduce((sum, stage) => sum + (save.campaign.cleared[stage.id] ?? 0), 0)
+    for (const chest of chests) {
+      const id = `${chapter}-${chest.stars}`
+      if (stars < chest.stars || save.campaign.chestsClaimed.includes(id)) continue
+      save.campaign.chestsClaimed.push(id)
+      save.currencies.gold += chest.reward.gold ?? 0
+      save.currencies.gems += chest.reward.gems ?? 0
+      save.currencies.essence += chest.reward.essence ?? 0
+      save.currencies.tickets += chest.reward.tickets ?? 0
+    }
   }
-  if (!save.daily.claimed.all && save.daily.claimed.win3 && save.daily.claimed.mine2 && save.daily.claimed.train1) {
-    save.daily.claimed.all = true
-    save.currencies.gems += rewards.quests.all.gems
-    save.currencies.gold += rewards.quests.all.gold
-    save.currencies.essence += rewards.quests.all.essence
-    messages.push(`Alle Tagesaufgaben: +${rewards.quests.all.gems} Juwelen, +${rewards.quests.all.gold} Gold, +${rewards.quests.all.essence} Essenz.`)
+}
+
+function unlockTypeFor(save: SaveData, stageId: string): string[] {
+  const messages: string[] = []
+  const row = typeUnlocks.typeUnlocks.find((entry) => entry.onStageCleared === stageId)
+  if (!row || save.activeTypes.includes(row.type as TypeId)) return messages
+  save.activeTypes.push(row.type as TypeId)
+  messages.push(`${row.type} ist jetzt im Portal.`)
+  if (row.gift) {
+    const gift = makeMonster(row.gift.speciesId, row.gift.rarity as Rarity, Date.now(), false)
+    gift.level = row.gift.level
+    save.monsters.push(gift)
+    messages.push(`Geschenk: ${species(gift.speciesId).name}.`)
   }
   return messages
+}
+
+export function chapterStars(save: SaveData, chapter: number): number {
+  return stages.filter((stage) => stage.chapter === chapter).reduce((sum, stage) => sum + (save.campaign.cleared[stage.id] ?? 0), 0)
+}
+
+export function claimQuest(save: SaveData, id: string): ActionResult {
+  if (!hasUnlock(save.buildings.townhall.level, 'daily_quests')) return fail('Rathaus Stufe 2')
+  const def = dailyCfg.quests.find((quest) => quest.id === id)
+  if (!def) return fail('Unbekannte Aufgabe.')
+  if (save.daily.claimed.includes(id)) return fail('Schon abgeholt.')
+  if ((save.daily.quests[id] ?? 0) < def.target) return fail('Noch nicht erfüllt.')
+  save.daily.claimed.push(id)
+  payReward(save, def.reward)
+  const messages = [`${def.name} abgeholt.`]
+  messages.push(...maybeChest(save))
+  return ok(undefined, messages)
+}
+
+function payReward(save: SaveData, reward: { gold?: number; gems?: number; essence?: number; tickets?: number }): void {
+  save.currencies.gold += reward.gold ?? 0
+  save.currencies.gems += reward.gems ?? 0
+  save.currencies.essence += reward.essence ?? 0
+  save.currencies.tickets += reward.tickets ?? 0
+}
+
+function maybeChest(save: SaveData): string[] {
+  if (save.daily.claimedAll) return []
+  const base = dailyCfg.quests.filter((quest) => quest.countsForChest)
+  if (!base.every((quest) => save.daily.claimed.includes(quest.id))) return []
+  save.daily.claimedAll = true
+  payReward(save, dailyCfg.chest.reward)
+  return ['Abschluss-Truhe: +40 Juwelen, +500 Gold, +30 Essenz.']
+}
+
+function autoClaimQuests(save: SaveData): string[] {
+  if (!dailyCfg.autoClaimOnReset || !hasUnlock(save.buildings.townhall.level, 'daily_quests')) return []
+  const messages: string[] = []
+  for (const quest of dailyCfg.quests) {
+    if (quest.unlock && save.buildings.breeding.level < (quest.unlock.breeding ?? 1)) continue
+    if (save.daily.claimed.includes(quest.id)) continue
+    if ((save.daily.quests[quest.id] ?? 0) < quest.target) continue
+    save.daily.claimed.push(quest.id)
+    payReward(save, quest.reward)
+    messages.push(`${quest.name} automatisch gutgeschrieben.`)
+  }
+  messages.push(...maybeChest(save))
+  return messages
+}
+
+export function teamPower(save: SaveData): number {
+  return teamMembers(save).reduce((sum, monster) => {
+    const extra = (monster.skills.slot2 ? 1 : 0) + (monster.skills.slot3 ? 1 : 0)
+    return sum + combatPower(instanceStats(monster.speciesId, monster.rarity, monster.level, monster.potential), extra)
+  }, 0)
+}
+
+export function stageEnemyPower(stage: StageDef): number {
+  return stageEnemyInputs(stage).reduce((sum, enemy) => {
+    const extra = enemy.learned ? 1 : 0
+    const stats = instanceStats(enemy.speciesId, enemy.rarity, enemy.level, enemy.potential)
+    return sum + combatPower(stats, extra, enemy.boss ? { hpMult: enemy.hpMult, atkMult: enemy.atkMult } : undefined)
+  }, 0)
+}
+
+function noteQuest(save: SaveData, key: string): string[] {
+  if (!hasUnlock(save.buildings.townhall.level, 'daily_quests')) return []
+  const def = dailyCfg.quests.find((quest) => quest.id === key)
+  if (!def) return []
+  if (def.unlock && save.buildings.breeding.level < (def.unlock.breeding ?? 1)) return []
+  const prev = save.daily.quests[key] ?? 0
+  if (prev >= def.target) return []
+  save.daily.quests[key] = prev + 1
+  if (save.daily.quests[key] >= def.target && !save.daily.claimed.includes(key)) return [`Tagesaufgabe fertig: ${def.name}.`]
+  return []
 }
 
 export function setTeam(save: SaveData, slot: SlotId, uid: string | null): ActionResult {
@@ -575,13 +943,15 @@ export function fightStage(save: SaveData, stageId: string, count: 1 | 3, now: n
   let tip = ''
   for (let i = 0; i < count; i++) {
     const seed = nextSeed(save)
-    const enemies = enemyInputs(stage)
+    const enemies = stageEnemyInputs(stage)
     const input = {
       seed,
       allies,
       enemies,
       allySynergy: hasUnlock(save.buildings.townhall.level, 'synergies'),
-      enemySynergy: true
+      allyClassSynergy: hasUnlock(save.buildings.townhall.level, 'class_synergies'),
+      enemySynergy: Boolean(stage.enemySynergies),
+      enemyClassSynergy: Boolean(stage.enemyClassSynergies)
     }
     const log = simulateBattle(input)
     logs.push(log)
@@ -607,15 +977,31 @@ export function commitFightRewards(save: SaveData, report: FightReport): string[
   save.currencies.gems += bundle.gems
   save.currencies.essence += bundle.essence
   save.currencies.tickets += bundle.tickets
+  save.lastBattleResult = report.victory ? 'win' : 'loss'
+  const messages: string[] = []
   if (report.victory) {
     const previous = save.campaign.cleared[report.stageId] ?? 0
+    const first = previous <= 0
     save.campaign.cleared[report.stageId] = Math.max(previous, report.stars) as 1 | 2 | 3
+    if (first) messages.push(...unlockTypeFor(save, report.stageId))
+    const beforeGold = save.currencies.gold
+    grantRetroChests(save)
+    if (save.currencies.gold > beforeGold) messages.push('Sterne-Truhe geöffnet.')
   }
   bundle.levels = grantTeamExp(save, bundle.exp)
-  const messages: string[] = []
+  if (bundle.levels > 0) messages.push(...noteQuest(save, 'levelup1'))
+  const synergy = synergyView(
+    allyInputs(save).map((unit) => ({ type: species(unit.speciesId).type, class: species(unit.speciesId).class })),
+    hasUnlock(save.buildings.townhall.level, 'synergies'),
+    hasUnlock(save.buildings.townhall.level, 'class_synergies')
+  ).active
   for (const log of report.logs) {
-    if (log.result === 'win') messages.push(...noteQuest(save, 'win3'))
+    if (log.result === 'win') {
+      messages.push(...noteQuest(save, 'win3'))
+      if (synergy) messages.push(...noteQuest(save, 'synergy2'))
+    }
   }
+  if (save.campaign.cleared['1-5']) save.tutorialDone = true
   return messages
 }
 
@@ -668,19 +1054,139 @@ function allyInputs(save: SaveData): BattleUnitInput[] {
     if (!open.has(slot) || !save.team[slot]) continue
     const monster = monsterByUid(save, save.team[slot])
     if (!monster) continue
-    list.push({ speciesId: monster.speciesId, rarity: monster.rarity, level: monster.level, slot })
+    list.push({
+      speciesId: monster.speciesId,
+      rarity: monster.rarity,
+      level: monster.level,
+      slot,
+      potential: monster.potential,
+      sigRank: monster.skills.sigRank,
+      learned: monster.skills.slot2,
+      slot3: monster.skills.slot3,
+      skillOrder: monster.skills.skillOrder
+    })
   }
   return list
 }
 
-function enemyInputs(stage: StageDef): BattleUnitInput[] {
-  return stage.enemies.map((enemy) => ({
+export function stageEnemyInputs(stage: StageDef): BattleUnitInput[] {
+  const rows: BattleUnitInput[] = stage.enemies.map((enemy) => ({
     speciesId: enemy.speciesId,
     rarity: (enemy.rarity ?? stage.enemyRarity) as Rarity,
     level: stage.enemyLevel,
     slot: enemy.slot,
+    learned: enemy.learned ?? null,
     boss: Boolean(enemy.boss)
   }))
+  if (stage.boss) {
+    rows.push({
+      speciesId: stage.boss.speciesId,
+      rarity: stage.boss.rarity,
+      level: stage.enemyLevel,
+      slot: stage.boss.slot,
+      learned: null,
+      boss: true,
+      hpMult: stage.boss.hpMult ?? 1.5,
+      atkMult: stage.boss.atkMult ?? 0.85,
+      stunChanceMult: stage.boss.statusResist?.stunChanceMult ?? 0.5,
+      poisonPctPerStack: stage.boss.statusResist?.poisonPctPerStack ?? 0.02,
+      mechanics: stage.boss.mechanics
+    })
+  }
+  return rows
+}
+
+export function breedPreview(save: SaveData, uidA: string, uidB: string): { text: string; blocked: string } {
+  if (save.buildings.breeding.level < 1) return { text: '', blocked: 'Die Zuchtstation ist noch nicht gebaut.' }
+  if (uidA === uidB) return { text: '', blocked: 'Wähle zwei verschiedene Monster.' }
+  const parentA = monsterByUid(save, uidA)
+  const parentB = monsterByUid(save, uidB)
+  if (!parentA || !parentB) return { text: '', blocked: 'Monster nicht gefunden.' }
+  const baseRarity = Math.floor((parentA.rarity + parentB.rarity) / 2)
+  const cost = breedingCfg.costByBaseRarity[baseRarity]
+  const up = parentA.rarity === parentB.rarity ? breedingCfg.rarityUpChance.sameRarity : breedingCfg.rarityUpChance.differentRarity
+  const def = buildings.breeding.levels[save.buildings.breeding.level - 1]
+  const minutes = Math.round(cost.minutes * (def?.durationMult ?? 1))
+  const names = [parentA, parentB]
+    .filter((parent, index, list) => species(parent.speciesId).baseRarity <= Math.min(9, baseRarity + 1) && list.findIndex((other) => other.speciesId === parent.speciesId) === index)
+    .map((parent) => species(parent.speciesId).name)
+  const lo = Math.min(10, Math.floor((parentA.potential.hp + parentB.potential.hp) / 2))
+  const hi = Math.min(10, lo + 2)
+  const text = `Basis ${rarityInfo(baseRarity as Rarity).name} · Aufstieg ${Math.round(up * 100)} % · ${names.join(' / ')} · Potenzial ${lo}–${hi} · ${cost.essence * breedingCfg.goldPerEssence} Gold · ${cost.essence} Essenz · ${minutes} Min.`
+  if (parentA.level < breedingCfg.minParentLevel || parentB.level < breedingCfg.minParentLevel) return { text, blocked: `Beide Eltern brauchen Stufe ${breedingCfg.minParentLevel}.` }
+  if (Date.now() < parentA.breedReadyAt || Date.now() < parentB.breedReadyAt) return { text, blocked: 'Ein Elternteil ist noch nicht ausgeruht.' }
+  return { text, blocked: '' }
+}
+
+export function startBreed(save: SaveData, uidA: string, uidB: string, now: number): ActionResult {
+  tick(save, now)
+  const level = save.buildings.breeding.level
+  if (level < 1) return fail('Die Zuchtstation ist noch nicht gebaut.')
+  const def = buildings.breeding.levels[level - 1]
+  if (!def) return fail('Die Zuchtstation ist noch nicht gebaut.')
+  if (save.buildings.breeding.slots.length >= def.slots) return fail('Kein freier Zuchtplatz.')
+  if (uidA === uidB) return fail('Wähle zwei verschiedene Monster.')
+  const parentA = monsterByUid(save, uidA)
+  const parentB = monsterByUid(save, uidB)
+  if (!parentA || !parentB) return fail('Monster nicht gefunden.')
+  if (parentA.level < breedingCfg.minParentLevel || parentB.level < breedingCfg.minParentLevel) return fail(`Beide Eltern brauchen Stufe ${breedingCfg.minParentLevel}.`)
+  if (now < parentA.breedReadyAt || now < parentB.breedReadyAt) return fail('Ein Elternteil ist noch nicht ausgeruht.')
+  const busy = new Set(save.buildings.breeding.slots.flatMap((slot) => [slot.parentA, slot.parentB]))
+  if (busy.has(uidA) || busy.has(uidB)) return fail('Dieses Monster züchtet schon.')
+  const baseRarity = Math.floor((parentA.rarity + parentB.rarity) / 2)
+  const cost = breedingCfg.costByBaseRarity[baseRarity]
+  const essence = cost.essence
+  const gold = essence * breedingCfg.goldPerEssence
+  if (save.currencies.gold < gold) return fail(`Nicht genug Gold (${gold}).`)
+  if (save.currencies.essence < essence) return fail(`Nicht genug Essenz (${essence}).`)
+  const up = parentA.rarity === parentB.rarity ? breedingCfg.rarityUpChance.sameRarity : breedingCfg.rarityUpChance.differentRarity
+  const rarity = (rng(save) < up ? Math.min(9, baseRarity + 1) : baseRarity) as Rarity
+  const options = [parentA, parentB].filter((parent, index, list) => species(parent.speciesId).baseRarity <= rarity && list.findIndex((other) => other.speciesId === parent.speciesId) === index)
+  const chosen = options.length === 1 || rng(save) < 0.5 ? options[0] : options[1]
+  const potential = { hp: 0, atk: 0, def: 0 }
+  for (const stat of ['hp', 'atk', 'def'] as const) {
+    const roll = rng(save) * 100
+    const bonus = roll < 50 ? 0 : roll < 85 ? 1 : 2
+    potential[stat] = Math.min(10, Math.floor((parentA.potential[stat] + parentB.potential[stat]) / 2) + bonus)
+  }
+  const childType = species(chosen.speciesId).type
+  const inheritedPool = [...parentA.skills.learned, ...parentB.skills.learned].filter((id) => {
+    const skill = skillsCfg.learnSkills.find((row) => row.id === id)
+    return !skill?.typeReq || skill.typeReq === childType
+  })
+  const inheritedSkill = inheritedPool.length && rng(save) < breedingCfg.skillInheritChance ? inheritedPool[Math.floor(rng(save) * inheritedPool.length)] : null
+  save.currencies.gold -= gold
+  save.currencies.essence -= essence
+  const endsAt = now + Math.round(cost.minutes * 60 * def.durationMult) * 1000
+  parentA.breedReadyAt = now + breedingCfg.parentCooldownSec * 1000
+  parentB.breedReadyAt = now + breedingCfg.parentCooldownSec * 1000
+  save.buildings.breeding.slots.push({
+    parentA: uidA,
+    parentB: uidB,
+    startAt: now,
+    endsAt,
+    goldPaid: gold,
+    essencePaid: essence,
+    result: { speciesId: chosen.speciesId, rarity, potential, inheritedSkill, generation: Math.max(parentA.generation, parentB.generation) + 1 }
+  })
+  return ok(undefined, [`Zucht gestartet.`, ...noteQuest(save, 'breed1')])
+}
+
+export function claimBreed(save: SaveData, index: number, now: number): ActionResult {
+  const slot = save.buildings.breeding.slots[index]
+  if (!slot) return fail('Keine Zucht.')
+  if (now < slot.endsAt) return fail('Die Zucht läuft noch.')
+  if (!inventoryRoom(save, 1)) return fail('Das Lager ist voll. Die Zucht wartet.')
+  const child = makeMonster(slot.result.speciesId, slot.result.rarity, now, false)
+  child.potential = slot.result.potential
+  child.generation = slot.result.generation
+  if (slot.result.inheritedSkill) {
+    child.skills.learned = [slot.result.inheritedSkill]
+    child.skills.slot2 = slot.result.inheritedSkill
+  }
+  save.monsters.push(child)
+  save.buildings.breeding.slots.splice(index, 1)
+  return ok(undefined, [`${species(child.speciesId).name} ist geschlüpft.`, ...noteQuest(save, 'breed1')])
 }
 
 export function inventoryRoom(save: SaveData, count: number): boolean {
@@ -715,7 +1221,7 @@ export function pull(save: SaveData, kind: 'single' | 'multi' | 'tutorial', pay:
   const messages: string[] = []
   const raw = kind === 'single'
     ? [singlePull(save)]
-    : rollMulti(save.gacha, () => rng(save), kind === 'tutorial' ? 3 : 2).map((p) => p)
+    : rollMulti(save.gacha, () => rng(save), kind === 'tutorial' ? 3 : 2, save.activeTypes).map((p) => p)
   if (kind === 'tutorial') save.tutorial.pullClaimed = true
   const results: PullResult[] = []
   const owned = new Set(save.monsters.map((monster) => monster.speciesId))
@@ -734,12 +1240,13 @@ export function pull(save: SaveData, kind: 'single' | 'multi' | 'tutorial', pay:
     messages.push(...noteMilestone(save, entry.rarity))
   }
   save.gacha.history = save.gacha.history.slice(0, 100)
+  messages.push(...noteQuest(save, 'pull1'))
   return ok(results, messages)
 }
 
 function singlePull(save: SaveData): { speciesId: string; rarity: Rarity; upgraded: boolean } {
   const rarity = rollRarity(save.gacha, () => rng(save))
-  const picked = pickSpecies(rarity, () => rng(save))
+  const picked = pickSpecies(rarity, () => rng(save), save.activeTypes)
   return {
     speciesId: picked.speciesId,
     rarity,
@@ -774,6 +1281,7 @@ export function releaseMonster(save: SaveData, uid: string): ActionResult<number
   const monster = monsterByUid(save, uid)
   if (!monster) return fail('Monster nicht gefunden.')
   if (monster.locked) return fail('Geschützte Monster kann man nicht freilassen.')
+  if (save.buildings.breeding.slots.some((slot) => slot.parentA === uid || slot.parentB === uid)) return fail('Dieses Monster züchtet gerade.')
   if (save.monsters.length <= 1) return fail('Dein letztes Monster bleibt bei dir.')
   const inTeam = ALL_SLOTS.filter((slot) => save.team[slot] === uid)
   const teamCount = ALL_SLOTS.filter((slot) => save.team[slot]).length
@@ -804,7 +1312,7 @@ export function ascend(save: SaveData, uid: string): ActionResult {
   return ok(undefined, messages)
 }
 
-export function applyRewarded(save: SaveData, placement: AdPlacement, now: number, context?: { gold?: number; expEach?: number; buildingId?: BuildingId; trainUid?: string }): Promise<ActionResult> {
+export function applyRewarded(save: SaveData, placement: AdPlacement, now: number, context?: { gold?: number; expEach?: number; buildingId?: BuildingId; trainUid?: string; breedIndex?: number }): Promise<ActionResult> {
   return tryRewarded(save, placement, now).then((result) => {
     if (result !== 'completed') {
       return result === 'unavailable' ? fail('Gerade keine Werbung verfügbar') : fail('Werbung abgebrochen.')
@@ -838,6 +1346,13 @@ export function applyRewarded(save: SaveData, placement: AdPlacement, now: numbe
         slot.endsAt = now + Math.floor(remain * 0.5)
         messages.push('Restliche Trainingszeit halbiert.')
       }
+    } else if (placement === 'breeding_speed' && context?.breedIndex != null) {
+      const slot = save.buildings.breeding.slots[context.breedIndex]
+      if (slot) {
+        const remain = Math.max(0, slot.endsAt - now)
+        slot.endsAt = now + Math.floor(remain * adsCfg.rewarded.placements.breeding_speed.reward.breedingRemainingPct)
+        messages.push('Restliche Zuchtzeit verkürzt.')
+      }
     } else if (placement === 'free_pull') {
       messages.push('Gratis-Ziehung bereit.')
     }
@@ -846,7 +1361,12 @@ export function applyRewarded(save: SaveData, placement: AdPlacement, now: numbe
 }
 
 export async function closeToCity(save: SaveData, now: number, victory: boolean): Promise<void> {
-  await maybeInterstitial(save, 'result_to_city', now, victory)
+  save.lastBattleResult = victory ? 'win' : 'loss'
+  await maybeInterstitial(save, 'battle_end', now)
+}
+
+export async function notifyChapterChange(save: SaveData, now: number): Promise<void> {
+  await maybeInterstitial(save, 'chapter_change', now)
 }
 
 export function setSpeed(save: SaveData, speed: 1 | 2 | 4): void {

@@ -1,4 +1,5 @@
 import Phaser from 'phaser'
+import { onAdVisibility } from './ads'
 import { session } from './session'
 import { BattleScene } from './scenes/Battle'
 import { CampaignScene } from './scenes/Campaign'
@@ -12,6 +13,7 @@ import { TeamScene } from './scenes/Team'
 session.boot()
 
 document.addEventListener('visibilitychange', () => {
+  onAdVisibility(Date.now())
   if (document.hidden) session.persist()
 })
 window.addEventListener('beforeunload', () => session.persist())
