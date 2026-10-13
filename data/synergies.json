@@ -1,0 +1,178 @@
+{
+  "capPerStat": 0.35,
+  "critChanceCap": 0.5,
+  "enemySynergiesFromStage": "1-6",
+  "enemyClassSynergiesFromStage": "1-9",
+  "unlock": {
+    "typeSynergies": {
+      "townhall": 2
+    },
+    "classSynergies": {
+      "townhall": 3
+    }
+  },
+  "typeTiers": {
+    "2": {
+      "atk": 0.05
+    },
+    "3": {
+      "atk": 0.1,
+      "hp": 0.05
+    },
+    "4": {
+      "atk": 0.15,
+      "hp": 0.1
+    },
+    "5": {
+      "atk": 0.2,
+      "hp": 0.15
+    }
+  },
+  "typeCombos": [
+    {
+      "id": "elemental_circle",
+      "name": "Elementarkreis",
+      "requires": [
+        "fire",
+        "water",
+        "plant",
+        "earth"
+      ],
+      "bonus": {
+        "spd": 0.08
+      },
+      "appliesTo": "all"
+    },
+    {
+      "id": "bulwark",
+      "name": "Bollwerk",
+      "requires": [
+        "earth",
+        "stone",
+        "crystal"
+      ],
+      "bonus": {
+        "def": 0.1
+      },
+      "appliesTo": "all"
+    },
+    {
+      "id": "swamp_fever",
+      "name": "Sumpffieber",
+      "requires": [
+        "poison",
+        "insect",
+        "plant"
+      ],
+      "bonus": {
+        "atk": 0.1
+      },
+      "appliesTo": "matching"
+    },
+    {
+      "id": "diversity",
+      "name": "Vielfalt",
+      "minDistinctTypes": 5,
+      "bonus": {
+        "hp": 0.05
+      },
+      "appliesTo": "all"
+    }
+  ],
+  "classTiers": {
+    "guardian": [
+      {
+        "count": 2,
+        "bonus": {
+          "def": 0.15
+        },
+        "appliesTo": "class"
+      }
+    ],
+    "fighter": [
+      {
+        "count": 2,
+        "bonus": {
+          "atk": 0.1
+        },
+        "appliesTo": "class"
+      },
+      {
+        "count": 3,
+        "bonus": {
+          "atk": 0.15,
+          "spd": 0.05
+        },
+        "appliesTo": "class"
+      }
+    ],
+    "shooter": [
+      {
+        "count": 2,
+        "bonus": {
+          "critChance": 0.1
+        },
+        "appliesTo": "class"
+      },
+      {
+        "count": 3,
+        "bonus": {
+          "critChance": 0.15,
+          "critDamage": 0.2
+        },
+        "appliesTo": "class"
+      }
+    ],
+    "support": [
+      {
+        "count": 1,
+        "bonus": {
+          "healShield": 0.1
+        },
+        "appliesTo": "all"
+      },
+      {
+        "count": 2,
+        "bonus": {
+          "healShield": 0.2
+        },
+        "appliesTo": "all"
+      }
+    ],
+    "disruptor": [
+      {
+        "count": 2,
+        "bonus": {
+          "statusChance": 0.1
+        },
+        "appliesTo": "class"
+      },
+      {
+        "count": 3,
+        "bonus": {
+          "statusChance": 0.15
+        },
+        "appliesTo": "class"
+      }
+    ]
+  },
+  "balanced": {
+    "name": "Ausgewogen",
+    "requires": {
+      "guardian": 1,
+      "support": 1,
+      "fighterOrShooter": 2
+    },
+    "bonus": {
+      "hp": 0.05
+    },
+    "appliesTo": "all"
+  },
+  "classNames": {
+    "guardian": "Wächter",
+    "fighter": "Kämpfer",
+    "shooter": "Schütze",
+    "support": "Stütze",
+    "disruptor": "Störer"
+  }
+}

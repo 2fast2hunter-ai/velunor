@@ -1,0 +1,523 @@
+{
+  "signatureRank": {
+    "atkMultPerRank": 0.1,
+    "shieldPerRank": 0.1,
+    "statusChancePerRank": 0.05,
+    "cooldownReductionAtRank": 5,
+    "minCooldown": 2,
+    "maxRankByRarity": [
+      2,
+      2,
+      3,
+      3,
+      4,
+      4,
+      5,
+      5,
+      5,
+      5
+    ],
+    "maxRankByTraining": [
+      1,
+      1,
+      2,
+      3,
+      4,
+      5
+    ],
+    "cost": {
+      "goldPerRankSq": 300,
+      "essencePerRankSq": 10,
+      "minutesPerRank": 30
+    }
+  },
+  "slots": {
+    "slot2": {
+      "townhall": 3,
+      "monsterLevel": 10
+    },
+    "slot3": {
+      "townhall": 5,
+      "training": 5,
+      "monsterLevel": 20
+    }
+  },
+  "tierCost": {
+    "1": {
+      "gold": 400,
+      "essence": 20,
+      "minutes": 30,
+      "training": 2
+    },
+    "2": {
+      "gold": 1500,
+      "essence": 60,
+      "minutes": 60,
+      "training": 3
+    },
+    "3": {
+      "gold": 4000,
+      "essence": 150,
+      "minutes": 120,
+      "training": 4
+    },
+    "passive": {
+      "gold": 6000,
+      "essence": 300,
+      "minutes": 240,
+      "training": 5
+    }
+  },
+  "learnSkills": [
+    {
+      "id": "L01",
+      "name": "Kräftiger Hieb",
+      "tier": 1,
+      "typeReq": null,
+      "cooldown": 3,
+      "initialCooldown": 1,
+      "target": "default",
+      "effects": [
+        {
+          "kind": "damage",
+          "atkMult": 1.3
+        }
+      ]
+    },
+    {
+      "id": "L02",
+      "name": "Abhärten",
+      "tier": 1,
+      "typeReq": null,
+      "cooldown": 4,
+      "initialCooldown": 1,
+      "target": "self",
+      "effects": [
+        {
+          "kind": "status",
+          "status": "def_up",
+          "chance": 1,
+          "duration": 2,
+          "value": 0.3
+        },
+        {
+          "kind": "shield",
+          "maxHpPctOfCaster": 0.1,
+          "duration": 2
+        }
+      ]
+    },
+    {
+      "id": "L03",
+      "name": "Erste Hilfe",
+      "tier": 1,
+      "typeReq": null,
+      "cooldown": 4,
+      "initialCooldown": 2,
+      "target": "ally_lowest_hp_pct",
+      "effects": [
+        {
+          "kind": "heal",
+          "atkMult": 1.0
+        }
+      ]
+    },
+    {
+      "id": "L04",
+      "name": "Funkenregen",
+      "tier": 1,
+      "typeReq": "fire",
+      "cooldown": 4,
+      "initialCooldown": 2,
+      "target": "enemy_all",
+      "effects": [
+        {
+          "kind": "damage",
+          "atkMult": 0.6
+        },
+        {
+          "kind": "status",
+          "status": "burn",
+          "chance": 0.2,
+          "duration": 2,
+          "value": 0.3
+        }
+      ]
+    },
+    {
+      "id": "L05",
+      "name": "Quellwasser",
+      "tier": 1,
+      "typeReq": "water",
+      "cooldown": 4,
+      "initialCooldown": 2,
+      "target": "ally_lowest_hp_pct",
+      "effects": [
+        {
+          "kind": "heal",
+          "atkMult": 1.2
+        },
+        {
+          "kind": "cleanse"
+        }
+      ]
+    },
+    {
+      "id": "L06",
+      "name": "Rankenfessel",
+      "tier": 1,
+      "typeReq": "plant",
+      "cooldown": 4,
+      "initialCooldown": 2,
+      "target": "default",
+      "effects": [
+        {
+          "kind": "damage",
+          "atkMult": 1.0
+        },
+        {
+          "kind": "status",
+          "status": "spd_down",
+          "chance": 1,
+          "duration": 2,
+          "value": 0.2
+        }
+      ]
+    },
+    {
+      "id": "L07",
+      "name": "Schlammwurf",
+      "tier": 1,
+      "typeReq": "earth",
+      "cooldown": 3,
+      "initialCooldown": 2,
+      "target": "default",
+      "effects": [
+        {
+          "kind": "damage",
+          "atkMult": 1.1
+        },
+        {
+          "kind": "status",
+          "status": "atk_down",
+          "chance": 0.6,
+          "duration": 2,
+          "value": 0.15
+        }
+      ]
+    },
+    {
+      "id": "L08",
+      "name": "Kampfschrei",
+      "tier": 2,
+      "typeReq": null,
+      "cooldown": 5,
+      "initialCooldown": 2,
+      "target": "ally_all",
+      "effects": [
+        {
+          "kind": "status",
+          "status": "atk_up",
+          "chance": 1,
+          "duration": 2,
+          "value": 0.15
+        }
+      ]
+    },
+    {
+      "id": "L09",
+      "name": "Präzisionsschuss",
+      "tier": 2,
+      "typeReq": null,
+      "cooldown": 4,
+      "initialCooldown": 2,
+      "target": "enemy_back_lowest_hp",
+      "effects": [
+        {
+          "kind": "damage",
+          "atkMult": 1.6
+        }
+      ]
+    },
+    {
+      "id": "L10",
+      "name": "Giftnebel",
+      "tier": 2,
+      "typeReq": "poison",
+      "cooldown": 4,
+      "initialCooldown": 2,
+      "target": "enemy_all",
+      "effects": [
+        {
+          "kind": "damage",
+          "atkMult": 0.5
+        },
+        {
+          "kind": "status",
+          "status": "poison",
+          "chance": 0.6,
+          "duration": 3,
+          "stacks": 1
+        }
+      ]
+    },
+    {
+      "id": "L11",
+      "name": "Felssturz",
+      "tier": 2,
+      "typeReq": "stone",
+      "cooldown": 4,
+      "initialCooldown": 3,
+      "target": "default",
+      "effects": [
+        {
+          "kind": "damage",
+          "atkMult": 1.4
+        },
+        {
+          "kind": "status",
+          "status": "stun",
+          "chance": 0.25,
+          "duration": 1
+        }
+      ]
+    },
+    {
+      "id": "L12",
+      "name": "Schwirrflug",
+      "tier": 2,
+      "typeReq": "insect",
+      "cooldown": 3,
+      "initialCooldown": 1,
+      "target": "default",
+      "effects": [
+        {
+          "kind": "damage",
+          "atkMult": 1.0
+        },
+        {
+          "kind": "status",
+          "status": "spd_up",
+          "chance": 1,
+          "duration": 2,
+          "value": 0.3,
+          "target": "self"
+        }
+      ]
+    },
+    {
+      "id": "L13",
+      "name": "Facettenschild",
+      "tier": 2,
+      "typeReq": "crystal",
+      "cooldown": 4,
+      "initialCooldown": 2,
+      "target": "ally_lowest_hp_pct",
+      "effects": [
+        {
+          "kind": "shield",
+          "maxHpPctOfCaster": 0.15,
+          "duration": 2
+        },
+        {
+          "kind": "status",
+          "status": "def_up",
+          "chance": 1,
+          "duration": 2,
+          "value": 0.2
+        }
+      ]
+    },
+    {
+      "id": "L14",
+      "name": "Vernichtungsschlag",
+      "tier": 3,
+      "typeReq": null,
+      "cooldown": 5,
+      "initialCooldown": 3,
+      "target": "default",
+      "effects": [
+        {
+          "kind": "damage",
+          "atkMult": 2.2
+        }
+      ]
+    },
+    {
+      "id": "L15",
+      "name": "Massenheilung",
+      "tier": 3,
+      "typeReq": null,
+      "cooldown": 5,
+      "initialCooldown": 3,
+      "target": "ally_all",
+      "effects": [
+        {
+          "kind": "heal",
+          "atkMult": 0.7
+        }
+      ]
+    },
+    {
+      "id": "L16",
+      "name": "Läuterung",
+      "tier": 3,
+      "typeReq": null,
+      "cooldown": 4,
+      "initialCooldown": 2,
+      "target": "ally_all",
+      "effects": [
+        {
+          "kind": "cleanse"
+        },
+        {
+          "kind": "status",
+          "status": "def_up",
+          "chance": 1,
+          "duration": 2,
+          "value": 0.1
+        }
+      ]
+    }
+  ],
+  "passives": [
+    {
+      "id": "P01",
+      "name": "Zähigkeit",
+      "typeReq": null,
+      "trigger": {
+        "kind": "lethal_hit"
+      },
+      "effects": [
+        {
+          "kind": "survive",
+          "hp": 1
+        }
+      ],
+      "usesPerBattle": 1
+    },
+    {
+      "id": "P02",
+      "name": "Erstschlag",
+      "typeReq": null,
+      "trigger": {
+        "kind": "battle_start"
+      },
+      "effects": [
+        {
+          "kind": "status",
+          "status": "spd_up",
+          "chance": 1,
+          "duration": 2,
+          "value": 0.2,
+          "target": "self"
+        }
+      ],
+      "usesPerBattle": 1
+    },
+    {
+      "id": "P03",
+      "name": "Lebensraub",
+      "typeReq": null,
+      "trigger": {
+        "kind": "on_basic_attack"
+      },
+      "effects": [
+        {
+          "kind": "lifesteal",
+          "pctOfDamage": 0.15
+        }
+      ],
+      "usesPerBattle": 0
+    },
+    {
+      "id": "P04",
+      "name": "Notschild",
+      "typeReq": null,
+      "trigger": {
+        "kind": "hp_below",
+        "pct": 0.4
+      },
+      "effects": [
+        {
+          "kind": "shield",
+          "maxHpPctOfCaster": 0.2,
+          "duration": 2,
+          "target": "self"
+        }
+      ],
+      "usesPerBattle": 1
+    },
+    {
+      "id": "P05",
+      "name": "Rache",
+      "typeReq": null,
+      "trigger": {
+        "kind": "on_ally_ko"
+      },
+      "effects": [
+        {
+          "kind": "status",
+          "status": "atk_up",
+          "chance": 1,
+          "duration": 2,
+          "value": 0.2,
+          "target": "self"
+        }
+      ],
+      "usesPerBattle": 2
+    },
+    {
+      "id": "P06",
+      "name": "Typmeister",
+      "typeReq": null,
+      "trigger": {
+        "kind": "passive_mod"
+      },
+      "effects": [
+        {
+          "kind": "mod",
+          "stat": "strongTypeDamage",
+          "value": 0.1
+        }
+      ],
+      "usesPerBattle": 0
+    },
+    {
+      "id": "P07",
+      "name": "Giftblut",
+      "typeReq": "poison",
+      "trigger": {
+        "kind": "on_hit_taken"
+      },
+      "effects": [
+        {
+          "kind": "status",
+          "status": "poison",
+          "chance": 0.3,
+          "duration": 3,
+          "stacks": 1,
+          "target": "attacker"
+        }
+      ],
+      "usesPerBattle": 0
+    },
+    {
+      "id": "P08",
+      "name": "Kristallhaut",
+      "typeReq": "crystal",
+      "trigger": {
+        "kind": "on_hit_taken",
+        "firstOnly": true
+      },
+      "effects": [
+        {
+          "kind": "mod",
+          "stat": "damageTaken",
+          "value": -0.5
+        }
+      ],
+      "usesPerBattle": 1
+    }
+  ]
+}

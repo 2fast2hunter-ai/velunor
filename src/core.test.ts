@@ -47,7 +47,7 @@ describe('stats', () => {
   })
 
   it('stops experience at the rarity cap', () => {
-    const monster = { uid: 'a', speciesId: 'm01', rarity: 0 as const, level: 20, exp: 0, locked: false, obtainedAt: 0 }
+    const monster = { uid: 'a', speciesId: 'm01', rarity: 0 as const, level: 20, exp: 0, locked: false, obtainedAt: 0, potential: { hp: 0, atk: 0, def: 0 }, skills: { sigRank: 1 as const, slot2: null, slot3: null, learned: [], skillOrder: ['sig' as const, 'slot2' as const] }, generation: 0, breedReadyAt: 0 }
     const granted = grantExp(monster, 100)
     expect(granted.overflow).toBe(100)
     expect(monster.level).toBe(20)

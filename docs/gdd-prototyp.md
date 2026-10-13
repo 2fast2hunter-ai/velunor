@@ -1,6 +1,6 @@
-# Game-Design-Dokument – Prototyp „Monster-Stadt" (Arbeitstitel)
+# Velunor – Game-Design-Dokument Prototyp
 
-**Version:** 0.1 (Prototyp) · **Stand:** 13.10.2026 · **Grundlage:** `konzept.md` (Fabian-Noel)
+**Version:** 0.1.1 (Prototyp) · **Stand:** 13.10.2026 (Umbenennung zu **Velunor**, Entscheidungen vom 13.10.2026 eingearbeitet) · **Grundlage:** `konzept.md` (Fabian-Noel)
 **Zielgruppe:** Entwicklung (Porygon) – TypeScript + Phaser, HTML5, Speicherstand lokal
 **Prototyp-Dauer laut Konzept:** 2–4 Wochen
 
@@ -22,7 +22,7 @@
 | Kampf | PvE-Kampagne: 2 Kapitel × 10 Stages, Auto-Kampf | Events, Dungeons, asynchrones PvP |
 | Gacha | 1 Standard-Portal, Pity, transparente Raten | Event-/Typ-Portale |
 | Zucht | **nicht im Prototyp**, nur Platzhalter ab Rathaus 5 **[ANNAHME]** | volles Zuchtsystem |
-| Monetarisierung | Rewarded Ads, Interstitials an natürlichen Pausen, Banner (Plattform-SDK-Adapter) | – |
+| Monetarisierung | Rewarded Ads, Banner (Plattform-SDK-Adapter); Interstitials standardmäßig **aus**, nur auf Plattformen, die sie verlangen (Poki, CrazyGames, GameDistribution), an natürlichen Pausen, nie in den ersten 10 Min. einer Sitzung (Kap. 9.3) | – |
 | Speicher | `localStorage`, JSON, versioniert | optional Export/Import als Datei |
 
 ---
@@ -87,7 +87,7 @@ Persistentes UI (Währungsleiste) als eigene `HUDScene`, parallel aktiv. **Banne
 | 1 | – (Start) | – | – | Kampagne Kap. 1, Team-Plätze **3** (F1, F2, H1), Goldmine & Training bis Stufe 1, Portal (ab Stage 1-2), Kampf 1×/2× |
 | 2 | 500 | 2 Min. | Stage **1-5** gewonnen | Team-Plätze **4** (+H2), **Typ-Synergien** (Kap. 7.9), Gebäude bis Stufe 2–3, Kampfgeschwindigkeit **4×**, Tagesaufgaben |
 | 3 | 2.000 | 10 Min. | Stage **1-8** gewonnen | Team-Plätze **5** (+H3), **Aufwertung** (Seltenheit erhöhen), **Überspringen** auch für noch nicht gewonnene Stages, Monster freilassen → Essenz |
-| 4 | 6.000 | 30 Min. | Stage **1-10** (Boss) gewonnen | Kampagne Kap. 2, Gebäude bis Stufe 4, **Mehrfach-Kampf** (Stage 3× hintereinander automatisch) |
+| 4 | 6.000 | **15 Min.** [ENTSCHIEDEN] | Stage **1-10** (Boss) gewonnen | Kampagne Kap. 2, Gebäude bis Stufe 4, **Mehrfach-Kampf** (Stage 3× hintereinander automatisch) |
 | 5 | 15.000 | 90 Min. | Stage **2-5** gewonnen | Gebäude bis Stufe 5, Platzhalter **Zuchtstation** („Bald verfügbar“) |
 
 Belohnung einmalig je erreichter Rathaus-Stufe: **100 × Stufe Juwelen** (St. 2: 200, St. 3: 300 …). **[ANNAHME]**
@@ -138,7 +138,7 @@ Beispiel: Stufe 3, 2 Std. → 26 × 120 = 3.120 EP für 936 Gold.
       { "level": 1, "cost": 0,     "buildSec": 0,    "req": {},                     "unlocks": ["campaign_ch1", "team_slots_3", "portal", "speed_2x"] },
       { "level": 2, "cost": 500,   "buildSec": 120,  "req": { "stageCleared": "1-5" },  "unlocks": ["team_slots_4", "synergies", "speed_4x", "daily_quests"] },
       { "level": 3, "cost": 2000,  "buildSec": 600,  "req": { "stageCleared": "1-8" },  "unlocks": ["team_slots_5", "ascension", "skip_uncleared", "release_monster"] },
-      { "level": 4, "cost": 6000,  "buildSec": 1800, "req": { "stageCleared": "1-10" }, "unlocks": ["campaign_ch2", "multi_battle"] },
+      { "level": 4, "cost": 6000,  "buildSec": 900,  "req": { "stageCleared": "1-10" }, "unlocks": ["campaign_ch2", "multi_battle"] },
       { "level": 5, "cost": 15000, "buildSec": 5400, "req": { "stageCleared": "2-5" },  "unlocks": ["breeding_placeholder"] }
     ]
   },
@@ -758,13 +758,14 @@ Summe Kampagne (alles einmalig): **10.400 Gold, 740 Juwelen + 400 Juwelen (3★)
 
 Grundsatz gegen Pay-to-Win (bzw. „Pay-with-Attention-to-Win“): Werbung bringt **höchstens ca. 40 % mehr Juwelen** pro Tag. Alle Inhalte sind auch ohne Werbung erreichbar.
 
-### 8.5 Speicherstand (`localStorage["mstadt.save.v1"]`)
+### 8.5 Speicherstand (`localStorage["velunor.save.v1"]`) **[ENTSCHIEDEN – Schlüssel, 13.10.2026]**
 
 ```json
 {
   "version": 1,
   "createdAt": 1791842400000,
   "lastSeen": 1791846000000,
+  "meta": { "migratedFrom": null, "migratedAt": 0 },
   "currencies": { "gold": 1200, "gems": 450, "essence": 0, "tickets": 0 },
   "buildings": {
     "townhall": { "level": 2, "upgradeEndsAt": null },
@@ -776,11 +777,84 @@ Grundsatz gegen Pay-to-Win (bzw. „Pay-with-Attention-to-Win“): Werbung bring
   "campaign": { "cleared": { "1-1": 3, "1-2": 2 } },
   "gacha": { "pityLeg": 12, "pityEpic": 3, "totalPulls": 12, "history": [] },
   "daily": { "dayKey": "2026-10-13", "loginStreak": 1, "quests": { "win3": 1, "mine2": 0, "train1": 0 }, "claimedAll": false },
-  "ads": { "dayKey": "2026-10-13", "counts": { "double_reward": 0, "gem_bonus": 0, "mine_boost": 0, "build_speed": 0, "free_pull": 0 }, "lastRewardedAt": 0, "lastInterstitialAt": 0 },
+  "ads": { "dayKey": "2026-10-13", "counts": { "double_reward": 0, "gem_bonus": 0, "mine_boost": 0, "build_speed": 0, "free_pull": 0 }, "lastRewardedAt": 0, "lastInterstitialAt": 0, "interstitialsToday": 0 },
+  "stats": { "playtimeSec": 0 }, "tutorialDone": false, "lastBattleResult": null,
   "settings": { "battleSpeed": 2, "sound": true }
 }
 ```
 Gespeichert wird nach jeder Transaktion, beim Szenenwechsel und bei `visibilitychange`. Hat der Speicherstand eine ältere `version`, läuft eine Migrationskette `migrate[v] (save) → save'`. **[ANNAHME]**
+
+**Schlüssel-Migration `mstadt.save.v1` → `velunor.save.v1`** **[ENTSCHIEDEN]**
+Der Arbeitstitel „Monster-Stadt“ hat den alten Schlüssel `mstadt.save.v1` geprägt. Der Prototyp läuft schon live (GitHub Pages), deshalb wird ein vorhandener alter Spielstand beim Start einmalig übernommen. Schlüssel und Datenversion sind getrennt: Das `.v1` im Schlüssel bleibt, auch wenn `version` im Inhalt steigt.
+
+| Fall beim Spielstart | Verhalten |
+|---|---|
+| `velunor.save.v1` vorhanden und gültig | wird geladen. Ein evtl. noch vorhandener `mstadt.save.v1` wird **nicht** gelesen und nicht übernommen (neuer Schlüssel hat immer Vorrang), aber nach `velunor.save.legacy` verschoben, falls dort noch nichts liegt, sonst gelöscht. |
+| nur `mstadt.save.v1` vorhanden und gültig | (1) parsen, (2) Datenmigration `migrate[v]` bis zur aktuellen `version`, (3) `meta.migratedFrom = "mstadt.save.v1"`, `meta.migratedAt = now`, (4) unter `velunor.save.v1` schreiben und **zurücklesen + vergleichen**, (5) erst danach Rohtext des alten Stands nach `velunor.save.legacy` kopieren und `mstadt.save.v1` löschen. |
+| Schreiben/Zurücklesen in Schritt 4 schlägt fehl (z. B. `QuotaExceededError`) | alter Schlüssel bleibt unverändert. Das Spiel läuft mit dem migrierten Stand im Speicher weiter und versucht die Übernahme beim nächsten Speichern bzw. Start erneut. Event `save_migration_failed`. |
+| `mstadt.save.v1` vorhanden, aber kein gültiges JSON oder ohne `version` | alter Schlüssel bleibt **unangetastet** (für Support/Debug), es startet ein neues Spiel unter `velunor.save.v1`. Event `save_migration_corrupt`. |
+| keiner von beiden | neues Spiel |
+| `velunor.save.legacy` älter als 14 Tage (`meta.migratedAt`) | wird beim Start gelöscht. |
+
+Regeln: Die Migration läuft **vor** jedem anderen Lese- oder Schreibzugriff auf den Speicherstand (`SaveService.init()` im `BootScene`). Sie ist idempotent (mehrfaches Ausführen ändert nichts). Andere Schlüssel mit `mstadt.`-Präfix gibt es im Prototyp nicht. `localStorage` gilt pro Herkunft (Origin): Die Übernahme klappt nur auf derselben Domain, z. B. GitHub Pages → GitHub Pages. Auf neuen Plattformen (Poki, CrazyGames, GameDistribution) gibt es keinen alten Stand, dort startet man neu.
+
+```ts
+const SAVE_KEY = 'velunor.save.v1';
+const LEGACY_KEYS = ['mstadt.save.v1'];
+const LEGACY_BACKUP_KEY = 'velunor.save.legacy';
+const LEGACY_BACKUP_DAYS = 14;
+
+function readSave(key: string): { raw: string; save: Save } | null {
+  const raw = localStorage.getItem(key);
+  if (raw === null) return null;
+  try {
+    const save = JSON.parse(raw);
+    return typeof save?.version === 'number' ? { raw, save } : null;
+  } catch { return null; }
+}
+
+function writeVerified(key: string, save: Save): boolean {
+  try {
+    const raw = JSON.stringify(save);
+    localStorage.setItem(key, raw);
+    return localStorage.getItem(key) === raw;
+  } catch { return false; }                       // z. B. QuotaExceededError
+}
+
+function moveToBackup(legacyKey: string, raw: string): void {
+  try {
+    if (localStorage.getItem(LEGACY_BACKUP_KEY) === null) localStorage.setItem(LEGACY_BACKUP_KEY, raw);
+    localStorage.removeItem(legacyKey);
+  } catch { /* Backup ist optional, Spiel läuft weiter */ }
+}
+
+export function loadOrMigrateSave(now: number): Save {
+  const current = readSave(SAVE_KEY);
+  if (current) {
+    for (const k of LEGACY_KEYS) {
+      const legacyRaw = localStorage.getItem(k);
+      if (legacyRaw !== null && readSave(k)) moveToBackup(k, legacyRaw);   // neuer Schlüssel hat Vorrang
+    }
+    const save = migrate(current.save);            // Datenversion → aktuell
+    if (save.meta?.migratedAt && now - save.meta.migratedAt > LEGACY_BACKUP_DAYS * 86400e3) localStorage.removeItem(LEGACY_BACKUP_KEY);
+    return save;
+  }
+  for (const k of LEGACY_KEYS) {
+    const legacy = readSave(k);
+    if (!legacy) {
+      if (localStorage.getItem(k) !== null) track('save_migration_corrupt', { key: k });   // kaputt: liegen lassen
+      continue;
+    }
+    const save = migrate(legacy.save);
+    save.meta = { ...(save.meta ?? {}), migratedFrom: k, migratedAt: now };
+    if (writeVerified(SAVE_KEY, save)) moveToBackup(k, legacy.raw);
+    else track('save_migration_failed', { key: k });                            // alter Schlüssel bleibt
+    return save;
+  }
+  return newSave(now);
+}
+```
+Testfälle: (a) nur alter Stand → identische Spielwerte unter neuem Schlüssel, alter Schlüssel weg, Backup da; (b) beide Stände → neuer gewinnt; (c) alter Stand kaputt → neues Spiel, alter Schlüssel unverändert; (d) `setItem` wirft → alter Schlüssel unverändert, zweiter Start migriert erfolgreich; (e) zweiter Start nach erfolgreicher Migration ändert nichts.
 
 ---
 
@@ -790,7 +864,7 @@ Gespeichert wird nach jeder Transaktion, beim Szenenwechsel und bei `visibilityc
 
 - Rewarded Ads sind **immer freiwillig**: Der Spieler klickt bewusst einen Button mit Werbe-Symbol und der Belohnung darauf.
 - **Banner sind dezent** und erscheinen **nie im Kampf**.
-- Zielplattformen sind CrazyGames, Poki und GameDistribution. Die Werbung läuft über die SDKs der Plattformen, deshalb fallen keine Zusatzkosten an. Im Code gibt es ein **`AdService`-Interface** mit einem Adapter pro Plattform und einem `NoAdsAdapter` für GitHub Pages/itch.io bzw. die lokale Entwicklung. **[ANNAHME]**
+- Zielplattformen sind CrazyGames, Poki und GameDistribution. Die Werbung läuft über die SDKs der Plattformen, deshalb fallen keine Zusatzkosten an. Im Code gibt es ein **`AdService`-Interface** mit einem Adapter pro Plattform und einem `NoAdsAdapter` für GitHub Pages/itch.io bzw. die lokale Entwicklung. **[ANNAHME]** Die Plattform wird beim Build festgelegt (`PLATFORM = 'poki' | 'crazygames' | 'gamedistribution' | 'none'`).
 - Gibt es keine Werbung (kein Fill, Adblocker, Fehler): Der Button wird ausgegraut („Gerade keine Werbung verfügbar“). Es gibt **keine Belohnung, aber auch keine Strafe**. Ein Adblocker wird nie bestraft.
 - Die Belohnung gibt es **erst nach dem Callback „vollständig angesehen“** des SDK. Bei Abbruch gibt es nichts, und der Tageszähler wird nicht erhöht.
 - Während der Werbung: Spiel pausieren und Ton stummschalten (Plattform-Vorgabe).
@@ -809,23 +883,49 @@ Gespeichert wird nach jeder Transaktion, beim Szenenwechsel und bei `visibilityc
 **Globales Limit:** höchstens **20 Rewarded Ads pro Tag**, alle Platzierungen zusammen. Der Tageszähler wird wie in 8.3 um 04:00 zurückgesetzt. **[ANNAHME: alle Werte]**
 Die Buttons zeigen den Restzähler („2/3 heute“). Ist das Limit erreicht, wird der Button ausgeblendet statt ausgegraut.
 
-### 9.3 Interstitials (Pausen-Werbung) **[ANNAHME – im Konzept nicht erwähnt]**
+### 9.3 Interstitials (Pausen-Werbung) **[ENTSCHIEDEN – Fabian-Noel, 13.10.2026]**
 
-Das Konzept nennt nur Rewarded Ads und Banner. Die Plattformen (v. a. Poki und CrazyGames: „commercial break“/„midgame“) erwarten bzw. vergüten aber Werbung an natürlichen Pausen. Deshalb gibt es ein **streng begrenztes, per Konfiguration abschaltbares** Interstitial.
+Das Konzept nennt nur Rewarded Ads und Banner. Interstitials gibt es deshalb **nur dort, wo eine Plattform sie verlangt**. Überall sonst sind sie aus. Stand 13.10.2026 verlangen alle drei Zielplattformen Pausen-Werbung: Poki („commercialBreak“), CrazyGames („midgame“) und GameDistribution („midroll“, laut GD-Entwicklerrichtlinien Pflicht für jedes Spiel). Fällt eine Pflicht weg, wird der Override für diese Plattform in `ads.json` auf `false` gesetzt, ohne Code-Änderung.
 
 | Regel | Wert |
 |---|---|
-| Erlaubte Auslöser | **nur** beim Wechsel *ResultScene → CityScene* (nach einem Kampf) und beim Verlassen der Portal-Ergebnisanzeige |
-| Nie | während eines Kampfes, im Kampf-Ladebildschirm, im Tutorial, während der Bauanimation, unmittelbar nach einer Niederlage |
-| Schonfrist bei Neuspielern | keine Interstitials, bevor Stage **1-5** gewonnen ist **und** die erste Sitzung 10 Min. läuft |
-| Mindestabstand | **3 Min.** zwischen zwei Interstitials |
-| Abstand zu Rewarded | **5 Min.** nach einer angesehenen Rewarded Ad kein Interstitial |
-| Sitzungsstart | frühestens 2 Min. nach Spielstart |
-| Maximum | **6 pro Stunde**, **30 pro Tag** |
-| Plattform-Vorrang | Die SDK-Regeln der Plattform haben Vorrang. Wir fragen nur an (`commercialBreak()`), die Plattform darf ablehnen. |
+| Standard | **aus** (`interstitial.enabled = false`). Eingeschaltet wird nur über `platformOverrides` für Plattformen, die Pausen-Werbung verlangen: **Poki**, **CrazyGames**, **GameDistribution**. GitHub Pages, itch.io und lokale Entwicklung: aus. **[ENTSCHIEDEN]** |
+| Erlaubte Auslöser (nur natürliche Pausen) | **(a) Kampf-Ende** (`battle_end`): beim Verlassen des Ergebnisbildschirms (`ResultScene` → nächste Szene), nie davor. Bei Mehrfach-Kampf nur nach dem letzten Kampf der Serie. **(b) Kapitelwechsel** (`chapter_change`): beim ersten Öffnen eines neu freigeschalteten Kapitels in der `CampaignScene`, nachdem der Boss-Ergebnisbildschirm geschlossen wurde. Andere Auslöser gibt es nicht (auch nicht das Portal). |
+| Mindestabstand | **höchstens 1 Interstitial alle 5 Minuten** (300 s seit dem letzten tatsächlich angezeigten Interstitial). Daraus folgen höchstens 12 pro Stunde. |
+| Schonfrist | **nie in den ersten 10 Minuten jeder Sitzung.** **[ENTSCHIEDEN]** Gezählt wird die aktive Spielzeit der laufenden Sitzung (`session.playtimeSec`, nur im Arbeitsspeicher, wird nicht gespeichert). Sie läuft nur bei sichtbarem Tab und nicht während einer Werbung. Eine **neue Sitzung** beginnt bei jedem Laden/Neuladen der Seite und wenn der Tab ≥ 30 Min. verborgen war (`sessionIdleResetSec`). **[ANNAHME]** `stats.playtimeSec` (gesamt) bleibt nur Statistik. |
+| Nie | während eines Kampfes, im Kampf-Ladebildschirm, im Tutorial (bis Stage 1-5), in Portal/Ziehungsanimation, während der Bauanimation, beim Laden/Spielstart. **[ANNAHME, unverändert]**: auch nicht unmittelbar nach einer Niederlage. |
+| Abstand zu Rewarded | **5 Min.** nach einer angesehenen Rewarded Ad kein Interstitial. **[ANNAHME, unverändert]** |
+| Tageslimit | **30 pro Tag** (Reset 04:00 wie in 8.3). **[ANNAHME, unverändert]** |
+| Plattform-Vorrang | Die SDK-Regeln der Plattform haben Vorrang. Wir fragen nur an (`commercialBreak()` / `requestAd('midgame')` / `gdsdk.showAd()`), die Plattform darf ablehnen. Der 5-Minuten-Abstand startet nur, wenn wirklich eine Werbung gezeigt wurde. Die Anfrage kommt immer direkt aus einem Klick (Button „Weiter“ im Ergebnisbildschirm bzw. Kapitel-Kachel), wie GameDistribution es verlangt. Eine Preroll-Werbung beim Laden steuert das Plattform-SDK selbst; sie ist **kein** Interstitial im Sinne dieser Regeln. |
 | Ohne Plattform | `NoAdsAdapter` → nichts passiert |
 
-`config.ads.interstitialEnabled` ist auf `true` für Poki/CrazyGames/GameDistribution und auf `false` für GitHub Pages/itch.io. Wenn Fabian-Noel das ganz streichen will, reicht `false` überall.
+Prüfung vor jeder Anfrage:
+```ts
+// Sitzung: nur im Arbeitsspeicher, beginnt bei jedem Seitenaufruf neu
+const session = { playtimeSec: 0, hiddenSince: 0 };
+
+function onVisibilityChange(cfg: AdsCfg, now: number): void {
+  if (document.hidden) { session.hiddenSince = now; return; }
+  if (session.hiddenSince && now - session.hiddenSince >= cfg.interstitial.sessionIdleResetSec * 1000) {
+    session.playtimeSec = 0;                     // nach ≥ 30 Min. verborgen: neue Sitzung
+  }
+  session.hiddenSince = 0;
+}
+// Tick (1×/s): if (!document.hidden && !adPlaying) { session.playtimeSec++; save.stats.playtimeSec++; }
+
+function canShowInterstitial(trigger: 'battle_end'|'chapter_change', s: Save, cfg: AdsCfg, now: number): boolean {
+  const ic = { ...cfg.interstitial, ...(cfg.interstitial.platformOverrides[PLATFORM] ?? {}) };
+  if (!ic.enabled || !ic.triggers.includes(trigger)) return false;
+  if (!s.tutorialDone) return false;
+  if (session.playtimeSec < ic.minSessionPlaytimeSec) return false;               // nie in den ersten 10 Min. der Sitzung
+  if (now - s.ads.lastInterstitialAt < ic.minIntervalSec * 1000) return false;     // max. 1 alle 5 Min.
+  if (now - s.ads.lastRewardedAt < ic.afterRewardedGraceSec * 1000) return false;
+  if (s.ads.interstitialsToday >= ic.maxPerDay) return false;
+  if (trigger === 'battle_end' && s.lastBattleResult === 'loss') return false;
+  return true;
+}
+```
+`tutorialDone`, `lastBattleResult`, `ads.lastInterstitialAt` und `ads.lastRewardedAt` werden im Speicherstand mitgeführt (Kap. 8.5), der 5-Minuten-Abstand gilt also auch über ein Neuladen hinweg. Nur die 10-Minuten-Schonfrist ist pro Sitzung.
 
 ### 9.4 Banner
 
@@ -849,11 +949,11 @@ Das Konzept nennt nur Rewarded Ads und Banner. Die Plattformen (v. a. Poki und C
     }
   },
   "interstitial": {
-    "enabled": true,
-    "triggers": ["result_to_city", "portal_result_close"],
-    "minIntervalSec": 180, "afterRewardedGraceSec": 300, "sessionStartGraceSec": 120,
-    "maxPerHour": 6, "maxPerDay": 30,
-    "unlockAfterStage": "1-5", "firstSessionGraceSec": 600
+    "enabled": false,
+    "platformOverrides": { "poki": { "enabled": true }, "crazygames": { "enabled": true }, "gamedistribution": { "enabled": true } },
+    "triggers": ["battle_end", "chapter_change"],
+    "minIntervalSec": 300, "minSessionPlaytimeSec": 600, "sessionIdleResetSec": 1800, "afterRewardedGraceSec": 300,
+    "maxPerDay": 30
   },
   "banner": { "enabled": true, "scenes": ["CityScene", "MonsterListScene", "TeamScene"] }
 }
@@ -866,13 +966,15 @@ interface AdService {
   showRewarded(placement: string): Promise<'completed'|'skipped'|'unavailable'>;
   showInterstitial(trigger: string): Promise<void>;   // muss immer resolven, auch bei Fehler
   showBanner(scene: string): void; hideBanner(): void;
-  gameplayStart(): void; gameplayStop(): void;       // Plattform-Hooks (Poki/CrazyGames)
+  gameplayStart(): void; gameplayStop(): void;       // Plattform-Hooks (Poki/CrazyGames; GD: SDK_GAME_PAUSE/SDK_GAME_START)
 }
 ```
 
 ---
 
 ## 10. Annahmen auf einen Blick (zur Freigabe durch Fabian-Noel)
+
+Status: Punkte mit **[ENTSCHIEDEN]** sind freigegeben, alle übrigen sind weiterhin offene Annahmen.
 
 1. 3 Prototyp-Gebäude: **Rathaus, Goldmine, Trainingsgelände**. Das Portal ist eine feste Funktion, die Zucht nur ein Platzhalter.
 2. Formation **2 Front / 3 Hinten**, Team-Plätze 3 → 4 → 5 über Rathaus 1–3. Positionsbonus +10 % ATK/DEF.
@@ -882,5 +984,7 @@ interface AdService {
 6. Gacha: 100 Juwelen pro Ziehung / 900 pro 10er, Basis Legendär+ 0,7 % mit Soft-Pity ab 60 und Hard-Pity bei 90 (effektiv ≈ 1,9 %); Episch+ Hard-Pity bei 20.
 7. Schaden `1,5 × ATK²/(ATK+DEF)`, Varianz ±10 %, Krit 10 % / ×1,5, Rundenlimit 20, Zeitablauf = Niederlage.
 8. Kein Energiesystem. Währungen: Gold, Juwelen, Essenz (+ Tickets).
-9. Interstitials gibt es nur an Pausen nach dem Kampf und nur auf Plattformen, die sie wollen. Abschaltbar.
+9. **[ENTSCHIEDEN – 13.10.2026]** Interstitials standardmäßig aus; nur auf Plattformen, die sie verlangen (Poki, CrazyGames, GameDistribution). Nur an natürlichen Pausen (nach Kampf-Ende oder beim Kapitelwechsel), höchstens 1 alle 5 Minuten, nie in den ersten 10 Minuten **jeder Sitzung** (Kap. 9.3).
 10. Alle Balancing-Werte liegen in JSON, alle Zufallswerte laufen über einen seedbaren PRNG.
+11. **[ENTSCHIEDEN – 13.10.2026]** Name **Velunor**. Speicherschlüssel `velunor.save.v1` mit einmaliger Übernahme von `mstadt.save.v1` (Kap. 8.5).
+12. **[ENTSCHIEDEN – 13.10.2026]** Rathaus 4: Bauzeit **15 Min.** statt 30 Min. (Kap. 2.2).

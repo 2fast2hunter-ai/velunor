@@ -1,6 +1,6 @@
 # Velunor
 
-Browser prototype of the monster-city gacha RPG. TypeScript, Phaser 3, and Vite. Monsters, buildings, rarity frames, icons, and the city, arena, and portal backgrounds live in `public/assets` (see `public/assets/LICENSES.md`). The save stays in `localStorage` under `mstadt.save.v1`.
+Browser prototype of the monster-city gacha RPG. TypeScript, Phaser 3, and Vite. Monsters, buildings, rarity frames, icons, and the city, arena, and portal backgrounds live in `public/assets` (see `public/assets/LICENSES.md`). The save stays in `localStorage` under `velunor.save.v1`. An older `mstadt.save.v1` save is migrated once.
 
 Design notes live in [`docs/konzept.md`](docs/konzept.md) and [`docs/gdd-prototyp.md`](docs/gdd-prototyp.md). Balance numbers live in [`data/`](data/).
 

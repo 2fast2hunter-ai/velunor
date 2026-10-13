@@ -1,0 +1,97 @@
+{
+  "building": {
+    "levels": [
+      {
+        "level": 1,
+        "cost": 5000,
+        "buildSec": 1800,
+        "req": {
+          "townhall": 5
+        },
+        "slots": 1,
+        "durationMult": 1.0
+      },
+      {
+        "level": 2,
+        "cost": 12000,
+        "buildSec": 3600,
+        "req": {
+          "townhall": 5,
+          "stageCleared": "2-10"
+        },
+        "slots": 1,
+        "durationMult": 0.85
+      },
+      {
+        "level": 3,
+        "cost": 25000,
+        "buildSec": 7200,
+        "req": {
+          "townhall": 5,
+          "breeding": 2
+        },
+        "slots": 2,
+        "durationMult": 0.75
+      }
+    ]
+  },
+  "minParentLevel": 15,
+  "parentCooldownSec": 43200,
+  "costByBaseRarity": [
+    {
+      "essence": 15,
+      "minutes": 30
+    },
+    {
+      "essence": 30,
+      "minutes": 60
+    },
+    {
+      "essence": 75,
+      "minutes": 120
+    },
+    {
+      "essence": 175,
+      "minutes": 240
+    },
+    {
+      "essence": 375,
+      "minutes": 360
+    },
+    {
+      "essence": 875,
+      "minutes": 480
+    },
+    {
+      "essence": 2000,
+      "minutes": 720
+    },
+    {
+      "essence": 4500,
+      "minutes": 960
+    },
+    {
+      "essence": 10000,
+      "minutes": 1200
+    },
+    {
+      "essence": 20000,
+      "minutes": 1440
+    }
+  ],
+  "goldPerEssence": 10,
+  "rarityUpChance": {
+    "sameRarity": 0.25,
+    "differentRarity": 0.1
+  },
+  "potential": {
+    "max": 10,
+    "bonusWeights": {
+      "0": 50,
+      "1": 35,
+      "2": 15
+    },
+    "statPctPerPoint": 0.01
+  },
+  "skillInheritChance": 0.3
+}

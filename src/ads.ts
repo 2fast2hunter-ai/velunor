@@ -36,14 +36,45 @@ export function bannerEnabled(): boolean {
   return false
 }
 
-export function interstitialConfigEnabled(): boolean {
-  if (typeof location !== 'undefined') {
-    const host = location.hostname
-    if (host.endsWith('github.io') || host.endsWith('itch.io') || host === 'localhost' || host === '127.0.0.1' || host === '') {
-      return adsCfg.pages.interstitialEnabled
-    }
+export const adSession = { playtimeSec: 0, hiddenSince: 0, adPlaying: false }
+
+export function currentPlatform(): string {
+  const fromEnv = import.meta.env.VITE_PLATFORM
+  return (typeof fromEnv === 'string' && fromEnv) || adsCfg.platform || 'none'
+}
+
+export function onAdVisibility(now: number): void {
+  if (typeof document !== 'undefined' && document.hidden) {
+    adSession.hiddenSince = now
+    return
   }
-  return adsCfg.interstitial.enabled
+  if (adSession.hiddenSince && now - adSession.hiddenSince >= adsCfg.interstitial.sessionIdleResetSec * 1000) {
+    adSession.playtimeSec = 0
+  }
+  adSession.hiddenSince = 0
+}
+
+export function tickAdSession(): void {
+  if (typeof document !== 'undefined' && document.hidden) return
+  if (adSession.adPlaying) return
+  adSession.playtimeSec += 1
+}
+
+export function setSessionPlaytimeForTests(seconds: number): void {
+  adSession.playtimeSec = seconds
+}
+
+export function canShowInterstitial(save: SaveData, trigger: 'battle_end' | 'chapter_change', now: number, platform = currentPlatform()): boolean {
+  const override = adsCfg.interstitial.platformOverrides[platform as 'poki'] 
+  const enabled = override?.enabled ?? adsCfg.interstitial.enabled
+  if (!enabled || !adsCfg.interstitial.triggers.includes(trigger)) return false
+  if (!save.tutorialDone && !save.campaign.cleared['1-5']) return false
+  if (adSession.playtimeSec < adsCfg.interstitial.minSessionPlaytimeSec) return false
+  if (save.ads.lastInterstitialAt > 0 && now - save.ads.lastInterstitialAt < adsCfg.interstitial.minIntervalSec * 1000) return false
+  if (save.ads.lastRewardedAt && now - save.ads.lastRewardedAt < adsCfg.interstitial.afterRewardedGraceSec * 1000) return false
+  if (save.ads.interstitialToday >= adsCfg.interstitial.maxPerDay) return false
+  if (trigger === 'battle_end' && save.lastBattleResult !== 'win') return false
+  return true
 }
 
 export interface AdButtonState {
@@ -81,7 +112,8 @@ function adLabel(placement: AdPlacement, remain: number, cap: number): string {
     free_pull: 'Gratis-Ziehung',
     mine_boost: 'Turbo +2 Std.',
     build_speed: 'Bau −30 Min.',
-    training_speed: 'Training −50 %'
+    training_speed: 'Training −50 %',
+    breeding_speed: 'Zucht −50 %'
   }
   return `${names[placement]} (${remain}/${cap})`
 }
@@ -105,24 +137,16 @@ export async function tryRewarded(save: SaveData, placement: AdPlacement, now: n
   return 'completed'
 }
 
-export async function maybeInterstitial(save: SaveData, trigger: 'result_to_city' | 'portal_result_close', now: number, victory: boolean): Promise<void> {
-  if (!interstitialConfigEnabled()) return
-  if (!adsCfg.interstitial.triggers.includes(trigger)) return
-  if (!victory && trigger === 'result_to_city') return
-  if (!save.campaign.cleared[adsCfg.interstitial.unlockAfterStage]) return
-  if (now - save.sessionStartedAt < adsCfg.interstitial.sessionStartGraceSec * 1000) return
-  if (now - save.createdAt < adsCfg.interstitial.firstSessionGraceSec * 1000) return
-  if (save.ads.lastInterstitialAt && now - save.ads.lastInterstitialAt < adsCfg.interstitial.minIntervalSec * 1000) return
-  if (save.ads.lastRewardedAt && now - save.ads.lastRewardedAt < adsCfg.interstitial.afterRewardedGraceSec * 1000) return
-  if (save.ads.interstitialToday >= adsCfg.interstitial.maxPerDay) return
-  const hourKey = String(Math.floor(now / 3600000))
-  const hourCount = save.ads.interstitialHourKey === hourKey ? save.ads.interstitialHourCount : 0
-  if (hourCount >= adsCfg.interstitial.maxPerHour) return
-  await ads.showInterstitial(trigger)
+export async function maybeInterstitial(save: SaveData, trigger: 'battle_end' | 'chapter_change', now: number): Promise<void> {
+  if (!canShowInterstitial(save, trigger, now)) return
+  adSession.adPlaying = true
+  try {
+    await ads.showInterstitial(trigger)
+  } finally {
+    adSession.adPlaying = false
+  }
   save.ads.lastInterstitialAt = now
   save.ads.interstitialToday += 1
-  save.ads.interstitialHourKey = hourKey
-  save.ads.interstitialHourCount = hourCount + 1
 }
 
 export function placementUnlocked(save: SaveData, placement: AdPlacement): boolean {

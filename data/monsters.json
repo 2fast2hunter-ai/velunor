@@ -5,7 +5,12 @@
     "type": "fire",
     "baseRarity": 0,
     "role": "back",
-    "base": { "hp": 110, "atk": 28, "def": 10, "spd": 108 },
+    "base": {
+      "hp": 110,
+      "atk": 28,
+      "def": 10,
+      "spd": 108
+    },
     "blurb": "Ein flinker Fuchs, der Funken aus dem Schweif schlägt.",
     "skill": {
       "id": "ember_strike",
@@ -15,11 +20,21 @@
       "initialCooldown": 2,
       "target": "default",
       "effects": [
-        { "kind": "damage", "atkMult": 1.5 },
-        { "kind": "status", "status": "burn", "chance": 0.4, "duration": 2, "value": 0.3 }
+        {
+          "kind": "damage",
+          "atkMult": 1.5
+        },
+        {
+          "kind": "status",
+          "status": "burn",
+          "chance": 0.4,
+          "duration": 2,
+          "value": 0.3
+        }
       ]
     },
-    "sprite": "m01"
+    "sprite": "m01",
+    "class": "shooter"
   },
   {
     "id": "m02",
@@ -27,7 +42,12 @@
     "type": "water",
     "baseRarity": 0,
     "role": "front",
-    "base": { "hp": 160, "atk": 18, "def": 18, "spd": 92 },
+    "base": {
+      "hp": 160,
+      "atk": 18,
+      "def": 18,
+      "spd": 92
+    },
     "blurb": "Trägt einen Wassertropfen wie einen Schild.",
     "skill": {
       "id": "water_shield",
@@ -37,10 +57,15 @@
       "initialCooldown": 2,
       "target": "self_and_ally_lowest_hp_pct",
       "effects": [
-        { "kind": "shield", "maxHpPctOfCaster": 0.15, "duration": 2 }
+        {
+          "kind": "shield",
+          "maxHpPctOfCaster": 0.15,
+          "duration": 2
+        }
       ]
     },
-    "sprite": "m02"
+    "sprite": "m02",
+    "class": "support"
   },
   {
     "id": "m03",
@@ -48,7 +73,12 @@
     "type": "plant",
     "baseRarity": 0,
     "role": "back",
-    "base": { "hp": 120, "atk": 20, "def": 12, "spd": 100 },
+    "base": {
+      "hp": 120,
+      "atk": 20,
+      "def": 12,
+      "spd": 100
+    },
     "blurb": "Eine kleine Knospe, die Licht in Heilung verwandelt.",
     "skill": {
       "id": "photosynthesis",
@@ -58,10 +88,14 @@
       "initialCooldown": 2,
       "target": "ally_lowest_hp_pct",
       "effects": [
-        { "kind": "heal", "atkMult": 1.5 }
+        {
+          "kind": "heal",
+          "atkMult": 1.5
+        }
       ]
     },
-    "sprite": "m03"
+    "sprite": "m03",
+    "class": "support"
   },
   {
     "id": "m04",
@@ -69,7 +103,12 @@
     "type": "earth",
     "baseRarity": 0,
     "role": "front",
-    "base": { "hp": 180, "atk": 16, "def": 22, "spd": 80 },
+    "base": {
+      "hp": 180,
+      "atk": 16,
+      "def": 22,
+      "spd": 80
+    },
     "blurb": "Ein wandelnder Lehmklumpen, der Schläge einsteckt.",
     "skill": {
       "id": "clay_wall",
@@ -79,11 +118,23 @@
       "initialCooldown": 1,
       "target": "self",
       "effects": [
-        { "kind": "status", "status": "taunt", "chance": 1, "duration": 2 },
-        { "kind": "status", "status": "def_up", "chance": 1, "duration": 2, "value": 0.3 }
+        {
+          "kind": "status",
+          "status": "taunt",
+          "chance": 1,
+          "duration": 2
+        },
+        {
+          "kind": "status",
+          "status": "def_up",
+          "chance": 1,
+          "duration": 2,
+          "value": 0.3
+        }
       ]
     },
-    "sprite": "m04"
+    "sprite": "m04",
+    "class": "guardian"
   },
   {
     "id": "m05",
@@ -91,7 +142,12 @@
     "type": "fire",
     "baseRarity": 1,
     "role": "front",
-    "base": { "hp": 150, "atk": 26, "def": 14, "spd": 112 },
+    "base": {
+      "hp": 150,
+      "atk": 26,
+      "def": 14,
+      "spd": 112
+    },
     "blurb": "Wirbelt durch die Frontreihe und lässt Asche zurück.",
     "skill": {
       "id": "flame_swirl",
@@ -101,10 +157,14 @@
       "initialCooldown": 2,
       "target": "enemy_front_all",
       "effects": [
-        { "kind": "damage", "atkMult": 0.9 }
+        {
+          "kind": "damage",
+          "atkMult": 0.9
+        }
       ]
     },
-    "sprite": "m05"
+    "sprite": "m05",
+    "class": "fighter"
   },
   {
     "id": "m06",
@@ -112,7 +172,12 @@
     "type": "plant",
     "baseRarity": 1,
     "role": "front",
-    "base": { "hp": 190, "atk": 17, "def": 20, "spd": 76 },
+    "base": {
+      "hp": 190,
+      "atk": 17,
+      "def": 20,
+      "spd": 76
+    },
     "blurb": "Ein Panzer aus Moos und Dornen.",
     "skill": {
       "id": "thorn_armor",
@@ -122,10 +187,17 @@
       "initialCooldown": 1,
       "target": "self",
       "effects": [
-        { "kind": "status", "status": "thorns", "chance": 1, "duration": 2, "value": 0.3 }
+        {
+          "kind": "status",
+          "status": "thorns",
+          "chance": 1,
+          "duration": 2,
+          "value": 0.3
+        }
       ]
     },
-    "sprite": "m06"
+    "sprite": "m06",
+    "class": "guardian"
   },
   {
     "id": "m07",
@@ -133,7 +205,12 @@
     "type": "water",
     "baseRarity": 2,
     "role": "back",
-    "base": { "hp": 130, "atk": 30, "def": 12, "spd": 110 },
+    "base": {
+      "hp": 130,
+      "atk": 30,
+      "def": 12,
+      "spd": 110
+    },
     "blurb": "Zieht den schwächsten Gegner der Hinterreihe in den Strudel.",
     "skill": {
       "id": "tide_strike",
@@ -143,10 +220,14 @@
       "initialCooldown": 2,
       "target": "enemy_back_lowest_hp",
       "effects": [
-        { "kind": "damage", "atkMult": 1.4 }
+        {
+          "kind": "damage",
+          "atkMult": 1.4
+        }
       ]
     },
-    "sprite": "m07"
+    "sprite": "m07",
+    "class": "shooter"
   },
   {
     "id": "m08",
@@ -154,7 +235,12 @@
     "type": "earth",
     "baseRarity": 2,
     "role": "back",
-    "base": { "hp": 135, "atk": 29, "def": 13, "spd": 106 },
+    "base": {
+      "hp": 135,
+      "atk": 29,
+      "def": 13,
+      "spd": 106
+    },
     "blurb": "Lauert im Sand und lähmt, wer zu nah kommt.",
     "skill": {
       "id": "quicksand",
@@ -164,11 +250,20 @@
       "initialCooldown": 2,
       "target": "default",
       "effects": [
-        { "kind": "damage", "atkMult": 1.1 },
-        { "kind": "status", "status": "stun", "chance": 0.4, "duration": 1 }
+        {
+          "kind": "damage",
+          "atkMult": 1.1
+        },
+        {
+          "kind": "status",
+          "status": "stun",
+          "chance": 0.4,
+          "duration": 1
+        }
       ]
     },
-    "sprite": "m08"
+    "sprite": "m08",
+    "class": "disruptor"
   },
   {
     "id": "m09",
@@ -176,7 +271,12 @@
     "type": "plant",
     "baseRarity": 3,
     "role": "back",
-    "base": { "hp": 140, "atk": 30, "def": 14, "spd": 104 },
+    "base": {
+      "hp": 140,
+      "atk": 30,
+      "def": 14,
+      "spd": 104
+    },
     "blurb": "Schlingt Wurzeln um jedes gegnerische Bein.",
     "skill": {
       "id": "root_weave",
@@ -186,11 +286,21 @@
       "initialCooldown": 3,
       "target": "enemy_all",
       "effects": [
-        { "kind": "damage", "atkMult": 0.7 },
-        { "kind": "status", "status": "def_down", "chance": 1, "duration": 2, "value": 0.2 }
+        {
+          "kind": "damage",
+          "atkMult": 0.7
+        },
+        {
+          "kind": "status",
+          "status": "def_down",
+          "chance": 1,
+          "duration": 2,
+          "value": 0.2
+        }
       ]
     },
-    "sprite": "m09"
+    "sprite": "m09",
+    "class": "disruptor"
   },
   {
     "id": "m10",
@@ -198,7 +308,12 @@
     "type": "fire",
     "baseRarity": 5,
     "role": "back",
-    "base": { "hp": 170, "atk": 36, "def": 16, "spd": 118 },
+    "base": {
+      "hp": 170,
+      "atk": 36,
+      "def": 16,
+      "spd": 118
+    },
     "blurb": "Verbrennt das Feld und erhebt sich einmal aus der Asche.",
     "skill": {
       "id": "sunfire",
@@ -208,8 +323,17 @@
       "initialCooldown": 3,
       "target": "enemy_all",
       "effects": [
-        { "kind": "damage", "atkMult": 1.0 },
-        { "kind": "status", "status": "burn", "chance": 0.5, "duration": 2, "value": 0.3 }
+        {
+          "kind": "damage",
+          "atkMult": 1.0
+        },
+        {
+          "kind": "status",
+          "status": "burn",
+          "chance": 0.5,
+          "duration": 2,
+          "value": 0.3
+        }
       ]
     },
     "passive": {
@@ -219,6 +343,563 @@
       "hpPct": 0.4,
       "usesPerBattle": 1
     },
-    "sprite": "m10"
+    "sprite": "m10",
+    "class": "shooter"
+  },
+  {
+    "id": "m11",
+    "name": "Surrlibelle",
+    "type": "insect",
+    "baseRarity": 0,
+    "role": "back",
+    "class": "shooter",
+    "base": {
+      "hp": 100,
+      "atk": 26,
+      "def": 10,
+      "spd": 116
+    },
+    "blurb": "Schneller Fernkampf-Einstieg, gut gegen Gift.",
+    "skill": {
+      "id": "double_sting",
+      "name": "Doppelstich",
+      "description": "2× 75 % ATK auf das Standardziel.",
+      "cooldown": 3,
+      "initialCooldown": 1,
+      "target": "default",
+      "effects": [
+        {
+          "kind": "damage",
+          "atkMult": 0.75,
+          "hits": 2
+        }
+      ]
+    },
+    "sprite": "m11"
+  },
+  {
+    "id": "m12",
+    "name": "Panzerkäfer",
+    "type": "insect",
+    "baseRarity": 1,
+    "role": "front",
+    "class": "guardian",
+    "base": {
+      "hp": 175,
+      "atk": 18,
+      "def": 21,
+      "spd": 86
+    },
+    "blurb": "Robuster Front-Blocker mit Schild.",
+    "skill": {
+      "id": "chitin_guard",
+      "name": "Chitinpanzer",
+      "description": "Schild 20 % Max-HP und DEF +20 % (2 Runden).",
+      "cooldown": 4,
+      "initialCooldown": 2,
+      "target": "self",
+      "effects": [
+        {
+          "kind": "shield",
+          "maxHpPctOfCaster": 0.2,
+          "duration": 2
+        },
+        {
+          "kind": "status",
+          "status": "def_up",
+          "chance": 1,
+          "duration": 2,
+          "value": 0.2
+        }
+      ]
+    },
+    "sprite": "m12"
+  },
+  {
+    "id": "m13",
+    "name": "Vespira",
+    "type": "insect",
+    "baseRarity": 4,
+    "role": "back",
+    "class": "shooter",
+    "base": {
+      "hp": 150,
+      "atk": 34,
+      "def": 14,
+      "spd": 114
+    },
+    "blurb": "Verteilt 4 Treffer gegen Schilde und Schwärme.",
+    "skill": {
+      "id": "swarm_strike",
+      "name": "Schwarmangriff",
+      "description": "4× 50 % ATK, jeder Treffer auf einen zufälligen Gegner.",
+      "cooldown": 4,
+      "initialCooldown": 3,
+      "target": "enemy_random",
+      "effects": [
+        {
+          "kind": "damage",
+          "atkMult": 0.5,
+          "hits": 4
+        }
+      ]
+    },
+    "sprite": "m13"
+  },
+  {
+    "id": "m14",
+    "name": "Sumpfunke",
+    "type": "poison",
+    "baseRarity": 0,
+    "role": "front",
+    "class": "fighter",
+    "base": {
+      "hp": 165,
+      "atk": 19,
+      "def": 17,
+      "spd": 88
+    },
+    "blurb": "Setzt Vergiftung auf Tanks.",
+    "skill": {
+      "id": "toxic_slime",
+      "name": "Giftschleim",
+      "description": "100 % ATK und 80 % Vergiftung (1 Stapel, 3 Runden).",
+      "cooldown": 3,
+      "initialCooldown": 2,
+      "target": "default",
+      "effects": [
+        {
+          "kind": "damage",
+          "atkMult": 1.0
+        },
+        {
+          "kind": "status",
+          "status": "poison",
+          "chance": 0.8,
+          "duration": 3,
+          "stacks": 1
+        }
+      ]
+    },
+    "sprite": "m14"
+  },
+  {
+    "id": "m15",
+    "name": "Nesselqualle",
+    "type": "poison",
+    "baseRarity": 2,
+    "role": "back",
+    "class": "disruptor",
+    "base": {
+      "hp": 125,
+      "atk": 29,
+      "def": 12,
+      "spd": 104
+    },
+    "blurb": "Flächiger Gift-Störer gegen Heiler.",
+    "skill": {
+      "id": "nettle_rain",
+      "name": "Nesselregen",
+      "description": "Alle Gegner: 60 % ATK und 50 % Vergiftung (1 Stapel, 3 Runden).",
+      "cooldown": 4,
+      "initialCooldown": 2,
+      "target": "enemy_all",
+      "effects": [
+        {
+          "kind": "damage",
+          "atkMult": 0.6
+        },
+        {
+          "kind": "status",
+          "status": "poison",
+          "chance": 0.5,
+          "duration": 3,
+          "stacks": 1
+        }
+      ]
+    },
+    "sprite": "m15"
+  },
+  {
+    "id": "m16",
+    "name": "Fäulnisnatter",
+    "type": "poison",
+    "baseRarity": 3,
+    "role": "back",
+    "class": "disruptor",
+    "base": {
+      "hp": 140,
+      "atk": 32,
+      "def": 13,
+      "spd": 110
+    },
+    "blurb": "Gift in zwei Stapeln plus ATK-Senkung.",
+    "skill": {
+      "id": "decay",
+      "name": "Zersetzung",
+      "description": "130 % ATK, ATK −25 % (2 Runden) und Vergiftung (2 Stapel, 3 Runden).",
+      "cooldown": 4,
+      "initialCooldown": 3,
+      "target": "default",
+      "effects": [
+        {
+          "kind": "damage",
+          "atkMult": 1.3
+        },
+        {
+          "kind": "status",
+          "status": "atk_down",
+          "chance": 1,
+          "duration": 2,
+          "value": 0.25
+        },
+        {
+          "kind": "status",
+          "status": "poison",
+          "chance": 1,
+          "duration": 3,
+          "stacks": 2
+        }
+      ]
+    },
+    "sprite": "m16"
+  },
+  {
+    "id": "m17",
+    "name": "Kieselkrabbe",
+    "type": "stone",
+    "baseRarity": 0,
+    "role": "front",
+    "class": "guardian",
+    "base": {
+      "hp": 170,
+      "atk": 17,
+      "def": 24,
+      "spd": 78
+    },
+    "blurb": "Spott-Tank mit Schild, stark gegen Feuer.",
+    "skill": {
+      "id": "shell_guard",
+      "name": "Panzerschale",
+      "description": "Schild 20 % Max-HP und Spott (2 Runden).",
+      "cooldown": 4,
+      "initialCooldown": 1,
+      "target": "self",
+      "effects": [
+        {
+          "kind": "shield",
+          "maxHpPctOfCaster": 0.2,
+          "duration": 2
+        },
+        {
+          "kind": "status",
+          "status": "taunt",
+          "chance": 1,
+          "duration": 2
+        }
+      ]
+    },
+    "sprite": "m17"
+  },
+  {
+    "id": "m18",
+    "name": "Geröllgolem",
+    "type": "stone",
+    "baseRarity": 2,
+    "role": "front",
+    "class": "fighter",
+    "base": {
+      "hp": 190,
+      "atk": 20,
+      "def": 23,
+      "spd": 72
+    },
+    "blurb": "Verlangsamt die gegnerische Front.",
+    "skill": {
+      "id": "landslide",
+      "name": "Erdrutsch",
+      "description": "Frontreihe: 80 % ATK und SPD −20 % (2 Runden).",
+      "cooldown": 4,
+      "initialCooldown": 2,
+      "target": "enemy_front_all",
+      "effects": [
+        {
+          "kind": "damage",
+          "atkMult": 0.8
+        },
+        {
+          "kind": "status",
+          "status": "spd_down",
+          "chance": 1,
+          "duration": 2,
+          "value": 0.2
+        }
+      ]
+    },
+    "sprite": "m18"
+  },
+  {
+    "id": "m19",
+    "name": "Basaltwidder",
+    "type": "stone",
+    "baseRarity": 4,
+    "role": "front",
+    "class": "fighter",
+    "base": {
+      "hp": 195,
+      "atk": 28,
+      "def": 20,
+      "spd": 90
+    },
+    "blurb": "Durchdringt 30 % Verteidigung.",
+    "skill": {
+      "id": "battering_ram",
+      "name": "Rammbock",
+      "description": "160 % ATK, ignoriert 30 % DEF.",
+      "cooldown": 3,
+      "initialCooldown": 2,
+      "target": "default",
+      "effects": [
+        {
+          "kind": "damage",
+          "atkMult": 1.6,
+          "defPierce": 0.3
+        }
+      ]
+    },
+    "sprite": "m19"
+  },
+  {
+    "id": "m20",
+    "name": "Quarzling",
+    "type": "crystal",
+    "baseRarity": 0,
+    "role": "back",
+    "class": "support",
+    "base": {
+      "hp": 115,
+      "atk": 20,
+      "def": 14,
+      "spd": 98
+    },
+    "blurb": "Gibt dem ganzen Team einen Schild.",
+    "skill": {
+      "id": "prism_shield",
+      "name": "Prismaschild",
+      "description": "Alle Verbündeten: Schild 10 % eigene Max-HP (2 Runden).",
+      "cooldown": 4,
+      "initialCooldown": 2,
+      "target": "ally_all",
+      "effects": [
+        {
+          "kind": "shield",
+          "maxHpPctOfCaster": 0.1,
+          "duration": 2
+        }
+      ]
+    },
+    "sprite": "m20"
+  },
+  {
+    "id": "m21",
+    "name": "Spiegelluchs",
+    "type": "crystal",
+    "baseRarity": 1,
+    "role": "back",
+    "class": "shooter",
+    "base": {
+      "hp": 120,
+      "atk": 27,
+      "def": 12,
+      "spd": 112
+    },
+    "blurb": "Jagt die Hinterreihe und schwächt Angreifer.",
+    "skill": {
+      "id": "refraction",
+      "name": "Lichtbrechung",
+      "description": "Hinterreihe, niedrigste HP: 130 % ATK und 50 % ATK −15 % (2 Runden).",
+      "cooldown": 3,
+      "initialCooldown": 2,
+      "target": "enemy_back_lowest_hp",
+      "effects": [
+        {
+          "kind": "damage",
+          "atkMult": 1.3
+        },
+        {
+          "kind": "status",
+          "status": "atk_down",
+          "chance": 0.5,
+          "duration": 2,
+          "value": 0.15
+        }
+      ]
+    },
+    "sprite": "m21"
+  },
+  {
+    "id": "m22",
+    "name": "Amethystwächter",
+    "type": "crystal",
+    "baseRarity": 3,
+    "role": "front",
+    "class": "guardian",
+    "base": {
+      "hp": 190,
+      "atk": 22,
+      "def": 23,
+      "spd": 84
+    },
+    "blurb": "Spott und 40 % Dornen.",
+    "skill": {
+      "id": "crystal_mirror",
+      "name": "Kristallspiegel",
+      "description": "Spott und Dornen 40 % (2 Runden).",
+      "cooldown": 4,
+      "initialCooldown": 2,
+      "target": "self",
+      "effects": [
+        {
+          "kind": "status",
+          "status": "taunt",
+          "chance": 1,
+          "duration": 2
+        },
+        {
+          "kind": "status",
+          "status": "thorns",
+          "chance": 1,
+          "duration": 2,
+          "value": 0.4
+        }
+      ]
+    },
+    "sprite": "m22"
+  },
+  {
+    "id": "m23",
+    "name": "Prismakoloss",
+    "type": "crystal",
+    "baseRarity": 5,
+    "role": "front",
+    "class": "fighter",
+    "base": {
+      "hp": 190,
+      "atk": 32,
+      "def": 20,
+      "spd": 96
+    },
+    "blurb": "Bricht die Hinterreihe auf und schützt sich unter 50 % HP.",
+    "skill": {
+      "id": "prism_beam",
+      "name": "Prismastrahl",
+      "description": "Hinterreihe: 110 % ATK und DEF −20 % (2 Runden).",
+      "cooldown": 4,
+      "initialCooldown": 3,
+      "target": "enemy_back_all",
+      "effects": [
+        {
+          "kind": "damage",
+          "atkMult": 1.1
+        },
+        {
+          "kind": "status",
+          "status": "def_down",
+          "chance": 1,
+          "duration": 2,
+          "value": 0.2
+        }
+      ]
+    },
+    "passive": {
+      "id": "crystal_heart",
+      "name": "Kristallherz",
+      "description": "Fällt die HP erstmals unter 50 %: Schild 25 % Max-HP (2 Runden).",
+      "trigger": {
+        "kind": "hp_below",
+        "pct": 0.5
+      },
+      "effects": [
+        {
+          "kind": "shield",
+          "maxHpPctOfCaster": 0.25,
+          "duration": 2,
+          "target": "self"
+        }
+      ],
+      "usesPerBattle": 1
+    },
+    "sprite": "m23"
+  },
+  {
+    "id": "m24",
+    "name": "Tiefseewal",
+    "type": "water",
+    "baseRarity": 4,
+    "role": "front",
+    "class": "support",
+    "base": {
+      "hp": 230,
+      "atk": 22,
+      "def": 20,
+      "spd": 82
+    },
+    "blurb": "Schaden auf die Front und Heilung für alle.",
+    "skill": {
+      "id": "tidal_wave",
+      "name": "Flutwelle",
+      "description": "Frontreihe 80 % ATK und Heilung 50 % ATK für alle Verbündeten.",
+      "cooldown": 4,
+      "initialCooldown": 2,
+      "target": "enemy_front_all",
+      "effects": [
+        {
+          "kind": "damage",
+          "atkMult": 0.8
+        },
+        {
+          "kind": "heal",
+          "atkMult": 0.5,
+          "target": "ally_all"
+        }
+      ]
+    },
+    "sprite": "m24"
+  },
+  {
+    "id": "m25",
+    "name": "Bebenwurm",
+    "type": "earth",
+    "baseRarity": 4,
+    "role": "front",
+    "class": "fighter",
+    "base": {
+      "hp": 190,
+      "atk": 27,
+      "def": 21,
+      "spd": 84
+    },
+    "blurb": "Flächenschaden mit Betäubungschance.",
+    "skill": {
+      "id": "quake",
+      "name": "Beben",
+      "description": "Alle Gegner: 70 % ATK und 20 % Betäubung.",
+      "cooldown": 4,
+      "initialCooldown": 2,
+      "target": "enemy_all",
+      "effects": [
+        {
+          "kind": "damage",
+          "atkMult": 0.7
+        },
+        {
+          "kind": "status",
+          "status": "stun",
+          "chance": 0.2,
+          "duration": 1
+        }
+      ]
+    },
+    "sprite": "m25"
   }
 ]

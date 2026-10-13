@@ -1,6 +1,7 @@
 import Phaser from 'phaser'
 import { monsterToken } from '../art'
 import { queueArt } from '../artLayout'
+import { tickAdSession } from '../ads'
 import { go, session, wipeSave } from '../session'
 import { iconSprite } from '../art'
 import { ESSENCE, GEM, GOLD, INK, MUTED, TICKET, W, button, confirm, hoverTip, panel, text } from '../ui'
@@ -58,6 +59,7 @@ export class HUDScene extends Phaser.Scene {
   }
 
   private pump(): void {
+    tickAdSession()
     session.tick()
     const message = session.toasts.shift()
     if (message) this.showToast(message)

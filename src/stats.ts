@@ -8,18 +8,35 @@ export interface InstanceStats {
   spd: number
 }
 
-export function instanceStats(speciesId: string, rarity: Rarity, level: number): InstanceStats {
+export function instanceStats(
+  speciesId: string,
+  rarity: Rarity,
+  level: number,
+  potential: { hp: number; atk: number; def: number } = { hp: 0, atk: 0, def: 0 }
+): InstanceStats {
   const sp = species(speciesId)
   const mult = rarityInfo(rarity).mult
   const growth = 1 + combat.levelStat * (level - 1)
   const spdGrowth = 1 + combat.levelSpd * (level - 1)
   const spdRarity = 1 + combat.spdPerRarity * rarity
+  const pot = (value: number) => 1 + 0.01 * value
   return {
-    hp: Math.floor(sp.base.hp * mult * growth),
-    atk: Math.floor(sp.base.atk * mult * growth),
-    def: Math.floor(sp.base.def * mult * growth),
+    hp: Math.floor(sp.base.hp * mult * growth * pot(potential.hp)),
+    atk: Math.floor(sp.base.atk * mult * growth * pot(potential.atk)),
+    def: Math.floor(sp.base.def * mult * growth * pot(potential.def)),
     spd: Math.floor(sp.base.spd * spdRarity * spdGrowth)
   }
+}
+
+/** Combat power uses instance stats only, plus boss multipliers and extra skill slots. */
+export function combatPower(
+  stats: InstanceStats,
+  extraSlots = 0,
+  boss?: { hpMult?: number; atkMult?: number }
+): number {
+  const hp = stats.hp * (boss?.hpMult ?? 1)
+  const atk = stats.atk * (boss?.atkMult ?? 1)
+  return Math.round((hp * 0.2 + atk * 2 + stats.def * 1.5) * (1 + 0.1 * extraSlots))
 }
 
 export function positionMatches(speciesId: string, row: Row): boolean {
@@ -76,7 +93,7 @@ export function synergyMultFor(type: TypeId, members: { type: TypeId }[]): { atk
 }
 
 export function previewStats(monster: MonsterInstance, row: Row | null, teamTypes: TypeId[] | null): InstanceStats {
-  const base = instanceStats(monster.speciesId, monster.rarity, monster.level)
+  const base = instanceStats(monster.speciesId, monster.rarity, monster.level, monster.potential)
   const pos = row != null && positionMatches(monster.speciesId, row)
   const posMult = pos ? 1 + combat.positionBonus : 1
   let atk = base.atk * posMult

@@ -2,21 +2,27 @@ import {
   ascend,
   cancelTraining,
   cancelUpgrade,
+  claimBreed,
+  claimQuest,
   claimTraining,
   closeToCity,
   collectMine,
   createSave,
   SAVE_KEY,
   commitFightRewards,
+  equipSkill,
   fightStage,
-  loadSave,
+  loadGame,
+  notifyChapterChange,
   pull,
-  readStorage,
   releaseMonster,
   setSpeed,
   setTeam,
+  startBreed,
+  startSkillTraining,
   startTraining,
   startUpgrade,
+  swapSkillOrder,
   tick,
   toggleLock,
   writeStorage,
@@ -35,7 +41,7 @@ class Session {
   toasts: string[] = []
 
   boot(): void {
-    this.save = loadSave(readStorage(), Date.now())
+    this.save = loadGame(Date.now())
     prefs.sound = this.save.settings.sound
     this.persist()
   }
@@ -97,6 +103,49 @@ class Session {
     this.take(result)
     if (!result.ok && result.reason) this.toast(result.reason)
     return result.ok
+  }
+
+  startSkill(uid: string, kind: 'rank' | 'learn' | 'passive', skillId: string): boolean {
+    const result = startSkillTraining(this.save, uid, kind, skillId, Date.now())
+    this.take(result)
+    if (!result.ok && result.reason) this.toast(result.reason)
+    return result.ok
+  }
+
+  equipSkill(uid: string, skillId: string): void {
+    const result = equipSkill(this.save, uid, skillId)
+    this.take(result)
+    if (!result.ok && result.reason) this.toast(result.reason)
+  }
+
+  swapSkillOrder(uid: string): void {
+    const result = swapSkillOrder(this.save, uid)
+    this.take(result)
+    if (!result.ok && result.reason) this.toast(result.reason)
+  }
+
+  startBreed(uidA: string, uidB: string): boolean {
+    const result = startBreed(this.save, uidA, uidB, Date.now())
+    this.take(result)
+    if (!result.ok && result.reason) this.toast(result.reason)
+    return result.ok
+  }
+
+  claimBreed(index: number): void {
+    const result = claimBreed(this.save, index, Date.now())
+    this.take(result)
+    if (!result.ok && result.reason) this.toast(result.reason)
+  }
+
+  async changeChapter(): Promise<void> {
+    await notifyChapterChange(this.save, Date.now())
+    this.persist()
+  }
+
+  claimQuest(id: string): void {
+    const result = claimQuest(this.save, id)
+    this.take(result)
+    if (!result.ok && result.reason) this.toast(result.reason)
   }
 
   claimTraining(uid: string): void {

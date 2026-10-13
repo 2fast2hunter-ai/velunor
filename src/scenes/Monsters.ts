@@ -1,6 +1,6 @@
 import Phaser from 'phaser'
 import { iconSprite, monsterToken } from '../art'
-import { ascensionCosts, expToNext, hasUnlock, maxLevelFor, rarityInfo, species, strongAgainst, typeName } from '../data'
+import { ascensionCosts, expToNext, hasUnlock, maxLevelFor, rarityInfo, skillsCfg, species, strongAgainst, typeName } from '../data'
 import { session } from '../session'
 import { instanceStats } from '../stats'
 import { INK, MUTED, W, button, confirm, openModal, text } from '../ui'
@@ -55,37 +55,56 @@ export class MonsterListScene extends Phaser.Scene {
     const monster = session.save.monsters.find((m) => m.uid === uid)
     if (!monster) return
     const sp = species(monster.speciesId)
-    const modal = openModal(this, 760, 520, sp.name)
-    modal.root.add(monsterToken(this, 280, 250, sp.id, 88, monster.rarity))
-    const stats = instanceStats(monster.speciesId, monster.rarity, monster.level)
+    const modal = openModal(this, 760, 640, sp.name)
+    modal.root.add(monsterToken(this, 280, 220, sp.id, 72, monster.rarity))
+    const stats = instanceStats(monster.speciesId, monster.rarity, monster.level, monster.potential)
     const cap = maxLevelFor(monster.rarity)
     const need = monster.level >= cap ? 0 : expToNext(monster.level)
+    const slot2 = skillsCfg.learnSkills.find((skill) => skill.id === monster.skills.slot2)
+    const slot3 = skillsCfg.passives.find((skill) => skill.id === monster.skills.slot3)
     const lines = [
       `${typeName(sp.type)} · ${rarityInfo(monster.rarity).name}${monster.rarity > sp.baseRarity ? ' · aufgewertet' : ''}`,
       `Level ${monster.level} / ${cap}${need ? ` · ${monster.exp}/${need} EP` : ''}`,
       `HP ${stats.hp}   ATK ${stats.atk}   DEF ${stats.def}   SPD ${stats.spd}`,
+      `Potenzial HP ${monster.potential.hp} · ATK ${monster.potential.atk} · DEF ${monster.potential.def} · Gen ${monster.generation}`,
+      `Signatur-Rang ${monster.skills.sigRank} · ${monster.skills.skillOrder[0] === 'sig' ? 'Signatur zuerst' : 'Lernskill zuerst'}`,
       `Rolle: ${sp.role === 'front' ? 'Front' : 'Hinten'}`,
       sp.blurb
     ]
-    lines.forEach((line, i) => modal.root.add(text(this, 360, 200 + i * 26, line, 15, i === 0 ? rarityInfo(monster.rarity).color : INK)))
-    modal.root.add(text(this, 200, 360, sp.skill.name, 18, '#f0c14a'))
-    const desc = text(this, 200, 388, sp.skill.description, 15, MUTED)
+    lines.forEach((line, i) => modal.root.add(text(this, 360, 170 + i * 24, line, 14, i === 0 ? rarityInfo(monster.rarity).color : INK)))
+    modal.root.add(text(this, 200, 360, sp.skill.name ?? sp.skill.id, 18, '#f0c14a'))
+    const desc = text(this, 200, 386, sp.skill.description ?? '', 15, MUTED)
     desc.setWordWrapWidth(520)
     modal.root.add(desc)
-    if (sp.passive) {
-      const passive = text(this, 200, 450, `${sp.passive.name}: ${sp.passive.description}`, 14, '#e0b3ff')
-      passive.setWordWrapWidth(520)
-      modal.root.add(passive)
+    modal.root.add(text(this, 200, 450, `Lernskill: ${slot2?.name ?? 'leer'}`, 15, INK))
+    modal.root.add(text(this, 200, 474, `Passiv: ${slot3?.name ?? sp.passive?.name ?? 'keine'}`, 15, INK))
+    if (sp.passive && slot3) {
+      const innate = text(this, 200, 496, `Angeboren: ${sp.passive.name}`, 13, '#e0b3ff')
+      modal.root.add(innate)
     }
     const strong = strongAgainst(sp.type).slice(0, 3).map((id) => typeName(id)).join(', ')
-    modal.root.add(text(this, 200, 500, `Stark gegen: ${strong}`, 14, MUTED))
-    modal.root.add(button(this, 260, 560, 160, 42, monster.locked ? 'Entsperren' : 'Schützen', () => {
+    modal.root.add(text(this, 200, 520, `Stark gegen: ${strong}`, 14, MUTED))
+    const learned = monster.skills.learned.filter((id) => skillsCfg.learnSkills.some((skill) => skill.id === id))
+    if (learned.length) {
+      modal.root.add(button(this, 700, 450, 180, 36, 'Lernskill', () => {
+        const index = Math.max(0, learned.indexOf(monster.skills.slot2 ?? ''))
+        session.equipSkill(uid, learned[(index + 1) % learned.length])
+        modal.close()
+        this.openDetail(uid)
+      }, { fill: 0x3d4b6e, color: INK, size: 13 }))
+    }
+    modal.root.add(button(this, 700, 496, 180, 36, 'Reihenfolge', () => {
+      session.swapSkillOrder(uid)
+      modal.close()
+      this.openDetail(uid)
+    }, { fill: 0x3d4b6e, color: INK, size: 13 }))
+    modal.root.add(button(this, 260, 600, 160, 42, monster.locked ? 'Entsperren' : 'Schützen', () => {
       session.toggleLock(uid)
       modal.close()
       this.paint()
     }, { fill: 0x3d4b6e, color: INK, size: 15 }))
     const canRelease = hasUnlock(session.save.buildings.townhall.level, 'release_monster')
-    modal.root.add(button(this, 450, 560, 180, 42, canRelease ? 'Freilassen' : 'Rathaus 3', () => {
+    modal.root.add(button(this, 450, 600, 180, 42, canRelease ? 'Freilassen' : 'Rathaus 3', () => {
       if (!canRelease) {
         session.toast('Rathaus Stufe 3')
         return
@@ -105,7 +124,7 @@ export class MonsterListScene extends Phaser.Scene {
         : monster.level < cap
           ? `Aufwertung ab Lv. ${cap}`
           : `Aufwerten · ${cost?.essence} Essenz`
-    modal.root.add(button(this, 680, 560, 240, 42, ascendLabel, () => {
+    modal.root.add(button(this, 680, 600, 240, 42, ascendLabel, () => {
       session.ascend(uid)
       modal.close()
       this.paint()

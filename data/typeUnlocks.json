@@ -1,0 +1,46 @@
+{
+  "activeTypesStart": [
+    "fire",
+    "water",
+    "plant",
+    "earth"
+  ],
+  "typeUnlocks": [
+    {
+      "type": "insect",
+      "onStageCleared": "2-1",
+      "gift": {
+        "speciesId": "m11",
+        "rarity": 0,
+        "level": 1
+      }
+    },
+    {
+      "type": "poison",
+      "onStageCleared": "2-3",
+      "gift": {
+        "speciesId": "m14",
+        "rarity": 0,
+        "level": 1
+      }
+    },
+    {
+      "type": "stone",
+      "onStageCleared": "2-5",
+      "gift": {
+        "speciesId": "m17",
+        "rarity": 0,
+        "level": 1
+      }
+    },
+    {
+      "type": "crystal",
+      "onStageCleared": "2-7",
+      "gift": {
+        "speciesId": "m20",
+        "rarity": 0,
+        "level": 1
+      }
+    }
+  ]
+}

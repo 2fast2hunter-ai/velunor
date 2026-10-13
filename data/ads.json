@@ -2,25 +2,87 @@
   "rewarded": {
     "globalDailyCap": 20,
     "placements": {
-      "double_reward": { "dailyCap": 10, "cooldownSec": 0, "reward": { "multiplyBattleGoldExp": 2 } },
-      "gem_bonus": { "dailyCap": 3, "cooldownSec": 1800, "reward": { "gems": 20 } },
-      "free_pull": { "dailyCap": 1, "cooldownSec": 0, "reward": { "pulls": 1 } },
-      "mine_boost": { "dailyCap": 3, "cooldownSec": 3600, "reward": { "mineHours": 2 } },
-      "build_speed": { "dailyCap": 5, "cooldownSec": 0, "reward": { "buildMinusSec": 1800 } },
-      "training_speed": { "dailyCap": 3, "cooldownSec": 0, "reward": { "trainingRemainingPct": 0.5 } }
+      "double_reward": {
+        "dailyCap": 10,
+        "cooldownSec": 0,
+        "reward": {
+          "multiplyBattleGoldExp": 2
+        }
+      },
+      "gem_bonus": {
+        "dailyCap": 3,
+        "cooldownSec": 1800,
+        "reward": {
+          "gems": 20
+        }
+      },
+      "free_pull": {
+        "dailyCap": 1,
+        "cooldownSec": 0,
+        "reward": {
+          "pulls": 1
+        }
+      },
+      "mine_boost": {
+        "dailyCap": 3,
+        "cooldownSec": 3600,
+        "reward": {
+          "mineHours": 2
+        }
+      },
+      "build_speed": {
+        "dailyCap": 5,
+        "cooldownSec": 0,
+        "reward": {
+          "buildMinusSec": 1800
+        }
+      },
+      "training_speed": {
+        "dailyCap": 3,
+        "cooldownSec": 0,
+        "reward": {
+          "trainingRemainingPct": 0.5
+        }
+      },
+      "breeding_speed": {
+        "dailyCap": 2,
+        "cooldownSec": 0,
+        "reward": {
+          "breedingRemainingPct": 0.5
+        }
+      }
     }
   },
   "interstitial": {
-    "enabled": true,
-    "triggers": ["result_to_city", "portal_result_close"],
-    "minIntervalSec": 180,
+    "enabled": false,
+    "platformOverrides": {
+      "poki": {
+        "enabled": true
+      },
+      "crazygames": {
+        "enabled": true
+      },
+      "gamedistribution": {
+        "enabled": true
+      }
+    },
+    "triggers": [
+      "battle_end",
+      "chapter_change"
+    ],
+    "minIntervalSec": 300,
+    "minSessionPlaytimeSec": 600,
+    "sessionIdleResetSec": 1800,
     "afterRewardedGraceSec": 300,
-    "sessionStartGraceSec": 120,
-    "maxPerHour": 6,
-    "maxPerDay": 30,
-    "unlockAfterStage": "1-5",
-    "firstSessionGraceSec": 600
+    "maxPerDay": 30
   },
-  "banner": { "enabled": true, "scenes": ["CityScene", "MonsterListScene", "TeamScene"] },
-  "pages": { "interstitialEnabled": false, "bannerEnabled": false }
+  "banner": {
+    "enabled": true,
+    "scenes": [
+      "CityScene",
+      "MonsterListScene",
+      "TeamScene"
+    ]
+  },
+  "platform": "none"
 }

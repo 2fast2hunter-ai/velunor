@@ -1,0 +1,89 @@
+{
+  "resetHourLocal": 4,
+  "unlock": {
+    "townhall": 2
+  },
+  "quests": [
+    {
+      "id": "win3",
+      "name": "Gewinne 3 Kämpfe",
+      "event": "battle_won",
+      "target": 3,
+      "reward": {
+        "gems": 20
+      },
+      "countsForChest": true
+    },
+    {
+      "id": "mine2",
+      "name": "Sammle die Goldmine 2× ein",
+      "event": "mine_collected",
+      "target": 2,
+      "reward": {
+        "gems": 20
+      },
+      "countsForChest": true
+    },
+    {
+      "id": "train1",
+      "name": "Schließe ein Training ab",
+      "event": "training_completed",
+      "target": 1,
+      "reward": {
+        "gems": 20
+      },
+      "countsForChest": true
+    },
+    {
+      "id": "levelup1",
+      "name": "Ein Monster steigt ein Level auf",
+      "event": "monster_level_up",
+      "target": 1,
+      "reward": {
+        "gold": 300
+      },
+      "countsForChest": true
+    },
+    {
+      "id": "synergy2",
+      "name": "Gewinne 2 Kämpfe mit Synergie",
+      "event": "battle_won_with_synergy",
+      "target": 2,
+      "reward": {
+        "essence": 20
+      },
+      "countsForChest": true
+    },
+    {
+      "id": "pull1",
+      "name": "Beschwöre einmal",
+      "event": "gacha_pull",
+      "target": 1,
+      "reward": {
+        "gold": 300
+      },
+      "countsForChest": false
+    },
+    {
+      "id": "breed1",
+      "name": "Starte oder schließe eine Zucht ab",
+      "event": "breeding_started_or_claimed",
+      "target": 1,
+      "reward": {
+        "essence": 30
+      },
+      "countsForChest": false,
+      "unlock": {
+        "breeding": 1
+      }
+    }
+  ],
+  "chest": {
+    "reward": {
+      "gems": 40,
+      "gold": 500,
+      "essence": 30
+    }
+  },
+  "autoClaimOnReset": true
+}

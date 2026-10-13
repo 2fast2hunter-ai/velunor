@@ -1,233 +1,1138 @@
 {
   "chapters": [
-    { "id": 1, "name": "Kapitel 1 · Funkenhain", "unlock": "campaign_ch1" },
-    { "id": 2, "name": "Kapitel 2 · Gezeitenbruch", "unlock": "campaign_ch2" }
+    {
+      "id": 1,
+      "name": "Kapitel 1 · Das Tal von Velunor",
+      "unlock": "campaign_ch1"
+    },
+    {
+      "id": 2,
+      "name": "Kapitel 2 · Nebelsumpf & Kristallgrotten",
+      "unlock": "campaign_ch2"
+    }
   ],
+  "starChests": {
+    "1": [
+      {
+        "stars": 10,
+        "reward": {
+          "gold": 500,
+          "gems": 30
+        }
+      },
+      {
+        "stars": 20,
+        "reward": {
+          "gold": 1500,
+          "essence": 50
+        }
+      },
+      {
+        "stars": 30,
+        "reward": {
+          "gold": 2000,
+          "tickets": 1
+        }
+      }
+    ],
+    "2": [
+      {
+        "stars": 10,
+        "reward": {
+          "gold": 1500,
+          "gems": 50
+        }
+      },
+      {
+        "stars": 20,
+        "reward": {
+          "gold": 2500,
+          "essence": 80
+        }
+      },
+      {
+        "stars": 30,
+        "reward": {
+          "gold": 3500,
+          "tickets": 1
+        }
+      }
+    ]
+  },
   "stages": [
     {
-      "id": "1-1", "chapter": 1, "s": 1, "name": "Erster Funke",
-      "enemyLevel": 1, "enemyRarity": 0,
+      "id": "1-1",
+      "name": "Dorfbrunnen",
+      "chapter": 1,
+      "enemyLevel": 1,
+      "enemyRarity": 0,
+      "enemySynergies": false,
+      "enemyClassSynergies": false,
       "enemies": [
-        { "slot": "F1", "speciesId": "m02" },
-        { "slot": "H1", "speciesId": "m01" }
+        {
+          "slot": "F1",
+          "speciesId": "m02"
+        },
+        {
+          "slot": "H1",
+          "speciesId": "m01"
+        }
       ],
-      "rewards": { "firstClear": { "gold": 140, "gems": 30, "exp": 45 }, "repeat": { "gold": 70, "exp": 45 }, "threeStarBonus": { "gems": 20 } }
+      "hint": "Pflanze (gg. Wasser), Erde (gg. Feuer)",
+      "rewards": {
+        "firstClear": {
+          "gold": 140,
+          "gems": 30,
+          "exp": 45
+        },
+        "repeat": {
+          "gold": 70,
+          "exp": 45
+        },
+        "threeStarBonus": {
+          "gems": 20
+        }
+      },
+      "recommendedKK": 207,
+      "s": 1
     },
     {
-      "id": "1-2", "chapter": 1, "s": 2, "name": "Bachlauf",
-      "enemyLevel": 2, "enemyRarity": 0,
+      "id": "1-2",
+      "name": "Lehmpfad",
+      "chapter": 1,
+      "enemyLevel": 2,
+      "enemyRarity": 0,
+      "enemySynergies": false,
+      "enemyClassSynergies": false,
       "enemies": [
-        { "slot": "F1", "speciesId": "m04" },
-        { "slot": "H1", "speciesId": "m03" }
+        {
+          "slot": "F1",
+          "speciesId": "m04"
+        },
+        {
+          "slot": "H1",
+          "speciesId": "m03"
+        }
       ],
-      "rewards": { "firstClear": { "gold": 180, "gems": 30, "exp": 60 }, "repeat": { "gold": 90, "exp": 60 }, "threeStarBonus": { "gems": 20 } }
+      "hint": "Wasser (gg. Erde), Feuer (gg. Pflanze)",
+      "rewards": {
+        "firstClear": {
+          "gold": 180,
+          "gems": 30,
+          "exp": 60
+        },
+        "repeat": {
+          "gold": 90,
+          "exp": 60
+        },
+        "threeStarBonus": {
+          "gems": 20
+        }
+      },
+      "recommendedKK": 213,
+      "s": 2
     },
     {
-      "id": "1-3", "chapter": 1, "s": 3, "name": "Lehmfurt",
-      "enemyLevel": 3, "enemyRarity": 0,
+      "id": "1-3",
+      "name": "Mühlbach",
+      "chapter": 1,
+      "enemyLevel": 3,
+      "enemyRarity": 0,
+      "enemySynergies": false,
+      "enemyClassSynergies": false,
       "enemies": [
-        { "slot": "F1", "speciesId": "m04" },
-        { "slot": "F2", "speciesId": "m02" },
-        { "slot": "H1", "speciesId": "m01" }
+        {
+          "slot": "F1",
+          "speciesId": "m04"
+        },
+        {
+          "slot": "F2",
+          "speciesId": "m02"
+        },
+        {
+          "slot": "H1",
+          "speciesId": "m01"
+        }
       ],
-      "rewards": { "firstClear": { "gold": 220, "gems": 30, "exp": 75 }, "repeat": { "gold": 110, "exp": 75 }, "threeStarBonus": { "gems": 20 } }
+      "hint": "Wasser, Erde",
+      "rewards": {
+        "firstClear": {
+          "gold": 220,
+          "gems": 30,
+          "exp": 75
+        },
+        "repeat": {
+          "gold": 110,
+          "exp": 75
+        },
+        "threeStarBonus": {
+          "gems": 20
+        }
+      },
+      "recommendedKK": 361,
+      "s": 3
     },
     {
-      "id": "1-4", "chapter": 1, "s": 4, "name": "Knospenhang",
-      "enemyLevel": 5, "enemyRarity": 0,
+      "id": "1-4",
+      "name": "Uferwiese",
+      "chapter": 1,
+      "enemyLevel": 5,
+      "enemyRarity": 0,
+      "enemySynergies": false,
+      "enemyClassSynergies": false,
       "enemies": [
-        { "slot": "F1", "speciesId": "m04" },
-        { "slot": "F2", "speciesId": "m02" },
-        { "slot": "H1", "speciesId": "m03" }
+        {
+          "slot": "F1",
+          "speciesId": "m02"
+        },
+        {
+          "slot": "F2",
+          "speciesId": "m04"
+        },
+        {
+          "slot": "H1",
+          "speciesId": "m03"
+        }
       ],
-      "rewards": { "firstClear": { "gold": 260, "gems": 30, "exp": 90 }, "repeat": { "gold": 130, "exp": 90 }, "threeStarBonus": { "gems": 20 } }
+      "hint": "Feuer, Pflanze; Heiler zuerst",
+      "rewards": {
+        "firstClear": {
+          "gold": 260,
+          "gems": 30,
+          "exp": 90
+        },
+        "repeat": {
+          "gold": 130,
+          "exp": 90
+        },
+        "threeStarBonus": {
+          "gems": 20
+        }
+      },
+      "recommendedKK": 399,
+      "s": 4
     },
     {
-      "id": "1-5", "chapter": 1, "s": 5, "name": "Wachtfeuer",
-      "enemyLevel": 6, "enemyRarity": 0,
+      "id": "1-5",
+      "name": "Ascheacker",
+      "chapter": 1,
+      "enemyLevel": 6,
+      "enemyRarity": 0,
+      "enemySynergies": false,
+      "enemyClassSynergies": false,
       "enemies": [
-        { "slot": "F1", "speciesId": "m04" },
-        { "slot": "H1", "speciesId": "m01" },
-        { "slot": "H2", "speciesId": "m03" }
+        {
+          "slot": "F1",
+          "speciesId": "m05"
+        },
+        {
+          "slot": "F2",
+          "speciesId": "m04"
+        },
+        {
+          "slot": "H1",
+          "speciesId": "m01"
+        }
       ],
-      "rewards": { "firstClear": { "gold": 300, "gems": 30, "exp": 105 }, "repeat": { "gold": 150, "exp": 105 }, "threeStarBonus": { "gems": 20 } }
+      "hint": "Erde (gg. Feuer), Wasser (gg. Erde)",
+      "rewards": {
+        "firstClear": {
+          "gold": 300,
+          "gems": 30,
+          "exp": 105
+        },
+        "repeat": {
+          "gold": 150,
+          "exp": 105
+        },
+        "threeStarBonus": {
+          "gems": 20
+        }
+      },
+      "recommendedKK": 453,
+      "s": 5
     },
     {
-      "id": "1-6", "chapter": 1, "s": 6, "name": "Doppelreihe",
-      "enemyLevel": 7, "enemyRarity": 0,
+      "id": "1-6",
+      "name": "Moosgrund",
+      "chapter": 1,
+      "enemyLevel": 7,
+      "enemyRarity": 0,
+      "enemySynergies": true,
+      "enemyClassSynergies": false,
       "enemies": [
-        { "slot": "F1", "speciesId": "m04" },
-        { "slot": "F2", "speciesId": "m02" },
-        { "slot": "H1", "speciesId": "m01" },
-        { "slot": "H2", "speciesId": "m03" }
+        {
+          "slot": "F1",
+          "speciesId": "m06"
+        },
+        {
+          "slot": "F2",
+          "speciesId": "m02"
+        },
+        {
+          "slot": "H1",
+          "speciesId": "m03"
+        },
+        {
+          "slot": "H2",
+          "speciesId": "m07"
+        }
       ],
-      "rewards": { "firstClear": { "gold": 340, "gems": 30, "exp": 120 }, "repeat": { "gold": 170, "exp": 120 }, "threeStarBonus": { "gems": 20 } }
+      "hint": "Feuer (gg. Pflanze), Pflanze (gg. Wasser)",
+      "rewards": {
+        "firstClear": {
+          "gold": 340,
+          "gems": 30,
+          "exp": 120
+        },
+        "repeat": {
+          "gold": 170,
+          "exp": 120
+        },
+        "threeStarBonus": {
+          "gems": 20
+        }
+      },
+      "recommendedKK": 615,
+      "s": 6
     },
     {
-      "id": "1-7", "chapter": 1, "s": 7, "name": "Aschenpfad",
-      "enemyLevel": 8, "enemyRarity": 0,
+      "id": "1-7",
+      "name": "Sandhang",
+      "chapter": 1,
+      "enemyLevel": 8,
+      "enemyRarity": 0,
+      "enemySynergies": true,
+      "enemyClassSynergies": false,
       "enemies": [
-        { "slot": "F1", "speciesId": "m04" },
-        { "slot": "F2", "speciesId": "m02" },
-        { "slot": "H1", "speciesId": "m01" },
-        { "slot": "H3", "speciesId": "m03" }
+        {
+          "slot": "F1",
+          "speciesId": "m04"
+        },
+        {
+          "slot": "F2",
+          "speciesId": "m05"
+        },
+        {
+          "slot": "H1",
+          "speciesId": "m08"
+        },
+        {
+          "slot": "H2",
+          "speciesId": "m01"
+        }
       ],
-      "rewards": { "firstClear": { "gold": 380, "gems": 30, "exp": 135 }, "repeat": { "gold": 190, "exp": 135 }, "threeStarBonus": { "gems": 20 } }
+      "hint": "Wasser (gg. Erde), Erde (gg. Feuer)",
+      "rewards": {
+        "firstClear": {
+          "gold": 380,
+          "gems": 30,
+          "exp": 135
+        },
+        "repeat": {
+          "gold": 190,
+          "exp": 135
+        },
+        "threeStarBonus": {
+          "gems": 20
+        }
+      },
+      "recommendedKK": 680,
+      "s": 7
     },
     {
-      "id": "1-8", "chapter": 1, "s": 8, "name": "Mooswall",
-      "enemyLevel": 9, "enemyRarity": 1,
+      "id": "1-8",
+      "name": "Wurzelhain",
+      "chapter": 1,
+      "enemyLevel": 9,
+      "enemyRarity": 1,
+      "enemySynergies": true,
+      "enemyClassSynergies": false,
       "enemies": [
-        { "slot": "F1", "speciesId": "m06" },
-        { "slot": "F2", "speciesId": "m04" },
-        { "slot": "H1", "speciesId": "m05" },
-        { "slot": "H2", "speciesId": "m01" }
+        {
+          "slot": "F1",
+          "speciesId": "m06"
+        },
+        {
+          "slot": "F2",
+          "speciesId": "m04"
+        },
+        {
+          "slot": "H1",
+          "speciesId": "m03"
+        },
+        {
+          "slot": "H2",
+          "speciesId": "m08"
+        }
       ],
-      "rewards": { "firstClear": { "gold": 420, "gems": 30, "exp": 150 }, "repeat": { "gold": 210, "exp": 150 }, "threeStarBonus": { "gems": 20 } }
+      "hint": "Feuer, Wasser; Dornen beachten",
+      "rewards": {
+        "firstClear": {
+          "gold": 420,
+          "gems": 30,
+          "exp": 150
+        },
+        "repeat": {
+          "gold": 210,
+          "exp": 150
+        },
+        "threeStarBonus": {
+          "gems": 20
+        }
+      },
+      "recommendedKK": 800,
+      "s": 8
     },
     {
-      "id": "1-9", "chapter": 1, "s": 9, "name": "Fünf Flammen",
-      "enemyLevel": 11, "enemyRarity": 1,
+      "id": "1-9",
+      "name": "Glutlichtung",
+      "chapter": 1,
+      "enemyLevel": 11,
+      "enemyRarity": 1,
+      "enemySynergies": true,
+      "enemyClassSynergies": true,
       "enemies": [
-        { "slot": "F1", "speciesId": "m06" },
-        { "slot": "F2", "speciesId": "m05" },
-        { "slot": "H1", "speciesId": "m01" },
-        { "slot": "H2", "speciesId": "m03" },
-        { "slot": "H3", "speciesId": "m08" }
+        {
+          "slot": "F1",
+          "speciesId": "m05"
+        },
+        {
+          "slot": "F2",
+          "speciesId": "m06"
+        },
+        {
+          "slot": "H1",
+          "speciesId": "m01"
+        },
+        {
+          "slot": "H2",
+          "speciesId": "m07"
+        },
+        {
+          "slot": "H3",
+          "speciesId": "m03"
+        }
       ],
-      "rewards": { "firstClear": { "gold": 460, "gems": 30, "exp": 165 }, "repeat": { "gold": 230, "exp": 165 }, "threeStarBonus": { "gems": 20 } }
+      "hint": "Erde, Feuer; gemischt – Synergie lohnt",
+      "rewards": {
+        "firstClear": {
+          "gold": 460,
+          "gems": 30,
+          "exp": 165
+        },
+        "repeat": {
+          "gold": 230,
+          "exp": 165
+        },
+        "threeStarBonus": {
+          "gems": 20
+        }
+      },
+      "recommendedKK": 1091,
+      "s": 9
     },
     {
-      "id": "1-10", "chapter": 1, "s": 10, "name": "Dryadenboss",
-      "enemyLevel": 12, "enemyRarity": 1, "boss": true,
+      "id": "1-10",
+      "name": "Herz des Hains",
+      "chapter": 1,
+      "enemyLevel": 12,
+      "enemyRarity": 1,
+      "enemySynergies": true,
+      "enemyClassSynergies": true,
       "enemies": [
-        { "slot": "F1", "speciesId": "m06" },
-        { "slot": "F2", "speciesId": "m04" },
-        { "slot": "H1", "speciesId": "m09", "boss": true, "rarity": 3 },
-        { "slot": "H2", "speciesId": "m05" },
-        { "slot": "H3", "speciesId": "m01" }
+        {
+          "slot": "F1",
+          "speciesId": "m06"
+        },
+        {
+          "slot": "F2",
+          "speciesId": "m04"
+        },
+        {
+          "slot": "H1",
+          "speciesId": "m03"
+        },
+        {
+          "slot": "H3",
+          "speciesId": "m01"
+        }
       ],
-      "rewards": { "firstClear": { "gold": 500, "gems": 100, "exp": 180, "essence": 100, "tickets": 1 }, "repeat": { "gold": 250, "exp": 180 }, "threeStarBonus": { "gems": 20 } }
+      "hint": "Feuer (3 Pflanze-Gegner inkl. Boss)",
+      "boss": {
+        "slot": "H2",
+        "speciesId": "m09",
+        "rarity": 3,
+        "hpMult": 1.5,
+        "atkMult": 0.85,
+        "statusResist": {
+          "stunChanceMult": 0.5,
+          "poisonPctPerStack": 0.02
+        },
+        "mechanics": [
+          {
+            "id": "root_call",
+            "trigger": {
+              "kind": "hp_below",
+              "pct": 0.5
+            },
+            "actions": [
+              {
+                "kind": "summon",
+                "speciesId": "m03",
+                "level": 10,
+                "rarity": 1,
+                "slots": [
+                  "F1",
+                  "F2"
+                ],
+                "max": 1,
+                "fallback": {
+                  "kind": "heal_all_pct",
+                  "pct": 0.15
+                }
+              }
+            ]
+          },
+          {
+            "id": "bloom_rage",
+            "trigger": {
+              "kind": "round_start",
+              "fromRound": 12
+            },
+            "actions": [
+              {
+                "kind": "status",
+                "target": "self",
+                "status": "atk_up",
+                "value": 0.3,
+                "duration": 99
+              }
+            ]
+          }
+        ]
+      },
+      "rewards": {
+        "firstClear": {
+          "gold": 500,
+          "gems": 100,
+          "exp": 180,
+          "essence": 100,
+          "tickets": 1
+        },
+        "repeat": {
+          "gold": 250,
+          "exp": 180
+        },
+        "threeStarBonus": {
+          "gems": 20
+        }
+      },
+      "recommendedKK": 1241,
+      "s": 10
     },
     {
-      "id": "2-1", "chapter": 2, "s": 11, "name": "Gezeitenwacht",
-      "enemyLevel": 13, "enemyRarity": 1,
+      "id": "2-1",
+      "name": "Summende Senke",
+      "chapter": 2,
+      "enemyLevel": 13,
+      "enemyRarity": 1,
+      "enemySynergies": true,
+      "enemyClassSynergies": true,
       "enemies": [
-        { "slot": "F1", "speciesId": "m06" },
-        { "slot": "F2", "speciesId": "m05" },
-        { "slot": "H1", "speciesId": "m07" },
-        { "slot": "H2", "speciesId": "m08" },
-        { "slot": "H3", "speciesId": "m01" }
+        {
+          "slot": "F1",
+          "speciesId": "m12"
+        },
+        {
+          "slot": "F2",
+          "speciesId": "m04"
+        },
+        {
+          "slot": "H1",
+          "speciesId": "m11"
+        },
+        {
+          "slot": "H2",
+          "speciesId": "m11"
+        },
+        {
+          "slot": "H3",
+          "speciesId": "m03"
+        }
       ],
-      "rewards": { "firstClear": { "gold": 540, "gems": 30, "exp": 195 }, "repeat": { "gold": 270, "exp": 195 }, "threeStarBonus": { "gems": 20 } }
+      "hint": "Feuer (gg. Insekt + Pflanze)",
+      "onFirstClear": {
+        "unlockType": "insect",
+        "gift": {
+          "speciesId": "m11",
+          "rarity": 0,
+          "level": 1
+        }
+      },
+      "rewards": {
+        "firstClear": {
+          "gold": 540,
+          "gems": 30,
+          "exp": 195
+        },
+        "repeat": {
+          "gold": 270,
+          "exp": 195
+        },
+        "threeStarBonus": {
+          "gems": 20
+        }
+      },
+      "recommendedKK": 1130,
+      "s": 1
     },
     {
-      "id": "2-2", "chapter": 2, "s": 12, "name": "Strudelgasse",
-      "enemyLevel": 14, "enemyRarity": 1,
+      "id": "2-2",
+      "name": "Schilfgürtel",
+      "chapter": 2,
+      "enemyLevel": 14,
+      "enemyRarity": 1,
+      "enemySynergies": true,
+      "enemyClassSynergies": true,
       "enemies": [
-        { "slot": "F1", "speciesId": "m04" },
-        { "slot": "F2", "speciesId": "m06" },
-        { "slot": "H1", "speciesId": "m07" },
-        { "slot": "H2", "speciesId": "m05" },
-        { "slot": "H3", "speciesId": "m08" }
+        {
+          "slot": "F1",
+          "speciesId": "m12"
+        },
+        {
+          "slot": "F2",
+          "speciesId": "m06"
+        },
+        {
+          "slot": "H1",
+          "speciesId": "m11"
+        },
+        {
+          "slot": "H2",
+          "speciesId": "m07"
+        },
+        {
+          "slot": "H3",
+          "speciesId": "m03"
+        }
       ],
-      "rewards": { "firstClear": { "gold": 580, "gems": 30, "exp": 210 }, "repeat": { "gold": 290, "exp": 210 }, "threeStarBonus": { "gems": 20 } }
+      "hint": "Feuer",
+      "rewards": {
+        "firstClear": {
+          "gold": 580,
+          "gems": 30,
+          "exp": 210
+        },
+        "repeat": {
+          "gold": 290,
+          "exp": 210
+        },
+        "threeStarBonus": {
+          "gems": 20
+        }
+      },
+      "recommendedKK": 1221,
+      "s": 2
     },
     {
-      "id": "2-3", "chapter": 2, "s": 13, "name": "Wurzelschatten",
-      "enemyLevel": 15, "enemyRarity": 1,
+      "id": "2-3",
+      "name": "Giftmoor",
+      "chapter": 2,
+      "enemyLevel": 15,
+      "enemyRarity": 1,
+      "enemySynergies": true,
+      "enemyClassSynergies": true,
       "enemies": [
-        { "slot": "F1", "speciesId": "m06" },
-        { "slot": "F2", "speciesId": "m02" },
-        { "slot": "H1", "speciesId": "m09" },
-        { "slot": "H2", "speciesId": "m07" },
-        { "slot": "H3", "speciesId": "m05" }
+        {
+          "slot": "F1",
+          "speciesId": "m14"
+        },
+        {
+          "slot": "F2",
+          "speciesId": "m12"
+        },
+        {
+          "slot": "H1",
+          "speciesId": "m15"
+        },
+        {
+          "slot": "H2",
+          "speciesId": "m11"
+        },
+        {
+          "slot": "H3",
+          "speciesId": "m03"
+        }
       ],
-      "rewards": { "firstClear": { "gold": 620, "gems": 30, "exp": 225 }, "repeat": { "gold": 310, "exp": 225 }, "threeStarBonus": { "gems": 20 } }
+      "hint": "Erde/Insekt (gg. Gift), Feuer (gg. Insekt)",
+      "onFirstClear": {
+        "unlockType": "poison",
+        "gift": {
+          "speciesId": "m14",
+          "rarity": 0,
+          "level": 1
+        }
+      },
+      "rewards": {
+        "firstClear": {
+          "gold": 620,
+          "gems": 30,
+          "exp": 225
+        },
+        "repeat": {
+          "gold": 310,
+          "exp": 225
+        },
+        "threeStarBonus": {
+          "gems": 20
+        }
+      },
+      "recommendedKK": 1249,
+      "s": 3
     },
     {
-      "id": "2-4", "chapter": 2, "s": 14, "name": "Aschendämmerung",
-      "enemyLevel": 17, "enemyRarity": 1,
+      "id": "2-4",
+      "name": "Faulwasser",
+      "chapter": 2,
+      "enemyLevel": 17,
+      "enemyRarity": 1,
+      "enemySynergies": true,
+      "enemyClassSynergies": true,
       "enemies": [
-        { "slot": "F1", "speciesId": "m06" },
-        { "slot": "F2", "speciesId": "m05" },
-        { "slot": "H1", "speciesId": "m10" },
-        { "slot": "H2", "speciesId": "m09" },
-        { "slot": "H3", "speciesId": "m07" }
+        {
+          "slot": "F1",
+          "speciesId": "m14",
+          "learned": "L01"
+        },
+        {
+          "slot": "F2",
+          "speciesId": "m14"
+        },
+        {
+          "slot": "H1",
+          "speciesId": "m15",
+          "learned": "L01"
+        },
+        {
+          "slot": "H2",
+          "speciesId": "m16"
+        },
+        {
+          "slot": "H3",
+          "speciesId": "m11",
+          "learned": "L01"
+        }
       ],
-      "rewards": { "firstClear": { "gold": 660, "gems": 30, "exp": 240 }, "repeat": { "gold": 330, "exp": 240 }, "threeStarBonus": { "gems": 20 } }
+      "hint": "Erde, Insekt (4× Gift)",
+      "rewards": {
+        "firstClear": {
+          "gold": 660,
+          "gems": 30,
+          "exp": 240
+        },
+        "repeat": {
+          "gold": 330,
+          "exp": 240
+        },
+        "threeStarBonus": {
+          "gems": 20
+        }
+      },
+      "recommendedKK": 1410,
+      "s": 4
     },
     {
-      "id": "2-5", "chapter": 2, "s": 15, "name": "Seltene Furt",
-      "enemyLevel": 18, "enemyRarity": 2,
+      "id": "2-5",
+      "name": "Geröllpass",
+      "chapter": 2,
+      "enemyLevel": 18,
+      "enemyRarity": 2,
+      "enemySynergies": true,
+      "enemyClassSynergies": true,
       "enemies": [
-        { "slot": "F1", "speciesId": "m06" },
-        { "slot": "F2", "speciesId": "m05" },
-        { "slot": "H1", "speciesId": "m07" },
-        { "slot": "H2", "speciesId": "m08" },
-        { "slot": "H3", "speciesId": "m09" }
+        {
+          "slot": "F1",
+          "speciesId": "m17",
+          "learned": "L01"
+        },
+        {
+          "slot": "F2",
+          "speciesId": "m18"
+        },
+        {
+          "slot": "H1",
+          "speciesId": "m08",
+          "learned": "L01"
+        },
+        {
+          "slot": "H2",
+          "speciesId": "m01"
+        },
+        {
+          "slot": "H3",
+          "speciesId": "m15",
+          "learned": "L01"
+        }
       ],
-      "rewards": { "firstClear": { "gold": 700, "gems": 30, "exp": 255 }, "repeat": { "gold": 350, "exp": 255 }, "threeStarBonus": { "gems": 20 } }
+      "hint": "Wasser (gg. Stein + Erde)",
+      "onFirstClear": {
+        "unlockType": "stone",
+        "gift": {
+          "speciesId": "m17",
+          "rarity": 0,
+          "level": 1
+        }
+      },
+      "rewards": {
+        "firstClear": {
+          "gold": 700,
+          "gems": 30,
+          "exp": 255
+        },
+        "repeat": {
+          "gold": 350,
+          "exp": 255
+        },
+        "threeStarBonus": {
+          "gems": 20
+        }
+      },
+      "recommendedKK": 1724,
+      "s": 5
     },
     {
-      "id": "2-6", "chapter": 2, "s": 16, "name": "Dornenkreis",
-      "enemyLevel": 19, "enemyRarity": 2,
+      "id": "2-6",
+      "name": "Steinbruch",
+      "chapter": 2,
+      "enemyLevel": 19,
+      "enemyRarity": 2,
+      "enemySynergies": true,
+      "enemyClassSynergies": true,
       "enemies": [
-        { "slot": "F1", "speciesId": "m04" },
-        { "slot": "F2", "speciesId": "m06" },
-        { "slot": "H1", "speciesId": "m09" },
-        { "slot": "H2", "speciesId": "m07" },
-        { "slot": "H3", "speciesId": "m08" }
+        {
+          "slot": "F1",
+          "speciesId": "m18",
+          "learned": "L11"
+        },
+        {
+          "slot": "F2",
+          "speciesId": "m17"
+        },
+        {
+          "slot": "H1",
+          "speciesId": "m08",
+          "learned": "L07"
+        },
+        {
+          "slot": "H2",
+          "speciesId": "m07"
+        },
+        {
+          "slot": "H3",
+          "speciesId": "m01",
+          "learned": "L04"
+        }
       ],
-      "rewards": { "firstClear": { "gold": 740, "gems": 30, "exp": 270 }, "repeat": { "gold": 370, "exp": 270 }, "threeStarBonus": { "gems": 20 } }
+      "hint": "Wasser; Pflanze gg. Strudelotter",
+      "rewards": {
+        "firstClear": {
+          "gold": 740,
+          "gems": 30,
+          "exp": 270
+        },
+        "repeat": {
+          "gold": 370,
+          "exp": 270
+        },
+        "threeStarBonus": {
+          "gems": 20
+        }
+      },
+      "recommendedKK": 1796,
+      "s": 6
     },
     {
-      "id": "2-7", "chapter": 2, "s": 17, "name": "Sonnenrand",
-      "enemyLevel": 20, "enemyRarity": 2,
+      "id": "2-7",
+      "name": "Kristallgrotte",
+      "chapter": 2,
+      "enemyLevel": 20,
+      "enemyRarity": 2,
+      "enemySynergies": true,
+      "enemyClassSynergies": true,
       "enemies": [
-        { "slot": "F1", "speciesId": "m06" },
-        { "slot": "F2", "speciesId": "m05" },
-        { "slot": "H1", "speciesId": "m10" },
-        { "slot": "H2", "speciesId": "m09" },
-        { "slot": "H3", "speciesId": "m07" }
+        {
+          "slot": "F1",
+          "speciesId": "m17",
+          "learned": "L11"
+        },
+        {
+          "slot": "F2",
+          "speciesId": "m22"
+        },
+        {
+          "slot": "H1",
+          "speciesId": "m20",
+          "learned": "L13"
+        },
+        {
+          "slot": "H2",
+          "speciesId": "m21"
+        },
+        {
+          "slot": "H3",
+          "speciesId": "m08",
+          "learned": "L07"
+        }
       ],
-      "rewards": { "firstClear": { "gold": 780, "gems": 30, "exp": 285 }, "repeat": { "gold": 390, "exp": 285 }, "threeStarBonus": { "gems": 20 } }
+      "hint": "Gift (gg. Kristall), Wasser (gg. Stein/Erde)",
+      "onFirstClear": {
+        "unlockType": "crystal",
+        "gift": {
+          "speciesId": "m20",
+          "rarity": 0,
+          "level": 1
+        }
+      },
+      "rewards": {
+        "firstClear": {
+          "gold": 780,
+          "gems": 30,
+          "exp": 285
+        },
+        "repeat": {
+          "gold": 390,
+          "exp": 285
+        },
+        "threeStarBonus": {
+          "gems": 20
+        }
+      },
+      "recommendedKK": 1811,
+      "s": 7
     },
     {
-      "id": "2-8", "chapter": 2, "s": 18, "name": "Glutnest",
-      "enemyLevel": 21, "enemyRarity": 2,
+      "id": "2-8",
+      "name": "Spiegelhalle",
+      "chapter": 2,
+      "enemyLevel": 21,
+      "enemyRarity": 2,
+      "enemySynergies": true,
+      "enemyClassSynergies": true,
       "enemies": [
-        { "slot": "F1", "speciesId": "m06" },
-        { "slot": "F2", "speciesId": "m04" },
-        { "slot": "H1", "speciesId": "m10" },
-        { "slot": "H2", "speciesId": "m07" },
-        { "slot": "H3", "speciesId": "m08" }
+        {
+          "slot": "F1",
+          "speciesId": "m18",
+          "learned": "L09"
+        },
+        {
+          "slot": "F2",
+          "speciesId": "m22"
+        },
+        {
+          "slot": "H1",
+          "speciesId": "m20",
+          "learned": "L09"
+        },
+        {
+          "slot": "H2",
+          "speciesId": "m21"
+        },
+        {
+          "slot": "H3",
+          "speciesId": "m15",
+          "learned": "L09"
+        }
       ],
-      "rewards": { "firstClear": { "gold": 820, "gems": 30, "exp": 300 }, "repeat": { "gold": 410, "exp": 300 }, "threeStarBonus": { "gems": 20 } }
+      "hint": "Gift, Wasser",
+      "rewards": {
+        "firstClear": {
+          "gold": 820,
+          "gems": 30,
+          "exp": 300
+        },
+        "repeat": {
+          "gold": 410,
+          "exp": 300
+        },
+        "threeStarBonus": {
+          "gems": 20
+        }
+      },
+      "recommendedKK": 1887,
+      "s": 8
     },
     {
-      "id": "2-9", "chapter": 2, "s": 19, "name": "Letzte Furt",
-      "enemyLevel": 23, "enemyRarity": 2,
+      "id": "2-9",
+      "name": "Prismenschlucht",
+      "chapter": 2,
+      "enemyLevel": 23,
+      "enemyRarity": 2,
+      "enemySynergies": true,
+      "enemyClassSynergies": true,
       "enemies": [
-        { "slot": "F1", "speciesId": "m06" },
-        { "slot": "F2", "speciesId": "m05" },
-        { "slot": "H1", "speciesId": "m10" },
-        { "slot": "H2", "speciesId": "m09" },
-        { "slot": "H3", "speciesId": "m08" }
+        {
+          "slot": "F1",
+          "speciesId": "m12",
+          "learned": "L12"
+        },
+        {
+          "slot": "F2",
+          "speciesId": "m18"
+        },
+        {
+          "slot": "H1",
+          "speciesId": "m16",
+          "learned": "L10"
+        },
+        {
+          "slot": "H2",
+          "speciesId": "m21"
+        },
+        {
+          "slot": "H3",
+          "speciesId": "m20",
+          "learned": "L13"
+        }
       ],
-      "rewards": { "firstClear": { "gold": 860, "gems": 30, "exp": 315 }, "repeat": { "gold": 430, "exp": 315 }, "threeStarBonus": { "gems": 20 } }
+      "hint": "gemischt: Gift, Feuer, Wasser · Vorschau Boss: Gift-Monster mitnehmen",
+      "stageText": "Hinter der Schlucht wartet der Prismakoloss. Kristall hält viel aus, aber Gift frisst sich durch jeden Schild. Nimm mindestens ein Gift-Monster mit (z. B. das Geschenk aus 2-3: Sumpfunke).",
+      "rewards": {
+        "firstClear": {
+          "gold": 860,
+          "gems": 30,
+          "exp": 315
+        },
+        "repeat": {
+          "gold": 430,
+          "exp": 315
+        },
+        "threeStarBonus": {
+          "gems": 20
+        }
+      },
+      "recommendedKK": 1986,
+      "s": 9
     },
     {
-      "id": "2-10", "chapter": 2, "s": 20, "name": "Phönixthron",
-      "enemyLevel": 24, "enemyRarity": 2, "boss": true,
+      "id": "2-10",
+      "name": "Thron des Prismakoloss",
+      "chapter": 2,
+      "enemyLevel": 24,
+      "enemyRarity": 2,
+      "enemySynergies": true,
+      "enemyClassSynergies": true,
       "enemies": [
-        { "slot": "F1", "speciesId": "m06" },
-        { "slot": "F2", "speciesId": "m05" },
-        { "slot": "H1", "speciesId": "m10", "boss": true, "rarity": 3 },
-        { "slot": "H2", "speciesId": "m09" },
-        { "slot": "H3", "speciesId": "m07" }
+        {
+          "slot": "F2",
+          "speciesId": "m17"
+        },
+        {
+          "slot": "H1",
+          "speciesId": "m20"
+        },
+        {
+          "slot": "H2",
+          "speciesId": "m11"
+        },
+        {
+          "slot": "H3",
+          "speciesId": "m03"
+        }
       ],
-      "rewards": { "firstClear": { "gold": 900, "gems": 100, "exp": 330, "essence": 100, "tickets": 1 }, "repeat": { "gold": 450, "exp": 330 }, "threeStarBonus": { "gems": 20 } }
+      "hint": "Gift (gg. Kristall + Pflanze), Feuer (gg. Insekt + Pflanze)",
+      "stageText": "Der Prismakoloss schützt sich mit Kristallschilden. Tipp: Gift-Monster sind ×1,5 gegen Kristall und ihr Gift wirkt durch Schilde. Erde-Monster lieber zu Hause lassen.",
+      "boss": {
+        "slot": "F1",
+        "speciesId": "m23",
+        "rarity": 2,
+        "hpMult": 1.5,
+        "atkMult": 0.85,
+        "statusResist": {
+          "stunChanceMult": 0.5,
+          "poisonPctPerStack": 0.02
+        },
+        "mechanics": [
+          {
+            "id": "prism_phase_1",
+            "trigger": {
+              "kind": "hp_below",
+              "pct": 0.66
+            },
+            "actions": [
+              {
+                "kind": "shield",
+                "target": "self",
+                "maxHpPct": 0.1,
+                "duration": 2
+              }
+            ]
+          },
+          {
+            "id": "prism_phase_2",
+            "trigger": {
+              "kind": "hp_below",
+              "pct": 0.33
+            },
+            "actions": [
+              {
+                "kind": "shield",
+                "target": "self",
+                "maxHpPct": 0.1,
+                "duration": 2
+              }
+            ]
+          },
+          {
+            "id": "resonance",
+            "trigger": {
+              "kind": "round_start",
+              "every": 5
+            },
+            "actions": [
+              {
+                "kind": "damage",
+                "target": "enemy_all",
+                "atkMult": 0.5
+              }
+            ]
+          },
+          {
+            "id": "enrage",
+            "trigger": {
+              "kind": "round_start",
+              "fromRound": 15
+            },
+            "actions": [
+              {
+                "kind": "status",
+                "target": "self",
+                "status": "atk_up",
+                "value": 0.5,
+                "duration": 99
+              }
+            ]
+          }
+        ]
+      },
+      "rewards": {
+        "firstClear": {
+          "gold": 900,
+          "gems": 100,
+          "exp": 330,
+          "essence": 100,
+          "tickets": 1
+        },
+        "repeat": {
+          "gold": 450,
+          "exp": 330
+        },
+        "threeStarBonus": {
+          "gems": 20
+        }
+      },
+      "recommendedKK": 2010,
+      "s": 10
     }
   ]
 }
