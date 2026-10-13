@@ -1,5 +1,6 @@
 import Phaser from 'phaser'
 import { monsterToken } from '../art'
+import { queueArt } from '../artLayout'
 import { go, session } from '../session'
 import { ESSENCE, GEM, GOLD, INK, MUTED, TICKET, W, button, confirm, panel, text } from '../ui'
 import { formatInt } from '../data'
@@ -14,6 +15,11 @@ export class BootScene extends Phaser.Scene {
 
 export class PreloadScene extends Phaser.Scene {
   constructor() { super('Preload') }
+
+  preload(): void {
+    queueArt(this.load)
+  }
+
   create(): void {
     const g = this.add.graphics()
     g.fillGradientStyle(0x1a1038, 0x1a1038, 0x3a2460, 0x3a2460, 1)
@@ -21,7 +27,7 @@ export class PreloadScene extends Phaser.Scene {
     text(this, W / 2, 230, 'VELUNOR', 64, GOLD, [0.5, 0.5])
     text(this, W / 2, 290, 'Stadt · Monster · Portal', 22, INK, [0.5, 0.5])
     ;['m01', 'm02', 'm03'].forEach((id, i) => monsterToken(this, W / 2 - 90 + i * 90, 390, id, 64, 0))
-    text(this, W / 2, 500, 'Platzhalter-Grafik · Prototyp', 16, MUTED, [0.5, 0.5])
+    text(this, W / 2, 500, 'Stilisierte Fantasy', 16, MUTED, [0.5, 0.5])
     this.time.delayedCall(700, () => {
       this.scene.launch('HUD')
       this.scene.start('City')
