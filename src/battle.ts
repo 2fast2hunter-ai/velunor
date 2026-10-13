@@ -461,7 +461,8 @@ export function simulateBattle(input: BattleInput): BattleLog {
     speciesId: unit.speciesId,
     maxHp: unit.maxHp,
     side: unit.side,
-    slot: unit.slot
+    slot: unit.slot,
+    rarity: unit.rarity
   }))
   return { seed: input.seed, rounds, result: finalResult, stars, events, koCount, roster }
 }

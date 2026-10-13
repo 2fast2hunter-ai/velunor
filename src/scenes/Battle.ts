@@ -1,5 +1,5 @@
 import Phaser from 'phaser'
-import { monsterToken } from '../art'
+import { iconSprite, monsterToken, paintBackground } from '../art'
 import { species } from '../data'
 import { go, session } from '../session'
 import { maxSpeed } from '../state'
@@ -22,6 +22,7 @@ interface Token {
   bar: Phaser.GameObjects.Graphics
   x: number
   y: number
+  statuses: Phaser.GameObjects.Image[]
 }
 
 export class BattleScene extends Phaser.Scene {
@@ -48,13 +49,15 @@ export class BattleScene extends Phaser.Scene {
   }
 
   private paintBackdrop(payload: FightPayload): void {
-    const g = this.add.graphics()
-    g.fillStyle(0x24160f, 1)
-    g.fillRect(0, 0, W, 360)
-    g.fillStyle(0x1d2a22, 1)
-    g.fillRect(0, 360, W, 360)
-    g.fillStyle(0xc4a574, 1)
-    g.fillRect(0, 348, W, 24)
+    if (!paintBackground(this, 'arena')) {
+      const g = this.add.graphics()
+      g.fillStyle(0x24160f, 1)
+      g.fillRect(0, 0, W, 360)
+      g.fillStyle(0x1d2a22, 1)
+      g.fillRect(0, 360, W, 360)
+      g.fillStyle(0xc4a574, 1)
+      g.fillRect(0, 348, W, 24)
+    }
     text(this, 40, 80, 'Gegner', 16, '#ffb4b4')
     text(this, 40, 430, 'Dein Team', 16, '#9dffc3')
     const count = payload.report.logs.length
@@ -63,22 +66,23 @@ export class BattleScene extends Phaser.Scene {
     this.log.setWordWrapWidth(520)
     this.log.setAlign('center')
     button(this, 1160, 100, 140, 42, 'Skip', () => this.skip(), { fill: 0x3d4b6e, color: INK, size: 16 })
-    button(this, 1160, 154, 140, 42, `${session.save.settings.battleSpeed}×`, () => {
+    const speed = session.save.settings.battleSpeed
+    button(this, 1160, 154, 150, 46, `${speed}×`, () => {
       const cap = maxSpeed(session.save)
       const current = session.save.settings.battleSpeed
       const next = current === 1 ? 2 : current === 2 && cap === 4 ? 4 : 1
       session.setSpeed(next)
-    }, { fill: 0x3d4b6e, color: INK, size: 16 })
+    }, { fill: 0x3d4b6e, color: INK, size: 16, icon: `speed_${speed}x`, hitPad: 8 })
   }
 
   private buildTokens(log: BattleLog): void {
     for (const unit of log.roster) {
       const [x, y] = place(unit.side, unit.slot)
-      const root = monsterToken(this, x, y, unit.speciesId, 64)
-      const name = text(this, 0, 46, unit.name, 13, INK, [0.5, 0])
+      const root = monsterToken(this, x, y, unit.speciesId, 72, unit.rarity)
+      const name = text(this, 0, 50, unit.name, 13, INK, [0.5, 0])
       const bar = this.add.graphics()
       root.add(name)
-      const token: Token = { id: unit.id, name: unit.name, speciesId: unit.speciesId, hp: unit.maxHp, max: unit.maxHp, root, bar, x, y }
+      const token: Token = { id: unit.id, name: unit.name, speciesId: unit.speciesId, hp: unit.maxHp, max: unit.maxHp, root, bar, x, y, statuses: [] }
       this.tokens.set(unit.id, token)
       this.redraw(token)
     }
@@ -153,6 +157,23 @@ export class BattleScene extends Phaser.Scene {
       target.root.setAlpha(0.3)
       this.redraw(target)
       this.log.setText(`${target.name} ist kampfunfähig.`)
+      return
+    }
+    if (event.kind === 'status_add' || event.kind === 'status_remove') {
+      const target = this.tokens.get(event.target)
+      if (!target) return
+      if (event.kind === 'status_remove') {
+        const index = target.statuses.findIndex((icon) => icon.getData('status') === event.status)
+        if (index >= 0) target.statuses.splice(index, 1)[0].destroy()
+      } else {
+        const icon = iconSprite(this, 0, 0, `status_${event.status}`, 18)
+        if (icon) {
+          icon.setData('status', event.status)
+          target.root.add(icon)
+          target.statuses.push(icon)
+        }
+      }
+      target.statuses.forEach((icon, index) => icon.setPosition(-20 + index * 20, -36))
       return
     }
     if (event.kind === 'revive') {

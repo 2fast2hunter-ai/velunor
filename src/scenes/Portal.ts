@@ -1,13 +1,13 @@
 import Phaser from 'phaser'
 import { rewardedButton } from '../ads'
-import { monsterToken } from '../art'
+import { monsterToken, paintBackground } from '../art'
 import { gachaCfg, rarityInfo, species } from '../data'
 import { pEpic, pLeg, pullsUntilEpic, pullsUntilLegendary } from '../gacha'
 import { session } from '../session'
 import { canOfferFreePull, canOfferGemBonus } from '../ads'
-import { portalOpen, presentPulls } from '../state'
+import { portalOpen, portalUnlockText, presentPulls } from '../state'
 import type { PullResult } from '../types'
-import { INK, MUTED, W, button, openModal, sfx, text } from '../ui'
+import { INK, MUTED, W, button, hoverTip, openModal, sfx, text } from '../ui'
 
 export class PortalScene extends Phaser.Scene {
   constructor() { super('Portal') }
@@ -18,16 +18,18 @@ export class PortalScene extends Phaser.Scene {
 
   private paint(): void {
     this.children.removeAll(true)
-    const g = this.add.graphics()
-    g.fillGradientStyle(0x1a1038, 0x241848, 0x120e22, 0x1a1630, 1)
-    g.fillRect(0, 0, W, 720)
-    g.fillStyle(0x5c6bc0, 0.85)
-    g.fillTriangle(180, 520, 320, 200, 460, 520)
-    g.fillStyle(0xf0c14a, 1)
-    g.fillCircle(320, 340, 18)
+    if (!paintBackground(this, 'portal')) {
+      const g = this.add.graphics()
+      g.fillGradientStyle(0x1a1038, 0x241848, 0x120e22, 0x1a1630, 1)
+      g.fillRect(0, 0, W, 720)
+      g.fillStyle(0x5c6bc0, 0.85)
+      g.fillTriangle(180, 520, 320, 200, 460, 520)
+      g.fillStyle(0xf0c14a, 1)
+      g.fillCircle(320, 340, 18)
+    }
     text(this, 560, 96, 'Beschwörungsportal', 34, '#f0c14a')
     if (!portalOpen(session.save)) {
-      text(this, 560, 320, 'Schließe Stage 1-2 ab', 24, INK)
+      text(this, 560, 320, portalUnlockText(session.save), 24, INK)
       return
     }
     const gacha = session.save.gacha
@@ -44,6 +46,7 @@ export class PortalScene extends Phaser.Scene {
       gacha.pityEpic >= 15 ? 'Soft-Pity für Episch+ ist aktiv.' : 'Soft-Pity Episch+ ab Ziehung 15.'
     ]
     lines.forEach((line, i) => text(this, 560, 160 + i * 32, line, 16, i < 2 ? INK : MUTED))
+    hoverTip(this, 860, 200, 620, 90, 'Soft-Pity erhöht die Chance schrittweise. Ab Ziehung 15 steigt Episch+, ab Ziehung 60 Legendär+. Der Zähler bleibt gespeichert.')
     const gems = session.save.currencies.gems
     const tickets = session.save.currencies.tickets
     button(this, 700, 400, 240, 52, '1×  ·  100 Juwelen', () => this.pay('single', 'gems'), { disabled: gems < 100 })
@@ -97,7 +100,9 @@ export class PortalScene extends Phaser.Scene {
       card.add(plate)
       card.add(monsterToken(this, 0, -20, pull.speciesId, 64, pull.rarity))
       card.add(text(this, 0, 40, sp.name, 14, INK, [0.5, 0]))
-      card.add(text(this, 0, 60, `${rarityInfo(pull.rarity).name}${pull.upgraded ? ' · aufgewertet' : ''}`, 12, rarityInfo(pull.rarity).color, [0.5, 0]))
+      const rarityLine = `${rarityInfo(pull.rarity).name}${pull.upgraded ? ' · aufgewertet' : ''}`
+      const dup = pull.duplicateEssence > 0 ? `${rarityLine} · +${pull.duplicateEssence} Essenz` : rarityLine
+      card.add(text(this, 0, 60, dup, 12, pull.duplicateEssence > 0 ? '#e0b3ff' : rarityInfo(pull.rarity).color, [0.5, 0]))
       card.setScale(0.2)
       root.add(card)
       this.tweens.add({ targets: card, scale: 1, duration: 180 })

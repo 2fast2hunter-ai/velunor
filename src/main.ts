@@ -29,4 +29,7 @@ const game = new Phaser.Game({
   scene: [BootScene, PreloadScene, HUDScene, CityScene, TeamScene, MonsterListScene, PortalScene, CampaignScene, BattleScene, ResultScene]
 })
 
+const refreshScale = () => game.scale.refresh()
+window.addEventListener('resize', refreshScale)
+void document.fonts?.ready.then(() => refreshScale())
 void game

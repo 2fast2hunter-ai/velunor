@@ -73,7 +73,7 @@ export function createSave(now = Date.now()): SaveData {
     daily: freshDaily(dayKey(now), 1),
     ads: freshAds(dayKey(now)),
     milestones: { firstEpic: false, firstLegendary: false, townhallRewards: [] },
-    tutorial: { mineGranted: false, freeTrainUsed: false, pullClaimed: false },
+    tutorial: { mineGranted: false, freeTrainUsed: false, pullClaimed: false, guideStep: 0 },
     settings: { battleSpeed: 1, sound: true },
     sessionStartedAt: now
   }
@@ -119,6 +119,11 @@ export function loadSave(raw: string | null, now = Date.now()): SaveData {
     const parsed = JSON.parse(raw) as SaveData
     if (!parsed || parsed.version !== 1 || !parsed.currencies || !parsed.buildings) return createSave(now)
     parsed.sessionStartedAt = now
+    if (!parsed.tutorial) parsed.tutorial = { mineGranted: true, freeTrainUsed: true, pullClaimed: true, guideStep: 6 }
+    if (parsed.tutorial.guideStep == null) {
+      const progressed = Object.keys(parsed.campaign?.cleared ?? {}).length > 0 || parsed.tutorial.pullClaimed || (parsed.monsters?.length ?? 0) > 3
+      parsed.tutorial.guideStep = progressed ? 6 : 0
+    }
     tick(parsed, now)
     return parsed
   } catch {
@@ -176,6 +181,11 @@ export function teamMembers(save: SaveData): MonsterInstance[] {
 
 export function portalOpen(save: SaveData): boolean {
   return Boolean(save.campaign.cleared['1-2'])
+}
+
+/** Townhall level 1 lists the portal, but it stays shut until stage 1-2. */
+export function portalUnlockText(save: SaveData): string {
+  return portalOpen(save) ? 'Portal' : 'Portal nach Stage 1-2'
 }
 
 export function coach(save: SaveData): { text: string; target: string } | null {
@@ -546,6 +556,7 @@ export interface FightReport {
   victory: boolean
   tip: string
   stars: 0 | 1 | 2 | 3
+  applied?: boolean
 }
 
 export function fightStage(save: SaveData, stageId: string, count: 1 | 3, now: number): ActionResult<FightReport> {
@@ -558,9 +569,9 @@ export function fightStage(save: SaveData, stageId: string, count: 1 | 3, now: n
   if (!allies.length) return fail('Stell mindestens ein Monster auf.')
   const bundle = emptyReward()
   const logs: BattleLog[] = []
-  const messages: string[] = []
   let allWins = true
   let bestStars: 0 | 1 | 2 | 3 = 0
+  let previewCleared = save.campaign.cleared[stage.id] ?? 0
   let tip = ''
   for (let i = 0; i < count; i++) {
     const seed = nextSeed(save)
@@ -575,20 +586,37 @@ export function fightStage(save: SaveData, stageId: string, count: 1 | 3, now: n
     const log = simulateBattle(input)
     logs.push(log)
     if (log.result === 'win') {
-      const won = grantWin(save, stage, log.stars)
+      const won = previewWin(stage, log.stars, previewCleared)
       addReward(bundle, won)
+      previewCleared = Math.max(previewCleared, log.stars)
       if (log.stars > bestStars) bestStars = log.stars
-      messages.push(...noteQuest(save, 'win3'))
     } else {
       allWins = false
-      const consolation = Math.floor(stage.rewards.repeat.exp * rewardsCfgLoss())
-      const levels = grantTeamExp(save, consolation)
-      bundle.exp += consolation
-      bundle.levels += levels
+      bundle.exp += Math.floor(stage.rewards.repeat.exp * rewardsCfgLoss())
       tip = battleTip(input, log)
     }
   }
-  return ok({ stageId, logs, rewards: bundle, victory: allWins, tip, stars: bestStars }, messages)
+  return ok({ stageId, logs, rewards: bundle, victory: allWins, tip, stars: bestStars, applied: false }, [])
+}
+
+export function commitFightRewards(save: SaveData, report: FightReport): string[] {
+  if (report.applied) return []
+  report.applied = true
+  const bundle = report.rewards
+  save.currencies.gold += bundle.gold
+  save.currencies.gems += bundle.gems
+  save.currencies.essence += bundle.essence
+  save.currencies.tickets += bundle.tickets
+  if (report.victory) {
+    const previous = save.campaign.cleared[report.stageId] ?? 0
+    save.campaign.cleared[report.stageId] = Math.max(previous, report.stars) as 1 | 2 | 3
+  }
+  bundle.levels = grantTeamExp(save, bundle.exp)
+  const messages: string[] = []
+  for (const log of report.logs) {
+    if (log.result === 'win') messages.push(...noteQuest(save, 'win3'))
+  }
+  return messages
 }
 
 function rewardsCfgLoss(): number {
@@ -608,8 +636,7 @@ function addReward(into: RewardBundle, extra: RewardBundle): void {
   into.levels += extra.levels
 }
 
-function grantWin(save: SaveData, stage: StageDef, stars: 0 | 1 | 2 | 3): RewardBundle {
-  const previous = save.campaign.cleared[stage.id] ?? 0
+function previewWin(stage: StageDef, stars: 0 | 1 | 2 | 3, previous: number): RewardBundle {
   const bundle = emptyReward()
   const first = previous <= 0
   if (first) {
@@ -622,12 +649,6 @@ function grantWin(save: SaveData, stage: StageDef, stars: 0 | 1 | 2 | 3): Reward
   }
   bundle.exp = first ? stage.rewards.firstClear.exp : stage.rewards.repeat.exp
   if (stars === 3 && previous < 3) bundle.gems += stage.rewards.threeStarBonus.gems
-  save.currencies.gold += bundle.gold
-  save.currencies.gems += bundle.gems
-  save.currencies.essence += bundle.essence
-  save.currencies.tickets += bundle.tickets
-  save.campaign.cleared[stage.id] = Math.max(previous, stars) as 1 | 2 | 3
-  bundle.levels = grantTeamExp(save, bundle.exp)
   return bundle
 }
 
@@ -697,12 +718,19 @@ export function pull(save: SaveData, kind: 'single' | 'multi' | 'tutorial', pay:
     : rollMulti(save.gacha, () => rng(save), kind === 'tutorial' ? 3 : 2).map((p) => p)
   if (kind === 'tutorial') save.tutorial.pullClaimed = true
   const results: PullResult[] = []
+  const owned = new Set(save.monsters.map((monster) => monster.speciesId))
   for (const entry of raw) {
+    const duplicateEssence = owned.has(entry.speciesId) ? rarityInfo(entry.rarity).essence : 0
+    if (duplicateEssence > 0) {
+      save.currencies.essence += duplicateEssence
+      messages.push(`${species(entry.speciesId).name}: Duplikat +${duplicateEssence} Essenz.`)
+    }
+    owned.add(entry.speciesId)
     const monster = makeMonster(entry.speciesId, entry.rarity, now, false)
     save.monsters.push(monster)
     const history: GachaHistoryEntry = { t: now, speciesId: entry.speciesId, rarity: entry.rarity, upgraded: entry.upgraded }
     save.gacha.history.unshift(history)
-    results.push({ ...entry, uid: monster.uid })
+    results.push({ ...entry, uid: monster.uid, duplicateEssence })
     messages.push(...noteMilestone(save, entry.rarity))
   }
   save.gacha.history = save.gacha.history.slice(0, 100)

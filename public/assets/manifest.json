@@ -56,37 +56,177 @@
     }
   },
   "frames": {
-    "0": "frames/rarity_0.png",
-    "1": "frames/rarity_1.png",
-    "2": "frames/rarity_2.png",
-    "3": "frames/rarity_3.png",
-    "4": "frames/rarity_4.png",
-    "5": "frames/rarity_5.png",
-    "6": "frames/rarity_6.png",
-    "7": "frames/rarity_7.png",
-    "8": "frames/rarity_8.png",
-    "9": "frames/rarity_9.png"
+    "0": {
+      "512": "frames/rarity_0.png",
+      "256": "frames/rarity_0_256.png"
+    },
+    "1": {
+      "512": "frames/rarity_1.png",
+      "256": "frames/rarity_1_256.png"
+    },
+    "2": {
+      "512": "frames/rarity_2.png",
+      "256": "frames/rarity_2_256.png"
+    },
+    "3": {
+      "512": "frames/rarity_3.png",
+      "256": "frames/rarity_3_256.png"
+    },
+    "4": {
+      "512": "frames/rarity_4.png",
+      "256": "frames/rarity_4_256.png"
+    },
+    "5": {
+      "512": "frames/rarity_5.png",
+      "256": "frames/rarity_5_256.png"
+    },
+    "6": {
+      "512": "frames/rarity_6.png",
+      "256": "frames/rarity_6_256.png"
+    },
+    "7": {
+      "512": "frames/rarity_7.png",
+      "256": "frames/rarity_7_256.png"
+    },
+    "8": {
+      "512": "frames/rarity_8.png",
+      "256": "frames/rarity_8_256.png"
+    },
+    "9": {
+      "512": "frames/rarity_9.png",
+      "256": "frames/rarity_9_256.png"
+    }
   },
   "icons": {
-    "gold": "icons/gold.png",
-    "gems": "icons/gems.png",
-    "essence": "icons/essence.png",
-    "tickets": "icons/tickets.png",
-    "type_fire": "icons/type_fire.png",
-    "type_water": "icons/type_water.png",
-    "type_plant": "icons/type_plant.png",
-    "type_earth": "icons/type_earth.png",
-    "star": "icons/star.png",
-    "star_empty": "icons/star_empty.png",
-    "lock": "icons/lock.png",
-    "speed_1x": "icons/speed_1x.png",
-    "speed_2x": "icons/speed_2x.png",
-    "speed_4x": "icons/speed_4x.png",
-    "settings": "icons/settings.png",
-    "nav_city": "icons/nav_city.png",
-    "nav_team": "icons/nav_team.png",
-    "nav_monsters": "icons/nav_monsters.png",
-    "nav_portal": "icons/nav_portal.png",
-    "nav_campaign": "icons/nav_campaign.png"
+    "gold": {
+      "256": "icons/gold.png",
+      "128": "icons/gold_128.png"
+    },
+    "gems": {
+      "256": "icons/gems.png",
+      "128": "icons/gems_128.png"
+    },
+    "essence": {
+      "256": "icons/essence.png",
+      "128": "icons/essence_128.png"
+    },
+    "tickets": {
+      "256": "icons/tickets.png",
+      "128": "icons/tickets_128.png"
+    },
+    "type_fire": {
+      "256": "icons/type_fire.png",
+      "128": "icons/type_fire_128.png"
+    },
+    "type_water": {
+      "256": "icons/type_water.png",
+      "128": "icons/type_water_128.png"
+    },
+    "type_plant": {
+      "256": "icons/type_plant.png",
+      "128": "icons/type_plant_128.png"
+    },
+    "type_earth": {
+      "256": "icons/type_earth.png",
+      "128": "icons/type_earth_128.png"
+    },
+    "star": {
+      "256": "icons/star.png",
+      "128": "icons/star_128.png"
+    },
+    "star_empty": {
+      "256": "icons/star_empty.png",
+      "128": "icons/star_empty_128.png"
+    },
+    "lock": {
+      "256": "icons/lock.png",
+      "128": "icons/lock_128.png"
+    },
+    "settings": {
+      "256": "icons/settings.png",
+      "128": "icons/settings_128.png"
+    },
+    "nav_city": {
+      "256": "icons/nav_city.png",
+      "128": "icons/nav_city_128.png"
+    },
+    "speed_1x": {
+      "256": "icons/speed_1x.png",
+      "128": "icons/speed_1x_128.png"
+    },
+    "speed_2x": {
+      "256": "icons/speed_2x.png",
+      "128": "icons/speed_2x_128.png"
+    },
+    "speed_4x": {
+      "256": "icons/speed_4x.png",
+      "128": "icons/speed_4x_128.png"
+    },
+    "nav_team": {
+      "256": "icons/nav_team.png",
+      "128": "icons/nav_team_128.png"
+    },
+    "nav_monsters": {
+      "256": "icons/nav_monsters.png",
+      "128": "icons/nav_monsters_128.png"
+    },
+    "nav_portal": {
+      "256": "icons/nav_portal.png",
+      "128": "icons/nav_portal_128.png"
+    },
+    "nav_campaign": {
+      "256": "icons/nav_campaign.png",
+      "128": "icons/nav_campaign_128.png"
+    },
+    "status_burn": {
+      "256": "icons/status_burn.png",
+      "128": "icons/status_burn_128.png"
+    },
+    "status_stun": {
+      "256": "icons/status_stun.png",
+      "128": "icons/status_stun_128.png"
+    },
+    "status_taunt": {
+      "256": "icons/status_taunt.png",
+      "128": "icons/status_taunt_128.png"
+    },
+    "status_def_up": {
+      "256": "icons/status_def_up.png",
+      "128": "icons/status_def_up_128.png"
+    },
+    "status_def_down": {
+      "256": "icons/status_def_down.png",
+      "128": "icons/status_def_down_128.png"
+    },
+    "status_thorns": {
+      "256": "icons/status_thorns.png",
+      "128": "icons/status_thorns_128.png"
+    }
+  },
+  "backgrounds": {
+    "bg_city": {
+      "jpg": "backgrounds/bg_city.jpg",
+      "webp": "backgrounds/bg_city.webp",
+      "size": [
+        1280,
+        720
+      ]
+    },
+    "bg_arena": {
+      "jpg": "backgrounds/bg_arena.jpg",
+      "webp": "backgrounds/bg_arena.webp",
+      "size": [
+        1280,
+        720
+      ]
+    },
+    "bg_portal": {
+      "jpg": "backgrounds/bg_portal.jpg",
+      "webp": "backgrounds/bg_portal.webp",
+      "size": [
+        1280,
+        720
+      ]
+    }
   }
 }

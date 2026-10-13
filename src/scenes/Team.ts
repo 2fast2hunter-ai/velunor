@@ -5,7 +5,8 @@ import { session } from '../session'
 import { hasUnlock } from '../data'
 import { previewStats, synergyForTeam } from '../stats'
 import { ALL_SLOTS, SLOT_ROW, type SlotId } from '../types'
-import { INK, MUTED, W, button, panel, text } from '../ui'
+import { openGuide } from '../guide'
+import { INK, MUTED, W, attachTip, button, hoverTip, panel, text } from '../ui'
 
 const SLOT_POS: Record<SlotId, [number, number]> = {
   F1: [480, 250],
@@ -23,6 +24,8 @@ export class TeamScene extends Phaser.Scene {
 
   create(): void {
     this.paint()
+    const guide = openGuide(this, 'Team')
+    if (guide) this.events.once('shutdown', () => guide.close())
   }
 
   private paint(): void {
@@ -41,7 +44,7 @@ export class TeamScene extends Phaser.Scene {
       const monster = save.monsters.find((m) => m.uid === uid)
       const box = this.add.graphics()
       panel(box, x - 70, y - 70, 150, 150, this.selected === slot ? 0x3a2a20 : 0x1b2438)
-      text(this, x + 5, y - 58, slot, 14, '#f0c14a', [0.5, 0])
+        text(this, x + 5, y - 58, slot, 14, '#f0c14a', [0.5, 0])
       if (!unlocked) {
         text(this, x + 5, y, slot === 'H2' ? 'Rathaus 2' : 'Rathaus 3', 14, MUTED, [0.5, 0.5])
       } else if (monster) {
@@ -55,7 +58,11 @@ export class TeamScene extends Phaser.Scene {
       }
       if (unlocked) {
         const hit = this.add.rectangle(x + 5, y + 8, 150, 150, 0xffffff, 0.001)
-        hit.setInteractive({ useHandCursor: true })
+        hit.setInteractive(new Phaser.Geom.Rectangle(0, 0, 150, 150), Phaser.Geom.Rectangle.Contains)
+        if (hit.input) hit.input.cursor = 'pointer'
+        attachTip(this, hit, x + 5, y - 70, slot.startsWith('F')
+          ? `${slot} ist Front. Das Monster hält aus und zielt auf seine Spur. Die passende Rolle gibt +10 % ATK und DEF.`
+          : `${slot} ist Hinten. Das Monster greift das schwächste Ziel an. Die passende Rolle gibt +10 % ATK und DEF.`)
         hit.on('pointerup', () => {
           this.selected = slot
           this.paint()
@@ -69,6 +76,7 @@ export class TeamScene extends Phaser.Scene {
       : 'Typ-Synergien: Rathaus Stufe 2'
     const synLabel = text(this, 48, 492, synText, 15, INK)
     synLabel.setWordWrapWidth(1180)
+    hoverTip(this, 360, 500, 640, 28, 'Zwei gleiche Typen im Team verstärken sich. Das Rathaus schaltet Typ-Synergien auf Stufe 2 frei.')
 
     const roster = save.monsters
     const pageSize = 5

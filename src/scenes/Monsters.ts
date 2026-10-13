@@ -1,5 +1,5 @@
 import Phaser from 'phaser'
-import { monsterToken } from '../art'
+import { iconSprite, monsterToken } from '../art'
 import { ascensionCosts, expToNext, hasUnlock, maxLevelFor, rarityInfo, species, strongAgainst, typeName } from '../data'
 import { session } from '../session'
 import { instanceStats } from '../stats'
@@ -39,7 +39,10 @@ export class MonsterListScene extends Phaser.Scene {
       text(this, x + 10, y - 36, sp.name, 16, INK)
       text(this, x + 10, y - 12, `${rarityInfo(monster.rarity).name}`, 13, rarityInfo(monster.rarity).color)
       text(this, x + 10, y + 8, `Lv. ${monster.level}`, 14, MUTED)
-      if (monster.locked) text(this, x + 10, y + 28, 'geschützt', 12, '#9dffc3')
+      if (monster.locked) {
+        const lock = iconSprite(this, x + 18, y + 28, 'lock', 16)
+        text(this, lock ? x + 32 : x + 10, y + 28, 'geschützt', 12, '#9dffc3', lock ? [0, 0.5] : [0, 0])
+      }
       const hit = this.add.rectangle(x, y, 200, 150, 0xffffff, 0.001)
       hit.setInteractive({ useHandCursor: true })
       hit.on('pointerup', () => this.openDetail(monster.uid))
