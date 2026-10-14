@@ -20,6 +20,10 @@ import { GOLD, INK, MUTED, W, button, floatText, openModal, panel, text } from '
 export class CityScene extends Phaser.Scene {
   private dynamic!: Phaser.GameObjects.Container
   private modal?: { close: () => void }
+  private buildingModal: BuildingId | null = null
+  private modalLevel = 0
+  private modalEndsAt: number | null = null
+  private countdown?: Phaser.GameObjects.Text
   private inputReady = false
   private breedA: string | null = null
   private breedB: string | null = null
@@ -208,6 +212,21 @@ export class CityScene extends Phaser.Scene {
       label.on('pointerup', () => this.openBuilding('breeding'))
       this.dynamic.add(label)
     }
+    this.syncBuildingModal()
+  }
+
+  /** Rebuild an open building popup when its level or timer changes, and tick the countdown in place. */
+  private syncBuildingModal(): void {
+    if (!this.buildingModal || !this.modal) return
+    const building = session.save.buildings[this.buildingModal]
+    const changed = building.level !== this.modalLevel || building.upgradeEndsAt !== this.modalEndsAt
+    if (changed) {
+      this.openBuilding(this.buildingModal)
+      return
+    }
+    if (this.countdown && building.upgradeEndsAt != null) {
+      this.countdown.setText(`Fertig in ${formatRemain(building.upgradeEndsAt - Date.now())}`)
+    }
   }
 
   private markX(target: string): number {
@@ -245,6 +264,16 @@ export class CityScene extends Phaser.Scene {
     const wide = id === 'training' || (id === 'breeding' && save.buildings.breeding.level > 0)
     const modal = openModal(this, wide ? 980 : 640, wide ? 560 : 460, buildingName(id))
     this.modal = modal
+    this.buildingModal = id
+    this.modalLevel = save.buildings[id].level
+    this.modalEndsAt = save.buildings[id].upgradeEndsAt
+    this.countdown = undefined
+    modal.root.once('destroy', () => {
+      if (this.modal !== modal) return
+      this.modal = undefined
+      this.buildingModal = null
+      this.countdown = undefined
+    })
     const now = Date.now()
     const info = upgradeInfo(save, id)
     const left = 180
@@ -294,7 +323,8 @@ export class CityScene extends Phaser.Scene {
   ): void {
     const building = session.save.buildings[id]
     if (building.upgradeEndsAt != null) {
-      root.add(text(this, x, y - 28, `Fertig in ${formatRemain(building.upgradeEndsAt - Date.now())}`, 16, GOLD, [0.5, 0]))
+      this.countdown = text(this, x, y - 28, `Fertig in ${formatRemain(building.upgradeEndsAt - Date.now())}`, 16, GOLD, [0.5, 0])
+      root.add(this.countdown)
       root.add(button(this, x, y + 20, 200, 44, 'Abbrechen', () => {
         session.cancelUpgrade(id)
         this.modal?.close()
@@ -303,6 +333,7 @@ export class CityScene extends Phaser.Scene {
       const speed = rewardedButton(session.save, 'build_speed', Date.now())
       if (speed.visible) {
         root.add(button(this, x, y + 74, 220, 40, speed.label, () => session.toast(speed.reason || 'Gerade keine Werbung verfügbar'), { disabled: !speed.enabled, fill: 0x3d4b6e, color: INK, size: 13 }))
+        if (speed.reason) root.add(text(this, x, y + 108, speed.reason, 12, MUTED, [0.5, 0]))
       }
       return
     }

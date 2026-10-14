@@ -1028,7 +1028,8 @@ export function fightArena(save: SaveData, tierId: string, now: number): ActionR
   const victory = fought.log.result === 'win'
   const scored = applyArenaOutcome(save, tierId, victory ? 'win' : 'loss')
   save.arena.attemptsUsed += 1
-  save.arena.rerollIndex += 1
+  // A loss keeps the current three opponents, so the free daily reroll still changes the board.
+  if (victory) save.arena.rerollIndex += 1
   save.lastBattleResult = victory ? 'win' : 'loss'
   const rewards = emptyReward()
   rewards.gold = scored.gold

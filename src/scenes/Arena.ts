@@ -67,13 +67,16 @@ export class ArenaScene extends Phaser.Scene {
     }
 
     const rerollsLeft = Math.max(0, arenaCfg.freeRerolls - save.arena.rerollsUsed)
-    button(this, 360, 608, 280, 46, rerollsLeft > 0 ? `Neu würfeln (${rerollsLeft})` : 'Neu würfeln', () => {
+    const rerollUsed = rerollsLeft <= 0
+    button(this, 360, 608, 280, 46, rerollUsed ? 'Heute gewürfelt' : `Neu würfeln (${rerollsLeft})`, () => {
+      if (session.save.arena.rerollsUsed >= arenaCfg.freeRerolls) return
       session.rerollArena()
       this.paint()
-    }, { disabled: rerollsLeft <= 0, fill: 0x3d4b6e, color: INK, size: 16 })
+    }, { disabled: rerollUsed, fill: 0xf0c14a, color: '#2a2112', size: 16 })
     const chestReady = save.arena.attemptsUsed >= arenaCfg.attemptsPerDay && !save.arena.chestClaimed
     const chestLabel = save.arena.chestClaimed ? 'Truhe geholt' : chestReady ? 'Tagestruhe' : 'Truhe nach 5 Versuchen'
     button(this, 680, 608, 300, 46, chestLabel, () => {
+      if (session.save.arena.chestClaimed || session.save.arena.attemptsUsed < arenaCfg.attemptsPerDay) return
       session.claimArenaChest()
       this.paint()
     }, { disabled: !chestReady, fill: 0x7e57c2, color: '#fff', size: 16 })

@@ -1,5 +1,6 @@
 import { describe, expect, it, vi } from 'vitest'
 import * as ads from './ads'
+import * as battle from './battle'
 import {
   applyArenaOutcome,
   arenaPlayerPower,
@@ -133,13 +134,48 @@ describe('arena rewards', () => {
     expect(value.arena?.pointsDelta).toBe(value.victory ? tier.win : 0)
     expect(save.arena.points).toBe(value.victory ? tier.win : 0)
     expect(save.arena.attemptsUsed).toBe(1)
-    expect(save.arena.rerollIndex).toBe(1)
+    expect(save.arena.rerollIndex).toBe(value.victory ? 1 : 0)
     expect(save.monsters.map((monster) => monster.exp)).toEqual(exp)
     expect(save.campaign.cleared).toEqual(cleared)
     expect(JSON.stringify(save.ads)).toBe(adsBefore)
     expect(commitFightRewards(save, value)).toEqual([])
     expect(save.currencies.gold).toBe(goldBefore + value.rewards.gold)
-    expect(listArenaOpponents(save, now).map((ghost) => ghost.seed)).not.toEqual(before.map((ghost) => ghost.seed))
+    const after = listArenaOpponents(save, now).map((ghost) => ghost.seed)
+    if (value.victory) expect(after).not.toEqual(before.map((ghost) => ghost.seed))
+    else expect(after).toEqual(before.map((ghost) => ghost.seed))
+  })
+
+  it('rolls a new board only after a win and keeps it after a loss', () => {
+    const save = ready(8, now)
+    const before = listArenaOpponents(save, now).map((ghost) => ghost.seed)
+    const log = {
+      seed: 1,
+      rounds: 1,
+      result: 'loss' as const,
+      stars: 0 as const,
+      events: [],
+      koCount: 0,
+      roster: []
+    }
+    const spy = vi.spyOn(battle, 'simulateBattle').mockReturnValue(log)
+    const loss = fightArena(save, 'hard', now)
+    expect(loss.ok).toBe(true)
+    expect(loss.value?.victory).toBe(false)
+    expect(loss.value?.rewards.exp).toBe(0)
+    expect(save.arena.attemptsUsed).toBe(1)
+    expect(save.arena.rerollIndex).toBe(0)
+    expect(save.arena.losses).toBe(1)
+    expect(listArenaOpponents(save, now).map((ghost) => ghost.seed)).toEqual(before)
+
+    spy.mockReturnValue({ ...log, result: 'win', stars: 3 })
+    const win = fightArena(save, 'hard', now)
+    expect(win.value?.victory).toBe(true)
+    expect(win.value?.rewards.exp).toBe(0)
+    expect(save.arena.attemptsUsed).toBe(2)
+    expect(save.arena.rerollIndex).toBe(1)
+    expect(save.arena.wins).toBe(1)
+    expect(listArenaOpponents(save, now).map((ghost) => ghost.seed)).not.toEqual(before)
+    spy.mockRestore()
   })
 
   it('caps the day at 5 attempts and 1 free reroll, then opens the chest once', () => {
