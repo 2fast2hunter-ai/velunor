@@ -12,7 +12,8 @@ import { go, session } from '../session'
 import { breedPreview, coach, mineFill, monsterByUid, portalOpen, portalUnlockText, skillOffers, trainingQuote, trainingReadyAt, unlockLabel, upgradeInfo } from '../state'
 import type { BuildingId } from '../types'
 import { BUILDING_FOOT, buildingTextureKey } from '../artLayout'
-import { paintBackground } from '../art'
+import { iconSprite, paintBackground } from '../art'
+import { arenaUnlocked } from '../arena'
 import { openGuide } from '../guide'
 import { GOLD, INK, MUTED, W, button, floatText, openModal, panel, text } from '../ui'
 
@@ -74,7 +75,26 @@ export class CityScene extends Phaser.Scene {
     this.structure(1030, 'goldmine', () => this.openBuilding('goldmine'))
     this.portal(460, 210)
     this.gate(820, 210)
+    this.arenaSign()
     button(this, 1148, 586, 150, 40, 'Aufgaben', () => this.openQuests(), { fill: 0x3d4b6e, color: INK, size: 15 })
+  }
+
+  private arenaSign(): void {
+    const g = this.add.graphics()
+    g.fillStyle(0x3e2a22, 0.92)
+    g.fillRoundedRect(36, 108, 128, 148, 16)
+    g.lineStyle(3, 0xf0c14a, 0.85)
+    g.strokeRoundedRect(36, 108, 128, 148, 16)
+    const hit = this.add.rectangle(100, 182, 128, 148, 0xffffff, 0.001)
+    hit.setInteractive({ useHandCursor: true })
+    hit.on('pointerup', () => {
+      if (!this.inputReady) return
+      if (!arenaUnlocked(session.save)) {
+        session.toast('Rathaus Stufe 3')
+        return
+      }
+      go(this, 'Arena')
+    })
   }
 
   private structure(x: number, id: BuildingId, onClick: () => void): void {
@@ -168,6 +188,18 @@ export class CityScene extends Phaser.Scene {
     }
     this.dynamic.add(text(this, 460, 268, 'Portal', 14, INK, [0.5, 0]))
     this.dynamic.add(text(this, 820, 268, 'Kampagne', 14, INK, [0.5, 0]))
+    const arenaOpen = arenaUnlocked(save)
+    const arenaIcon = iconSprite(this, 100, 156, 'arena', 64)
+    if (arenaIcon) {
+      if (!arenaOpen) arenaIcon.setAlpha(0.45)
+      this.dynamic.add(arenaIcon)
+    }
+    this.dynamic.add(text(this, 100, 196, 'Arena', 15, arenaOpen ? GOLD : MUTED, [0.5, 0]))
+    if (!arenaOpen) {
+      const lock = iconSprite(this, 132, 168, 'lock', 22)
+      if (lock) this.dynamic.add(lock)
+      this.dynamic.add(text(this, 100, 218, 'Rathaus Stufe 3', 11, '#ffd59e', [0.5, 0]))
+    }
     const breed = save.buildings.breeding
     const breedLabel = breed.level > 0 ? `Zuchtstation ${breed.level}` : save.buildings.townhall.level >= 5 ? 'Zuchtstation bauen' : ''
     if (breedLabel) {

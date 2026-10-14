@@ -154,9 +154,10 @@ function buildOne(input: BattleUnitInput, side: Side, members: SynergyMember[], 
     const inst = instanceStats(input.speciesId, input.rarity, input.level, input.potential)
     const pos = sp.role === row ? 1 + combat.positionBonus : 1
     const syn = unitSynergy({ type: sp.type, class: sp.class }, members, typeOn, classOn)
-    atk = inst.atk * pos * syn.atk * (input.atkMult ?? (input.boss ? 0.85 : 1))
-    def = inst.def * pos * syn.def
-    hp = inst.hp * syn.hp * (input.hpMult ?? (input.boss ? combat.bossHpMult : 1))
+    const scale = input.statMult ?? 1
+    atk = inst.atk * pos * syn.atk * (input.atkMult ?? (input.boss ? 0.85 : 1)) * scale
+    def = inst.def * pos * syn.def * scale
+    hp = inst.hp * syn.hp * (input.hpMult ?? (input.boss ? combat.bossHpMult : 1)) * scale
     spd = inst.spd * syn.spd
     critChance = Math.min(0.5, combat.critChance + syn.critChance)
     critMult = combat.critMult + syn.critMult

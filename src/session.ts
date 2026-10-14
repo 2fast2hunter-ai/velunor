@@ -11,6 +11,7 @@ import {
   SAVE_KEY,
   commitFightRewards,
   equipSkill,
+  fightArena,
   fightStage,
   loadGame,
   notifyChapterChange,
@@ -29,6 +30,7 @@ import {
   type ActionResult,
   type FightReport
 } from './state'
+import { claimArenaChest, rerollArena } from './arena'
 import type { BuildingId, SlotId } from './types'
 
 export const prefs = { sound: true }
@@ -164,6 +166,29 @@ class Session {
     if (!result.ok && result.reason) this.toast(result.reason)
   }
 
+  arenaFight(tierId: string): FightReport | null {
+    const result = fightArena(this.save, tierId, Date.now())
+    if (!result.ok) {
+      if (result.reason) this.toast(result.reason)
+      return null
+    }
+    this.persist()
+    this.emit()
+    return result.value ?? null
+  }
+
+  rerollArena(): void {
+    const result = rerollArena(this.save, Date.now())
+    this.take({ ok: result.ok, reason: result.reason, messages: result.messages })
+    if (!result.ok && result.reason) this.toast(result.reason)
+  }
+
+  claimArenaChest(): void {
+    const result = claimArenaChest(this.save, Date.now())
+    this.take({ ok: result.ok, reason: result.reason, messages: result.messages })
+    if (!result.ok && result.reason) this.toast(result.reason)
+  }
+
   fight(stageId: string, count: 1 | 3): FightReport | null {
     const result = fightStage(this.save, stageId, count, Date.now())
     if (!result.ok) {
@@ -216,8 +241,8 @@ class Session {
     this.emit()
   }
 
-  async leaveResult(victory: boolean): Promise<void> {
-    await closeToCity(this.save, Date.now(), victory)
+  async leaveResult(victory: boolean, allowAds = true): Promise<void> {
+    await closeToCity(this.save, Date.now(), victory, allowAds)
     this.persist()
   }
 }
@@ -245,7 +270,7 @@ export function go(from: Phaser.Scene, key: string): void {
   // release cannot land on a building and open its modal.
   window.setTimeout(() => {
     switching = false
-    const mains = ['City', 'Team', 'Monsters', 'Portal', 'Campaign', 'Battle', 'Result', 'Preload', 'Boot']
+    const mains = ['City', 'Team', 'Monsters', 'Portal', 'Campaign', 'Arena', 'Battle', 'Result', 'Preload', 'Boot']
     session.persist()
     if (plugin.isActive(key)) plugin.stop(key)
     plugin.launch(key)

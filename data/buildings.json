@@ -40,7 +40,8 @@
           "ascension",
           "skip_uncleared",
           "release_monster",
-          "class_synergies"
+          "class_synergies",
+          "arena"
         ]
       },
       {

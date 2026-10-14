@@ -1,5 +1,5 @@
 import Phaser from 'phaser'
-import { iconSprite, monsterToken, paintBackground } from '../art'
+import { addGhostOverlay, iconSprite, monsterToken, paintBackground } from '../art'
 import { species } from '../data'
 import { go, session } from '../session'
 import { maxSpeed } from '../state'
@@ -43,7 +43,7 @@ export class BattleScene extends Phaser.Scene {
     }
     const log = payload.report.logs[payload.index]
     this.paintBackdrop(payload)
-    this.buildTokens(log)
+    this.buildTokens(log, Boolean(payload.report.arena))
     this.events.once('shutdown', () => { this.stopped = true })
     this.time.delayedCall(300, () => this.play(groupEvents(log.events), 0))
   }
@@ -75,10 +75,11 @@ export class BattleScene extends Phaser.Scene {
     }, { fill: 0x3d4b6e, color: INK, size: 16, icon: `speed_${speed}x`, hitPad: 8 })
   }
 
-  private buildTokens(log: BattleLog): void {
+  private buildTokens(log: BattleLog, arena: boolean): void {
     for (const unit of log.roster) {
       const [x, y] = place(unit.side, unit.slot)
       const root = monsterToken(this, x, y, unit.speciesId, 72, unit.rarity)
+      if (arena && unit.side === 'B') addGhostOverlay(root, this, 72)
       const name = text(this, 0, 50, unit.name, 13, INK, [0.5, 0])
       const bar = this.add.graphics()
       root.add(name)

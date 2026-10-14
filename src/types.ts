@@ -173,6 +173,18 @@ export type AdPlacement =
   | 'training_speed'
   | 'breeding_speed'
 
+export interface ArenaState {
+  dayKey: string
+  attemptsUsed: number
+  rerollsUsed: number
+  rerollIndex: number
+  points: number
+  bestRank: string
+  chestClaimed: boolean
+  wins: number
+  losses: number
+}
+
 export interface SaveData {
   version: number
   createdAt: number
@@ -212,6 +224,7 @@ export interface SaveData {
   tutorial: { mineGranted: boolean; freeTrainUsed: boolean; pullClaimed: boolean; guideStep: number }
   settings: { battleSpeed: 1 | 2 | 4; sound: boolean }
   sessionStartedAt: number
+  arena: ArenaState
 }
 
 export interface BattleEventBase {
@@ -261,6 +274,8 @@ export interface BattleUnitInput {
   stunChanceMult?: number
   poisonPctPerStack?: number
   mechanics?: BossMechanic[]
+  /** Scales hp, atk and def together. Arena ghosts use this when level steps miss the KK band. */
+  statMult?: number
   /** Exact pre-bonus stats. Used by tests to pin mechanics. */
   fixed?: { hp: number; atk: number; def: number; spd: number }
 }

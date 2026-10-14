@@ -1,0 +1,20 @@
+{
+  "unlockTownhall": 3,
+  "attemptsPerDay": 5,
+  "freeRerolls": 1,
+  "tiers": [
+    { "id": "easy", "kkFactor": 0.85, "win": 10, "gold": 150 },
+    { "id": "mid", "kkFactor": 1.0, "win": 20, "gold": 250 },
+    { "id": "hard", "kkFactor": 1.15, "win": 30, "gold": 400 }
+  ],
+  "lossPoints": -5,
+  "lossGold": 50,
+  "dailyChest": { "gems": 30, "essence": 20 },
+  "ranks": [
+    { "id": "bronze", "min": 0, "gems": 0 },
+    { "id": "silver", "min": 100, "gems": 100 },
+    { "id": "gold", "min": 250, "gems": 200 },
+    { "id": "platinum", "min": 500, "gems": 300 }
+  ],
+  "ghostNames": ["Nebelwanderer", "Schattenzähmer", "Irrlicht", "Grauer Hüter"]
+}

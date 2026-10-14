@@ -3,7 +3,7 @@ import { rewardedButton } from '../ads'
 import { go, session } from '../session'
 import type { FightReport } from '../state'
 import { iconSprite } from '../art'
-import { INK, MUTED, W, button, panel, text } from '../ui'
+import { GOLD, INK, MUTED, W, button, panel, text } from '../ui'
 
 interface FightPayload {
   report: FightReport
@@ -24,11 +24,15 @@ export class ResultScene extends Phaser.Scene {
     }
     const report = payload.report
     session.commitResult(report)
+    const arenaFight = Boolean(report.arena)
     const card = this.add.graphics()
     panel(card, 280, 100, 720, 500)
     text(this, W / 2, 130, report.victory ? 'Sieg' : 'Niederlage', 40, report.victory ? '#f0c14a' : '#ff8a80', [0.5, 0])
     text(this, W / 2, 190, report.stageId, 22, INK, [0.5, 0])
-    if (report.victory && this.textures.exists('icon-star')) {
+    if (arenaFight && report.arena) {
+      const delta = report.arena.pointsDelta
+      text(this, W / 2, 230, `${delta > 0 ? '+' : ''}${delta} Punkte · ${report.arena.points} gesamt`, 20, GOLD, [0.5, 0.5])
+    } else if (report.victory && this.textures.exists('icon-star')) {
       for (let i = 0; i < 3; i++) iconSprite(this, W / 2 - 36 + i * 36, 230, i < report.stars ? 'star' : 'star_empty', 28)
     } else if (report.victory) {
       text(this, W / 2, 230, '★'.repeat(report.stars) + '☆'.repeat(3 - report.stars), 22, '#f0c14a', [0.5, 0.5])
@@ -36,7 +40,11 @@ export class ResultScene extends Phaser.Scene {
       text(this, W / 2, 230, 'Keine Sterne', 18, MUTED, [0.5, 0.5])
     }
     const rewards = report.rewards
-    const lines = [
+    const lines = arenaFight ? [
+      `+${rewards.gold} Gold`,
+      rewards.gems ? `+${rewards.gems} Juwelen für den neuen Rang` : '',
+      'Keine EP'
+    ].filter(Boolean) : [
       `+${rewards.gold} Gold`,
       rewards.gems ? `+${rewards.gems} Juwelen` : (report.victory ? 'Keine Juwelen' : 'Niederlage: keine Juwelen'),
       `+${rewards.exp} EP je Monster im Team`,
@@ -54,10 +62,10 @@ export class ResultScene extends Phaser.Scene {
       tip.setWordWrapWidth(640)
       tip.setAlign('center')
     }
-    button(this, W / 2, 520, 320, 64, 'Weiter zur Stadt', () => {
-      void session.leaveResult(report.victory).then(() => go(this, 'City'))
+    button(this, W / 2, 520, 320, 64, arenaFight ? 'Zurück zur Arena' : 'Weiter zur Stadt', () => {
+      void session.leaveResult(report.victory, !arenaFight).then(() => go(this, arenaFight ? 'Arena' : 'City'))
     }, { hitPad: 18 })
-    if (report.victory && report.logs.length === 1) {
+    if (!arenaFight && report.victory && report.logs.length === 1) {
       const ad = rewardedButton(session.save, 'double_reward', Date.now())
       if (ad.visible) {
         button(this, W / 2, 590, 320, 42, ad.label, () => session.toast(ad.reason || 'Gerade keine Werbung verfügbar'), {
