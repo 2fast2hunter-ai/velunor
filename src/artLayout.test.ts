@@ -1,7 +1,7 @@
 import { describe, expect, it } from 'vitest'
 import shipped from '../public/assets/manifest.json'
 import manifest from './artManifest.json'
-import { assetUrl, backgroundTextureKey, frameMonsterFit, frameTextureKey, iconTextureKey, monsterSlotScale, queueArt } from './artLayout'
+import { assetUrl, backgroundTextureKey, frameMonsterFit, frameTextureKey, ghostOverlayTextureKey, iconTextureKey, monsterSlotScale, queueArt } from './artLayout'
 
 describe('monster slot scale', () => {
   it('insets the wide motifs and leaves the others at full size', () => {
@@ -27,20 +27,32 @@ describe('art manifest', () => {
     expect(shipped).toEqual(manifest)
     expect(Object.keys(manifest.monsters)).toHaveLength(10)
     expect(Object.keys(manifest.buildings)).toEqual(['townhall', 'goldmine', 'training'])
-    expect(Object.keys(manifest.frames)).toHaveLength(10)
+    expect(Object.keys(manifest.frames).filter((id) => Number.isInteger(Number(id)))).toHaveLength(10)
+    expect(manifest.frames.ghost_overlay['512']).toBe('frames/ghost_overlay.png')
+    expect(manifest.frames.ghost_overlay['256']).toBe('frames/ghost_overlay_256.png')
+    expect(manifest.icons.arena).toEqual({ '128': 'icons/arena.png', '64': 'icons/arena_64.png' })
+    expect(manifest.icons.rank_bronze['48']).toBe('icons/rank_bronze.png')
+    expect(manifest.icons.rank_bronze['96']).toBe('icons/rank_bronze_96.png')
+    expect(manifest.icons.rank_sheet.order).toEqual(['bronze', 'silver', 'gold', 'platinum'])
+    expect(manifest.icons.rank_sheet.frame).toEqual([48, 48])
     expect(Object.keys(manifest.icons).length).toBeGreaterThan(20)
     expect(Object.keys(manifest.backgrounds)).toEqual(['bg_city', 'bg_arena', 'bg_portal'])
   })
 
   it('preloads every manifest image on the pages base path', () => {
     const queued: [string, string][] = []
-    queueArt({ image: (key, url) => queued.push([key, url]) }, '/velunor/')
+    const sheets: [string, string, number, number][] = []
+    queueArt({
+      image: (key, url) => queued.push([key, url]),
+      spritesheet: (key, url, config) => sheets.push([key, url, config.frameWidth, config.frameHeight])
+    }, '/velunor/')
     const monsters = Object.keys(manifest.monsters).length
     const buildings = Object.keys(manifest.buildings).length
     const frames = Object.keys(manifest.frames).length
     const icons = Object.keys(manifest.icons).length
     const backgrounds = Object.keys(manifest.backgrounds).length
-    expect(queued).toHaveLength(monsters * 2 + buildings * 2 + frames * 2 + icons * 2 + backgrounds)
+    expect(queued).toHaveLength(monsters * 2 + buildings * 2 + frames * 2 + (icons - 1) * 2 + backgrounds)
+    expect(sheets).toEqual([[iconTextureKey('rank_sheet'), '/velunor/assets/icons/rank_sheet.png', 48, 48]])
     const url = Object.fromEntries(queued)
     expect(url['monster-m01']).toBe('/velunor/assets/monsters/m01_256.png')
     expect(url['building-townhall-lg']).toBe('/velunor/assets/buildings/townhall.png')
@@ -49,6 +61,14 @@ describe('art manifest', () => {
     expect(url[iconTextureKey('gold')]).toBe('/velunor/assets/icons/gold_128.png')
     expect(url[iconTextureKey('status_burn', true)]).toBe('/velunor/assets/icons/status_burn.png')
     expect(url[iconTextureKey('speed_1x')]).toBe('/velunor/assets/icons/speed_1x_128.png')
+    expect(url[ghostOverlayTextureKey()]).toBe('/velunor/assets/frames/ghost_overlay_256.png')
+    expect(url[ghostOverlayTextureKey(true)]).toBe('/velunor/assets/frames/ghost_overlay.png')
+    expect(url[iconTextureKey('arena')]).toBe('/velunor/assets/icons/arena_64.png')
+    expect(url[iconTextureKey('arena', true)]).toBe('/velunor/assets/icons/arena.png')
+    expect(url[iconTextureKey('rank_gold')]).toBe('/velunor/assets/icons/rank_gold.png')
+    expect(url[iconTextureKey('rank_gold', true)]).toBe('/velunor/assets/icons/rank_gold_96.png')
+    expect(url[iconTextureKey('rank_silver')]).toBe('/velunor/assets/icons/rank_silver.png')
+    expect(url[iconTextureKey('rank_platinum', true)]).toBe('/velunor/assets/icons/rank_platinum_96.png')
     expect(url[backgroundTextureKey('bg_city')]).toBe('/velunor/assets/backgrounds/bg_city.webp')
     expect(url[backgroundTextureKey('bg_arena')]).toBe('/velunor/assets/backgrounds/bg_arena.webp')
     expect(url[backgroundTextureKey('bg_portal')]).toBe('/velunor/assets/backgrounds/bg_portal.webp')

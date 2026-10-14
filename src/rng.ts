@@ -28,6 +28,17 @@ export function nextUint(state: RngState): number {
   return state.seed >>> 0
 }
 
+/** Stable 32-bit FNV-1a. Gameplay seeds come from this, never from Math.random. */
+export function hashSeed(text: string): number {
+  let hash = 2166136261
+  for (let i = 0; i < text.length; i++) {
+    hash ^= text.charCodeAt(i)
+    hash = Math.imul(hash, 16777619)
+  }
+  const out = hash >>> 0
+  return out === 0 ? 1 : out
+}
+
 export function freshSeed(): number {
   const buf = new Uint32Array(1)
   crypto.getRandomValues(buf)

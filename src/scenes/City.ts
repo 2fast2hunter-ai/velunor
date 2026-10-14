@@ -12,13 +12,18 @@ import { go, session } from '../session'
 import { breedPreview, coach, mineFill, monsterByUid, portalOpen, portalUnlockText, skillOffers, trainingQuote, trainingReadyAt, unlockLabel, upgradeInfo } from '../state'
 import type { BuildingId } from '../types'
 import { BUILDING_FOOT, buildingTextureKey } from '../artLayout'
-import { paintBackground } from '../art'
+import { iconSprite, paintBackground } from '../art'
+import { arenaUnlocked } from '../arena'
 import { openGuide } from '../guide'
 import { GOLD, INK, MUTED, W, button, floatText, openModal, panel, text } from '../ui'
 
 export class CityScene extends Phaser.Scene {
   private dynamic!: Phaser.GameObjects.Container
   private modal?: { close: () => void }
+  private buildingModal: BuildingId | null = null
+  private modalLevel = 0
+  private modalEndsAt: number | null = null
+  private countdown?: Phaser.GameObjects.Text
   private inputReady = false
   private breedA: string | null = null
   private breedB: string | null = null
@@ -74,7 +79,26 @@ export class CityScene extends Phaser.Scene {
     this.structure(1030, 'goldmine', () => this.openBuilding('goldmine'))
     this.portal(460, 210)
     this.gate(820, 210)
+    this.arenaSign()
     button(this, 1148, 586, 150, 40, 'Aufgaben', () => this.openQuests(), { fill: 0x3d4b6e, color: INK, size: 15 })
+  }
+
+  private arenaSign(): void {
+    const g = this.add.graphics()
+    g.fillStyle(0x3e2a22, 0.92)
+    g.fillRoundedRect(36, 108, 128, 148, 16)
+    g.lineStyle(3, 0xf0c14a, 0.85)
+    g.strokeRoundedRect(36, 108, 128, 148, 16)
+    const hit = this.add.rectangle(100, 182, 128, 148, 0xffffff, 0.001)
+    hit.setInteractive({ useHandCursor: true })
+    hit.on('pointerup', () => {
+      if (!this.inputReady) return
+      if (!arenaUnlocked(session.save)) {
+        session.toast('Rathaus Stufe 3')
+        return
+      }
+      go(this, 'Arena')
+    })
   }
 
   private structure(x: number, id: BuildingId, onClick: () => void): void {
@@ -168,6 +192,18 @@ export class CityScene extends Phaser.Scene {
     }
     this.dynamic.add(text(this, 460, 268, 'Portal', 14, INK, [0.5, 0]))
     this.dynamic.add(text(this, 820, 268, 'Kampagne', 14, INK, [0.5, 0]))
+    const arenaOpen = arenaUnlocked(save)
+    const arenaIcon = iconSprite(this, 100, 156, 'arena', 64)
+    if (arenaIcon) {
+      if (!arenaOpen) arenaIcon.setAlpha(0.45)
+      this.dynamic.add(arenaIcon)
+    }
+    this.dynamic.add(text(this, 100, 196, 'Arena', 15, arenaOpen ? GOLD : MUTED, [0.5, 0]))
+    if (!arenaOpen) {
+      const lock = iconSprite(this, 132, 168, 'lock', 22)
+      if (lock) this.dynamic.add(lock)
+      this.dynamic.add(text(this, 100, 218, 'Rathaus Stufe 3', 11, '#ffd59e', [0.5, 0]))
+    }
     const breed = save.buildings.breeding
     const breedLabel = breed.level > 0 ? `Zuchtstation ${breed.level}` : save.buildings.townhall.level >= 5 ? 'Zuchtstation bauen' : ''
     if (breedLabel) {
@@ -175,6 +211,21 @@ export class CityScene extends Phaser.Scene {
       label.setInteractive({ useHandCursor: true })
       label.on('pointerup', () => this.openBuilding('breeding'))
       this.dynamic.add(label)
+    }
+    this.syncBuildingModal()
+  }
+
+  /** Rebuild an open building popup when its level or timer changes, and tick the countdown in place. */
+  private syncBuildingModal(): void {
+    if (!this.buildingModal || !this.modal) return
+    const building = session.save.buildings[this.buildingModal]
+    const changed = building.level !== this.modalLevel || building.upgradeEndsAt !== this.modalEndsAt
+    if (changed) {
+      this.openBuilding(this.buildingModal)
+      return
+    }
+    if (this.countdown && building.upgradeEndsAt != null) {
+      this.countdown.setText(`Fertig in ${formatRemain(building.upgradeEndsAt - Date.now())}`)
     }
   }
 
@@ -213,6 +264,16 @@ export class CityScene extends Phaser.Scene {
     const wide = id === 'training' || (id === 'breeding' && save.buildings.breeding.level > 0)
     const modal = openModal(this, wide ? 980 : 640, wide ? 560 : 460, buildingName(id))
     this.modal = modal
+    this.buildingModal = id
+    this.modalLevel = save.buildings[id].level
+    this.modalEndsAt = save.buildings[id].upgradeEndsAt
+    this.countdown = undefined
+    modal.root.once('destroy', () => {
+      if (this.modal !== modal) return
+      this.modal = undefined
+      this.buildingModal = null
+      this.countdown = undefined
+    })
     const now = Date.now()
     const info = upgradeInfo(save, id)
     const left = 180
@@ -262,7 +323,8 @@ export class CityScene extends Phaser.Scene {
   ): void {
     const building = session.save.buildings[id]
     if (building.upgradeEndsAt != null) {
-      root.add(text(this, x, y - 28, `Fertig in ${formatRemain(building.upgradeEndsAt - Date.now())}`, 16, GOLD, [0.5, 0]))
+      this.countdown = text(this, x, y - 28, `Fertig in ${formatRemain(building.upgradeEndsAt - Date.now())}`, 16, GOLD, [0.5, 0])
+      root.add(this.countdown)
       root.add(button(this, x, y + 20, 200, 44, 'Abbrechen', () => {
         session.cancelUpgrade(id)
         this.modal?.close()
@@ -271,6 +333,7 @@ export class CityScene extends Phaser.Scene {
       const speed = rewardedButton(session.save, 'build_speed', Date.now())
       if (speed.visible) {
         root.add(button(this, x, y + 74, 220, 40, speed.label, () => session.toast(speed.reason || 'Gerade keine Werbung verfügbar'), { disabled: !speed.enabled, fill: 0x3d4b6e, color: INK, size: 13 }))
+        if (speed.reason) root.add(text(this, x, y + 108, speed.reason, 12, MUTED, [0.5, 0]))
       }
       return
     }

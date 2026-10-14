@@ -101,27 +101,35 @@ export function button(
   const color = opts.disabled ? '#aeb6c9' : (opts.color ?? '#2a2112')
   const t = text(scene, icon ? 12 : 0, 0, label, opts.size ?? 18, color, [0.5, 0.5])
   root.add(icon ? [g, icon, t] : [g, t])
-  if (!opts.disabled) {
-    const pad = opts.hitPad ?? 10
-    const hitW = w + pad * 2
-    const hitH = h + pad * 2
-    const hit = scene.add.rectangle(0, 0, hitW, hitH, 0xffffff, 0.001)
-    hit.setInteractive(
-      new Phaser.Geom.Rectangle(0, 0, hitW, hitH),
+  if (opts.disabled) {
+    root.setAlpha(0.45)
+    const blocker = scene.add.rectangle(0, 0, w, h, 0xffffff, 0.001)
+    blocker.setInteractive(
+      new Phaser.Geom.Rectangle(0, 0, w, h),
       Phaser.Geom.Rectangle.Contains
     )
-    hit.input!.cursor = 'pointer'
-    let armed = false
-    hit.on('pointerdown', () => { armed = true })
-    hit.on('pointerout', () => { armed = false })
-    hit.on('pointerup', () => {
-      if (!armed) return
-      armed = false
-      sfx('click')
-      onClick()
-    })
-    root.add(hit)
+    root.add(blocker)
+    return root
   }
+  const pad = opts.hitPad ?? 10
+  const hitW = w + pad * 2
+  const hitH = h + pad * 2
+  const hit = scene.add.rectangle(0, 0, hitW, hitH, 0xffffff, 0.001)
+  hit.setInteractive(
+    new Phaser.Geom.Rectangle(0, 0, hitW, hitH),
+    Phaser.Geom.Rectangle.Contains
+  )
+  hit.input!.cursor = 'pointer'
+  let armed = false
+  hit.on('pointerdown', () => { armed = true })
+  hit.on('pointerout', () => { armed = false })
+  hit.on('pointerup', () => {
+    if (!armed) return
+    armed = false
+    sfx('click')
+    onClick()
+  })
+  root.add(hit)
   return root
 }
 

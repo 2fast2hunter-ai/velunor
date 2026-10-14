@@ -1,8 +1,18 @@
 import { maybeInterstitial, tryRewarded } from './ads'
+import {
+  applyArenaOutcome,
+  arenaUnlocked,
+  ensureArena,
+  freshArena,
+  ghostBattleUnits,
+  listArenaOpponents,
+  syncArenaDay
+} from './arena'
 import { SAVE_KEY, loadOrMigrateSave } from './saveMigrate'
 import { simulateBattle, battleTip } from './battle'
 import {
   adsCfg,
+  arenaCfg,
   ascensionCosts,
   breedingCfg,
   buildings,
@@ -28,6 +38,7 @@ import { combatPower, grantExp, instanceStats, roomToMax } from './stats'
 import { synergyView } from './synergy'
 import type {
   AdPlacement,
+  BattleInput,
   BattleLog,
   BattleUnitInput,
   BuildingId,
@@ -65,7 +76,7 @@ export function createSave(now = Date.now()): SaveData {
   const starters = rewards.start.starters.map((id) => makeMonster(id, 0, now, true))
   const [fox, newt, sprout] = starters
   return {
-    version: 2,
+    version: 3,
     createdAt: now,
     lastSeen: now,
     rngSeed: freshSeed(),
@@ -89,7 +100,8 @@ export function createSave(now = Date.now()): SaveData {
     milestones: { firstEpic: false, firstLegendary: false, townhallRewards: [] },
     tutorial: { mineGranted: false, freeTrainUsed: false, pullClaimed: false, guideStep: 0 },
     settings: { battleSpeed: 1, sound: true },
-    sessionStartedAt: now
+    sessionStartedAt: now,
+    arena: freshArena(dayKey(now))
   }
 }
 
@@ -137,7 +149,11 @@ export function migrateSaveData(save: SaveData, _now: number): SaveData {
     const progressed = Object.keys(save.campaign?.cleared ?? {}).length > 0 || save.tutorial.pullClaimed || (save.monsters?.length ?? 0) > 3
     save.tutorial.guideStep = progressed ? 6 : 0
   }
-  if (save.version >= 2 && save.buildings.breeding && save.activeTypes) return save
+  const needsV2 = !(save.version >= 2 && save.buildings.breeding && save.activeTypes)
+  if (!needsV2) {
+    ensureArena(save, _now)
+    return save
+  }
   save.version = 2
   save.activeTypes = save.activeTypes ?? ['fire', 'water', 'plant', 'earth']
   save.campaign = save.campaign ?? { cleared: {}, chestsClaimed: [] }
@@ -181,6 +197,7 @@ export function migrateSaveData(save: SaveData, _now: number): SaveData {
   }
   grantRetroChests(save)
   for (const stageId of Object.keys(save.campaign.cleared)) unlockTypeFor(save, stageId)
+  ensureArena(save, _now)
   return save
 }
 
@@ -301,6 +318,7 @@ export function coach(save: SaveData): { text: string; target: string } | null {
 export function tick(save: SaveData, now: number): string[] {
   const messages: string[] = []
   messages.push(...rolloverDay(save, now))
+  syncArenaDay(save, now)
   messages.push(...resolveUpgrade(save, 'townhall', now))
   messages.push(...resolveMine(save, now))
   messages.push(...resolveUpgrade(save, 'training', now))
@@ -398,7 +416,8 @@ export function unlockLabel(id: string): string {
     release_monster: 'Monster freilassen',
     campaign_ch2: 'Kampagne Kapitel 2',
     multi_battle: 'Mehrfach-Kampf',
-    breeding_placeholder: 'Zuchtstation (Platzhalter)'
+    breeding_placeholder: 'Zuchtstation (Platzhalter)',
+    arena: 'Arena'
   }
   return labels[id] ?? id
 }
@@ -925,6 +944,13 @@ export interface FightReport {
   tip: string
   stars: 0 | 1 | 2 | 3
   applied?: boolean
+  arena?: {
+    tier: string
+    ghostName: string
+    points: number
+    pointsDelta: number
+    rankGems: number
+  }
 }
 
 export function fightStage(save: SaveData, stageId: string, count: 1 | 3, now: number): ActionResult<FightReport> {
@@ -969,8 +995,65 @@ export function fightStage(save: SaveData, stageId: string, count: 1 | 3, now: n
   return ok({ stageId, logs, rewards: bundle, victory: allWins, tip, stars: bestStars, applied: false }, [])
 }
 
+export function previewArenaFight(save: SaveData, tierId: string, now: number): BattleLog | null {
+  const fought = runArenaBattle(save, tierId, now)
+  return fought?.log ?? null
+}
+
+function runArenaBattle(save: SaveData, tierId: string, now: number): { ghostName: string; tier: string; input: BattleInput; log: BattleLog } | null {
+  const ghost = listArenaOpponents(save, now).find((entry) => entry.tier === tierId)
+  const allies = allyInputs(save)
+  if (!ghost || !allies.length) return null
+  const synergy = hasUnlock(save.buildings.townhall.level, 'synergies')
+  const classSynergy = hasUnlock(save.buildings.townhall.level, 'class_synergies')
+  const input: BattleInput = {
+    seed: ghost.seed,
+    allies,
+    enemies: ghostBattleUnits(ghost),
+    allySynergy: synergy,
+    enemySynergy: synergy,
+    allyClassSynergy: classSynergy,
+    enemyClassSynergy: classSynergy
+  }
+  return { ghostName: ghost.name, tier: ghost.tier, input, log: simulateBattle(input) }
+}
+
+export function fightArena(save: SaveData, tierId: string, now: number): ActionResult<FightReport> {
+  tick(save, now)
+  if (!arenaUnlocked(save)) return fail('Rathaus Stufe 3')
+  if (!allyInputs(save).length) return fail('Stell mindestens ein Monster auf.')
+  if (save.arena.attemptsUsed >= arenaCfg.attemptsPerDay) return fail('Keine Versuche mehr heute.')
+  const fought = runArenaBattle(save, tierId, now)
+  if (!fought) return fail('Unbekannter Gegner.')
+  const victory = fought.log.result === 'win'
+  const scored = applyArenaOutcome(save, tierId, victory ? 'win' : 'loss')
+  save.arena.attemptsUsed += 1
+  // A loss keeps the current three opponents, so the free daily reroll still changes the board.
+  if (victory) save.arena.rerollIndex += 1
+  save.lastBattleResult = victory ? 'win' : 'loss'
+  const rewards = emptyReward()
+  rewards.gold = scored.gold
+  rewards.gems = scored.rankGems
+  return ok({
+    stageId: `Arena · ${fought.ghostName}`,
+    logs: [fought.log],
+    rewards,
+    victory,
+    tip: victory ? '' : battleTip(fought.input, fought.log),
+    stars: victory ? fought.log.stars : 0,
+    applied: true,
+    arena: {
+      tier: tierId,
+      ghostName: fought.ghostName,
+      points: scored.points,
+      pointsDelta: scored.pointsDelta,
+      rankGems: scored.rankGems
+    }
+  }, [])
+}
+
 export function commitFightRewards(save: SaveData, report: FightReport): string[] {
-  if (report.applied) return []
+  if (report.arena || report.applied) return []
   report.applied = true
   const bundle = report.rewards
   save.currencies.gold += bundle.gold
@@ -1360,8 +1443,9 @@ export function applyRewarded(save: SaveData, placement: AdPlacement, now: numbe
   })
 }
 
-export async function closeToCity(save: SaveData, now: number, victory: boolean): Promise<void> {
+export async function closeToCity(save: SaveData, now: number, victory: boolean, allowAds = true): Promise<void> {
   save.lastBattleResult = victory ? 'win' : 'loss'
+  if (!allowAds) return
   await maybeInterstitial(save, 'battle_end', now)
 }
 

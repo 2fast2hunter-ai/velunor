@@ -95,6 +95,10 @@
     "9": {
       "512": "frames/rarity_9.png",
       "256": "frames/rarity_9_256.png"
+    },
+    "ghost_overlay": {
+      "512": "frames/ghost_overlay.png",
+      "256": "frames/ghost_overlay_256.png"
     }
   },
   "icons": {
@@ -201,6 +205,39 @@
     "status_thorns": {
       "256": "icons/status_thorns.png",
       "128": "icons/status_thorns_128.png"
+    },
+    "arena": {
+      "128": "icons/arena.png",
+      "64": "icons/arena_64.png"
+    },
+    "rank_bronze": {
+      "48": "icons/rank_bronze.png",
+      "96": "icons/rank_bronze_96.png"
+    },
+    "rank_silver": {
+      "48": "icons/rank_silver.png",
+      "96": "icons/rank_silver_96.png"
+    },
+    "rank_gold": {
+      "48": "icons/rank_gold.png",
+      "96": "icons/rank_gold_96.png"
+    },
+    "rank_platinum": {
+      "48": "icons/rank_platinum.png",
+      "96": "icons/rank_platinum_96.png"
+    },
+    "rank_sheet": {
+      "sheet": "icons/rank_sheet.png",
+      "frame": [
+        48,
+        48
+      ],
+      "order": [
+        "bronze",
+        "silver",
+        "gold",
+        "platinum"
+      ]
     }
   },
   "backgrounds": {

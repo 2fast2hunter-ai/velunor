@@ -3,6 +3,7 @@ import {
   backgroundTextureKey,
   frameMonsterFit,
   frameTextureKey,
+  ghostOverlayTextureKey,
   iconTextureKey,
   monsterSlotScale,
   monsterTextureKey
@@ -49,6 +50,12 @@ export function monsterToken(
     }
   }
   return root
+}
+
+export function addGhostOverlay(token: Phaser.GameObjects.Container, scene: Phaser.Scene, size: number): void {
+  const key = ghostOverlayTextureKey(size >= 160)
+  if (!scene.textures.exists(key)) return
+  token.add(scene.add.image(0, 0, key).setDisplaySize(size, size))
 }
 
 export function iconSprite(

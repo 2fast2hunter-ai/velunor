@@ -13,6 +13,7 @@ import synergiesJson from '../data/synergies.json'
 import breedingJson from '../data/breeding.json'
 import dailyJson from '../data/daily.json'
 import typeUnlocksJson from '../data/typeUnlocks.json'
+import arenaJson from '../data/arena.json'
 
 export const typesCfg = typesJson
 export const rarities = raritiesJson.levels
@@ -31,6 +32,7 @@ export const synergies = synergiesJson
 export const breedingCfg = breedingJson
 export const dailyCfg = dailyJson
 export const typeUnlocks = typeUnlocksJson
+export const arenaCfg = arenaJson
 
 const monsterById = new Map(monsters.map((m) => [m.id, m]))
 
