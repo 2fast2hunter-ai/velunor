@@ -4,7 +4,9 @@ import { queueArt } from '../artLayout'
 import { tickAdSession } from '../ads'
 import { go, session, wipeSave } from '../session'
 import { iconSprite } from '../art'
-import { ESSENCE, GEM, GOLD, INK, MUTED, TICKET, W, button, confirm, hoverTip, panel, text } from '../ui'
+import { rankLabel } from '../arena'
+import type { LastSeasonResult } from '../types'
+import { ESSENCE, GEM, GOLD, INK, MUTED, TICKET, W, button, confirm, hoverTip, openModal, panel, text } from '../ui'
 import { formatInt } from '../data'
 import { portalOpen, portalUnlockText } from '../state'
 
@@ -42,6 +44,7 @@ export class HUDScene extends Phaser.Scene {
   private nav!: Phaser.GameObjects.Container
   private currencies!: Phaser.GameObjects.Container
   private navKey = ''
+  private seasonPopup = false
 
   constructor() { super('HUD') }
 
@@ -56,6 +59,7 @@ export class HUDScene extends Phaser.Scene {
       this.drawNav()
     })
     this.pump()
+    this.maybeSeason()
   }
 
   private pump(): void {
@@ -71,7 +75,46 @@ export class HUDScene extends Phaser.Scene {
       this.drawNav()
     }
     this.game.events.emit('clock')
+    this.maybeSeason()
     this.scene.bringToTop()
+  }
+
+  private maybeSeason(): void {
+    const result = session.save.arena?.lastSeasonResult
+    if (!result) {
+      this.seasonPopup = false
+      return
+    }
+    if (this.seasonPopup) return
+    if (this.scene.isActive('Battle') || this.scene.isActive('Result')) return
+    this.seasonPopup = true
+    this.showSeason(result)
+  }
+
+  private showSeason(result: LastSeasonResult): void {
+    const lines = [`Höchster Rang: ${rankLabel(result.rank)}`]
+    if (result.gold) lines.push(`+${formatInt(result.gold)} Gold`)
+    if (result.gems) lines.push(`+${formatInt(result.gems)} Juwelen`)
+    if (result.essence) lines.push(`+${formatInt(result.essence)} Essenz`)
+    if (result.tickets) lines.push(`+${result.tickets} Beschwörungsticket`)
+    lines.push('Punkte stehen wieder auf 0.')
+    const h = 250 + lines.length * 28
+    const modal = openModal(this, 640, h, 'Saison beendet')
+    modal.root.setDepth(180)
+    const top = (720 - h) / 2
+    const wash = this.add.rectangle(W / 2, top + h / 2, 600, h - 24, 0x162033, 1)
+    modal.root.addAt(wash, 2)
+    const badge = iconSprite(this, W / 2, top + 88, `rank_${result.rank}`, 64)
+    if (badge) modal.root.add(badge)
+    modal.root.add(text(this, W / 2, top + 128, `Saison ${result.seasonKey}`, 16, MUTED, [0.5, 0]))
+    lines.forEach((line, index) => {
+      modal.root.add(text(this, W / 2, top + 160 + index * 28, line, 18, index === 0 ? GOLD : INK, [0.5, 0]))
+    })
+    modal.root.add(button(this, W / 2, top + h - 56, 220, 46, 'Weiter', () => {
+      session.dismissSeason()
+      this.seasonPopup = false
+      modal.close()
+    }, { fill: 0xf0c14a, color: '#2a2112' }))
   }
 
   private drawBar(): void {

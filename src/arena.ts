@@ -1,13 +1,25 @@
-import { arenaCfg, dayKey, maxLevelFor, monsters, teamSlotLimit } from './data'
+import { simulateBattle } from './battle'
+import { arenaCfg, dayKey, hasUnlock, isoWeekKey, maxLevelFor, monsters, teamSlotLimit } from './data'
 import { hashSeed, mulberry32 } from './rng'
 import { combatPower, instanceStats } from './stats'
-import { ALL_SLOTS, type ArenaState, type BattleUnitInput, type MonsterInstance, type Rarity, type SaveData, type SlotId } from './types'
+import {
+  ALL_SLOTS,
+  type ArenaState,
+  type BattleUnitInput,
+  type DefenseFight,
+  type LastSeasonResult,
+  type MonsterInstance,
+  type Rarity,
+  type SaveData,
+  type SlotId
+} from './types'
 
 const RANK_LABEL: Record<string, string> = {
   bronze: 'Bronze',
   silver: 'Silber',
   gold: 'Gold',
-  platinum: 'Platin'
+  platinum: 'Platin',
+  diamond: 'Diamant'
 }
 
 const TIER_LABEL: Record<string, string> = {
@@ -38,7 +50,36 @@ export interface ArenaAction {
   messages: string[]
 }
 
-export function freshArena(key: string): ArenaState {
+export interface DefenseReport {
+  ran: boolean
+  log: DefenseFight[]
+  points: number
+  gold: number
+  rankGems: number
+}
+
+type SeasonPayout = { gold?: number; gems?: number; essence?: number; tickets?: number }
+
+function blankDefense(): Record<SlotId, string | null> {
+  return { F1: null, F2: null, H1: null, H2: null, H3: null }
+}
+
+function defenseFromTeam(save: SaveData): Record<SlotId, string | null> {
+  const defense = blankDefense()
+  for (const slot of ALL_SLOTS) defense[slot] = save.team?.[slot] ?? null
+  return defense
+}
+
+function pruneDefense(save: SaveData): void {
+  if (!save.arena?.defense) return
+  const alive = new Set(save.monsters.map((monster) => monster.uid))
+  for (const slot of ALL_SLOTS) {
+    const uid = save.arena.defense[slot]
+    if (uid && !alive.has(uid)) save.arena.defense[slot] = null
+  }
+}
+
+export function freshArena(key: string, now: number): ArenaState {
   return {
     dayKey: key,
     attemptsUsed: 0,
@@ -48,7 +89,13 @@ export function freshArena(key: string): ArenaState {
     bestRank: 'bronze',
     chestClaimed: false,
     wins: 0,
-    losses: 0
+    losses: 0,
+    defense: blankDefense(),
+    defenseDayKey: null,
+    defenseLog: [],
+    seasonKey: isoWeekKey(now),
+    seasonBest: 'bronze',
+    lastSeasonResult: null
   }
 }
 
@@ -76,10 +123,22 @@ export function nextRank(points: number): { id: string; min: number; gems: numbe
   return arenaCfg.ranks.find((rank) => rank.min > points) ?? null
 }
 
+function rememberSeasonBest(save: SaveData): void {
+  const order = arenaCfg.ranks.map((rank) => rank.id)
+  const next = order.indexOf(rankForPoints(save.arena.points).id)
+  const prev = order.indexOf(save.arena.seasonBest)
+  if (next > prev) save.arena.seasonBest = order[next]
+}
+
+function initialSeasonBest(arena: ArenaState): string {
+  const known = arenaCfg.ranks.some((rank) => rank.id === arena.bestRank)
+  return known ? arena.bestRank : rankForPoints(arena.points).id
+}
+
 /** New dayKey only moves forward. Turning the clock back does not refill attempts. */
 export function syncArenaDay(save: SaveData, now: number): void {
   const key = dayKey(now)
-  if (!save.arena) save.arena = freshArena(key)
+  if (!save.arena) save.arena = freshArena(key, now)
   if (key > save.arena.dayKey) {
     save.arena.dayKey = key
     save.arena.attemptsUsed = 0
@@ -89,23 +148,70 @@ export function syncArenaDay(save: SaveData, now: number): void {
 }
 
 export function ensureArena(save: SaveData, now: number): void {
-  if (save.version >= 3 && save.arena) return
   const key = dayKey(now)
-  if (!save.arena) save.arena = freshArena(key)
-  else {
-    save.arena = {
-      dayKey: save.arena.dayKey || key,
-      attemptsUsed: save.arena.attemptsUsed || 0,
-      rerollsUsed: save.arena.rerollsUsed || 0,
-      rerollIndex: save.arena.rerollIndex || 0,
-      points: Math.max(0, save.arena.points || 0),
-      bestRank: save.arena.bestRank || 'bronze',
-      chestClaimed: Boolean(save.arena.chestClaimed),
-      wins: save.arena.wins || 0,
-      losses: save.arena.losses || 0
-    }
+  const week = isoWeekKey(now)
+  if (!save.arena) {
+    save.arena = freshArena(key, now)
+    save.arena.defense = defenseFromTeam(save)
   }
-  save.version = 3
+  const arena = save.arena
+  if (!arena.dayKey) arena.dayKey = key
+  if (arena.attemptsUsed == null) arena.attemptsUsed = 0
+  if (arena.rerollsUsed == null) arena.rerollsUsed = 0
+  if (arena.rerollIndex == null) arena.rerollIndex = 0
+  arena.points = Math.max(0, arena.points || 0)
+  if (!arena.bestRank) arena.bestRank = 'bronze'
+  if (arena.chestClaimed == null) arena.chestClaimed = false
+  if (arena.wins == null) arena.wins = 0
+  if (arena.losses == null) arena.losses = 0
+  if (!arena.defense) arena.defense = defenseFromTeam(save)
+  for (const slot of ALL_SLOTS) {
+    if (arena.defense[slot] === undefined) arena.defense[slot] = null
+  }
+  pruneDefense(save)
+  if (arena.defenseDayKey === undefined) arena.defenseDayKey = null
+  if (!Array.isArray(arena.defenseLog)) arena.defenseLog = []
+  if (!arena.seasonKey) arena.seasonKey = week
+  if (!arena.seasonBest) arena.seasonBest = initialSeasonBest(arena)
+  if (arena.lastSeasonResult === undefined) arena.lastSeasonResult = null
+  save.version = 4
+}
+
+function seasonPayout(rankId: string): { gold: number; gems: number; essence: number; tickets: number } {
+  const table = arenaCfg.seasonRewards as Record<string, SeasonPayout>
+  const row = table[rankId] ?? table.bronze ?? {}
+  return {
+    gold: row.gold ?? 0,
+    gems: row.gems ?? 0,
+    essence: row.essence ?? 0,
+    tickets: row.tickets ?? 0
+  }
+}
+
+/**
+ * Week switch is Monday 00:00 local. An older seasonKey (clock turned back) is ignored.
+ * Several missed weeks pay the last season once, then jump to the current week.
+ */
+export function syncArenaSeason(save: SaveData, now: number): LastSeasonResult | null {
+  if (!save.arena?.seasonKey) return null
+  const key = isoWeekKey(now)
+  if (key <= save.arena.seasonKey) return null
+  const rank = save.arena.seasonBest || 'bronze'
+  const payout = seasonPayout(rank)
+  save.currencies.gold += payout.gold
+  save.currencies.gems += payout.gems
+  save.currencies.essence += payout.essence
+  save.currencies.tickets += payout.tickets
+  const result: LastSeasonResult = { seasonKey: save.arena.seasonKey, rank, ...payout }
+  save.arena.points = 0
+  save.arena.seasonBest = 'bronze'
+  save.arena.seasonKey = key
+  save.arena.lastSeasonResult = result
+  return result
+}
+
+export function dismissSeasonResult(save: SaveData): void {
+  if (save.arena) save.arena.lastSeasonResult = null
 }
 
 function roster(save: SaveData): MonsterInstance[] {
@@ -120,11 +226,32 @@ function roster(save: SaveData): MonsterInstance[] {
   return list
 }
 
-export function arenaPlayerPower(save: SaveData): number {
-  return roster(save).reduce((sum, monster) => {
+export function defenseRoster(save: SaveData): MonsterInstance[] {
+  const open = new Set(teamSlotLimit(save.buildings.townhall.level))
+  const list: MonsterInstance[] = []
+  if (!save.arena?.defense) return list
+  for (const slot of ALL_SLOTS) {
+    if (!open.has(slot)) continue
+    const uid = save.arena.defense[slot]
+    const monster = uid ? save.monsters.find((entry) => entry.uid === uid) : undefined
+    if (monster) list.push(monster)
+  }
+  return list
+}
+
+function powerOf(list: MonsterInstance[]): number {
+  return list.reduce((sum, monster) => {
     const extra = (monster.skills?.slot2 ? 1 : 0) + (monster.skills?.slot3 ? 1 : 0)
     return sum + combatPower(instanceStats(monster.speciesId, monster.rarity, monster.level, monster.potential), extra)
   }, 0)
+}
+
+export function arenaPlayerPower(save: SaveData): number {
+  return powerOf(roster(save))
+}
+
+export function defensePower(save: SaveData): number {
+  return powerOf(defenseRoster(save))
 }
 
 function unlockedSpecies(save: SaveData): string[] {
@@ -210,31 +337,48 @@ function fitGhost(members: GhostMember[], target: number): { members: GhostMembe
   return { members: fitted, kk: scaled, statMult }
 }
 
+function rollGhost(save: SaveData, seedText: string, tierId: string, target: number, samples: MonsterInstance[]): GhostTeam {
+  const seed = hashSeed(seedText)
+  const rng = mulberry32(seed)
+  const name = arenaCfg.ghostNames[Math.floor(rng() * arenaCfg.ghostNames.length)] ?? arenaCfg.ghostNames[0]
+  const avgLevel = Math.round(samples.reduce((sum, monster) => sum + monster.level, 0) / samples.length)
+  const avgRarity = Math.round(samples.reduce((sum, monster) => sum + monster.rarity, 0) / samples.length)
+  const pool = unlockedSpecies(save)
+  const rolled: GhostMember[] = ALL_SLOTS.map(() => {
+    const speciesId = pool[Math.floor(rng() * pool.length)]
+    const rarity = clamp(avgRarity + rollInt(rng, -1, 1), 0, 9) as Rarity
+    const level = clamp(avgLevel + rollInt(rng, -2, 2), 1, maxLevelFor(rarity))
+    return { speciesId, rarity, level }
+  })
+  const fitted = fitGhost(rolled, Math.max(1, target))
+  const slots = {} as Record<SlotId, GhostMember>
+  ALL_SLOTS.forEach((slot, slotIndex) => {
+    slots[slot] = fitted.members[slotIndex]
+  })
+  return { name, tier: tierId, kk: fitted.kk, seed, statMult: fitted.statMult, team: slots }
+}
+
 export function listArenaOpponents(save: SaveData, now = Date.now()): GhostTeam[] {
   syncArenaDay(save, now)
   const team = roster(save)
   if (!team.length || !save.arena) return []
   const power = arenaPlayerPower(save)
-  const avgLevel = Math.round(team.reduce((sum, monster) => sum + monster.level, 0) / team.length)
-  const avgRarity = Math.round(team.reduce((sum, monster) => sum + monster.rarity, 0) / team.length)
-  const pool = unlockedSpecies(save)
   return arenaCfg.tiers.map((tier, index) => {
-    const seed = hashSeed(`${save.arena.dayKey}:${save.arena.rerollIndex}:${index}:${tier.id}`)
-    const rng = mulberry32(seed)
-    const name = arenaCfg.ghostNames[Math.floor(rng() * arenaCfg.ghostNames.length)] ?? arenaCfg.ghostNames[0]
-    const rolled: GhostMember[] = ALL_SLOTS.map(() => {
-      const speciesId = pool[Math.floor(rng() * pool.length)]
-      const rarity = clamp(avgRarity + rollInt(rng, -1, 1), 0, 9) as Rarity
-      const level = clamp(avgLevel + rollInt(rng, -2, 2), 1, maxLevelFor(rarity))
-      return { speciesId, rarity, level }
-    })
-    const fitted = fitGhost(rolled, Math.max(1, power * tier.kkFactor))
-    const slots = {} as Record<SlotId, GhostMember>
-    ALL_SLOTS.forEach((slot, slotIndex) => {
-      slots[slot] = fitted.members[slotIndex]
-    })
-    return { name, tier: tier.id, kk: fitted.kk, seed, statMult: fitted.statMult, team: slots }
+    const seedText = `${save.arena.dayKey}:${save.arena.rerollIndex}:${index}:${tier.id}`
+    return rollGhost(save, seedText, tier.id, power * tier.kkFactor, team)
   })
+}
+
+export function listDefenseAttackers(save: SaveData, now = Date.now()): GhostTeam[] {
+  const team = defenseRoster(save)
+  if (!team.length || !save.arena) return []
+  const power = defensePower(save)
+  const key = save.arena.dayKey || dayKey(now)
+  const ghosts: GhostTeam[] = []
+  for (let i = 0; i < arenaCfg.defense.fightsPerDay; i++) {
+    ghosts.push(rollGhost(save, `${key}def${i}`, 'defense', power * arenaCfg.defense.kkFactor, team))
+  }
+  return ghosts
 }
 
 export function ghostBattleUnits(ghost: GhostTeam): BattleUnitInput[] {
@@ -248,6 +392,28 @@ export function ghostBattleUnits(ghost: GhostTeam): BattleUnitInput[] {
       statMult: ghost.statMult
     }
   })
+}
+
+function defenseBattleUnits(save: SaveData): BattleUnitInput[] {
+  const open = new Set(teamSlotLimit(save.buildings.townhall.level))
+  const list: BattleUnitInput[] = []
+  for (const slot of ALL_SLOTS) {
+    if (!open.has(slot) || !save.arena?.defense[slot]) continue
+    const monster = save.monsters.find((entry) => entry.uid === save.arena.defense[slot])
+    if (!monster) continue
+    list.push({
+      speciesId: monster.speciesId,
+      rarity: monster.rarity,
+      level: monster.level,
+      slot,
+      potential: monster.potential,
+      sigRank: monster.skills.sigRank,
+      learned: monster.skills.slot2,
+      slot3: monster.skills.slot3,
+      skillOrder: monster.skills.skillOrder
+    })
+  }
+  return list
 }
 
 /** First-time rank gems. Dropping points never takes a rank reward back or pays it twice. */
@@ -282,9 +448,53 @@ export function applyArenaOutcome(save: SaveData, tierId: string, result: 'win' 
   save.currencies.gold += gold
   if (won) save.arena.wins += 1
   else save.arena.losses += 1
+  rememberSeasonBest(save)
   const rankGems = awardNewRanks(save)
   save.currencies.gems += rankGems
   return { ok: true, messages: [], gold, pointsDelta, rankGems, points: save.arena.points }
+}
+
+/**
+ * First arena open of the day. Empty defense fights nothing and still spends the day.
+ * A clock turned backwards does not run another set. Missed days are not caught up.
+ * simulateBattle(ghost, defense, seed): the ghost attacks, a defense win is the attacker failing.
+ */
+export function runDefenseDay(save: SaveData, now: number): DefenseReport {
+  syncArenaDay(save, now)
+  if (!save.arena) return { ran: false, log: [], points: 0, gold: 0, rankGems: 0 }
+  const key = dayKey(now)
+  const idle: DefenseReport = { ran: false, log: save.arena.defenseLog ?? [], points: 0, gold: 0, rankGems: 0 }
+  if (save.arena.defenseDayKey && key <= save.arena.defenseDayKey) return idle
+  save.arena.defenseDayKey = key
+  const defenders = defenseBattleUnits(save)
+  if (!defenders.length) {
+    save.arena.defenseLog = []
+    return { ran: true, log: [], points: 0, gold: 0, rankGems: 0 }
+  }
+  const synergy = hasUnlock(save.buildings.townhall.level, 'synergies')
+  const classSynergy = hasUnlock(save.buildings.townhall.level, 'class_synergies')
+  const log: DefenseFight[] = listDefenseAttackers(save, now).map((ghost) => {
+    const fought = simulateBattle({
+      seed: ghost.seed,
+      allies: ghostBattleUnits(ghost),
+      enemies: defenders,
+      allySynergy: synergy,
+      enemySynergy: synergy,
+      allyClassSynergy: classSynergy,
+      enemyClassSynergy: classSynergy
+    })
+    return { name: ghost.name, win: fought.result !== 'win' }
+  })
+  const wins = log.filter((fight) => fight.win).length
+  const gold = wins * arenaCfg.defense.winGold
+  const before = save.arena.points
+  save.arena.points = Math.max(0, before + wins * arenaCfg.defense.winPoints)
+  save.currencies.gold += gold
+  save.arena.defenseLog = log
+  rememberSeasonBest(save)
+  const rankGems = awardNewRanks(save)
+  save.currencies.gems += rankGems
+  return { ran: true, log, points: save.arena.points - before, gold, rankGems }
 }
 
 export function rerollArena(save: SaveData, now: number): ArenaAction {
