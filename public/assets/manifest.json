@@ -40,6 +40,66 @@
       "512": "monsters/m10.png",
       "256": "monsters/m10_256.png"
     },
+    "m11": {
+      "512": "monsters/m11.png",
+      "256": "monsters/m11_256.png"
+    },
+    "m12": {
+      "512": "monsters/m12.png",
+      "256": "monsters/m12_256.png"
+    },
+    "m13": {
+      "512": "monsters/m13.png",
+      "256": "monsters/m13_256.png"
+    },
+    "m14": {
+      "512": "monsters/m14.png",
+      "256": "monsters/m14_256.png"
+    },
+    "m15": {
+      "512": "monsters/m15.png",
+      "256": "monsters/m15_256.png"
+    },
+    "m16": {
+      "512": "monsters/m16.png",
+      "256": "monsters/m16_256.png"
+    },
+    "m17": {
+      "512": "monsters/m17.png",
+      "256": "monsters/m17_256.png"
+    },
+    "m18": {
+      "512": "monsters/m18.png",
+      "256": "monsters/m18_256.png"
+    },
+    "m19": {
+      "512": "monsters/m19.png",
+      "256": "monsters/m19_256.png"
+    },
+    "m20": {
+      "512": "monsters/m20.png",
+      "256": "monsters/m20_256.png"
+    },
+    "m21": {
+      "512": "monsters/m21.png",
+      "256": "monsters/m21_256.png"
+    },
+    "m22": {
+      "512": "monsters/m22.png",
+      "256": "monsters/m22_256.png"
+    },
+    "m23": {
+      "512": "monsters/m23.png",
+      "256": "monsters/m23_256.png"
+    },
+    "m24": {
+      "512": "monsters/m24.png",
+      "256": "monsters/m24_256.png"
+    },
+    "m25": {
+      "512": "monsters/m25.png",
+      "256": "monsters/m25_256.png"
+    },
     "m26": {
       "512": "monsters/m26.png",
       "256": "monsters/m26_256.png"

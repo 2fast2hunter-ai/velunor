@@ -25,7 +25,7 @@ describe('monster slot scale', () => {
 describe('art manifest', () => {
   it('ships monsters, buildings, frames, icons, and backgrounds', () => {
     expect(shipped).toEqual(manifest)
-    expect(Object.keys(manifest.monsters)).toHaveLength(20)
+    expect(Object.keys(manifest.monsters)).toHaveLength(35)
     expect(Object.keys(manifest.buildings)).toEqual(['townhall', 'goldmine', 'training'])
     expect(Object.keys(manifest.frames).filter((id) => Number.isInteger(Number(id)))).toHaveLength(10)
     expect(manifest.frames.ghost_overlay['512']).toBe('frames/ghost_overlay.png')
@@ -37,7 +37,7 @@ describe('art manifest', () => {
     expect(manifest.icons.rank_diamond).toEqual({ '48': 'icons/rank_diamond.png', '96': 'icons/rank_diamond_96.png' })
     expect(manifest.icons.defense_shield).toEqual({ '128': 'icons/defense_shield.png', '64': 'icons/defense_shield_64.png' })
     expect(manifest.icons.catalog).toEqual({ '128': 'icons/catalog.png', '64': 'icons/catalog_64.png' })
-    for (let id = 26; id <= 35; id++) {
+    for (let id = 1; id <= 35; id++) {
       const key = `m${String(id).padStart(2, '0')}`
       expect(manifest.monsters[key as keyof typeof manifest.monsters]).toEqual({
         '512': `monsters/${key}.png`,
