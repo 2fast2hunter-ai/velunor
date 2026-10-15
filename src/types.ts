@@ -73,6 +73,8 @@ export interface MonsterSpecies {
   skill: SkillDef
   passive?: SpeciesPassive
   sprite: string
+  /** Short look description. Optional so older species files stay valid. */
+  aussehen?: string
 }
 
 export interface MonsterSkills {
@@ -246,6 +248,8 @@ export interface SaveData {
   settings: { battleSpeed: 1 | 2 | 4; sound: boolean }
   sessionStartedAt: number
   arena: ArenaState
+  /** Every species id this profile has ever obtained. Releasing a monster does not remove it. */
+  collection: string[]
 }
 
 export interface BattleEventBase {

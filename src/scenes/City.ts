@@ -81,6 +81,10 @@ export class CityScene extends Phaser.Scene {
     this.gate(820, 210)
     this.arenaSign()
     button(this, 1148, 586, 150, 40, 'Aufgaben', () => this.openQuests(), { fill: 0x3d4b6e, color: INK, size: 15 })
+    button(this, 1148, 118, 176, 48, 'Katalog', () => {
+      if (!this.inputReady) return
+      go(this, 'Catalog')
+    }, { fill: 0x2c3654, color: INK, size: 16, icon: 'catalog', hitPad: 10 })
   }
 
   private arenaSign(): void {

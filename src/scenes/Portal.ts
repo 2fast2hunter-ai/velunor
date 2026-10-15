@@ -1,7 +1,7 @@
 import Phaser from 'phaser'
 import { rewardedButton } from '../ads'
 import { monsterToken, paintBackground } from '../art'
-import { gachaCfg, monsters, rarityInfo, species, typeName } from '../data'
+import { gachaCfg, monsters, rarityInfo, species } from '../data'
 import { pEpic, pLeg, pullsUntilEpic, pullsUntilLegendary } from '../gacha'
 import { session } from '../session'
 import { canOfferFreePull, canOfferGemBonus } from '../ads'
@@ -130,19 +130,13 @@ export class PortalScene extends Phaser.Scene {
     note.setWordWrapWidth(640)
     note.setAlign('center')
     modal.root.add(note)
-    const active = new Set(session.save.activeTypes)
-    const pool = monsters.filter((monster) => active.has(monster.type))
-    const byRarity = new Map<number, string[]>()
-    for (const monster of pool) {
-      const list = byRarity.get(monster.baseRarity) ?? []
-      list.push(monster.name)
-      byRarity.set(monster.baseRarity, list)
-    }
+    const byRarity = new Map<number, number>()
+    for (const monster of monsters) byRarity.set(monster.baseRarity, (byRarity.get(monster.baseRarity) ?? 0) + 1)
     const poolLine = [...byRarity.entries()]
       .sort((a, b) => a[0] - b[0])
-      .map(([rarity, names]) => `${rarityInfo(rarity).name}: ${names.join(', ')}`)
+      .map(([rarity, count]) => `${rarityInfo(rarity).name} ${count}`)
       .join(' · ')
-    const poolText = text(this, W / 2, 460, `Aktives Portal (${session.save.activeTypes.map((id) => typeName(id)).join(', ')}): ${poolLine}`, 13, INK, [0.5, 0])
+    const poolText = text(this, W / 2, 460, `Alle ${monsters.length} Monster sind sofort ziehbar. Keine Typ- oder Seltenheitssperre. ${poolLine}`, 13, INK, [0.5, 0])
     poolText.setWordWrapWidth(680)
     modal.root.add(poolText)
     const history = session.save.gacha.history.slice(0, 5)

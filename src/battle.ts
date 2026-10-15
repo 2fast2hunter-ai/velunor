@@ -180,17 +180,18 @@ function buildOne(input: BattleUnitInput, side: Side, members: SynergyMember[], 
   }
   let rebirthsLeft = 0
   let rebirthHpPct = 0
-  if (sp.passive?.id === 'rebirth') {
-    rebirthsLeft = sp.passive.usesPerBattle
-    rebirthHpPct = sp.passive.hpPct ?? 0.4
-  } else if (sp.passive?.trigger) {
+  const innate = sp.passive
+  if (innate?.trigger) {
     passives.push({
-      id: sp.passive.id,
-      usesLeft: sp.passive.usesPerBattle === 0 ? Infinity : sp.passive.usesPerBattle,
-      trigger: sp.passive.trigger,
-      effects: (sp.passive.effects ?? []) as PassiveInst['effects'],
+      id: innate.id,
+      usesLeft: innate.usesPerBattle === 0 ? Infinity : innate.usesPerBattle,
+      trigger: innate.trigger,
+      effects: (innate.effects ?? []) as PassiveInst['effects'],
       fired: false
     })
+  } else if (innate && innate.hpPct != null) {
+    rebirthsLeft = innate.usesPerBattle
+    rebirthHpPct = innate.hpPct
   }
   return {
     id: summonId ?? `${side}-${input.slot}`,

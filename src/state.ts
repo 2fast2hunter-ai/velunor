@@ -78,7 +78,7 @@ export function createSave(now = Date.now()): SaveData {
   const starters = rewards.start.starters.map((id) => makeMonster(id, 0, now, true))
   const [fox, newt, sprout] = starters
   return {
-    version: 4,
+    version: 5,
     createdAt: now,
     lastSeen: now,
     rngSeed: freshSeed(),
@@ -103,7 +103,8 @@ export function createSave(now = Date.now()): SaveData {
     tutorial: { mineGranted: false, freeTrainUsed: false, pullClaimed: false, guideStep: 0 },
     settings: { battleSpeed: 1, sound: true },
     sessionStartedAt: now,
-    arena: freshArena(dayKey(now), now)
+    arena: freshArena(dayKey(now), now),
+    collection: [...new Set(starters.map((monster) => monster.speciesId))]
   }
 }
 
@@ -154,6 +155,7 @@ export function migrateSaveData(save: SaveData, _now: number): SaveData {
   const needsV2 = !(save.version >= 2 && save.buildings.breeding && save.activeTypes)
   if (!needsV2) {
     ensureArena(save, _now)
+    ensureCollection(save)
     return save
   }
   save.version = 2
@@ -200,7 +202,30 @@ export function migrateSaveData(save: SaveData, _now: number): SaveData {
   grantRetroChests(save)
   for (const stageId of Object.keys(save.campaign.cleared)) unlockTypeFor(save, stageId)
   ensureArena(save, _now)
+  ensureCollection(save)
   return save
+}
+
+function rememberCollected(save: SaveData, speciesId: string): void {
+  if (!Array.isArray(save.collection)) save.collection = []
+  if (!save.collection.includes(speciesId)) save.collection.push(speciesId)
+}
+
+/** Version 5: collection is the set of every species ever obtained, including ones no longer in the stable. */
+function ensureCollection(save: SaveData): void {
+  const have: string[] = []
+  const seen = new Set<string>()
+  const add = (id: unknown) => {
+    if (typeof id !== 'string' || !id || seen.has(id)) return
+    seen.add(id)
+    have.push(id)
+  }
+  if (Array.isArray(save.collection)) {
+    for (const id of save.collection) add(id)
+  }
+  for (const monster of save.monsters ?? []) add(monster?.speciesId)
+  save.collection = have
+  save.version = Math.max(save.version || 0, 5)
 }
 
 export function loadGame(now = Date.now()): SaveData {
@@ -816,6 +841,7 @@ function unlockTypeFor(save: SaveData, stageId: string): string[] {
     const gift = makeMonster(row.gift.speciesId, row.gift.rarity as Rarity, Date.now(), false)
     gift.level = row.gift.level
     save.monsters.push(gift)
+    rememberCollected(save, gift.speciesId)
     messages.push(`Geschenk: ${species(gift.speciesId).name}.`)
   }
   return messages
@@ -1305,6 +1331,7 @@ export function claimBreed(save: SaveData, index: number, now: number): ActionRe
     child.skills.slot2 = slot.result.inheritedSkill
   }
   save.monsters.push(child)
+  rememberCollected(save, child.speciesId)
   save.buildings.breeding.slots.splice(index, 1)
   return ok(undefined, [`${species(child.speciesId).name} ist geschlüpft.`, ...noteQuest(save, 'breed1')])
 }
@@ -1341,7 +1368,7 @@ export function pull(save: SaveData, kind: 'single' | 'multi' | 'tutorial', pay:
   const messages: string[] = []
   const raw = kind === 'single'
     ? [singlePull(save)]
-    : rollMulti(save.gacha, () => rng(save), kind === 'tutorial' ? 3 : 2, save.activeTypes).map((p) => p)
+    : rollMulti(save.gacha, () => rng(save), kind === 'tutorial' ? 3 : 2).map((p) => p)
   if (kind === 'tutorial') save.tutorial.pullClaimed = true
   const results: PullResult[] = []
   const owned = new Set(save.monsters.map((monster) => monster.speciesId))
@@ -1354,6 +1381,7 @@ export function pull(save: SaveData, kind: 'single' | 'multi' | 'tutorial', pay:
     owned.add(entry.speciesId)
     const monster = makeMonster(entry.speciesId, entry.rarity, now, false)
     save.monsters.push(monster)
+    rememberCollected(save, entry.speciesId)
     const history: GachaHistoryEntry = { t: now, speciesId: entry.speciesId, rarity: entry.rarity, upgraded: entry.upgraded }
     save.gacha.history.unshift(history)
     results.push({ ...entry, uid: monster.uid, duplicateEssence })
@@ -1366,7 +1394,7 @@ export function pull(save: SaveData, kind: 'single' | 'multi' | 'tutorial', pay:
 
 function singlePull(save: SaveData): { speciesId: string; rarity: Rarity; upgraded: boolean } {
   const rarity = rollRarity(save.gacha, () => rng(save))
-  const picked = pickSpecies(rarity, () => rng(save), save.activeTypes)
+  const picked = pickSpecies(rarity, () => rng(save))
   return {
     speciesId: picked.speciesId,
     rarity,
