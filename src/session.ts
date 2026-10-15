@@ -16,6 +16,7 @@ import {
   loadGame,
   notifyChapterChange,
   pull,
+  clearDefense,
   copyTeamToDefense,
   dismissSeasonResult,
   releaseMonster,
@@ -180,6 +181,11 @@ class Session {
 
   copyTeamToDefense(): void {
     const result = copyTeamToDefense(this.save)
+    this.take(result)
+  }
+
+  clearDefense(): void {
+    const result = clearDefense(this.save)
     this.take(result)
   }
 

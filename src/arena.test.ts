@@ -10,10 +10,16 @@ import {
   defensePower,
   listArenaOpponents,
   listDefenseAttackers,
+  defensePayoutLine,
+  formatSeasonLeft,
+  nextSeasonAt,
   rankForPoints,
   rankLabel,
   rerollArena,
+  resolveSeasonNow,
   runDefenseDay,
+  seasonRewardText,
+  seasonStatusLine,
   syncArenaSeason
 } from './arena'
 import { arenaCfg, dayKey, isoWeekKey, species } from './data'
@@ -22,6 +28,7 @@ import { setSessionPlaytimeForTests } from './ads'
 import {
   closeToCity,
   commitFightRewards,
+  clearDefense,
   copyTeamToDefense,
   createSave,
   fightArena,
@@ -133,6 +140,10 @@ describe('arena rewards', () => {
     expect(save.arena.bestRank).toBe('diamond')
     expect(save.arena.seasonBest).toBe('diamond')
     expect(rankLabel('diamond')).toBe('Diamant')
+    expect(arenaCfg.ranks.map((rank) => `${rankLabel(rank.id)} ${rank.min}`)).toEqual(['Bronze 0', 'Silber 80', 'Gold 200', 'Platin 400', 'Diamant 650'])
+    expect(seasonRewardText('bronze')).toBe('500 Gold')
+    expect(seasonRewardText('diamond')).toBe('200 Juwelen · 4.000 Gold · 100 Essenz · 1 Ticket')
+    expect(defensePayoutLine()).toBe('Sieg +8 P./+100 Gold, Niederlage ±0')
     expect(rankForPoints(650).id).toBe('diamond')
     expect(rankForPoints(649).id).toBe('platinum')
     const gemsAfter = save.currencies.gems
@@ -310,7 +321,7 @@ describe('arena defense', () => {
     return save
   }
 
-  it('copies the campaign team and still allows the same monster in both', () => {
+  it('sets, removes and clears defense slots without touching the campaign team', () => {
     const save = ready(8, now)
     for (const slot of Object.keys(save.arena.defense) as (keyof SaveData['arena']['defense'])[]) {
       save.arena.defense[slot] = null
@@ -325,6 +336,12 @@ describe('arena defense', () => {
     expect(save.team.F1).toBe(uid)
     expect(save.arena.defense.F1).toBeNull()
     expect(save.arena.defense.F2).toBe(uid)
+    expect(clearDefense(save).messages).toContain('Verteidigung geleert.')
+    expect(Object.values(save.arena.defense).every((slot) => slot == null)).toBe(true)
+    expect(save.team.F1).toBe(uid)
+    setDefense(save, 'F1', uid)
+    expect(save.arena.defense.F1).toBe(uid)
+    expect(save.team.F1).toBe(uid)
   })
 
   it('removes a released monster from the defense team', () => {
@@ -453,6 +470,33 @@ describe('arena season', () => {
   const monday = at(2026, 10, 19, 0)
   const beforeMonday = at(2026, 10, 18, 23)
   const twoWeeksLater = at(2026, 11, 2, 12)
+
+  it('counts down to Monday 00:00 and ?debugSeason=next switches the week once', () => {
+    const thursday = at(2026, 10, 15, 10)
+    expect(formatSeasonLeft(nextSeasonAt(thursday) - thursday)).toBe('3T 14h')
+    expect(seasonStatusLine('2026-W42', thursday)).toBe('Saison 2026-W42 · Reset Mo 00:00 · Saison endet in 3T 14h')
+    expect(isoWeekKey(resolveSeasonNow(thursday, 'next'))).not.toBe(isoWeekKey(thursday))
+    expect(resolveSeasonNow(thursday, null)).toBe(thursday)
+    const save = ready(8, thursday)
+    save.arena.points = 2
+    save.arena.seasonBest = 'bronze'
+    save.arena.bestRank = 'bronze'
+    const gems = save.currencies.gems
+    const switched = syncArenaSeason(save, resolveSeasonNow(thursday, 'next'))
+    expect(switched?.rank).toBe('bronze')
+    expect(switched?.gold).toBe(500)
+    expect(save.arena.points).toBe(0)
+    expect(save.arena.seasonKey).toBe(isoWeekKey(nextSeasonAt(thursday)))
+    expect(syncArenaSeason(save, resolveSeasonNow(thursday, 'next'))).toBeNull()
+    save.arena.points = 1
+    expect(applyArenaOutcome(save, 'easy', 'loss').points).toBe(0)
+    expect(save.arena.points).toBe(0)
+    save.arena.points = 80
+    expect(applyArenaOutcome(save, 'easy', 'win').rankGems).toBe(100)
+    expect(save.arena.bestRank).toBe('silver')
+    expect(applyArenaOutcome(save, 'easy', 'win').rankGems).toBe(0)
+    expect(save.currencies.gems).toBe(gems + 100)
+  })
 
   it('switches on Monday 00:00 local, not at the 04:00 day reset', () => {
     expect(isoWeekKey(monday)).toMatch(/^\d{4}-W\d{2}$/)

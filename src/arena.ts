@@ -1,5 +1,5 @@
 import { simulateBattle } from './battle'
-import { arenaCfg, dayKey, hasUnlock, isoWeekKey, maxLevelFor, monsters, teamSlotLimit } from './data'
+import { arenaCfg, dayKey, formatInt, hasUnlock, isoWeekKey, maxLevelFor, monsters, teamSlotLimit } from './data'
 import { hashSeed, mulberry32 } from './rng'
 import { combatPower, instanceStats } from './stats'
 import {
@@ -188,13 +188,72 @@ function seasonPayout(rankId: string): { gold: number; gems: number; essence: nu
   }
 }
 
+/** Next Monday 00:00 local, strictly after `ts`. That is the season reset. */
+export function nextSeasonAt(ts: number): number {
+  const date = new Date(ts)
+  const midnight = new Date(date.getFullYear(), date.getMonth(), date.getDate())
+  const day = midnight.getDay()
+  midnight.setDate(midnight.getDate() + ((8 - day) % 7 || 7))
+  return midnight.getTime()
+}
+
+/** `3T 14h` while a day remains, otherwise hours and minutes. */
+export function formatSeasonLeft(ms: number): string {
+  const total = Math.max(0, Math.floor(ms / 60000))
+  const days = Math.floor(total / 1440)
+  const hours = Math.floor((total % 1440) / 60)
+  const mins = total % 60
+  if (days > 0) return `${days}T ${hours}h`
+  if (hours > 0) return `${hours}h ${mins}m`
+  return `${mins}m`
+}
+
+/** `?debugSeason=next` reads as the coming Monday 00:00 so a week switch can be played once. */
+export function debugSeasonFlag(): string | null {
+  if (typeof location === 'undefined') return null
+  try {
+    return new URLSearchParams(location.search).get('debugSeason')
+  } catch {
+    return null
+  }
+}
+
+export function resolveSeasonNow(now: number, flag: string | null = debugSeasonFlag()): number {
+  if (flag === 'next') return nextSeasonAt(now)
+  return now
+}
+
+export function seasonStatusLine(seasonKey: string, now: number): string {
+  const clock = resolveSeasonNow(now)
+  const left = formatSeasonLeft(nextSeasonAt(clock) - clock)
+  return `Saison ${seasonKey} · Reset Mo 00:00 · Saison endet in ${left}`
+}
+
+export function seasonRewardText(rankId: string): string {
+  const table = arenaCfg.seasonRewards as Record<string, { gold?: number; gems?: number; essence?: number; tickets?: number }>
+  const row = table[rankId] ?? {}
+  const bits: string[] = []
+  if (row.gems) bits.push(`${formatInt(row.gems)} Juwelen`)
+  if (row.gold) bits.push(`${formatInt(row.gold)} Gold`)
+  if (row.essence) bits.push(`${formatInt(row.essence)} Essenz`)
+  if (row.tickets) bits.push(`${row.tickets} Ticket`)
+  return bits.join(' · ')
+}
+
+export function defensePayoutLine(): string {
+  return `Sieg +${arenaCfg.defense.winPoints} P./+${arenaCfg.defense.winGold} Gold, Niederlage ±0`
+}
+
+export const EMPTY_DEFENSE_HINT = 'Leer = keine Verteidigungskämpfe'
+
 /**
  * Week switch is Monday 00:00 local. An older seasonKey (clock turned back) is ignored.
  * Several missed weeks pay the last season once, then jump to the current week.
+ * `?debugSeason=next` treats the clock as the coming Monday so the switch can be played.
  */
 export function syncArenaSeason(save: SaveData, now: number): LastSeasonResult | null {
   if (!save.arena?.seasonKey) return null
-  const key = isoWeekKey(now)
+  const key = isoWeekKey(resolveSeasonNow(now))
   if (key <= save.arena.seasonKey) return null
   const rank = save.arena.seasonBest || 'bronze'
   const payout = seasonPayout(rank)

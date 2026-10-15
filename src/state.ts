@@ -940,6 +940,12 @@ export function copyTeamToDefense(save: SaveData): ActionResult {
   return ok(undefined, ['Team übernommen.'])
 }
 
+export function clearDefense(save: SaveData): ActionResult {
+  if (!save.arena) return fail('Arena ist noch nicht bereit.')
+  save.arena.defense = { F1: null, F2: null, H1: null, H2: null, H3: null }
+  return ok(undefined, ['Verteidigung geleert.'])
+}
+
 export { dismissSeasonResult }
 
 export function stageUnlocked(save: SaveData, stage: StageDef): { ok: boolean; reason: string } {
