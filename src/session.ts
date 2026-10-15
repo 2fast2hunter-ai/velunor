@@ -299,7 +299,7 @@ export function go(from: Phaser.Scene, key: string): void {
   // release cannot land on a building and open its modal.
   window.setTimeout(() => {
     switching = false
-    const mains = ['City', 'Team', 'Monsters', 'Portal', 'Campaign', 'Arena', 'Battle', 'Result', 'Preload', 'Boot']
+    const mains = ['City', 'Catalog', 'Team', 'Monsters', 'Portal', 'Campaign', 'Arena', 'Battle', 'Result', 'Preload', 'Boot']
     session.persist()
     if (plugin.isActive(key)) plugin.stop(key)
     plugin.launch(key)

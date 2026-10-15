@@ -4,6 +4,7 @@ import { session } from './session'
 import { ArenaScene } from './scenes/Arena'
 import { BattleScene } from './scenes/Battle'
 import { CampaignScene } from './scenes/Campaign'
+import { CatalogScene } from './scenes/Catalog'
 import { CityScene } from './scenes/City'
 import { MonsterListScene } from './scenes/Monsters'
 import { PortalScene } from './scenes/Portal'
@@ -29,7 +30,7 @@ const game = new Phaser.Game({
     width: 1280,
     height: 720
   },
-  scene: [BootScene, PreloadScene, HUDScene, CityScene, TeamScene, MonsterListScene, PortalScene, CampaignScene, ArenaScene, BattleScene, ResultScene]
+  scene: [BootScene, PreloadScene, HUDScene, CityScene, CatalogScene, TeamScene, MonsterListScene, PortalScene, CampaignScene, ArenaScene, BattleScene, ResultScene]
 })
 
 const refreshScale = () => game.scale.refresh()

@@ -285,7 +285,7 @@ describe('arena day and migration', () => {
     const legacy = { ...save, version: 2 } as Partial<SaveData>
     delete legacy.arena
     const migrated = migrateSaveData(legacy as SaveData, now)
-    expect(migrated.version).toBe(4)
+    expect(migrated.version).toBe(5)
     expect(migrated.arena).toEqual({
       dayKey: dayKey(now),
       attemptsUsed: 0,
@@ -575,7 +575,7 @@ describe('arena season', () => {
     save.arena = slice1 as SaveData['arena']
     save.version = 3
     const migrated = migrateSaveData(save, now)
-    expect(migrated.version).toBe(4)
+    expect(migrated.version).toBe(5)
     expect(migrated.arena.points).toBe(40)
     expect(migrated.arena.attemptsUsed).toBe(2)
     expect(migrated.arena.rerollIndex).toBe(1)

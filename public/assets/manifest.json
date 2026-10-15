@@ -39,6 +39,46 @@
     "m10": {
       "512": "monsters/m10.png",
       "256": "monsters/m10_256.png"
+    },
+    "m26": {
+      "512": "monsters/m26.png",
+      "256": "monsters/m26_256.png"
+    },
+    "m27": {
+      "512": "monsters/m27.png",
+      "256": "monsters/m27_256.png"
+    },
+    "m28": {
+      "512": "monsters/m28.png",
+      "256": "monsters/m28_256.png"
+    },
+    "m29": {
+      "512": "monsters/m29.png",
+      "256": "monsters/m29_256.png"
+    },
+    "m30": {
+      "512": "monsters/m30.png",
+      "256": "monsters/m30_256.png"
+    },
+    "m31": {
+      "512": "monsters/m31.png",
+      "256": "monsters/m31_256.png"
+    },
+    "m32": {
+      "512": "monsters/m32.png",
+      "256": "monsters/m32_256.png"
+    },
+    "m33": {
+      "512": "monsters/m33.png",
+      "256": "monsters/m33_256.png"
+    },
+    "m34": {
+      "512": "monsters/m34.png",
+      "256": "monsters/m34_256.png"
+    },
+    "m35": {
+      "512": "monsters/m35.png",
+      "256": "monsters/m35_256.png"
     }
   },
   "buildings": {
@@ -247,6 +287,10 @@
         "platinum",
         "diamond"
       ]
+    },
+    "catalog": {
+      "128": "icons/catalog.png",
+      "64": "icons/catalog_64.png"
     }
   },
   "backgrounds": {
