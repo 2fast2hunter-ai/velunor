@@ -226,6 +226,14 @@
       "48": "icons/rank_platinum.png",
       "96": "icons/rank_platinum_96.png"
     },
+    "rank_diamond": {
+      "48": "icons/rank_diamond.png",
+      "96": "icons/rank_diamond_96.png"
+    },
+    "defense_shield": {
+      "128": "icons/defense_shield.png",
+      "64": "icons/defense_shield_64.png"
+    },
     "rank_sheet": {
       "sheet": "icons/rank_sheet.png",
       "frame": [
@@ -236,7 +244,8 @@
         "bronze",
         "silver",
         "gold",
-        "platinum"
+        "platinum",
+        "diamond"
       ]
     }
   },

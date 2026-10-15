@@ -173,6 +173,21 @@ export type AdPlacement =
   | 'training_speed'
   | 'breeding_speed'
 
+export interface DefenseFight {
+  name: string
+  win: boolean
+}
+
+/** Shown once after a week rolls over. Cleared when the player dismisses the popup. */
+export interface LastSeasonResult {
+  seasonKey: string
+  rank: string
+  gold: number
+  gems: number
+  essence: number
+  tickets: number
+}
+
 export interface ArenaState {
   dayKey: string
   attemptsUsed: number
@@ -183,6 +198,12 @@ export interface ArenaState {
   chestClaimed: boolean
   wins: number
   losses: number
+  defense: Record<SlotId, string | null>
+  defenseDayKey: string | null
+  defenseLog: DefenseFight[]
+  seasonKey: string
+  seasonBest: string
+  lastSeasonResult: LastSeasonResult | null
 }
 
 export interface SaveData {

@@ -3,18 +3,27 @@
   "attemptsPerDay": 5,
   "freeRerolls": 1,
   "tiers": [
-    { "id": "easy", "kkFactor": 0.85, "win": 10, "gold": 150 },
-    { "id": "mid", "kkFactor": 1.0, "win": 20, "gold": 250 },
-    { "id": "hard", "kkFactor": 1.15, "win": 30, "gold": 400 }
+    { "id": "easy", "kkFactor": 0.8, "win": 8, "gold": 120 },
+    { "id": "mid", "kkFactor": 1.0, "win": 16, "gold": 200 },
+    { "id": "hard", "kkFactor": 1.2, "win": 28, "gold": 350 }
   ],
-  "lossPoints": -5,
+  "lossPoints": -3,
   "lossGold": 50,
   "dailyChest": { "gems": 30, "essence": 20 },
+  "defense": { "fightsPerDay": 3, "kkFactor": 1.0, "winPoints": 8, "winGold": 100 },
   "ranks": [
     { "id": "bronze", "min": 0, "gems": 0 },
-    { "id": "silver", "min": 100, "gems": 100 },
-    { "id": "gold", "min": 250, "gems": 200 },
-    { "id": "platinum", "min": 500, "gems": 300 }
+    { "id": "silver", "min": 80, "gems": 100 },
+    { "id": "gold", "min": 200, "gems": 200 },
+    { "id": "platinum", "min": 400, "gems": 300 },
+    { "id": "diamond", "min": 650, "gems": 400 }
   ],
+  "seasonRewards": {
+    "bronze": { "gold": 500 },
+    "silver": { "gems": 50, "gold": 1000 },
+    "gold": { "gems": 100, "gold": 2000, "essence": 30 },
+    "platinum": { "gems": 150, "gold": 3000, "essence": 60 },
+    "diamond": { "gems": 200, "gold": 4000, "essence": 100, "tickets": 1 }
+  },
   "ghostNames": ["Nebelwanderer", "Schattenzähmer", "Irrlicht", "Grauer Hüter"]
 }

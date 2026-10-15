@@ -16,7 +16,11 @@ import {
   loadGame,
   notifyChapterChange,
   pull,
+  clearDefense,
+  copyTeamToDefense,
+  dismissSeasonResult,
   releaseMonster,
+  setDefense,
   setSpeed,
   setTeam,
   startBreed,
@@ -70,9 +74,12 @@ class Session {
   }
 
   tick(): void {
+    const seasonKey = this.save.arena?.seasonKey
+    const pending = this.save.arena?.lastSeasonResult
     const messages = tick(this.save, Date.now())
-    if (messages.length) {
-      this.toasts.push(...messages)
+    const seasonMoved = this.save.arena?.seasonKey !== seasonKey || this.save.arena?.lastSeasonResult !== pending
+    if (messages.length) this.toasts.push(...messages)
+    if (messages.length || seasonMoved) {
       this.persist()
       this.emit()
     }
@@ -164,6 +171,28 @@ class Session {
     const result = setTeam(this.save, slot, uid)
     this.take(result)
     if (!result.ok && result.reason) this.toast(result.reason)
+  }
+
+  setDefense(slot: SlotId, uid: string | null): void {
+    const result = setDefense(this.save, slot, uid)
+    this.take(result)
+    if (!result.ok && result.reason) this.toast(result.reason)
+  }
+
+  copyTeamToDefense(): void {
+    const result = copyTeamToDefense(this.save)
+    this.take(result)
+  }
+
+  clearDefense(): void {
+    const result = clearDefense(this.save)
+    this.take(result)
+  }
+
+  dismissSeason(): void {
+    dismissSeasonResult(this.save)
+    this.persist()
+    this.emit()
   }
 
   arenaFight(tierId: string): FightReport | null {

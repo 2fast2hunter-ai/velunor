@@ -2,11 +2,13 @@ import { maybeInterstitial, tryRewarded } from './ads'
 import {
   applyArenaOutcome,
   arenaUnlocked,
+  dismissSeasonResult,
   ensureArena,
   freshArena,
   ghostBattleUnits,
   listArenaOpponents,
-  syncArenaDay
+  syncArenaDay,
+  syncArenaSeason
 } from './arena'
 import { SAVE_KEY, loadOrMigrateSave } from './saveMigrate'
 import { simulateBattle, battleTip } from './battle'
@@ -76,7 +78,7 @@ export function createSave(now = Date.now()): SaveData {
   const starters = rewards.start.starters.map((id) => makeMonster(id, 0, now, true))
   const [fox, newt, sprout] = starters
   return {
-    version: 3,
+    version: 4,
     createdAt: now,
     lastSeen: now,
     rngSeed: freshSeed(),
@@ -101,7 +103,7 @@ export function createSave(now = Date.now()): SaveData {
     tutorial: { mineGranted: false, freeTrainUsed: false, pullClaimed: false, guideStep: 0 },
     settings: { battleSpeed: 1, sound: true },
     sessionStartedAt: now,
-    arena: freshArena(dayKey(now))
+    arena: freshArena(dayKey(now), now)
   }
 }
 
@@ -319,6 +321,7 @@ export function tick(save: SaveData, now: number): string[] {
   const messages: string[] = []
   messages.push(...rolloverDay(save, now))
   syncArenaDay(save, now)
+  syncArenaSeason(save, now)
   messages.push(...resolveUpgrade(save, 'townhall', now))
   messages.push(...resolveMine(save, now))
   messages.push(...resolveUpgrade(save, 'training', now))
@@ -911,6 +914,40 @@ export function setTeam(save: SaveData, slot: SlotId, uid: string | null): Actio
   return ok(undefined, [])
 }
 
+export function setDefense(save: SaveData, slot: SlotId, uid: string | null): ActionResult {
+  if (!save.arena?.defense) return fail('Arena ist noch nicht bereit.')
+  const open = teamSlotLimit(save.buildings.townhall.level)
+  if (!open.includes(slot)) return fail('Rathaus Stufe 3')
+  if (uid == null) {
+    save.arena.defense[slot] = null
+    return ok(undefined, [])
+  }
+  const monster = monsterByUid(save, uid)
+  if (!monster) return fail('Monster nicht gefunden.')
+  for (const other of ALL_SLOTS) {
+    if (other !== slot && save.arena.defense[other] === uid) save.arena.defense[other] = null
+  }
+  save.arena.defense[slot] = uid
+  return ok(undefined, [])
+}
+
+export function copyTeamToDefense(save: SaveData): ActionResult {
+  if (!save.arena) return fail('Arena ist noch nicht bereit.')
+  const open = new Set(teamSlotLimit(save.buildings.townhall.level))
+  const defense = { F1: null, F2: null, H1: null, H2: null, H3: null } as Record<SlotId, string | null>
+  for (const slot of ALL_SLOTS) defense[slot] = open.has(slot) ? save.team[slot] : null
+  save.arena.defense = defense
+  return ok(undefined, ['Team übernommen.'])
+}
+
+export function clearDefense(save: SaveData): ActionResult {
+  if (!save.arena) return fail('Arena ist noch nicht bereit.')
+  save.arena.defense = { F1: null, F2: null, H1: null, H2: null, H3: null }
+  return ok(undefined, ['Verteidigung geleert.'])
+}
+
+export { dismissSeasonResult }
+
 export function stageUnlocked(save: SaveData, stage: StageDef): { ok: boolean; reason: string } {
   if (stage.chapter === 2 && !hasUnlock(save.buildings.townhall.level, 'campaign_ch2')) {
     return { ok: false, reason: 'Rathaus Stufe 4' }
@@ -1373,6 +1410,11 @@ export function releaseMonster(save: SaveData, uid: string): ActionResult<number
   save.currencies.essence += essence
   save.monsters = save.monsters.filter((m) => m.uid !== uid)
   for (const slot of inTeam) save.team[slot] = null
+  if (save.arena?.defense) {
+    for (const slot of ALL_SLOTS) {
+      if (save.arena.defense[slot] === uid) save.arena.defense[slot] = null
+    }
+  }
   save.buildings.training.slots = save.buildings.training.slots.filter((s) => s.monsterUid !== uid)
   return ok(essence, [`${species(monster.speciesId).name} freigelassen. +${essence} Essenz.`])
 }
