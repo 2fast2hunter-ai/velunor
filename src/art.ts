@@ -50,7 +50,12 @@ export function monsterToken(
   }
   if (rarity != null) {
     const frameKey = frameTextureKey(rarity, size >= 160)
-    if (scene.textures.exists(frameKey)) {
+    if (dim) {
+      const g = scene.add.graphics()
+      g.lineStyle(4, 0x8a8a8a, 1)
+      g.strokeRoundedRect(-size / 2 + 2, -size / 2 + 2, size - 4, size - 4, size * 0.16)
+      root.add(g)
+    } else if (scene.textures.exists(frameKey)) {
       const frame = scene.add.image(0, 0, frameKey)
       frame.setDisplaySize(size, size)
       root.add(frame)

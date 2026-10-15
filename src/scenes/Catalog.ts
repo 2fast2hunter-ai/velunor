@@ -33,12 +33,21 @@ export class CatalogScene extends Phaser.Scene {
   constructor() { super('Catalog') }
 
   create(): void {
+    this.typeFilter = 'all'
+    this.rarityFilter = 'all'
+    this.obtainedOnly = false
+    this.page = 0
     this.draw()
-    const off = session.on(() => {
+    const refresh = () => {
       const next = (session.save.collection ?? []).join('\n')
       if (next !== this.collectedKey) this.draw()
+    }
+    const off = session.on(refresh)
+    this.game.events.on('clock', refresh)
+    this.events.once('shutdown', () => {
+      off()
+      this.game.events.off('clock', refresh)
     })
-    this.events.once('shutdown', () => off())
   }
 
   private draw(): void {
@@ -151,19 +160,26 @@ export class CatalogScene extends Phaser.Scene {
 
   private card(monster: MonsterSpecies, x: number, y: number, owned: boolean): void {
     const plate = this.add.graphics()
-    const color = Phaser.Display.Color.HexStringToColor(rarityInfo(monster.baseRarity).color).color
+    const rarity = rarityInfo(monster.baseRarity)
     const left = x - CARD_W / 2
     const top = y - CARD_H / 2
     plate.fillStyle(0x120e1c, 1)
     plate.fillRoundedRect(left, top, CARD_W, CARD_H, 14)
-    plate.lineStyle(3, color, owned ? 1 : 0.5)
+    const stroke = owned ? Phaser.Display.Color.HexStringToColor(rarity.color).color : 0x7a7a7a
+    plate.lineStyle(3, stroke, 1)
     plate.strokeRoundedRect(left, top, CARD_W, CARD_H, 14)
-    monsterToken(this, x, y - 28, monster.id, 84, monster.baseRarity, !owned)
-    text(this, x, y + 22, monster.name, 14, INK, [0.5, 0])
-    const icon = iconSprite(this, x - 62, y + 46, `type_${monster.type}`, 16)
-    text(this, icon ? x - 50 : x, y + 46, typeName(monster.type), 12, INK, icon ? [0, 0.5] : [0.5, 0.5])
-    text(this, x, y + 66, rarityInfo(monster.baseRarity).name, 12, rarityInfo(monster.baseRarity).color, [0.5, 0])
-    if (!owned) iconSprite(this, x + 32, y - 8, 'lock', 22)
+    const tokenX = left + 42
+    const tokenY = top + 44
+    monsterToken(this, tokenX, tokenY, monster.sprite || monster.id, 68, monster.baseRarity, !owned)
+    if (!owned) iconSprite(this, tokenX + 18, tokenY + 14, 'lock', 18)
+    const rarityText = text(this, left + 80, top + 36, rarity.name, 12, owned ? rarity.color : MUTED)
+    rarityText.setWordWrapWidth(CARD_W - 88)
+    const name = text(this, x, top + 84, monster.name, 13, INK, [0.5, 0])
+    name.setWordWrapWidth(CARD_W - 16)
+    name.setAlign('center')
+    const typeY = top + 108 + Math.max(0, name.height - 16)
+    const icon = iconSprite(this, x - 36, typeY, `type_${monster.type}`, 14)
+    text(this, icon ? x - 24 : x, typeY, typeName(monster.type), 12, INK, icon ? [0, 0.5] : [0.5, 0.5])
     const hit = this.add.rectangle(x, y, CARD_W, CARD_H, 0xffffff, 0.001)
     hit.setInteractive({ useHandCursor: true })
     hit.on('pointerup', () => {
@@ -175,12 +191,17 @@ export class CatalogScene extends Phaser.Scene {
   private openDetail(id: string): void {
     const monster = species(id)
     const stats = instanceStats(monster.id, monster.baseRarity, 1)
-    const modal = openModal(this, 880, 560, monster.name)
+    const modalW = 1040
+    const modalH = 560
+    const modal = openModal(this, modalW, modalH, monster.name)
+    const left = (W - modalW) / 2
+    const top = (720 - modalH) / 2
+    const pad = 48
     const plate = this.add.graphics()
     plate.fillStyle(0x100c18, 1)
-    plate.fillRoundedRect(196, 168, 220, 250, 18)
+    plate.fillRoundedRect(left + pad, top + 72, 200, 210, 18)
     modal.root.add(plate)
-    modal.root.add(monsterToken(this, 306, 292, monster.id, 210, monster.baseRarity))
+    modal.root.add(monsterToken(this, left + pad + 100, top + 176, monster.sprite || monster.id, 168, monster.baseRarity))
     const lines = [
       `${typeName(monster.type)} · ${rarityInfo(monster.baseRarity).name}`,
       `Klasse: ${classLabel(monster.class)}`,
@@ -188,28 +209,31 @@ export class CatalogScene extends Phaser.Scene {
       'Basiswerte, Stufe 1',
       `HP ${stats.hp}    ATK ${stats.atk}    DEF ${stats.def}    SPD ${stats.spd}`
     ]
+    const infoX = left + pad + 232
     lines.forEach((line, index) => {
-      modal.root.add(text(this, 450, 176 + index * 28, line, 16, index === 0 ? rarityInfo(monster.baseRarity).color : INK))
+      modal.root.add(text(this, infoX, top + 88 + index * 30, line, 16, index === 0 ? rarityInfo(monster.baseRarity).color : INK))
     })
-    let y = 400
-    modal.root.add(text(this, 210, y, monster.skill.name ?? monster.skill.id, 18, GOLD))
-    y += 28
-    const desc = text(this, 210, y, monster.skill.description ?? '', 15, MUTED)
-    desc.setWordWrapWidth(780)
+    let y = top + 308
+    const bodyX = left + pad
+    const wrap = modalW - pad * 2
+    modal.root.add(text(this, bodyX, y, monster.skill.name ?? monster.skill.id, 18, GOLD))
+    y += 32
+    const desc = text(this, bodyX, y, monster.skill.description ?? '', 15, MUTED)
+    desc.setWordWrapWidth(wrap)
     modal.root.add(desc)
-    y += desc.height + 10
-    modal.root.add(text(this, 210, y, `Abklingzeit: ${monster.skill.cooldown}`, 15, INK))
-    y += 26
+    y += desc.height + 12
+    modal.root.add(text(this, bodyX, y, `Abklingzeit: ${monster.skill.cooldown}`, 15, INK))
+    y += 28
     const passiveLine = monster.passive
       ? `${monster.passive.name}: ${monster.passive.description}`
       : 'Keine angeborene Passive.'
-    const passive = text(this, 210, y, passiveLine, 15, monster.passive ? '#e0b3ff' : MUTED)
-    passive.setWordWrapWidth(780)
+    const passive = text(this, bodyX, y, passiveLine, 15, monster.passive ? '#e0b3ff' : MUTED)
+    passive.setWordWrapWidth(wrap)
     modal.root.add(passive)
-    y += passive.height + 10
+    y += passive.height + 12
     if (monster.aussehen) {
-      const look = text(this, 210, y, monster.aussehen, 14, INK)
-      look.setWordWrapWidth(780)
+      const look = text(this, bodyX, y, monster.aussehen, 14, INK)
+      look.setWordWrapWidth(wrap)
       modal.root.add(look)
     }
   }
