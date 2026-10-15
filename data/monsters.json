@@ -1003,9 +1003,9 @@
     "baseRarity": 0,
     "role": "front",
     "base": {
-      "hp": 165,
-      "atk": 14,
-      "def": 21,
+      "hp": 182,
+      "atk": 15,
+      "def": 23,
       "spd": 80
     },
     "blurb": "Runder blauer Krebs mit großer Perlmuttschale und neugierigen Stielaugen.",
@@ -1112,9 +1112,9 @@
     "baseRarity": 4,
     "role": "front",
     "base": {
-      "hp": 220,
-      "atk": 18,
-      "def": 28,
+      "hp": 238,
+      "atk": 19,
+      "def": 30,
       "spd": 84
     },
     "blurb": "Bemooster Hirsch mit Geweih aus Ästen voller Blüten, Glühwürmchen und Rindenpanzer an der Brust.",
@@ -1152,9 +1152,9 @@
     "baseRarity": 1,
     "role": "front",
     "base": {
-      "hp": 155,
-      "atk": 24,
-      "def": 15,
+      "hp": 147,
+      "atk": 23,
+      "def": 14,
       "spd": 95
     },
     "blurb": "Flinker Gecko aus gebranntem Lehm mit Rissmuster und erdbraunen Streifen.",
@@ -1248,9 +1248,9 @@
     "baseRarity": 2,
     "role": "back",
     "base": {
-      "hp": 150,
-      "atk": 24,
-      "def": 16,
+      "hp": 160,
+      "atk": 26,
+      "def": 17,
       "spd": 102
     },
     "blurb": "Dicker Käfer mit leuchtendem Hinterleib wie eine Laterne und durchscheinenden Flügeln.",
@@ -1280,9 +1280,9 @@
     "baseRarity": 3,
     "role": "front",
     "base": {
-      "hp": 160,
-      "atk": 25,
-      "def": 15,
+      "hp": 150,
+      "atk": 24,
+      "def": 14,
       "spd": 101
     },
     "blurb": "Smaragdgrüne Gottesanbeterin mit Sichelarmen aus Chitin, feinen Goldkanten und einem Schimmer auf den Flügeln.",
