@@ -32,7 +32,8 @@ import {
   stages,
   starChests,
   teamSlotLimit,
-  typeUnlocks
+  typeUnlocks,
+  typesCfg
 } from './data'
 import { pickSpecies, rollMulti, rollRarity } from './gacha'
 import { freshSeed, nextFloat, nextUint } from './rng'
@@ -74,6 +75,18 @@ function fail(reason: string): ActionResult<never> {
   return { ok: false, reason, messages: [] }
 }
 
+/** Types listed in config are live immediately. Stage clears never gate them. */
+function starterTypes(): TypeId[] {
+  return typesCfg.activeTypes.map((type) => type as TypeId)
+}
+
+function ensureStarterTypes(save: SaveData): void {
+  if (!Array.isArray(save.activeTypes)) save.activeTypes = []
+  for (const type of starterTypes()) {
+    if (!save.activeTypes.includes(type)) save.activeTypes.push(type)
+  }
+}
+
 export function createSave(now = Date.now()): SaveData {
   const starters = rewards.start.starters.map((id) => makeMonster(id, 0, now, true))
   const [fox, newt, sprout] = starters
@@ -84,7 +97,7 @@ export function createSave(now = Date.now()): SaveData {
     rngSeed: freshSeed(),
     currencies: { gold: rewards.start.gold, gems: rewards.start.gems, essence: 0, tickets: 0 },
     meta: { migratedFrom: null, migratedAt: 0 },
-    activeTypes: ['fire', 'water', 'plant', 'earth'],
+    activeTypes: starterTypes(),
     buildings: {
       townhall: { level: 1, upgradeEndsAt: null, upgradePaid: null },
       goldmine: { level: 1, stored: 0, lastTick: now, upgradeEndsAt: null, upgradePaid: null },
@@ -154,12 +167,13 @@ export function migrateSaveData(save: SaveData, _now: number): SaveData {
   }
   const needsV2 = !(save.version >= 2 && save.buildings.breeding && save.activeTypes)
   if (!needsV2) {
+    ensureStarterTypes(save)
     ensureArena(save, _now)
     ensureCollection(save)
     return save
   }
   save.version = 2
-  save.activeTypes = save.activeTypes ?? ['fire', 'water', 'plant', 'earth']
+  ensureStarterTypes(save)
   save.campaign = save.campaign ?? { cleared: {}, chestsClaimed: [] }
   save.campaign.chestsClaimed = save.campaign.chestsClaimed ?? []
   save.lastBattleResult = save.lastBattleResult ?? null

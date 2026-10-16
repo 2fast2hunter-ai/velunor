@@ -29,7 +29,7 @@ export function monsterToken(
   // when the sprite sits on a lighter plate or the arena stone.
   if (speciesId === 'm33') {
     const matte = scene.add.graphics()
-    matte.fillStyle(0x140e22, 1)
+    matte.fillStyle(dim ? 0x3c3a4a : 0x140e22, 1)
     matte.fillRoundedRect(-display / 2, -display / 2, display, display, display * 0.2)
     root.add(matte)
   }
@@ -37,22 +37,32 @@ export function monsterToken(
     const image = scene.add.image(0, 0, key)
     image.setDisplaySize(display, display)
     if (dim) {
-      image.setTint(0x8a8a8a)
-      image.setAlpha(0.78)
+      const outline = 0xf4f0e6
+      for (const [ox, oy] of [[-2, 0], [2, 0], [0, -2], [0, 2]] as const) {
+        const edge = scene.add.image(ox, oy, key)
+        edge.setDisplaySize(display, display)
+        edge.setTint(outline)
+        root.add(edge)
+      }
+      image.setTint(0xd8d8e0)
     }
     root.add(image)
   } else {
     const g = scene.add.graphics()
-    const color = dim ? 0x6e6e6e : Phaser.Display.Color.HexStringToColor(typeColor(species(speciesId).type)).color
-    g.fillStyle(color, dim ? 0.78 : 1)
+    const color = dim ? 0xd0d0d8 : Phaser.Display.Color.HexStringToColor(typeColor(species(speciesId).type)).color
+    g.fillStyle(color, 1)
     g.fillCircle(0, 0, display * 0.38)
+    if (dim) {
+      g.lineStyle(2, 0xf4f0e6, 1)
+      g.strokeCircle(0, 0, display * 0.38)
+    }
     root.add(g)
   }
   if (rarity != null) {
     const frameKey = frameTextureKey(rarity, size >= 160)
     if (dim) {
       const g = scene.add.graphics()
-      g.lineStyle(4, 0x8a8a8a, 1)
+      g.lineStyle(3, 0xe6e2d8, 1)
       g.strokeRoundedRect(-size / 2 + 2, -size / 2 + 2, size - 4, size - 4, size * 0.16)
       root.add(g)
     } else if (scene.textures.exists(frameKey)) {
