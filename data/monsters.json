@@ -1310,5 +1310,418 @@
     "sprite": "m35",
     "class": "fighter",
     "aussehen": "Smaragdgrüne Gottesanbeterin mit Sichelarmen aus Chitin, feinen Goldkanten und einem Schimmer auf den Flügeln."
+  },
+  {
+    "id": "m36",
+    "name": "Schlammkröte",
+    "type": "poison",
+    "baseRarity": 1,
+    "role": "front",
+    "base": {
+      "hp": 185,
+      "atk": 15,
+      "def": 23,
+      "spd": 79
+    },
+    "blurb": "Plumpe violette Kröte mit Giftblasen auf dem Rücken und trägem Blick.",
+    "skill": {
+      "id": "schlammkroete_skill",
+      "name": "Schlammkröte-Bollwerk",
+      "description": "Spott 2 Runden und eigene DEF +32 % (2 Runden).",
+      "cooldown": 4,
+      "initialCooldown": 1,
+      "target": "self",
+      "effects": [
+        {
+          "kind": "status",
+          "status": "taunt",
+          "chance": 1,
+          "duration": 2
+        },
+        {
+          "kind": "status",
+          "status": "def_up",
+          "chance": 1,
+          "duration": 2,
+          "value": 0.32
+        }
+      ]
+    },
+    "sprite": "m36",
+    "class": "guardian",
+    "aussehen": "Plumpe violette Kröte mit Giftblasen auf dem Rücken und trägem Blick."
+  },
+  {
+    "id": "m37",
+    "name": "Nachtschattenhydra",
+    "type": "poison",
+    "baseRarity": 5,
+    "role": "back",
+    "base": {
+      "hp": 175,
+      "atk": 37,
+      "def": 15,
+      "spd": 111
+    },
+    "blurb": "Dreiköpfige violette Schlange mit Blütenkragen, tropfendem Giftnebel und leuchtenden Mustern auf den Schuppen.",
+    "skill": {
+      "id": "nachtschattenhydra_skill",
+      "name": "Nachtschattenhydra-Fluch",
+      "description": "Alle Gegner: 85 % ATK, 60 % Chance auf Vergiftung.",
+      "cooldown": 4,
+      "initialCooldown": 2,
+      "target": "enemy_all",
+      "effects": [
+        {
+          "kind": "damage",
+          "atkMult": 0.85
+        },
+        {
+          "kind": "status",
+          "status": "poison",
+          "chance": 0.6,
+          "duration": 3,
+          "stacks": 1
+        }
+      ]
+    },
+    "sprite": "m37",
+    "class": "disruptor",
+    "aussehen": "Dreiköpfige violette Schlange mit Blütenkragen, tropfendem Giftnebel und leuchtenden Mustern auf den Schuppen."
+  },
+  {
+    "id": "m38",
+    "name": "Kieselgolem",
+    "type": "stone",
+    "baseRarity": 3,
+    "role": "front",
+    "base": {
+      "hp": 195,
+      "atk": 16,
+      "def": 25,
+      "spd": 84
+    },
+    "blurb": "Golem aus gestapelten runden Kieseln mit moosigen Fugen und einem leuchtenden Kern im Bauch.",
+    "skill": {
+      "id": "kieselgolem_skill",
+      "name": "Kieselgolem-Bollwerk",
+      "description": "Spott 2 Runden und eigene DEF +36 % (2 Runden).",
+      "cooldown": 4,
+      "initialCooldown": 1,
+      "target": "self",
+      "effects": [
+        {
+          "kind": "status",
+          "status": "taunt",
+          "chance": 1,
+          "duration": 2
+        },
+        {
+          "kind": "status",
+          "status": "def_up",
+          "chance": 1,
+          "duration": 2,
+          "value": 0.36
+        }
+      ]
+    },
+    "sprite": "m38",
+    "class": "guardian",
+    "aussehen": "Golem aus gestapelten runden Kieseln mit moosigen Fugen und einem leuchtenden Kern im Bauch."
+  },
+  {
+    "id": "m39",
+    "name": "Monolithwächter",
+    "type": "stone",
+    "baseRarity": 6,
+    "role": "front",
+    "base": {
+      "hp": 205,
+      "atk": 33,
+      "def": 20,
+      "spd": 105
+    },
+    "blurb": "Schwebender Obelisk-Krieger mit gemeißelten Runen, kreisenden Steinplatten als Schild und glühenden Augenschlitzen.",
+    "skill": {
+      "id": "monolithwaechter_skill",
+      "name": "Monolithwächter-Ansturm",
+      "description": "Gegnerische Frontreihe: 130 % ATK, 24 % Chance auf Betäubung.",
+      "cooldown": 4,
+      "initialCooldown": 2,
+      "target": "enemy_front_all",
+      "effects": [
+        {
+          "kind": "damage",
+          "atkMult": 1.3
+        },
+        {
+          "kind": "status",
+          "status": "stun",
+          "chance": 0.24,
+          "duration": 1
+        }
+      ]
+    },
+    "passive": {
+      "id": "monolithwaechter_passive",
+      "name": "Letzter Wille",
+      "description": "Fällt die HP erstmals unter 50 %: Schild 15 % Max-HP (2 Runden).",
+      "trigger": {
+        "kind": "hp_below",
+        "pct": 0.5
+      },
+      "effects": [
+        {
+          "kind": "shield",
+          "maxHpPctOfCaster": 0.15,
+          "duration": 2,
+          "target": "self"
+        }
+      ],
+      "usesPerBattle": 1
+    },
+    "sprite": "m39",
+    "class": "fighter",
+    "aussehen": "Schwebender Obelisk-Krieger mit gemeißelten Runen, kreisenden Steinplatten als Schild und glühenden Augenschlitzen."
+  },
+  {
+    "id": "m40",
+    "name": "Prismadrache",
+    "type": "crystal",
+    "baseRarity": 8,
+    "role": "back",
+    "base": {
+      "hp": 200,
+      "atk": 50,
+      "def": 18,
+      "spd": 124
+    },
+    "blurb": "Majestätischer Drache aus Kristallfacetten, der Licht in Regenbogenstrahlen bricht, mit schwebenden Splitterkränzen und Sternenglanz im Inneren.",
+    "skill": {
+      "id": "prismadrache_skill",
+      "name": "Prismadrache-Schuss",
+      "description": "190 % ATK auf das Standardziel, 54 % Chance auf DEF −20 %.",
+      "cooldown": 3,
+      "initialCooldown": 2,
+      "target": "default",
+      "effects": [
+        {
+          "kind": "damage",
+          "atkMult": 1.9
+        },
+        {
+          "kind": "status",
+          "status": "def_down",
+          "chance": 0.54,
+          "duration": 2,
+          "value": 0.2
+        }
+      ]
+    },
+    "passive": {
+      "id": "prismadrache_passive",
+      "name": "Letzter Wille",
+      "description": "Fällt die HP erstmals unter 50 %: Schild 21 % Max-HP (2 Runden).",
+      "trigger": {
+        "kind": "hp_below",
+        "pct": 0.5
+      },
+      "effects": [
+        {
+          "kind": "shield",
+          "maxHpPctOfCaster": 0.21,
+          "duration": 2,
+          "target": "self"
+        }
+      ],
+      "usesPerBattle": 1
+    },
+    "sprite": "m40",
+    "class": "shooter",
+    "aussehen": "Majestätischer Drache aus Kristallfacetten, der Licht in Regenbogenstrahlen bricht, mit schwebenden Splitterkränzen und Sternenglanz im Inneren."
+  },
+  {
+    "id": "m41",
+    "name": "Brisenmaus",
+    "type": "wind",
+    "baseRarity": 0,
+    "role": "back",
+    "base": {
+      "hp": 115,
+      "atk": 28,
+      "def": 10,
+      "spd": 108
+    },
+    "blurb": "Kleine Maus mit großen Segelohren und einem flauschigen Wirbel-Schweif.",
+    "skill": {
+      "id": "brisenmaus_skill",
+      "name": "Brisenmaus-Schuss",
+      "description": "150 % ATK auf das Standardziel, 30 % Chance auf TEMPO −20 %.",
+      "cooldown": 3,
+      "initialCooldown": 2,
+      "target": "default",
+      "effects": [
+        {
+          "kind": "damage",
+          "atkMult": 1.5
+        },
+        {
+          "kind": "status",
+          "status": "spd_down",
+          "chance": 0.3,
+          "duration": 2,
+          "value": 0.2
+        }
+      ]
+    },
+    "sprite": "m41",
+    "class": "shooter",
+    "aussehen": "Kleine Maus mit großen Segelohren und einem flauschigen Wirbel-Schweif."
+  },
+  {
+    "id": "m42",
+    "name": "Wolkenschaf",
+    "type": "wind",
+    "baseRarity": 1,
+    "role": "back",
+    "base": {
+      "hp": 145,
+      "atk": 24,
+      "def": 16,
+      "spd": 98
+    },
+    "blurb": "Schaf mit Wolle aus echter Wolke und kleinen Luftwirbeln an den Füßen.",
+    "skill": {
+      "id": "wolkenschaf_skill",
+      "name": "Wolkenschaf-Schutz",
+      "description": "Schild = 9 % eigene Max-HP auf alle Verbündeten (2 Runden).",
+      "cooldown": 4,
+      "initialCooldown": 2,
+      "target": "ally_all",
+      "effects": [
+        {
+          "kind": "shield",
+          "maxHpPctOfCaster": 0.09,
+          "duration": 2
+        }
+      ]
+    },
+    "sprite": "m42",
+    "class": "support",
+    "aussehen": "Schaf mit Wolle aus echter Wolke und kleinen Luftwirbeln an den Füßen."
+  },
+  {
+    "id": "m43",
+    "name": "Böenfuchs",
+    "type": "wind",
+    "baseRarity": 2,
+    "role": "back",
+    "base": {
+      "hp": 140,
+      "atk": 29,
+      "def": 12,
+      "spd": 108
+    },
+    "blurb": "Schlanker hellblauer Fuchs mit wehenden Bandschweifen und Windlinien im Fell.",
+    "skill": {
+      "id": "boeenfuchs_skill",
+      "name": "Böenfuchs-Fluch",
+      "description": "Alle Gegner: 70 % ATK, 48 % Chance auf TEMPO −20 %.",
+      "cooldown": 4,
+      "initialCooldown": 2,
+      "target": "enemy_all",
+      "effects": [
+        {
+          "kind": "damage",
+          "atkMult": 0.7
+        },
+        {
+          "kind": "status",
+          "status": "spd_down",
+          "chance": 0.48,
+          "duration": 2,
+          "value": 0.2
+        }
+      ]
+    },
+    "sprite": "m43",
+    "class": "disruptor",
+    "aussehen": "Schlanker hellblauer Fuchs mit wehenden Bandschweifen und Windlinien im Fell."
+  },
+  {
+    "id": "m44",
+    "name": "Sturmadler",
+    "type": "wind",
+    "baseRarity": 3,
+    "role": "back",
+    "base": {
+      "hp": 125,
+      "atk": 32,
+      "def": 11,
+      "spd": 115
+    },
+    "blurb": "Weißer Adler mit sturmgrauen Federspitzen, kleinen Blitzwolken unter den Schwingen und scharfem Blick.",
+    "skill": {
+      "id": "sturmadler_skill",
+      "name": "Sturmadler-Schuss",
+      "description": "165 % ATK auf das Standardziel, 39 % Chance auf TEMPO −20 %.",
+      "cooldown": 3,
+      "initialCooldown": 2,
+      "target": "default",
+      "effects": [
+        {
+          "kind": "damage",
+          "atkMult": 1.65
+        },
+        {
+          "kind": "status",
+          "status": "spd_down",
+          "chance": 0.39,
+          "duration": 2,
+          "value": 0.2
+        }
+      ]
+    },
+    "sprite": "m44",
+    "class": "shooter",
+    "aussehen": "Weißer Adler mit sturmgrauen Federspitzen, kleinen Blitzwolken unter den Schwingen und scharfem Blick."
+  },
+  {
+    "id": "m45",
+    "name": "Zyklonfürst",
+    "type": "wind",
+    "baseRarity": 5,
+    "role": "front",
+    "base": {
+      "hp": 200,
+      "atk": 32,
+      "def": 20,
+      "spd": 104
+    },
+    "blurb": "Greif mit Körper aus kreiselnden Luftströmen, Federkrone, mitgerissenen Blättern und einem leuchtenden Auge des Sturms auf der Brust.",
+    "skill": {
+      "id": "zyklonfuerst_skill",
+      "name": "Zyklonfürst-Ansturm",
+      "description": "Gegnerische Frontreihe: 125 % ATK, 45 % Chance auf TEMPO −20 %.",
+      "cooldown": 4,
+      "initialCooldown": 2,
+      "target": "enemy_front_all",
+      "effects": [
+        {
+          "kind": "damage",
+          "atkMult": 1.25
+        },
+        {
+          "kind": "status",
+          "status": "spd_down",
+          "chance": 0.45,
+          "duration": 2,
+          "value": 0.2
+        }
+      ]
+    },
+    "sprite": "m45",
+    "class": "fighter",
+    "aussehen": "Greif mit Körper aus kreiselnden Luftströmen, Federkrone, mitgerissenen Blättern und einem leuchtenden Auge des Sturms auf der Brust."
   }
 ]
