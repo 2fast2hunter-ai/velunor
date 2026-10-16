@@ -36,9 +36,11 @@ export class TeamScene extends Phaser.Scene {
     g.fillStyle(0x1a1630, 1)
     g.fillRect(0, 0, W, 720)
     text(this, 48, 88, 'Team', 32, '#f0c14a')
-    text(this, 48, 128, 'Front hält aus und zielt auf die eigene Spur. Hinten fokussiert das niedrigste Ziel. Passende Reihe: +10 % ATK und DEF.', 15, MUTED)
+    const hint = text(this, 48, 128, 'Front hält aus und zielt auf die eigene Spur. Hinten fokussiert das niedrigste Ziel. Passende Reihe: +10 % ATK und DEF.', 15, MUTED)
+    hint.setWordWrapWidth(790)
     const save = session.save
     const open = new Set(teamSlotLimit(save.buildings.townhall.level))
+    const showDetail = open.has(this.selected) && save.monsters.some((monster) => monster.uid === save.team[this.selected])
     for (const slot of ALL_SLOTS) {
       const [x, y] = SLOT_POS[slot]
       const unlocked = open.has(slot)
@@ -64,7 +66,8 @@ export class TeamScene extends Phaser.Scene {
         if (hit.input) hit.input.cursor = 'pointer'
         attachTip(this, hit, x + 5, y - 70, slot.startsWith('F')
           ? `${slot} ist Front. Das Monster hält aus und zielt auf seine Spur. Die passende Rolle gibt +10 % ATK und DEF.`
-          : `${slot} ist Hinten. Das Monster greift das schwächste Ziel an. Die passende Rolle gibt +10 % ATK und DEF.`)
+          : `${slot} ist Hinten. Das Monster greift das schwächste Ziel an. Die passende Rolle gibt +10 % ATK und DEF.`,
+        showDetail ? 844 : W - 12)
         hit.on('pointerup', () => {
           this.selected = slot
           this.paint()

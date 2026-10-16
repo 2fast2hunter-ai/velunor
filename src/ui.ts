@@ -162,7 +162,14 @@ export function openModal(
   return { root, close }
 }
 
-export function attachTip(scene: Phaser.Scene, zone: Phaser.GameObjects.GameObject, x: number, y: number, message: string): void {
+export function attachTip(
+  scene: Phaser.Scene,
+  zone: Phaser.GameObjects.GameObject,
+  x: number,
+  y: number,
+  message: string,
+  maxRight = W - 12
+): void {
   let tip: Phaser.GameObjects.Container | undefined
   const hide = () => {
     tip?.destroy()
@@ -175,7 +182,7 @@ export function attachTip(scene: Phaser.Scene, zone: Phaser.GameObjects.GameObje
     const width = Math.min(340, Math.max(180, body.width + 24))
     body.setWordWrapWidth(width - 24)
     const height = body.height + 20
-    const left = Math.min(Math.max(12, x - width / 2), W - width - 12)
+    const left = Math.min(Math.max(12, x - width / 2), Math.max(12, maxRight - width))
     const top = Math.min(y + 28, H - height - 80)
     const holder = scene.add.container(left, top).setDepth(220)
     const g = scene.add.graphics()

@@ -165,7 +165,7 @@ export class CatalogScene extends Phaser.Scene {
     const top = y - CARD_H / 2
     plate.fillStyle(0x120e1c, 1)
     plate.fillRoundedRect(left, top, CARD_W, CARD_H, 14)
-    const stroke = owned ? Phaser.Display.Color.HexStringToColor(rarity.color).color : 0x7a7a7a
+    const stroke = owned ? Phaser.Display.Color.HexStringToColor(rarity.color).color : 0xc8c4bc
     plate.lineStyle(3, stroke, 1)
     plate.strokeRoundedRect(left, top, CARD_W, CARD_H, 14)
     const tokenX = left + 42
