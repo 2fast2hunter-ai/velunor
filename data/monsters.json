@@ -1396,9 +1396,9 @@
     "baseRarity": 3,
     "role": "front",
     "base": {
-      "hp": 215,
-      "atk": 20,
-      "def": 26,
+      "hp": 225,
+      "atk": 21,
+      "def": 27,
       "spd": 84
     },
     "blurb": "Golem aus gestapelten runden Kieseln mit moosigen Fugen und einem leuchtenden Kern im Bauch.",
@@ -1548,7 +1548,7 @@
     "role": "back",
     "base": {
       "hp": 105,
-      "atk": 26,
+      "atk": 25,
       "def": 10,
       "spd": 108
     },
@@ -1693,8 +1693,8 @@
     "baseRarity": 5,
     "role": "front",
     "base": {
-      "hp": 210,
-      "atk": 36,
+      "hp": 205,
+      "atk": 34,
       "def": 21,
       "spd": 104
     },
