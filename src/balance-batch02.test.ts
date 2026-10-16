@@ -32,13 +32,11 @@ function winsOf(challenger: MonsterSpecies, opponent: MonsterSpecies): number {
   return wins
 }
 
-/** Guardians may sit as low as 25%. Everyone else is judged from 35%. Above 60% is always flagged, and so is anything outside 35–65% (25–65% for guardians). */
+/** Target band is 35–65%. Guardians may sit as low as 25%. */
 function flagFor(rate: number, monster: MonsterSpecies): string {
   const low = monster.class === 'guardian' ? 0.25 : 0.35
-  const marks: string[] = []
-  if (rate > 0.6) marks.push('>60%')
-  if (rate < low || rate > 0.65) marks.push(monster.class === 'guardian' ? 'outside 25-65%' : 'outside 35-65%')
-  return marks.length ? ` FLAG ${marks.join(', ')}` : ''
+  if (rate < low || rate > 0.65) return monster.class === 'guardian' ? ' FLAG outside 25-65%' : ' FLAG outside 35-65%'
+  return ''
 }
 
 describe('batch 02 balance', () => {

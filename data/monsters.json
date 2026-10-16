@@ -1396,9 +1396,9 @@
     "baseRarity": 3,
     "role": "front",
     "base": {
-      "hp": 195,
-      "atk": 16,
-      "def": 25,
+      "hp": 215,
+      "atk": 20,
+      "def": 26,
       "spd": 84
     },
     "blurb": "Golem aus gestapelten runden Kieseln mit moosigen Fugen und einem leuchtenden Kern im Bauch.",
@@ -1437,7 +1437,7 @@
     "role": "front",
     "base": {
       "hp": 205,
-      "atk": 33,
+      "atk": 31,
       "def": 20,
       "spd": 105
     },
@@ -1547,8 +1547,8 @@
     "baseRarity": 0,
     "role": "back",
     "base": {
-      "hp": 115,
-      "atk": 28,
+      "hp": 105,
+      "atk": 26,
       "def": 10,
       "spd": 108
     },
@@ -1655,8 +1655,8 @@
     "baseRarity": 3,
     "role": "back",
     "base": {
-      "hp": 125,
-      "atk": 32,
+      "hp": 120,
+      "atk": 29,
       "def": 11,
       "spd": 115
     },
@@ -1693,9 +1693,9 @@
     "baseRarity": 5,
     "role": "front",
     "base": {
-      "hp": 200,
-      "atk": 32,
-      "def": 20,
+      "hp": 210,
+      "atk": 36,
+      "def": 21,
       "spd": 104
     },
     "blurb": "Greif mit Körper aus kreiselnden Luftströmen, Federkrone, mitgerissenen Blättern und einem leuchtenden Auge des Sturms auf der Brust.",
