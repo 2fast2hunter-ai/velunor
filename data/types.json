@@ -1,5 +1,5 @@
 {
-  "activeTypes": ["fire", "water", "plant", "earth", "wind"],
+  "activeTypes": ["fire", "water", "plant", "earth", "wind", "ice", "lightning"],
   "multipliers": { "strong": 1.5, "weak": 0.75, "neutral": 1.0 },
   "mutualStrong": [["light", "shadow"]],
   "names": {

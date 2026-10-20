@@ -23,7 +23,7 @@ export interface SynergyView {
 }
 
 const TYPE_NAMES: Record<string, string> = {
-  fire: 'Feuer', water: 'Wasser', plant: 'Pflanze', earth: 'Erde', wind: 'Wind',
+  fire: 'Feuer', water: 'Wasser', plant: 'Pflanze', earth: 'Erde', wind: 'Wind', ice: 'Eis', lightning: 'Blitz',
   poison: 'Gift', stone: 'Stein', insect: 'Insekt', crystal: 'Kristall'
 }
 
