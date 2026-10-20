@@ -22,6 +22,27 @@ export interface SynergyView {
   active: boolean
 }
 
+const CLASS_LABELS: Record<string, string> = {
+  guardian: 'Wächter',
+  fighter: 'Kämpfer',
+  shooter: 'Schütze',
+  support: 'Stütze',
+  disruptor: 'Störer'
+}
+
+/** German class name. Never blank, including support, guardian, and disruptor. */
+export function classLabel(id: string): string {
+  const fromData = (synergies.classNames as Record<string, string> | undefined)?.[id]
+  const label = (typeof fromData === 'string' ? fromData.trim() : '') || CLASS_LABELS[id] || id.trim()
+  return label || 'Klasse'
+}
+
+/** One team-screen line. Progress rows are names, so two separators never collapse into an empty role. */
+export function synergySummary(power: number, lines: string[]): string {
+  const bits = lines.map((line) => line.trim()).filter((line) => line.length > 0 && !/^·+$/.test(line))
+  return [`Kampfkraft ${power}`, ...(bits.length ? bits : ['Noch keine Synergie.'])].join(' · ')
+}
+
 const TYPE_NAMES: Record<string, string> = {
   fire: 'Feuer', water: 'Wasser', plant: 'Pflanze', earth: 'Erde', wind: 'Wind', ice: 'Eis', lightning: 'Blitz',
   poison: 'Gift', stone: 'Stein', insect: 'Insekt', crystal: 'Kristall'
@@ -33,6 +54,7 @@ function cap(n: number): number {
 
 export function synergyView(members: SynergyMember[], typeOn: boolean, classOn: boolean): SynergyView {
   const lines: string[] = []
+  let active = false
   if (typeOn) {
     const counts = new Map<TypeId, number>()
     for (const member of members) counts.set(member.type, (counts.get(member.type) ?? 0) + 1)
@@ -42,29 +64,42 @@ export function synergyView(members: SynergyMember[], typeOn: boolean, classOn: 
       const parts = [`+${pct(tier.atk)} ATK`]
       if (tier.hp) parts.push(`+${pct(tier.hp)} HP`)
       lines.push(`${TYPE_NAMES[type] ?? type} ×${count}: ${parts.join(', ')}`)
+      active = true
     }
     for (const combo of synergies.typeCombos) {
-      if (comboActive(combo, counts)) lines.push(`${combo.name}: ${bonusText(combo.bonus)}`)
+      if (!comboActive(combo, counts)) continue
+      lines.push(`${combo.name}: ${bonusText(combo.bonus)}`)
+      active = true
     }
   }
   if (classOn) {
     const counts = classCounts(members)
+    const listed = new Set<string>()
     for (const [id, tiers] of Object.entries(synergies.classTiers)) {
+      listed.add(id)
       const count = counts.get(id as MonsterClass) ?? 0
       const tier = [...tiers].reverse().find((row) => count >= row.count)
-      const name = synergies.classNames[id as MonsterClass]
+      const name = classLabel(id)
       if (!tier) {
         const need = tiers[0]?.count ?? 2
-        if (count > 0 && count < need) lines.push(`· ${name} ${count}/${need}`)
+        if (count > 0 && count < need) lines.push(`${name} ${count}/${need}`)
         continue
       }
       lines.push(`${name} ×${count}: ${bonusText(tier.bonus)}`)
+      active = true
     }
-    if (balancedOn(counts)) lines.push(`${synergies.balanced.name}: ${bonusText(synergies.balanced.bonus)}`)
+    for (const [id, count] of counts) {
+      if (listed.has(id) || count <= 0) continue
+      lines.push(`${classLabel(id)} ${count}`)
+    }
+    if (balancedOn(counts)) {
+      lines.push(`${synergies.balanced.name}: ${bonusText(synergies.balanced.bonus)}`)
+      active = true
+    }
   } else if (members.length) {
     lines.push('Klassen-Synergien ab Rathaus 3')
   }
-  return { lines, active: lines.some((line) => !line.startsWith('Klassen-Synergien') && !line.startsWith('· ')) }
+  return { lines, active }
 }
 
 export function unitSynergy(member: SynergyMember, members: SynergyMember[], typeOn: boolean, classOn: boolean): UnitSynergy {

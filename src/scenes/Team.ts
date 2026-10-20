@@ -4,7 +4,7 @@ import { rarityInfo, species, teamSlotLimit, typeName } from '../data'
 import { session } from '../session'
 import { hasUnlock } from '../data'
 import { previewStats } from '../stats'
-import { synergyView } from '../synergy'
+import { synergySummary, synergyView } from '../synergy'
 import { teamPower } from '../state'
 import { ALL_SLOTS, SLOT_ROW, type SlotId } from '../types'
 import { openGuide } from '../guide'
@@ -80,7 +80,7 @@ export class TeamScene extends Phaser.Scene {
       hasUnlock(save.buildings.townhall.level, 'synergies'),
       hasUnlock(save.buildings.townhall.level, 'class_synergies')
     )
-    const synText = `Kampfkraft ${teamPower(save)} · ${syn.lines.join('   ') || 'Noch keine Synergie.'}`
+    const synText = synergySummary(teamPower(save), syn.lines)
     const synLabel = text(this, 48, 492, synText, 15, INK)
     synLabel.setWordWrapWidth(1180)
     hoverTip(this, 360, 500, 640, 28, 'Zwei gleiche Typen im Team verstärken sich. Das Rathaus schaltet Typ-Synergien auf Stufe 2 frei.')
