@@ -1,5 +1,7 @@
-import { monsters, rarities, synergies, typesCfg } from './data'
+import { monsters, rarities, typesCfg } from './data'
 import type { MonsterSpecies, Rarity, TypeId } from './types'
+
+export { classLabel } from './synergy'
 
 export type CatalogTypeFilter = TypeId | 'all'
 export type CatalogRarityFilter = Rarity | 'all'
@@ -17,11 +19,6 @@ export function catalogTypeIds(): TypeId[] {
 
 export function catalogRarities(): { index: Rarity; name: string; color: string }[] {
   return rarities.map((row) => ({ index: row.index as Rarity, name: row.name, color: row.color }))
-}
-
-export function classLabel(id: string): string {
-  const names = synergies.classNames as Record<string, string>
-  return names[id] ?? id
 }
 
 /** Species order follows monsters.json, so a later batch shows up without a scene change. */
