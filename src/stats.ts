@@ -75,7 +75,8 @@ export function synergyForTeam(members: { type: TypeId }[]): SynergyResult {
 
 function typeLabel(type: TypeId): string {
   const names: Record<string, string> = {
-    fire: 'Feuer', water: 'Wasser', plant: 'Pflanze', earth: 'Erde', wind: 'Wind', ice: 'Eis', lightning: 'Blitz'
+    fire: 'Feuer', water: 'Wasser', plant: 'Pflanze', earth: 'Erde', wind: 'Wind', ice: 'Eis', lightning: 'Blitz',
+    metal: 'Metall', fighting: 'Kampf'
   }
   return names[type] ?? type
 }

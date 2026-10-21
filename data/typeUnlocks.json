@@ -6,7 +6,9 @@
     "earth",
     "wind",
     "ice",
-    "lightning"
+    "lightning",
+    "metal",
+    "fighting"
   ],
   "typeUnlocks": [
     {

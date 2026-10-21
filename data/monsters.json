@@ -2133,5 +2133,403 @@
     "sprite": "m55",
     "class": "shooter",
     "aussehen": "Gewaltiger Donnervogel mit Schwingen aus Gewitterwolken, Kronenblitzen, kreisenden Funkenringen und einem Kern aus weißem Licht."
+  },
+  {
+    "id": "m56",
+    "name": "Schraubkäfer",
+    "type": "metal",
+    "baseRarity": 0,
+    "role": "front",
+    "base": {
+      "hp": 165,
+      "atk": 14,
+      "def": 21,
+      "spd": 78
+    },
+    "blurb": "Kleiner Blechkäfer mit Schrauben als Beinen und polierter Stahlschale.",
+    "skill": {
+      "id": "schraubkaefer_skill",
+      "name": "Schraubkäfer-Bollwerk",
+      "description": "Spott 2 Runden und eigene DEF +30 % (2 Runden).",
+      "cooldown": 4,
+      "initialCooldown": 1,
+      "target": "self",
+      "effects": [
+        {
+          "kind": "status",
+          "status": "taunt",
+          "chance": 1,
+          "duration": 2
+        },
+        {
+          "kind": "status",
+          "status": "def_up",
+          "chance": 1,
+          "duration": 2,
+          "value": 0.3
+        }
+      ]
+    },
+    "sprite": "m56",
+    "class": "guardian",
+    "aussehen": "Kleiner Blechkäfer mit Schrauben als Beinen und polierter Stahlschale."
+  },
+  {
+    "id": "m57",
+    "name": "Zahnradkatze",
+    "type": "metal",
+    "baseRarity": 1,
+    "role": "back",
+    "base": {
+      "hp": 115,
+      "atk": 29,
+      "def": 10,
+      "spd": 110
+    },
+    "blurb": "Katze aus Messing mit Zahnrädern an den Gelenken und dampfendem Schwanzventil.",
+    "skill": {
+      "id": "zahnradkatze_skill",
+      "name": "Zahnradkatze-Schuss",
+      "description": "155 % ATK auf das Standardziel, 33 % Chance auf DEF −20 %.",
+      "cooldown": 3,
+      "initialCooldown": 2,
+      "target": "default",
+      "effects": [
+        {
+          "kind": "damage",
+          "atkMult": 1.55
+        },
+        {
+          "kind": "status",
+          "status": "def_down",
+          "chance": 0.33,
+          "duration": 2,
+          "value": 0.2
+        }
+      ]
+    },
+    "sprite": "m57",
+    "class": "shooter",
+    "aussehen": "Katze aus Messing mit Zahnrädern an den Gelenken und dampfendem Schwanzventil."
+  },
+  {
+    "id": "m58",
+    "name": "Rüstungsechse",
+    "type": "metal",
+    "baseRarity": 2,
+    "role": "front",
+    "base": {
+      "hp": 195,
+      "atk": 16,
+      "def": 25,
+      "spd": 83
+    },
+    "blurb": "Echse mit Plattenrüstung, Nieten an den Rändern und blankem Silberglanz.",
+    "skill": {
+      "id": "ruestungsechse_skill",
+      "name": "Rüstungsechse-Bollwerk",
+      "description": "Spott 2 Runden und eigene DEF +34 % (2 Runden).",
+      "cooldown": 4,
+      "initialCooldown": 1,
+      "target": "self",
+      "effects": [
+        {
+          "kind": "status",
+          "status": "taunt",
+          "chance": 1,
+          "duration": 2
+        },
+        {
+          "kind": "status",
+          "status": "def_up",
+          "chance": 1,
+          "duration": 2,
+          "value": 0.34
+        }
+      ]
+    },
+    "sprite": "m58",
+    "class": "guardian",
+    "aussehen": "Echse mit Plattenrüstung, Nieten an den Rändern und blankem Silberglanz."
+  },
+  {
+    "id": "m59",
+    "name": "Klingenschwalbe",
+    "type": "metal",
+    "baseRarity": 3,
+    "role": "back",
+    "base": {
+      "hp": 150,
+      "atk": 31,
+      "def": 13,
+      "spd": 110
+    },
+    "blurb": "Schwalbe mit messerscharfen Stahlfedern, Funkenspur im Flug und gravierten Mustern.",
+    "skill": {
+      "id": "klingenschwalbe_skill",
+      "name": "Klingenschwalbe-Fluch",
+      "description": "Alle Gegner: 75 % ATK, 52 % Chance auf DEF −20 %.",
+      "cooldown": 4,
+      "initialCooldown": 2,
+      "target": "enemy_all",
+      "effects": [
+        {
+          "kind": "damage",
+          "atkMult": 0.75
+        },
+        {
+          "kind": "status",
+          "status": "def_down",
+          "chance": 0.52,
+          "duration": 2,
+          "value": 0.2
+        }
+      ]
+    },
+    "sprite": "m59",
+    "class": "disruptor",
+    "aussehen": "Schwalbe mit messerscharfen Stahlfedern, Funkenspur im Flug und gravierten Mustern."
+  },
+  {
+    "id": "m60",
+    "name": "Eisenkoloss",
+    "type": "metal",
+    "baseRarity": 5,
+    "role": "front",
+    "base": {
+      "hp": 195,
+      "atk": 31,
+      "def": 19,
+      "spd": 104
+    },
+    "blurb": "Hoher Stahlritter-Golem mit Kolbenarmen, glühender Ofenbrust, Gravuren und schwebenden Zahnrädern um die Schultern.",
+    "skill": {
+      "id": "eisenkoloss_skill",
+      "name": "Eisenkoloss-Ansturm",
+      "description": "Gegnerische Frontreihe: 125 % ATK, 45 % Chance auf DEF −20 %.",
+      "cooldown": 4,
+      "initialCooldown": 2,
+      "target": "enemy_front_all",
+      "effects": [
+        {
+          "kind": "damage",
+          "atkMult": 1.25
+        },
+        {
+          "kind": "status",
+          "status": "def_down",
+          "chance": 0.45,
+          "duration": 2,
+          "value": 0.2
+        }
+      ]
+    },
+    "sprite": "m60",
+    "class": "fighter",
+    "aussehen": "Hoher Stahlritter-Golem mit Kolbenarmen, glühender Ofenbrust, Gravuren und schwebenden Zahnrädern um die Schultern."
+  },
+  {
+    "id": "m61",
+    "name": "Raufkänguru",
+    "type": "fighting",
+    "baseRarity": 0,
+    "role": "front",
+    "base": {
+      "hp": 135,
+      "atk": 22,
+      "def": 13,
+      "spd": 93
+    },
+    "blurb": "Kleines Känguru mit Boxhandschuhen und Stirnband.",
+    "skill": {
+      "id": "raufkaenguru_skill",
+      "name": "Raufkänguru-Ansturm",
+      "description": "Gegnerische Frontreihe: 100 % ATK, 30 % Chance auf DEF −20 %.",
+      "cooldown": 4,
+      "initialCooldown": 2,
+      "target": "enemy_front_all",
+      "effects": [
+        {
+          "kind": "damage",
+          "atkMult": 1.0
+        },
+        {
+          "kind": "status",
+          "status": "def_down",
+          "chance": 0.3,
+          "duration": 2,
+          "value": 0.2
+        }
+      ]
+    },
+    "sprite": "m61",
+    "class": "fighter",
+    "aussehen": "Kleines Känguru mit Boxhandschuhen und Stirnband."
+  },
+  {
+    "id": "m62",
+    "name": "Mönchsaffe",
+    "type": "fighting",
+    "baseRarity": 1,
+    "role": "back",
+    "base": {
+      "hp": 140,
+      "atk": 23,
+      "def": 15,
+      "spd": 98
+    },
+    "blurb": "Ruhiger Affe in Mönchskutte mit Gebetsperlen und gelassenem Blick.",
+    "skill": {
+      "id": "moenchsaffe_skill",
+      "name": "Mönchsaffe-Schutz",
+      "description": "Schild = 9 % eigene Max-HP auf alle Verbündeten (2 Runden).",
+      "cooldown": 4,
+      "initialCooldown": 2,
+      "target": "ally_all",
+      "effects": [
+        {
+          "kind": "shield",
+          "maxHpPctOfCaster": 0.09,
+          "duration": 2
+        }
+      ]
+    },
+    "sprite": "m62",
+    "class": "support",
+    "aussehen": "Ruhiger Affe in Mönchskutte mit Gebetsperlen und gelassenem Blick."
+  },
+  {
+    "id": "m63",
+    "name": "Hiebkrabbe",
+    "type": "fighting",
+    "baseRarity": 2,
+    "role": "front",
+    "base": {
+      "hp": 160,
+      "atk": 26,
+      "def": 16,
+      "spd": 98
+    },
+    "blurb": "Krabbe mit übergroßer Schlagschere, Narben und Kampfbandagen.",
+    "skill": {
+      "id": "hiebkrabbe_skill",
+      "name": "Hiebkrabbe-Ansturm",
+      "description": "Gegnerische Frontreihe: 110 % ATK, 36 % Chance auf DEF −20 %.",
+      "cooldown": 4,
+      "initialCooldown": 2,
+      "target": "enemy_front_all",
+      "effects": [
+        {
+          "kind": "damage",
+          "atkMult": 1.1
+        },
+        {
+          "kind": "status",
+          "status": "def_down",
+          "chance": 0.36,
+          "duration": 2,
+          "value": 0.2
+        }
+      ]
+    },
+    "sprite": "m63",
+    "class": "fighter",
+    "aussehen": "Krabbe mit übergroßer Schlagschere, Narben und Kampfbandagen."
+  },
+  {
+    "id": "m64",
+    "name": "Ringerbär",
+    "type": "fighting",
+    "baseRarity": 4,
+    "role": "front",
+    "base": {
+      "hp": 215,
+      "atk": 18,
+      "def": 27,
+      "spd": 87
+    },
+    "blurb": "Kräftiger Bär im Ringergürtel mit Kampfbemalung, glühenden Fäusten und flatterndem Umhang.",
+    "skill": {
+      "id": "ringerbaer_skill",
+      "name": "Ringerbär-Bollwerk",
+      "description": "Spott 2 Runden und eigene DEF +38 % (2 Runden).",
+      "cooldown": 4,
+      "initialCooldown": 1,
+      "target": "self",
+      "effects": [
+        {
+          "kind": "status",
+          "status": "taunt",
+          "chance": 1,
+          "duration": 2
+        },
+        {
+          "kind": "status",
+          "status": "def_up",
+          "chance": 1,
+          "duration": 2,
+          "value": 0.38
+        }
+      ]
+    },
+    "sprite": "m64",
+    "class": "guardian",
+    "aussehen": "Kräftiger Bär im Ringergürtel mit Kampfbemalung, glühenden Fäusten und flatterndem Umhang."
+  },
+  {
+    "id": "m65",
+    "name": "Großmeisterkranich",
+    "type": "fighting",
+    "baseRarity": 6,
+    "role": "back",
+    "base": {
+      "hp": 165,
+      "atk": 42,
+      "def": 15,
+      "spd": 121
+    },
+    "blurb": "Edler Kranich in Kampfrobe, dessen Flügelschläge Druckwellen erzeugen, mit goldenen Armreifen, Aura-Flammen und schwebenden Schriftrollen.",
+    "skill": {
+      "id": "grossmeisterkranich_skill",
+      "name": "Großmeisterkranich-Schuss",
+      "description": "180 % ATK auf das Standardziel, 48 % Chance auf DEF −20 %.",
+      "cooldown": 3,
+      "initialCooldown": 2,
+      "target": "default",
+      "effects": [
+        {
+          "kind": "damage",
+          "atkMult": 1.8
+        },
+        {
+          "kind": "status",
+          "status": "def_down",
+          "chance": 0.48,
+          "duration": 2,
+          "value": 0.2
+        }
+      ]
+    },
+    "passive": {
+      "id": "grossmeisterkranich_passive",
+      "name": "Letzter Wille",
+      "description": "Fällt die HP erstmals unter 50 %: Schild 15 % Max-HP (2 Runden).",
+      "trigger": {
+        "kind": "hp_below",
+        "pct": 0.5
+      },
+      "effects": [
+        {
+          "kind": "shield",
+          "maxHpPctOfCaster": 0.15,
+          "duration": 2,
+          "target": "self"
+        }
+      ],
+      "usesPerBattle": 1
+    },
+    "sprite": "m65",
+    "class": "shooter",
+    "aussehen": "Edler Kranich in Kampfrobe, dessen Flügelschläge Druckwellen erzeugen, mit goldenen Armreifen, Aura-Flammen und schwebenden Schriftrollen."
   }
 ]
