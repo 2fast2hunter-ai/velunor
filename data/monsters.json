@@ -2181,8 +2181,8 @@
     "baseRarity": 1,
     "role": "back",
     "base": {
-      "hp": 115,
-      "atk": 29,
+      "hp": 110,
+      "atk": 26,
       "def": 10,
       "spd": 110
     },
@@ -2297,9 +2297,9 @@
     "baseRarity": 5,
     "role": "front",
     "base": {
-      "hp": 195,
-      "atk": 31,
-      "def": 19,
+      "hp": 205,
+      "atk": 34,
+      "def": 21,
       "spd": 104
     },
     "blurb": "Hoher Stahlritter-Golem mit Kolbenarmen, glühender Ofenbrust, Gravuren und schwebenden Zahnrädern um die Schultern.",
@@ -2373,9 +2373,9 @@
     "baseRarity": 1,
     "role": "back",
     "base": {
-      "hp": 140,
-      "atk": 23,
-      "def": 15,
+      "hp": 145,
+      "atk": 24,
+      "def": 16,
       "spd": 98
     },
     "blurb": "Ruhiger Affe in Mönchskutte mit Gebetsperlen und gelassenem Blick.",
@@ -2443,9 +2443,9 @@
     "baseRarity": 4,
     "role": "front",
     "base": {
-      "hp": 215,
-      "atk": 18,
-      "def": 27,
+      "hp": 235,
+      "atk": 21,
+      "def": 29,
       "spd": 87
     },
     "blurb": "Kräftiger Bär im Ringergürtel mit Kampfbemalung, glühenden Fäusten und flatterndem Umhang.",
@@ -2483,8 +2483,8 @@
     "baseRarity": 6,
     "role": "back",
     "base": {
-      "hp": 165,
-      "atk": 42,
+      "hp": 160,
+      "atk": 39,
       "def": 15,
       "spd": 121
     },
