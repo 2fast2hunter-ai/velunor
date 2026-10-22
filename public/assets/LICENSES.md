@@ -5,3 +5,4 @@
 - _old_pil/: ersetzte prozedurale Monster/Gebäude (Archiv).
 - preview.png: Kontaktbogen, Schrift DejaVu Sans (freie Lizenz).
 - monsters/m46–m55, icons/type_ice*, icons/type_lightning*: KI-generiert mit dem Grok-Bot-Bildgenerator, selbst für Velunor erstellt.
+- monsters/m56–m65: KI-generiert mit dem Grok-Bot-Bildgenerator, selbst für Velunor erstellt.

@@ -219,6 +219,46 @@
     "m55": {
       "512": "monsters/m55.png",
       "256": "monsters/m55_256.png"
+    },
+    "m56": {
+      "512": "monsters/m56.png",
+      "256": "monsters/m56_256.png"
+    },
+    "m57": {
+      "512": "monsters/m57.png",
+      "256": "monsters/m57_256.png"
+    },
+    "m58": {
+      "512": "monsters/m58.png",
+      "256": "monsters/m58_256.png"
+    },
+    "m59": {
+      "512": "monsters/m59.png",
+      "256": "monsters/m59_256.png"
+    },
+    "m60": {
+      "512": "monsters/m60.png",
+      "256": "monsters/m60_256.png"
+    },
+    "m61": {
+      "512": "monsters/m61.png",
+      "256": "monsters/m61_256.png"
+    },
+    "m62": {
+      "512": "monsters/m62.png",
+      "256": "monsters/m62_256.png"
+    },
+    "m63": {
+      "512": "monsters/m63.png",
+      "256": "monsters/m63_256.png"
+    },
+    "m64": {
+      "512": "monsters/m64.png",
+      "256": "monsters/m64_256.png"
+    },
+    "m65": {
+      "512": "monsters/m65.png",
+      "256": "monsters/m65_256.png"
     }
   },
   "buildings": {
