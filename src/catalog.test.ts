@@ -6,8 +6,8 @@ describe('catalog', () => {
   it('lists every active species in file order and grows with the data file', () => {
     const shown = filterCatalog({ type: 'all', rarity: 'all', obtainedOnly: false, collected: new Set() })
     expect(shown.map((monster) => monster.id)).toEqual(monsters.map((monster) => monster.id))
-    expect(monsters).toHaveLength(65)
-    expect(monsters.at(-1)?.id).toBe('m65')
+    expect(monsters).toHaveLength(75)
+    expect(monsters.at(-1)?.id).toBe('m75')
     expect(catalogTypeIds()).toHaveLength(20)
     expect(catalogRarities()).toHaveLength(10)
   })
@@ -34,14 +34,18 @@ describe('catalog', () => {
     expect(metal.map((monster) => monster.id)).toEqual(['m56', 'm57', 'm58', 'm59', 'm60'])
     const fighting = filterCatalog({ type: 'fighting', rarity: 'all', obtainedOnly: false, collected: new Set() })
     expect(fighting.map((monster) => monster.id)).toEqual(['m61', 'm62', 'm63', 'm64', 'm65'])
+    const beast = filterCatalog({ type: 'beast', rarity: 'all', obtainedOnly: false, collected: new Set() })
+    expect(beast.map((monster) => monster.id)).toEqual(['m66', 'm67', 'm68', 'm69', 'm70'])
+    const light = filterCatalog({ type: 'light', rarity: 'all', obtainedOnly: false, collected: new Set() })
+    expect(light.map((monster) => monster.id)).toEqual(['m71', 'm72', 'm73', 'm74', 'm75'])
   })
 
   it('counts collected species against the active roster and the current selection', () => {
     const shown = filterCatalog({ type: 'insect', rarity: 'all', obtainedOnly: false, collected: new Set() })
     const progress = catalogProgress(['m01', 'm02', 'm03', 'm34', 'm99'], shown)
-    expect(progress.collectedLabel).toBe('4/65 gesammelt')
+    expect(progress.collectedLabel).toBe('4/75 gesammelt')
     const full = catalogProgress(monsters.map((monster) => monster.id), shown)
-    expect(full.collectedLabel).toBe('65/65 gesammelt')
+    expect(full.collectedLabel).toBe('75/75 gesammelt')
     const insectOwned = shown.filter((monster) => monster.id === 'm34').length
     expect(progress.selectionLabel).toBe(`${insectOwned}/${shown.length} in Auswahl`)
     expect(species('m26').aussehen).toContain('Widder')

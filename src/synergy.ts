@@ -45,7 +45,8 @@ export function synergySummary(power: number, lines: string[]): string {
 
 const TYPE_NAMES: Record<string, string> = {
   fire: 'Feuer', water: 'Wasser', plant: 'Pflanze', earth: 'Erde', wind: 'Wind', ice: 'Eis', lightning: 'Blitz',
-  poison: 'Gift', metal: 'Metall', stone: 'Stein', insect: 'Insekt', fighting: 'Kampf', crystal: 'Kristall'
+  poison: 'Gift', metal: 'Metall', stone: 'Stein', insect: 'Insekt', fighting: 'Kampf', crystal: 'Kristall',
+  beast: 'Bestie', light: 'Licht'
 }
 
 function cap(n: number): number {
