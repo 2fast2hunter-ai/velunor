@@ -2577,9 +2577,9 @@
     "baseRarity": 0,
     "role": "front",
     "base": {
-      "hp": 170,
-      "atk": 14,
-      "def": 22,
+      "hp": 188,
+      "atk": 17,
+      "def": 24,
       "spd": 79
     },
     "blurb": "Rundes Wildschweinchen mit dichten Borsten und kleinen Hauern.",
@@ -2617,9 +2617,9 @@
     "baseRarity": 1,
     "role": "back",
     "base": {
-      "hp": 120,
-      "atk": 31,
-      "def": 11,
+      "hp": 110,
+      "atk": 25,
+      "def": 10,
       "spd": 111
     },
     "blurb": "Sandfarbener Luchs mit Pinselohren und gefleckter Mähne.",
@@ -2655,9 +2655,9 @@
     "baseRarity": 2,
     "role": "front",
     "base": {
-      "hp": 190,
-      "atk": 16,
-      "def": 24,
+      "hp": 205,
+      "atk": 19,
+      "def": 26,
       "spd": 84
     },
     "blurb": "Massiger Büffel mit geschwungenen Hörnern, Fellzotteln und Stammesbemalung.",
@@ -2764,9 +2764,9 @@
     "baseRarity": 1,
     "role": "back",
     "base": {
-      "hp": 125,
-      "atk": 31,
-      "def": 11,
+      "hp": 112,
+      "atk": 26,
+      "def": 10,
       "spd": 110
     },
     "blurb": "Goldenes Küken mit Strahlenkranz-Federn auf dem Kopf.",
@@ -2833,9 +2833,9 @@
     "baseRarity": 5,
     "role": "front",
     "base": {
-      "hp": 195,
-      "atk": 31,
-      "def": 19,
+      "hp": 215,
+      "atk": 37,
+      "def": 22,
       "spd": 103
     },
     "blurb": "Goldener Löwe mit Mähne aus Sonnenstrahlen, Brustplatte mit Sonnenwappen und leuchtenden Pfotenabdrücken.",
