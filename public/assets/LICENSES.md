@@ -7,3 +7,4 @@
 - monsters/m46–m55, icons/type_ice*, icons/type_lightning*: KI-generiert mit dem Grok-Bot-Bildgenerator, selbst für Velunor erstellt.
 - monsters/m56–m65: KI-generiert mit dem Grok-Bot-Bildgenerator, selbst für Velunor erstellt.
 - monsters/m66–m75: KI-generiert mit dem Grok-Bot-Bildgenerator, selbst für Velunor erstellt.
+- monsters/m76–m85, icons/type_shadow*, icons/type_ghost*: KI-generiert mit dem Grok-Bot-Bildgenerator, selbst für Velunor erstellt.

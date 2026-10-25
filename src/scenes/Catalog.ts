@@ -85,9 +85,9 @@ export class CatalogScene extends Phaser.Scene {
         }, { fill: 0x3d4b6e, color: INK, size: 14, hitPad: 4 })
       }
     }
-    const types: { id: CatalogTypeFilter; label: string }[] = [
+    const types: { id: CatalogTypeFilter; label: string; icon?: string }[] = [
       { id: 'all', label: 'Alle' },
-      ...catalogTypeIds().map((id) => ({ id, label: typeName(id) }))
+      ...catalogTypeIds().map((id) => ({ id, label: typeName(id), icon: `type_${id}` }))
     ]
     this.chipRow(types.slice(0, 11), 168, this.typeFilter, (id) => {
       this.typeFilter = id
@@ -140,7 +140,7 @@ export class CatalogScene extends Phaser.Scene {
   }
 
   private chipRow<T extends string | number>(
-    items: { id: T; label: string }[],
+    items: { id: T; label: string; icon?: string }[],
     y: number,
     selected: T,
     onPick: (id: T) => void,
@@ -153,7 +153,8 @@ export class CatalogScene extends Phaser.Scene {
         fill: on ? 0xf0c14a : 0x2c3654,
         color: on ? '#2a2112' : INK,
         size: 12,
-        hitPad: 2
+        hitPad: 2,
+        icon: item.icon
       })
     })
   }
@@ -210,8 +211,11 @@ export class CatalogScene extends Phaser.Scene {
       `HP ${stats.hp}    ATK ${stats.atk}    DEF ${stats.def}    SPD ${stats.spd}`
     ]
     const infoX = left + pad + 232
+    const typeIcon = iconSprite(this, infoX + 9, top + 96, `type_${monster.type}`, 18)
+    if (typeIcon) modal.root.add(typeIcon)
     lines.forEach((line, index) => {
-      modal.root.add(text(this, infoX, top + 88 + index * 30, line, 16, index === 0 ? rarityInfo(monster.baseRarity).color : INK))
+      const x = index === 0 && typeIcon ? infoX + 24 : infoX
+      modal.root.add(text(this, x, top + 88 + index * 30, line, 16, index === 0 ? rarityInfo(monster.baseRarity).color : INK))
     })
     let y = top + 308
     const bodyX = left + pad

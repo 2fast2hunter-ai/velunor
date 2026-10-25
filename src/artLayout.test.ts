@@ -25,7 +25,7 @@ describe('monster slot scale', () => {
 describe('art manifest', () => {
   it('ships monsters, buildings, frames, icons, and backgrounds', () => {
     expect(shipped).toEqual(manifest)
-    expect(Object.keys(manifest.monsters)).toHaveLength(75)
+    expect(Object.keys(manifest.monsters)).toHaveLength(85)
     expect(Object.keys(manifest.buildings)).toEqual(['townhall', 'goldmine', 'training'])
     expect(Object.keys(manifest.frames).filter((id) => Number.isInteger(Number(id)))).toHaveLength(10)
     expect(manifest.frames.ghost_overlay['512']).toBe('frames/ghost_overlay.png')
@@ -37,7 +37,7 @@ describe('art manifest', () => {
     expect(manifest.icons.rank_diamond).toEqual({ '48': 'icons/rank_diamond.png', '96': 'icons/rank_diamond_96.png' })
     expect(manifest.icons.defense_shield).toEqual({ '128': 'icons/defense_shield.png', '64': 'icons/defense_shield_64.png' })
     expect(manifest.icons.catalog).toEqual({ '128': 'icons/catalog.png', '64': 'icons/catalog_64.png' })
-    for (let id = 1; id <= 75; id++) {
+    for (let id = 1; id <= 85; id++) {
       const key = `m${String(id).padStart(2, '0')}`
       expect(manifest.monsters[key as keyof typeof manifest.monsters]).toEqual({
         '512': `monsters/${key}.png`,
@@ -99,6 +99,13 @@ describe('art manifest', () => {
     expect(url['monster-m66']).toBe('/velunor/assets/monsters/m66_256.png')
     expect(url['monster-m75']).toBe('/velunor/assets/monsters/m75_256.png')
     expect(url['monster-m75-lg']).toBe('/velunor/assets/monsters/m75.png')
+    expect(url['monster-m76']).toBe('/velunor/assets/monsters/m76_256.png')
+    expect(url['monster-m85']).toBe('/velunor/assets/monsters/m85_256.png')
+    expect(url['monster-m85-lg']).toBe('/velunor/assets/monsters/m85.png')
+    expect(url[iconTextureKey('type_shadow')]).toBe('/velunor/assets/icons/type_shadow_128.png')
+    expect(url[iconTextureKey('type_shadow', true)]).toBe('/velunor/assets/icons/type_shadow.png')
+    expect(url[iconTextureKey('type_ghost')]).toBe('/velunor/assets/icons/type_ghost_128.png')
+    expect(url[iconTextureKey('type_ghost', true)]).toBe('/velunor/assets/icons/type_ghost.png')
     expect(url[iconTextureKey('type_ice')]).toBe('/velunor/assets/icons/type_ice_128.png')
     expect(url[iconTextureKey('type_ice', true)]).toBe('/velunor/assets/icons/type_ice.png')
     expect(url[iconTextureKey('type_lightning')]).toBe('/velunor/assets/icons/type_lightning_128.png')

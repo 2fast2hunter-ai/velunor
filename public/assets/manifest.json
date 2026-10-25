@@ -299,6 +299,46 @@
     "m75": {
       "512": "monsters/m75.png",
       "256": "monsters/m75_256.png"
+    },
+    "m76": {
+      "512": "monsters/m76.png",
+      "256": "monsters/m76_256.png"
+    },
+    "m77": {
+      "512": "monsters/m77.png",
+      "256": "monsters/m77_256.png"
+    },
+    "m78": {
+      "512": "monsters/m78.png",
+      "256": "monsters/m78_256.png"
+    },
+    "m79": {
+      "512": "monsters/m79.png",
+      "256": "monsters/m79_256.png"
+    },
+    "m80": {
+      "512": "monsters/m80.png",
+      "256": "monsters/m80_256.png"
+    },
+    "m81": {
+      "512": "monsters/m81.png",
+      "256": "monsters/m81_256.png"
+    },
+    "m82": {
+      "512": "monsters/m82.png",
+      "256": "monsters/m82_256.png"
+    },
+    "m83": {
+      "512": "monsters/m83.png",
+      "256": "monsters/m83_256.png"
+    },
+    "m84": {
+      "512": "monsters/m84.png",
+      "256": "monsters/m84_256.png"
+    },
+    "m85": {
+      "512": "monsters/m85.png",
+      "256": "monsters/m85_256.png"
     }
   },
   "buildings": {
@@ -401,6 +441,14 @@
     "type_lightning": {
       "256": "icons/type_lightning.png",
       "128": "icons/type_lightning_128.png"
+    },
+    "type_shadow": {
+      "256": "icons/type_shadow.png",
+      "128": "icons/type_shadow_128.png"
+    },
+    "type_ghost": {
+      "256": "icons/type_ghost.png",
+      "128": "icons/type_ghost_128.png"
     },
     "star": {
       "256": "icons/star.png",

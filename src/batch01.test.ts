@@ -25,9 +25,11 @@ describe('batch 01 gacha', () => {
     const expected = ['fire', 'water', 'plant', 'earth', 'insect', 'poison', 'stone', 'crystal'] as const
     for (const type of expected) expect(types.has(type)).toBe(true)
     const cosmic = pickSpecies(8, () => 0)
+    const cosmicLast = pickSpecies(8, () => 0.99)
     const origin = pickSpecies(9, () => 0.99)
     expect(cosmic).toEqual({ speciesId: 'm40', upgraded: false })
-    expect(origin).toEqual({ speciesId: 'm40', upgraded: true })
+    expect(cosmicLast).toEqual({ speciesId: 'm80', upgraded: false })
+    expect(origin).toEqual({ speciesId: 'm80', upgraded: true })
   })
 
   it('adds a pull to the collection immediately', () => {
