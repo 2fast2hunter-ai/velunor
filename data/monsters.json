@@ -2929,8 +2929,8 @@
     "baseRarity": 0,
     "role": "back",
     "base": {
-      "hp": 112,
-      "atk": 24,
+      "hp": 121,
+      "atk": 26,
       "def": 10,
       "spd": 103
     },
@@ -3081,10 +3081,10 @@
     "baseRarity": 8,
     "role": "back",
     "base": {
-      "hp": 240,
-      "atk": 52,
-      "def": 22,
-      "spd": 125
+      "hp": 222,
+      "atk": 47,
+      "def": 19,
+      "spd": 122
     },
     "blurb": "Gekrönter Schattendrache-Fürst mit Umhang aus Nacht, schwebenden dunklen Sternen, violetten Flammenaugen und einer Aura verschluckten Lichts.",
     "skill": {

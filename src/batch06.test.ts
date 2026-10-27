@@ -22,11 +22,11 @@ describe('batch 06', () => {
       }
     }
     for (const id of BATCH) expect(seen.has(id)).toBe(true)
-    expect(species('m76')).toMatchObject({ name: 'Schattenmaus', type: 'shadow', baseRarity: 0, class: 'disruptor', base: { hp: 112, atk: 24, def: 10, spd: 103 } })
+    expect(species('m76')).toMatchObject({ name: 'Schattenmaus', type: 'shadow', baseRarity: 0, class: 'disruptor', base: { hp: 121, atk: 26, def: 10, spd: 103 } })
     expect(species('m77')).toMatchObject({ name: 'Dämmerkatze', type: 'shadow', baseRarity: 1, class: 'shooter', base: { hp: 108, atk: 26, def: 10, spd: 110 } })
     expect(species('m78')).toMatchObject({ name: 'Nebelkrähe', type: 'shadow', baseRarity: 2, class: 'disruptor' })
     expect(species('m79')).toMatchObject({ name: 'Schattenpanther', type: 'shadow', baseRarity: 4, class: 'fighter' })
-    expect(species('m80')).toMatchObject({ name: 'Finsterfürst', type: 'shadow', baseRarity: 8, class: 'disruptor', base: { hp: 240, atk: 52, def: 22, spd: 125 } })
+    expect(species('m80')).toMatchObject({ name: 'Finsterfürst', type: 'shadow', baseRarity: 8, class: 'disruptor', base: { hp: 222, atk: 47, def: 19, spd: 122 } })
     expect(species('m81')).toMatchObject({ name: 'Irrlicht', type: 'ghost', baseRarity: 0, class: 'shooter', base: { hp: 104, atk: 25, def: 10, spd: 108 } })
     expect(species('m82')).toMatchObject({ name: 'Laternengeist', type: 'ghost', baseRarity: 1, class: 'support' })
     expect(species('m83')).toMatchObject({ name: 'Spukrüstung', type: 'ghost', baseRarity: 2, class: 'guardian', base: { hp: 215, atk: 20, def: 27, spd: 83 } })
