@@ -2929,9 +2929,9 @@
     "baseRarity": 0,
     "role": "back",
     "base": {
-      "hp": 130,
-      "atk": 27,
-      "def": 11,
+      "hp": 112,
+      "atk": 24,
+      "def": 10,
       "spd": 103
     },
     "blurb": "Kleine schwarze Maus mit violetten Augen und rauchigem Schwanz.",
@@ -2967,9 +2967,9 @@
     "baseRarity": 1,
     "role": "back",
     "base": {
-      "hp": 120,
-      "atk": 31,
-      "def": 11,
+      "hp": 108,
+      "atk": 26,
+      "def": 10,
       "spd": 110
     },
     "blurb": "Schlanke Katze mit Fell wie Abendhimmel und Sternpunkten.",
@@ -3081,10 +3081,10 @@
     "baseRarity": 8,
     "role": "back",
     "base": {
-      "hp": 205,
-      "atk": 43,
-      "def": 17,
-      "spd": 119
+      "hp": 240,
+      "atk": 52,
+      "def": 22,
+      "spd": 125
     },
     "blurb": "Gekrönter Schattendrache-Fürst mit Umhang aus Nacht, schwebenden dunklen Sternen, violetten Flammenaugen und einer Aura verschluckten Lichts.",
     "skill": {
@@ -3137,8 +3137,8 @@
     "baseRarity": 0,
     "role": "back",
     "base": {
-      "hp": 115,
-      "atk": 28,
+      "hp": 104,
+      "atk": 25,
       "def": 10,
       "spd": 108
     },
@@ -3207,9 +3207,9 @@
     "baseRarity": 2,
     "role": "front",
     "base": {
-      "hp": 185,
-      "atk": 16,
-      "def": 24,
+      "hp": 215,
+      "atk": 20,
+      "def": 27,
       "spd": 83
     },
     "blurb": "Leere Ritterrüstung, aus deren Fugen blasser Geisternebel quillt.",
