@@ -2921,5 +2921,417 @@
     "sprite": "m75",
     "class": "guardian",
     "aussehen": "Majestätischer Hirsch mit sechs Lichtflügeln, Heiligenschein-Geweih, schwebenden goldenen Ringen und einem Funkenregen."
+  },
+  {
+    "id": "m76",
+    "name": "Schattenmaus",
+    "type": "shadow",
+    "baseRarity": 0,
+    "role": "back",
+    "base": {
+      "hp": 121,
+      "atk": 26,
+      "def": 10,
+      "spd": 103
+    },
+    "blurb": "Kleine schwarze Maus mit violetten Augen und rauchigem Schwanz.",
+    "skill": {
+      "id": "schattenmaus_skill",
+      "name": "Schattenmaus-Fluch",
+      "description": "Gegnerische Hinterreihe: 60 % ATK, 40 % Chance auf ATK −20 %.",
+      "cooldown": 4,
+      "initialCooldown": 2,
+      "target": "enemy_back_all",
+      "effects": [
+        {
+          "kind": "damage",
+          "atkMult": 0.6
+        },
+        {
+          "kind": "status",
+          "status": "atk_down",
+          "chance": 0.4,
+          "duration": 2,
+          "value": 0.2
+        }
+      ]
+    },
+    "sprite": "m76",
+    "class": "disruptor",
+    "aussehen": "Kleine schwarze Maus mit violetten Augen und rauchigem Schwanz."
+  },
+  {
+    "id": "m77",
+    "name": "Dämmerkatze",
+    "type": "shadow",
+    "baseRarity": 1,
+    "role": "back",
+    "base": {
+      "hp": 108,
+      "atk": 26,
+      "def": 10,
+      "spd": 110
+    },
+    "blurb": "Schlanke Katze mit Fell wie Abendhimmel und Sternpunkten.",
+    "skill": {
+      "id": "daemmerkatze_skill",
+      "name": "Dämmerkatze-Schuss",
+      "description": "155 % ATK auf das Standardziel, 33 % Chance auf ATK −20 %.",
+      "cooldown": 3,
+      "initialCooldown": 2,
+      "target": "default",
+      "effects": [
+        {
+          "kind": "damage",
+          "atkMult": 1.55
+        },
+        {
+          "kind": "status",
+          "status": "atk_down",
+          "chance": 0.33,
+          "duration": 2,
+          "value": 0.2
+        }
+      ]
+    },
+    "sprite": "m77",
+    "class": "shooter",
+    "aussehen": "Schlanke Katze mit Fell wie Abendhimmel und Sternpunkten."
+  },
+  {
+    "id": "m78",
+    "name": "Nebelkrähe",
+    "type": "shadow",
+    "baseRarity": 2,
+    "role": "back",
+    "base": {
+      "hp": 140,
+      "atk": 29,
+      "def": 12,
+      "spd": 108
+    },
+    "blurb": "Krähe aus dunklem Nebel mit glühenden Augen und zerfasernden Federn.",
+    "skill": {
+      "id": "nebelkraehe_skill",
+      "name": "Nebelkrähe-Fluch",
+      "description": "Gegnerische Hinterreihe: 70 % ATK, 48 % Chance auf ATK −20 %.",
+      "cooldown": 4,
+      "initialCooldown": 2,
+      "target": "enemy_back_all",
+      "effects": [
+        {
+          "kind": "damage",
+          "atkMult": 0.7
+        },
+        {
+          "kind": "status",
+          "status": "atk_down",
+          "chance": 0.48,
+          "duration": 2,
+          "value": 0.2
+        }
+      ]
+    },
+    "sprite": "m78",
+    "class": "disruptor",
+    "aussehen": "Krähe aus dunklem Nebel mit glühenden Augen und zerfasernden Federn."
+  },
+  {
+    "id": "m79",
+    "name": "Schattenpanther",
+    "type": "shadow",
+    "baseRarity": 4,
+    "role": "front",
+    "base": {
+      "hp": 175,
+      "atk": 28,
+      "def": 17,
+      "spd": 102
+    },
+    "blurb": "Schwarzer Panther mit violetten Rauchschwaden, leuchtenden Runenstreifen und Klauen aus Dunkelheit.",
+    "skill": {
+      "id": "schattenpanther_skill",
+      "name": "Schattenpanther-Ansturm",
+      "description": "Gegnerische Frontreihe: 120 % ATK, 42 % Chance auf ATK −20 %.",
+      "cooldown": 4,
+      "initialCooldown": 2,
+      "target": "enemy_front_all",
+      "effects": [
+        {
+          "kind": "damage",
+          "atkMult": 1.2
+        },
+        {
+          "kind": "status",
+          "status": "atk_down",
+          "chance": 0.42,
+          "duration": 2,
+          "value": 0.2
+        }
+      ]
+    },
+    "sprite": "m79",
+    "class": "fighter",
+    "aussehen": "Schwarzer Panther mit violetten Rauchschwaden, leuchtenden Runenstreifen und Klauen aus Dunkelheit."
+  },
+  {
+    "id": "m80",
+    "name": "Finsterfürst",
+    "type": "shadow",
+    "baseRarity": 8,
+    "role": "back",
+    "base": {
+      "hp": 222,
+      "atk": 47,
+      "def": 19,
+      "spd": 124
+    },
+    "blurb": "Gekrönter Schattendrache-Fürst mit Umhang aus Nacht, schwebenden dunklen Sternen, violetten Flammenaugen und einer Aura verschluckten Lichts.",
+    "skill": {
+      "id": "finsterfuerst_skill",
+      "name": "Finsterfürst-Fluch",
+      "description": "Gegnerische Hinterreihe: 100 % ATK, 72 % Chance auf ATK −20 %.",
+      "cooldown": 4,
+      "initialCooldown": 2,
+      "target": "enemy_back_all",
+      "effects": [
+        {
+          "kind": "damage",
+          "atkMult": 1.0
+        },
+        {
+          "kind": "status",
+          "status": "atk_down",
+          "chance": 0.72,
+          "duration": 2,
+          "value": 0.2
+        }
+      ]
+    },
+    "passive": {
+      "id": "finsterfuerst_passive",
+      "name": "Letzter Wille",
+      "description": "Fällt die HP erstmals unter 50 %: Schild 21 % Max-HP (2 Runden).",
+      "trigger": {
+        "kind": "hp_below",
+        "pct": 0.5
+      },
+      "effects": [
+        {
+          "kind": "shield",
+          "maxHpPctOfCaster": 0.21,
+          "duration": 2,
+          "target": "self"
+        }
+      ],
+      "usesPerBattle": 1
+    },
+    "sprite": "m80",
+    "class": "disruptor",
+    "aussehen": "Gekrönter Schattendrache-Fürst mit Umhang aus Nacht, schwebenden dunklen Sternen, violetten Flammenaugen und einer Aura verschluckten Lichts."
+  },
+  {
+    "id": "m81",
+    "name": "Irrlicht",
+    "type": "ghost",
+    "baseRarity": 0,
+    "role": "back",
+    "base": {
+      "hp": 104,
+      "atk": 25,
+      "def": 10,
+      "spd": 108
+    },
+    "blurb": "Kleine blaue Geisterflamme mit großen Augen und Schwänzchen.",
+    "skill": {
+      "id": "irrlicht_skill",
+      "name": "Irrlicht-Schuss",
+      "description": "150 % ATK auf das Standardziel, 30 % Chance auf DEF −20 %.",
+      "cooldown": 3,
+      "initialCooldown": 2,
+      "target": "default",
+      "effects": [
+        {
+          "kind": "damage",
+          "atkMult": 1.5
+        },
+        {
+          "kind": "status",
+          "status": "def_down",
+          "chance": 0.3,
+          "duration": 2,
+          "value": 0.2
+        }
+      ]
+    },
+    "sprite": "m81",
+    "class": "shooter",
+    "aussehen": "Kleine blaue Geisterflamme mit großen Augen und Schwänzchen."
+  },
+  {
+    "id": "m82",
+    "name": "Laternengeist",
+    "type": "ghost",
+    "baseRarity": 1,
+    "role": "back",
+    "base": {
+      "hp": 145,
+      "atk": 24,
+      "def": 16,
+      "spd": 98
+    },
+    "blurb": "Kleiner Geist, der eine alte Laterne trägt, mit flatterndem Lakenkörper.",
+    "skill": {
+      "id": "laternengeist_skill",
+      "name": "Laternengeist-Schutz",
+      "description": "Schild = 9 % eigene Max-HP auf alle Verbündeten (2 Runden).",
+      "cooldown": 4,
+      "initialCooldown": 2,
+      "target": "ally_all",
+      "effects": [
+        {
+          "kind": "shield",
+          "maxHpPctOfCaster": 0.09,
+          "duration": 2
+        }
+      ]
+    },
+    "sprite": "m82",
+    "class": "support",
+    "aussehen": "Kleiner Geist, der eine alte Laterne trägt, mit flatterndem Lakenkörper."
+  },
+  {
+    "id": "m83",
+    "name": "Spukrüstung",
+    "type": "ghost",
+    "baseRarity": 2,
+    "role": "front",
+    "base": {
+      "hp": 215,
+      "atk": 20,
+      "def": 27,
+      "spd": 83
+    },
+    "blurb": "Leere Ritterrüstung, aus deren Fugen blasser Geisternebel quillt.",
+    "skill": {
+      "id": "spukruestung_skill",
+      "name": "Spukrüstung-Bollwerk",
+      "description": "Spott 2 Runden und eigene DEF +34 % (2 Runden).",
+      "cooldown": 4,
+      "initialCooldown": 1,
+      "target": "self",
+      "effects": [
+        {
+          "kind": "status",
+          "status": "taunt",
+          "chance": 1,
+          "duration": 2
+        },
+        {
+          "kind": "status",
+          "status": "def_up",
+          "chance": 1,
+          "duration": 2,
+          "value": 0.34
+        }
+      ]
+    },
+    "sprite": "m83",
+    "class": "guardian",
+    "aussehen": "Leere Ritterrüstung, aus deren Fugen blasser Geisternebel quillt."
+  },
+  {
+    "id": "m84",
+    "name": "Seelenschleier",
+    "type": "ghost",
+    "baseRarity": 3,
+    "role": "back",
+    "base": {
+      "hp": 145,
+      "atk": 30,
+      "def": 12,
+      "spd": 110
+    },
+    "blurb": "Schwebende Frauengestalt aus Schleiern mit Seelenlichtern und Kettenresten.",
+    "skill": {
+      "id": "seelenschleier_skill",
+      "name": "Seelenschleier-Fluch",
+      "description": "Gegnerische Hinterreihe: 75 % ATK, 52 % Chance auf DEF −20 %.",
+      "cooldown": 4,
+      "initialCooldown": 2,
+      "target": "enemy_back_all",
+      "effects": [
+        {
+          "kind": "damage",
+          "atkMult": 0.75
+        },
+        {
+          "kind": "status",
+          "status": "def_down",
+          "chance": 0.52,
+          "duration": 2,
+          "value": 0.2
+        }
+      ]
+    },
+    "sprite": "m84",
+    "class": "disruptor",
+    "aussehen": "Schwebende Frauengestalt aus Schleiern mit Seelenlichtern und Kettenresten."
+  },
+  {
+    "id": "m85",
+    "name": "Geisterkönig",
+    "type": "ghost",
+    "baseRarity": 6,
+    "role": "front",
+    "base": {
+      "hp": 220,
+      "atk": 35,
+      "def": 21,
+      "spd": 106
+    },
+    "blurb": "Geisterhafter König mit zerrissenem Mantel, Krone aus Grabkerzen, kreisenden Seelenlichtern und einem ätherischen Schwert.",
+    "skill": {
+      "id": "geisterkoenig_skill",
+      "name": "Geisterkönig-Ansturm",
+      "description": "Gegnerische Frontreihe: 130 % ATK, 48 % Chance auf DEF −20 %.",
+      "cooldown": 4,
+      "initialCooldown": 2,
+      "target": "enemy_front_all",
+      "effects": [
+        {
+          "kind": "damage",
+          "atkMult": 1.3
+        },
+        {
+          "kind": "status",
+          "status": "def_down",
+          "chance": 0.48,
+          "duration": 2,
+          "value": 0.2
+        }
+      ]
+    },
+    "passive": {
+      "id": "geisterkoenig_passive",
+      "name": "Letzter Wille",
+      "description": "Fällt die HP erstmals unter 50 %: Schild 15 % Max-HP (2 Runden).",
+      "trigger": {
+        "kind": "hp_below",
+        "pct": 0.5
+      },
+      "effects": [
+        {
+          "kind": "shield",
+          "maxHpPctOfCaster": 0.15,
+          "duration": 2,
+          "target": "self"
+        }
+      ],
+      "usesPerBattle": 1
+    },
+    "sprite": "m85",
+    "class": "fighter",
+    "aussehen": "Geisterhafter König mit zerrissenem Mantel, Krone aus Grabkerzen, kreisenden Seelenlichtern und einem ätherischen Schwert."
   }
 ]
