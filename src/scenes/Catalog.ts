@@ -164,14 +164,14 @@ export class CatalogScene extends Phaser.Scene {
     const rarity = rarityInfo(monster.baseRarity)
     const left = x - CARD_W / 2
     const top = y - CARD_H / 2
-    plate.fillStyle(0x120e1c, 1)
+    plate.fillStyle(0x2a3148, 1)
     plate.fillRoundedRect(left, top, CARD_W, CARD_H, 14)
     const stroke = owned ? Phaser.Display.Color.HexStringToColor(rarity.color).color : 0xc8c4bc
     plate.lineStyle(3, stroke, 1)
     plate.strokeRoundedRect(left, top, CARD_W, CARD_H, 14)
     const tokenX = left + 42
     const tokenY = top + 44
-    monsterToken(this, tokenX, tokenY, monster.sprite || monster.id, 68, monster.baseRarity, !owned)
+    monsterToken(this, tokenX, tokenY, monster.sprite || monster.id, 68, monster.baseRarity, !owned, true)
     if (!owned) iconSprite(this, tokenX + 18, tokenY + 14, 'lock', 18)
     const rarityText = text(this, left + 80, top + 36, rarity.name, 12, owned ? rarity.color : MUTED)
     rarityText.setWordWrapWidth(CARD_W - 88)
@@ -199,10 +199,10 @@ export class CatalogScene extends Phaser.Scene {
     const top = (720 - modalH) / 2
     const pad = 48
     const plate = this.add.graphics()
-    plate.fillStyle(0x100c18, 1)
+    plate.fillStyle(0x343c58, 1)
     plate.fillRoundedRect(left + pad, top + 72, 200, 210, 18)
     modal.root.add(plate)
-    modal.root.add(monsterToken(this, left + pad + 100, top + 176, monster.sprite || monster.id, 168, monster.baseRarity))
+    modal.root.add(monsterToken(this, left + pad + 100, top + 176, monster.sprite || monster.id, 168, monster.baseRarity, false, true))
     const lines = [
       `${typeName(monster.type)} · ${rarityInfo(monster.baseRarity).name}`,
       `Klasse: ${classLabel(monster.class)}`,

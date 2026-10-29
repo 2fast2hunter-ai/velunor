@@ -1,5 +1,5 @@
 import Phaser from 'phaser'
-import { monsterToken } from '../art'
+import { iconSprite, monsterToken } from '../art'
 import { rarityInfo, species, teamSlotLimit, typeName } from '../data'
 import { session } from '../session'
 import { hasUnlock } from '../data'
@@ -52,7 +52,7 @@ export class TeamScene extends Phaser.Scene {
       if (!unlocked) {
         text(this, x + 5, y, slot === 'H2' ? 'Rathaus 2' : 'Rathaus 3', 14, MUTED, [0.5, 0.5])
       } else if (monster) {
-        monsterToken(this, x + 5, y - 6, monster.speciesId, 56, monster.rarity)
+        monsterToken(this, x + 5, y - 6, monster.speciesId, 56, monster.rarity, false, true)
         const sp = species(monster.speciesId)
         const match = sp.role === SLOT_ROW[slot]
         text(this, x + 5, y + 48, sp.name, 13, INK, [0.5, 0])
@@ -92,7 +92,7 @@ export class TeamScene extends Phaser.Scene {
       const x = 120 + index * 200
       const y = 575
       const sp = species(monster.speciesId)
-      monsterToken(this, x, y, monster.speciesId, 48, monster.rarity)
+      monsterToken(this, x, y, monster.speciesId, 48, monster.rarity, false, true)
       text(this, x, y + 40, sp.name, 13, INK, [0.5, 0])
       const placed = (Object.entries(save.team) as [SlotId, string | null][]).find(([, uid]) => uid === monster.uid)
       text(this, x, y + 58, placed ? placed[0] : rarityInfo(monster.rarity).name, 12, MUTED, [0.5, 0])
@@ -114,7 +114,8 @@ export class TeamScene extends Phaser.Scene {
       const stats = previewStats(selectedMonster, SLOT_ROW[this.selected], types)
       const sp = species(selectedMonster.speciesId)
       text(this, 860, 88, sp.name, 22, rarityInfo(selectedMonster.rarity).color)
-      text(this, 860, 120, `${typeName(sp.type)} · ${sp.role === 'front' ? 'Front' : 'Hinten'} · Lv. ${selectedMonster.level}`, 15, MUTED)
+      const typeIcon = iconSprite(this, 868, 128, `type_${sp.type}`, 16)
+      text(this, typeIcon ? 882 : 860, 120, `${typeName(sp.type)} · ${sp.role === 'front' ? 'Front' : 'Hinten'} · Lv. ${selectedMonster.level}`, 15, MUTED)
       text(this, 860, 150, `HP ${Math.floor(stats.hp)}   ATK ${Math.floor(stats.atk)}   DEF ${Math.floor(stats.def)}   SPD ${Math.floor(stats.spd)}`, 15, INK)
       text(this, 860, 180, sp.skill.name ?? sp.skill.id, 16, '#f0c14a')
       const desc = text(this, 860, 206, sp.skill.description ?? '', 14, MUTED)

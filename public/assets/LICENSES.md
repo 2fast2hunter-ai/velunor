@@ -1,10 +1,16 @@
 # Lizenzen / Herkunft
-- monsters/*.png, buildings/*.png (+ *_256.png), raw/*.jpg: KI-generiert mit dem Grok-Bot-Bildgenerator, selbst für Velunor erstellt; freigestellt mit rembg (MIT-Lizenz, Modell isnet-general-use).
-- frames/*.png, icons/*.png: prozedural mit gen.py (Python/Pillow) selbst erstellt, keine externen Assets.
-- stilproben/: KI-Stilproben (Grok-Bot-Bildgenerator), selbst erstellt.
-- _old_pil/: ersetzte prozedurale Monster/Gebäude (Archiv).
+- monsters/, buildings/, frames/, icons/, backgrounds/, raw/, stilproben/: KI-generiert mit dem Grok-Bot-Bildgenerator, selbst für Velunor erstellt. Freistellung mit rembg (MIT, Modell isnet-general-use) bzw. eigenem Chroma-Key (frames.py, arena.py).
+- _old_pil/: archivierte, ersetzte Dateien (alte PIL-Grafiken aus gen.py, altes m05).
 - preview.png: Kontaktbogen, Schrift DejaVu Sans (freie Lizenz).
-- monsters/m46–m55, icons/type_ice*, icons/type_lightning*: KI-generiert mit dem Grok-Bot-Bildgenerator, selbst für Velunor erstellt.
-- monsters/m56–m65: KI-generiert mit dem Grok-Bot-Bildgenerator, selbst für Velunor erstellt.
-- monsters/m66–m75: KI-generiert mit dem Grok-Bot-Bildgenerator, selbst für Velunor erstellt.
-- monsters/m76–m85, icons/type_shadow*, icons/type_ghost*: KI-generiert mit dem Grok-Bot-Bildgenerator, selbst für Velunor erstellt.
+- Arena-Slice (icons/arena*, icons/rank_*, frames/ghost_overlay*): KI-generiert mit dem Grok-Bot-Bildgenerator, selbst erstellt.
+- icons/rank_diamond*, icons/defense_shield*: KI-generiert mit dem Grok-Bot-Bildgenerator, selbst erstellt.
+- monsters/m26–m35, icons/catalog*: KI-generiert mit dem Grok-Bot-Bildgenerator, selbst erstellt.
+- monsters/m11–m25: KI-generiert mit dem Grok-Bot-Bildgenerator, selbst erstellt.
+- monsters/m36–m45: KI-generiert mit dem Grok-Bot-Bildgenerator, selbst erstellt.
+- monsters/m46–m55: KI-generiert mit dem Grok-Bot-Bildgenerator, selbst erstellt.
+- monsters/m56–m65: KI-generiert mit dem Grok-Bot-Bildgenerator, selbst erstellt.
+- monsters/m66–m75: KI-generiert mit dem Grok-Bot-Bildgenerator, selbst erstellt.
+- monsters/m76–m85, icons/type_shadow*, icons/type_ghost*: KI-generiert mit dem Grok-Bot-Bildgenerator, selbst erstellt.
+- icons/type_{wind,poison,metal,stone,light,dragon,insect,beast,fighting,psychic,sound,crystal}*: KI-generiert mit dem Grok-Bot-Bildgenerator, selbst erstellt.
+- icons/type_ice*, icons/type_lightning*: KI-generiert mit dem Grok-Bot-Bildgenerator, selbst erstellt. type_metal/type_insect mit icons2.py neu entsäumt.
+- monsters/m86–m95: KI-generiert mit dem Grok-Bot-Bildgenerator, selbst erstellt.

@@ -1,4 +1,5 @@
 import { describe, expect, it } from 'vitest'
+import types from '../data/types.json'
 import shipped from '../public/assets/manifest.json'
 import manifest from './artManifest.json'
 import { assetUrl, backgroundTextureKey, frameMonsterFit, frameTextureKey, ghostOverlayTextureKey, iconTextureKey, monsterSlotScale, queueArt } from './artLayout'
@@ -25,7 +26,7 @@ describe('monster slot scale', () => {
 describe('art manifest', () => {
   it('ships monsters, buildings, frames, icons, and backgrounds', () => {
     expect(shipped).toEqual(manifest)
-    expect(Object.keys(manifest.monsters)).toHaveLength(85)
+    expect(Object.keys(manifest.monsters)).toHaveLength(95)
     expect(Object.keys(manifest.buildings)).toEqual(['townhall', 'goldmine', 'training'])
     expect(Object.keys(manifest.frames).filter((id) => Number.isInteger(Number(id)))).toHaveLength(10)
     expect(manifest.frames.ghost_overlay['512']).toBe('frames/ghost_overlay.png')
@@ -37,7 +38,7 @@ describe('art manifest', () => {
     expect(manifest.icons.rank_diamond).toEqual({ '48': 'icons/rank_diamond.png', '96': 'icons/rank_diamond_96.png' })
     expect(manifest.icons.defense_shield).toEqual({ '128': 'icons/defense_shield.png', '64': 'icons/defense_shield_64.png' })
     expect(manifest.icons.catalog).toEqual({ '128': 'icons/catalog.png', '64': 'icons/catalog_64.png' })
-    for (let id = 1; id <= 85; id++) {
+    for (let id = 1; id <= 95; id++) {
       const key = `m${String(id).padStart(2, '0')}`
       expect(manifest.monsters[key as keyof typeof manifest.monsters]).toEqual({
         '512': `monsters/${key}.png`,
@@ -102,6 +103,19 @@ describe('art manifest', () => {
     expect(url['monster-m76']).toBe('/velunor/assets/monsters/m76_256.png')
     expect(url['monster-m85']).toBe('/velunor/assets/monsters/m85_256.png')
     expect(url['monster-m85-lg']).toBe('/velunor/assets/monsters/m85.png')
+    expect(url['monster-m86']).toBe('/velunor/assets/monsters/m86_256.png')
+    expect(url['monster-m95']).toBe('/velunor/assets/monsters/m95_256.png')
+    expect(url['monster-m95-lg']).toBe('/velunor/assets/monsters/m95.png')
+    const typeIcons = manifest.icons as Record<string, { '256'?: string; '128'?: string }>
+    for (const id of Object.keys(types.names)) {
+      expect(typeIcons[`type_${id}`]).toEqual({
+        '256': `icons/type_${id}.png`,
+        '128': `icons/type_${id}_128.png`
+      })
+      expect(url[iconTextureKey(`type_${id}`)]).toBe(`/velunor/assets/icons/type_${id}_128.png`)
+      expect(url[iconTextureKey(`type_${id}`, true)]).toBe(`/velunor/assets/icons/type_${id}.png`)
+    }
+    expect(Object.keys(types.names)).toHaveLength(20)
     expect(url[iconTextureKey('type_shadow')]).toBe('/velunor/assets/icons/type_shadow_128.png')
     expect(url[iconTextureKey('type_shadow', true)]).toBe('/velunor/assets/icons/type_shadow.png')
     expect(url[iconTextureKey('type_ghost')]).toBe('/velunor/assets/icons/type_ghost_128.png')

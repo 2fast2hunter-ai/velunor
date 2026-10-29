@@ -8,6 +8,7 @@ import { rankLabel } from '../arena'
 import type { LastSeasonResult } from '../types'
 import { ESSENCE, GEM, GOLD, INK, MUTED, TICKET, W, button, confirm, hoverTip, openModal, panel, text } from '../ui'
 import { formatInt } from '../data'
+import { debugToolsEnabled, grantDebugMonster } from '../debugGrant'
 import { portalOpen, portalUnlockText } from '../state'
 
 export class BootScene extends Phaser.Scene {
@@ -201,14 +202,16 @@ export class HUDScene extends Phaser.Scene {
   private openSettings(): void {
     const { root, close } = (() => {
       const modalW = 520
-      const modalH = 440
+      let showDebug = false
+      if (import.meta.env.DEV) showDebug = debugToolsEnabled()
+      const modalH = showDebug ? 520 : 440
       const holder = this.add.container(0, 0).setDepth(140)
       const dim = this.add.rectangle(W / 2, 360, W, 720, 0x07060f, 0.66).setInteractive()
       const g = this.add.graphics()
       panel(g, (W - modalW) / 2, (720 - modalH) / 2, modalW, modalH)
       const done = () => holder.destroy()
-      holder.add([dim, g, text(this, W / 2, 220, 'Einstellungen', 26, GOLD, [0.5, 0])])
-      holder.add(button(this, W / 2 + 200, 230, 56, 36, 'X', done, { fill: 0x3d4b6e, color: INK, size: 16 }))
+      holder.add([dim, g, text(this, W / 2, showDebug ? 180 : 220, 'Einstellungen', 26, GOLD, [0.5, 0])])
+      holder.add(button(this, W / 2 + 200, showDebug ? 190 : 230, 56, 36, 'X', done, { fill: 0x3d4b6e, color: INK, size: 16 }))
       const soundLabel = session.save.settings.sound ? 'Ton an' : 'Ton aus'
       holder.add(button(this, W / 2, 310, 280, 46, soundLabel, () => {
         session.toggleSound()
@@ -235,6 +238,20 @@ export class HUDScene extends Phaser.Scene {
           location.reload()
         })
       }, { fill: 0xe15b64, color: '#fff' }))
+      if (import.meta.env.DEV && showDebug) {
+        holder.add(button(this, W / 2, 550, 280, 46, 'Debug: Monster ins Team', () => {
+          const raw = window.prompt('Monster-ID, zum Beispiel m80', 'm80')
+          if (!raw) return
+          const result = grantDebugMonster(session.save, raw, Date.now())
+          if (!result.ok) {
+            session.toast(result.reason)
+            return
+          }
+          session.toast(`${result.name} ist im Lager und steht auf ${result.slot}.`)
+          done()
+          go(this, 'Team')
+        }, { fill: 0x5e35b1, color: INK, size: 15 }))
+      }
       return { root: holder, close: done }
     })()
     void root

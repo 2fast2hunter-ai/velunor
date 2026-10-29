@@ -3333,5 +3333,381 @@
     "sprite": "m85",
     "class": "fighter",
     "aussehen": "Geisterhafter König mit zerrissenem Mantel, Krone aus Grabkerzen, kreisenden Seelenlichtern und einem ätherischen Schwert."
+  },
+  {
+    "id": "m86",
+    "name": "Gedankenqualle",
+    "type": "psychic",
+    "baseRarity": 0,
+    "role": "back",
+    "base": {
+      "hp": 121,
+      "atk": 26,
+      "def": 10,
+      "spd": 103
+    },
+    "blurb": "Rosa Qualle, deren Schirm wie ein Gehirn pulsiert.",
+    "skill": {
+      "id": "gedankenqualle_skill",
+      "name": "Gedankenqualle-Fluch",
+      "description": "Gegnerische Hinterreihe: 60 % ATK, 40 % Chance auf ATK −20 %.",
+      "cooldown": 4,
+      "initialCooldown": 2,
+      "target": "enemy_back_all",
+      "effects": [
+        {
+          "kind": "damage",
+          "atkMult": 0.6
+        },
+        {
+          "kind": "status",
+          "status": "atk_down",
+          "chance": 0.4,
+          "duration": 2,
+          "value": 0.2
+        }
+      ]
+    },
+    "sprite": "m86",
+    "class": "disruptor",
+    "aussehen": "Rosa Qualle, deren Schirm wie ein Gehirn pulsiert."
+  },
+  {
+    "id": "m87",
+    "name": "Traumkatze",
+    "type": "psychic",
+    "baseRarity": 1,
+    "role": "back",
+    "base": {
+      "hp": 145,
+      "atk": 24,
+      "def": 16,
+      "spd": 98
+    },
+    "blurb": "Schlafende Katze auf schwebendem Kissen mit Traumblasen.",
+    "skill": {
+      "id": "traumkatze_skill",
+      "name": "Traumkatze-Heilung",
+      "description": "Heilt den Verbündeten mit dem niedrigsten HP-% um 160 % ATK.",
+      "cooldown": 3,
+      "initialCooldown": 2,
+      "target": "ally_lowest_hp_pct",
+      "effects": [
+        {
+          "kind": "heal",
+          "atkMult": 1.6
+        }
+      ]
+    },
+    "sprite": "m87",
+    "class": "support",
+    "aussehen": "Schlafende Katze auf schwebendem Kissen mit Traumblasen."
+  },
+  {
+    "id": "m88",
+    "name": "Augenmotte",
+    "type": "psychic",
+    "baseRarity": 2,
+    "role": "back",
+    "base": {
+      "hp": 125,
+      "atk": 31,
+      "def": 11,
+      "spd": 113
+    },
+    "blurb": "Motte mit Augenmustern auf den Flügeln, die hypnotisch schimmern.",
+    "skill": {
+      "id": "augenmotte_skill",
+      "name": "Augenmotte-Schuss",
+      "description": "160 % ATK auf das Standardziel, 36 % Chance auf ATK −20 %.",
+      "cooldown": 3,
+      "initialCooldown": 2,
+      "target": "default",
+      "effects": [
+        {
+          "kind": "damage",
+          "atkMult": 1.6
+        },
+        {
+          "kind": "status",
+          "status": "atk_down",
+          "chance": 0.36,
+          "duration": 2,
+          "value": 0.2
+        }
+      ]
+    },
+    "sprite": "m88",
+    "class": "shooter",
+    "aussehen": "Motte mit Augenmustern auf den Flügeln, die hypnotisch schimmern."
+  },
+  {
+    "id": "m89",
+    "name": "Orakeleule",
+    "type": "psychic",
+    "baseRarity": 4,
+    "role": "back",
+    "base": {
+      "hp": 172,
+      "atk": 28,
+      "def": 19,
+      "spd": 105
+    },
+    "blurb": "Eule mit drittem Auge, schwebenden Tarotkarten und violetter Gedankenaura.",
+    "skill": {
+      "id": "orakeleule_skill",
+      "name": "Orakeleule-Heilung",
+      "description": "Heilt den Verbündeten mit dem niedrigsten HP-% um 190 % ATK.",
+      "cooldown": 3,
+      "initialCooldown": 2,
+      "target": "ally_lowest_hp_pct",
+      "effects": [
+        {
+          "kind": "heal",
+          "atkMult": 1.9
+        }
+      ]
+    },
+    "sprite": "m89",
+    "class": "support",
+    "aussehen": "Eule mit drittem Auge, schwebenden Tarotkarten und violetter Gedankenaura."
+  },
+  {
+    "id": "m90",
+    "name": "Astralsphinx",
+    "type": "psychic",
+    "baseRarity": 7,
+    "role": "back",
+    "base": {
+      "hp": 210,
+      "atk": 43,
+      "def": 18,
+      "spd": 117
+    },
+    "blurb": "Sphinx aus Sternenlicht mit Gedankenkrone, kreisenden Runenringen, schwebenden Kristallaugen und einem kosmischen Schleier.",
+    "skill": {
+      "id": "astralsphinx_skill",
+      "name": "Astralsphinx-Fluch",
+      "description": "Gegnerische Hinterreihe: 95 % ATK, 68 % Chance auf ATK −20 %.",
+      "cooldown": 4,
+      "initialCooldown": 2,
+      "target": "enemy_back_all",
+      "effects": [
+        {
+          "kind": "damage",
+          "atkMult": 0.95
+        },
+        {
+          "kind": "status",
+          "status": "atk_down",
+          "chance": 0.68,
+          "duration": 2,
+          "value": 0.2
+        }
+      ]
+    },
+    "passive": {
+      "id": "astralsphinx_passive",
+      "name": "Letzter Wille",
+      "description": "Fällt die HP erstmals unter 50 %: Schild 18 % Max-HP (2 Runden).",
+      "trigger": {
+        "kind": "hp_below",
+        "pct": 0.5
+      },
+      "effects": [
+        {
+          "kind": "shield",
+          "maxHpPctOfCaster": 0.18,
+          "duration": 2,
+          "target": "self"
+        }
+      ],
+      "usesPerBattle": 1
+    },
+    "sprite": "m90",
+    "class": "disruptor",
+    "aussehen": "Sphinx aus Sternenlicht mit Gedankenkrone, kreisenden Runenringen, schwebenden Kristallaugen und einem kosmischen Schleier."
+  },
+  {
+    "id": "m91",
+    "name": "Summhummel",
+    "type": "sound",
+    "baseRarity": 0,
+    "role": "back",
+    "base": {
+      "hp": 130,
+      "atk": 21,
+      "def": 14,
+      "spd": 96
+    },
+    "blurb": "Pelzige Hummel mit Notenmuster und kleinen Schallwellen um die Flügel.",
+    "skill": {
+      "id": "summhummel_skill",
+      "name": "Summhummel-Heilung",
+      "description": "Heilt den Verbündeten mit dem niedrigsten HP-% um 150 % ATK.",
+      "cooldown": 3,
+      "initialCooldown": 2,
+      "target": "ally_lowest_hp_pct",
+      "effects": [
+        {
+          "kind": "heal",
+          "atkMult": 1.5
+        }
+      ]
+    },
+    "sprite": "m91",
+    "class": "support",
+    "aussehen": "Pelzige Hummel mit Notenmuster und kleinen Schallwellen um die Flügel."
+  },
+  {
+    "id": "m92",
+    "name": "Echofledermaus",
+    "type": "sound",
+    "baseRarity": 1,
+    "role": "back",
+    "base": {
+      "hp": 112,
+      "atk": 26,
+      "def": 10,
+      "spd": 110
+    },
+    "blurb": "Fledermaus mit riesigen Ohren und sichtbaren Echo-Ringen.",
+    "skill": {
+      "id": "echofledermaus_skill",
+      "name": "Echofledermaus-Schuss",
+      "description": "155 % ATK auf das Standardziel, 17 % Chance auf Betäubung.",
+      "cooldown": 3,
+      "initialCooldown": 2,
+      "target": "default",
+      "effects": [
+        {
+          "kind": "damage",
+          "atkMult": 1.55
+        },
+        {
+          "kind": "status",
+          "status": "stun",
+          "chance": 0.17,
+          "duration": 1
+        }
+      ]
+    },
+    "sprite": "m92",
+    "class": "shooter",
+    "aussehen": "Fledermaus mit riesigen Ohren und sichtbaren Echo-Ringen."
+  },
+  {
+    "id": "m93",
+    "name": "Trommelfrosch",
+    "type": "sound",
+    "baseRarity": 2,
+    "role": "front",
+    "base": {
+      "hp": 205,
+      "atk": 19,
+      "def": 26,
+      "spd": 83
+    },
+    "blurb": "Dicker Frosch mit Trommelbauch und Schlagzeug-Muster.",
+    "skill": {
+      "id": "trommelfrosch_skill",
+      "name": "Trommelfrosch-Bollwerk",
+      "description": "Spott 2 Runden und eigene DEF +34 % (2 Runden).",
+      "cooldown": 4,
+      "initialCooldown": 1,
+      "target": "self",
+      "effects": [
+        {
+          "kind": "status",
+          "status": "taunt",
+          "chance": 1,
+          "duration": 2
+        },
+        {
+          "kind": "status",
+          "status": "def_up",
+          "chance": 1,
+          "duration": 2,
+          "value": 0.34
+        }
+      ]
+    },
+    "sprite": "m93",
+    "class": "guardian",
+    "aussehen": "Dicker Frosch mit Trommelbauch und Schlagzeug-Muster."
+  },
+  {
+    "id": "m94",
+    "name": "Sirenenvogel",
+    "type": "sound",
+    "baseRarity": 3,
+    "role": "back",
+    "base": {
+      "hp": 150,
+      "atk": 31,
+      "def": 13,
+      "spd": 110
+    },
+    "blurb": "Bunter Paradiesvogel mit Schweif aus Notenbändern und schimmernden Schallwellen.",
+    "skill": {
+      "id": "sirenenvogel_skill",
+      "name": "Sirenenvogel-Fluch",
+      "description": "Gegnerische Hinterreihe: 75 % ATK, 26 % Chance auf Betäubung.",
+      "cooldown": 4,
+      "initialCooldown": 2,
+      "target": "enemy_back_all",
+      "effects": [
+        {
+          "kind": "damage",
+          "atkMult": 0.75
+        },
+        {
+          "kind": "status",
+          "status": "stun",
+          "chance": 0.26,
+          "duration": 1
+        }
+      ]
+    },
+    "sprite": "m94",
+    "class": "disruptor",
+    "aussehen": "Bunter Paradiesvogel mit Schweif aus Notenbändern und schimmernden Schallwellen."
+  },
+  {
+    "id": "m95",
+    "name": "Resonanzhirsch",
+    "type": "sound",
+    "baseRarity": 5,
+    "role": "front",
+    "base": {
+      "hp": 205,
+      "atk": 34,
+      "def": 21,
+      "spd": 104
+    },
+    "blurb": "Hirsch mit Geweih aus Stimmgabeln, vibrierenden Klangringen, leuchtenden Saiten am Hals und Notenfunken.",
+    "skill": {
+      "id": "resonanzhirsch_skill",
+      "name": "Resonanzhirsch-Ansturm",
+      "description": "Gegnerische Frontreihe: 125 % ATK, 23 % Chance auf Betäubung.",
+      "cooldown": 4,
+      "initialCooldown": 2,
+      "target": "enemy_front_all",
+      "effects": [
+        {
+          "kind": "damage",
+          "atkMult": 1.25
+        },
+        {
+          "kind": "status",
+          "status": "stun",
+          "chance": 0.23,
+          "duration": 1
+        }
+      ]
+    },
+    "sprite": "m95",
+    "class": "fighter",
+    "aussehen": "Hirsch mit Geweih aus Stimmgabeln, vibrierenden Klangringen, leuchtenden Saiten am Hals und Notenfunken."
   }
 ]

@@ -339,6 +339,46 @@
     "m85": {
       "512": "monsters/m85.png",
       "256": "monsters/m85_256.png"
+    },
+    "m86": {
+      "512": "monsters/m86.png",
+      "256": "monsters/m86_256.png"
+    },
+    "m87": {
+      "512": "monsters/m87.png",
+      "256": "monsters/m87_256.png"
+    },
+    "m88": {
+      "512": "monsters/m88.png",
+      "256": "monsters/m88_256.png"
+    },
+    "m89": {
+      "512": "monsters/m89.png",
+      "256": "monsters/m89_256.png"
+    },
+    "m90": {
+      "512": "monsters/m90.png",
+      "256": "monsters/m90_256.png"
+    },
+    "m91": {
+      "512": "monsters/m91.png",
+      "256": "monsters/m91_256.png"
+    },
+    "m92": {
+      "512": "monsters/m92.png",
+      "256": "monsters/m92_256.png"
+    },
+    "m93": {
+      "512": "monsters/m93.png",
+      "256": "monsters/m93_256.png"
+    },
+    "m94": {
+      "512": "monsters/m94.png",
+      "256": "monsters/m94_256.png"
+    },
+    "m95": {
+      "512": "monsters/m95.png",
+      "256": "monsters/m95_256.png"
     }
   },
   "buildings": {
@@ -433,22 +473,6 @@
     "type_earth": {
       "256": "icons/type_earth.png",
       "128": "icons/type_earth_128.png"
-    },
-    "type_ice": {
-      "256": "icons/type_ice.png",
-      "128": "icons/type_ice_128.png"
-    },
-    "type_lightning": {
-      "256": "icons/type_lightning.png",
-      "128": "icons/type_lightning_128.png"
-    },
-    "type_shadow": {
-      "256": "icons/type_shadow.png",
-      "128": "icons/type_shadow_128.png"
-    },
-    "type_ghost": {
-      "256": "icons/type_ghost.png",
-      "128": "icons/type_ghost_128.png"
     },
     "star": {
       "256": "icons/star.png",
@@ -567,6 +591,70 @@
     "catalog": {
       "128": "icons/catalog.png",
       "64": "icons/catalog_64.png"
+    },
+    "type_shadow": {
+      "256": "icons/type_shadow.png",
+      "128": "icons/type_shadow_128.png"
+    },
+    "type_ghost": {
+      "256": "icons/type_ghost.png",
+      "128": "icons/type_ghost_128.png"
+    },
+    "type_wind": {
+      "256": "icons/type_wind.png",
+      "128": "icons/type_wind_128.png"
+    },
+    "type_poison": {
+      "256": "icons/type_poison.png",
+      "128": "icons/type_poison_128.png"
+    },
+    "type_metal": {
+      "256": "icons/type_metal.png",
+      "128": "icons/type_metal_128.png"
+    },
+    "type_stone": {
+      "256": "icons/type_stone.png",
+      "128": "icons/type_stone_128.png"
+    },
+    "type_light": {
+      "256": "icons/type_light.png",
+      "128": "icons/type_light_128.png"
+    },
+    "type_dragon": {
+      "256": "icons/type_dragon.png",
+      "128": "icons/type_dragon_128.png"
+    },
+    "type_insect": {
+      "256": "icons/type_insect.png",
+      "128": "icons/type_insect_128.png"
+    },
+    "type_beast": {
+      "256": "icons/type_beast.png",
+      "128": "icons/type_beast_128.png"
+    },
+    "type_fighting": {
+      "256": "icons/type_fighting.png",
+      "128": "icons/type_fighting_128.png"
+    },
+    "type_psychic": {
+      "256": "icons/type_psychic.png",
+      "128": "icons/type_psychic_128.png"
+    },
+    "type_sound": {
+      "256": "icons/type_sound.png",
+      "128": "icons/type_sound_128.png"
+    },
+    "type_crystal": {
+      "256": "icons/type_crystal.png",
+      "128": "icons/type_crystal_128.png"
+    },
+    "type_ice": {
+      "256": "icons/type_ice.png",
+      "128": "icons/type_ice_128.png"
+    },
+    "type_lightning": {
+      "256": "icons/type_lightning.png",
+      "128": "icons/type_lightning_128.png"
     }
   },
   "backgrounds": {

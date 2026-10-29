@@ -35,7 +35,7 @@ export class MonsterListScene extends Phaser.Scene {
       box.fillRoundedRect(x - 90, y - 70, 200, 150, 16)
       box.lineStyle(3, Phaser.Display.Color.HexStringToColor(rarityInfo(monster.rarity).color).color, 1)
       box.strokeRoundedRect(x - 90, y - 70, 200, 150, 16)
-      monsterToken(this, x - 40, y - 10, monster.speciesId, 56, monster.rarity)
+      monsterToken(this, x - 40, y - 10, monster.speciesId, 56, monster.rarity, false, true)
       text(this, x + 10, y - 36, sp.name, 16, INK)
       text(this, x + 10, y - 12, `${rarityInfo(monster.rarity).name}`, 13, rarityInfo(monster.rarity).color)
       text(this, x + 10, y + 8, `Lv. ${monster.level}`, 14, MUTED)
@@ -56,7 +56,7 @@ export class MonsterListScene extends Phaser.Scene {
     if (!monster) return
     const sp = species(monster.speciesId)
     const modal = openModal(this, 760, 640, sp.name)
-    modal.root.add(monsterToken(this, 280, 220, sp.id, 72, monster.rarity))
+    modal.root.add(monsterToken(this, 280, 220, sp.id, 72, monster.rarity, false, true))
     const stats = instanceStats(monster.speciesId, monster.rarity, monster.level, monster.potential)
     const cap = maxLevelFor(monster.rarity)
     const need = monster.level >= cap ? 0 : expToNext(monster.level)
@@ -71,7 +71,12 @@ export class MonsterListScene extends Phaser.Scene {
       `Rolle: ${sp.role === 'front' ? 'Front' : 'Hinten'}`,
       sp.blurb
     ]
-    lines.forEach((line, i) => modal.root.add(text(this, 360, 170 + i * 24, line, 14, i === 0 ? rarityInfo(monster.rarity).color : INK)))
+    const typeIcon = iconSprite(this, 370, 178, `type_${sp.type}`, 16)
+    if (typeIcon) modal.root.add(typeIcon)
+    lines.forEach((line, i) => {
+      const x = i === 0 && typeIcon ? 384 : 360
+      modal.root.add(text(this, x, 170 + i * 24, line, 14, i === 0 ? rarityInfo(monster.rarity).color : INK))
+    })
     modal.root.add(text(this, 200, 360, sp.skill.name ?? sp.skill.id, 18, '#f0c14a'))
     const desc = text(this, 200, 386, sp.skill.description ?? '', 15, MUTED)
     desc.setWordWrapWidth(520)
@@ -82,8 +87,13 @@ export class MonsterListScene extends Phaser.Scene {
       const innate = text(this, 200, 496, `Angeboren: ${sp.passive.name}`, 13, '#e0b3ff')
       modal.root.add(innate)
     }
-    const strong = strongAgainst(sp.type).slice(0, 3).map((id) => typeName(id)).join(', ')
-    modal.root.add(text(this, 200, 520, `Stark gegen: ${strong}`, 14, MUTED))
+    modal.root.add(text(this, 200, 520, 'Stark gegen', 14, MUTED))
+    strongAgainst(sp.type).slice(0, 3).forEach((id, index) => {
+      const x = 310 + index * 150
+      const icon = iconSprite(this, x, 528, `type_${id}`, 16)
+      if (icon) modal.root.add(icon)
+      modal.root.add(text(this, icon ? x + 12 : x, 520, typeName(id), 14, INK))
+    })
     const learned = monster.skills.learned.filter((id) => skillsCfg.learnSkills.some((skill) => skill.id === id))
     if (learned.length) {
       modal.root.add(button(this, 700, 450, 180, 36, 'Lernskill', () => {
