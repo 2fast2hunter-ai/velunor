@@ -98,7 +98,7 @@ export class PortalScene extends Phaser.Scene {
       plate.lineStyle(4, Phaser.Display.Color.HexStringToColor(rarityInfo(pull.rarity).color).color, 1)
       plate.strokeRoundedRect(-80, -80, 160, 170, 14)
       card.add(plate)
-      card.add(monsterToken(this, 0, -20, pull.speciesId, 64, pull.rarity))
+      card.add(monsterToken(this, 0, -20, pull.speciesId, 64, pull.rarity, false, true))
       card.add(text(this, 0, 40, sp.name, 14, INK, [0.5, 0]))
       const rarityLine = `${rarityInfo(pull.rarity).name}${pull.upgraded ? ' · aufgewertet' : ''}`
       const dup = pull.duplicateEssence > 0 ? `${rarityLine} · +${pull.duplicateEssence} Essenz` : rarityLine

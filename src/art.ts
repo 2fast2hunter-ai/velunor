@@ -10,6 +10,22 @@ import {
 } from './artLayout'
 import type { TypeId } from './types'
 
+/**
+ * Warm disc and rim behind a sprite on a dark card. The sprite file is unchanged.
+ * Bergtitan keeps its own dark matte, so the glow stays off that one.
+ */
+function addReadableGlow(scene: Phaser.Scene, root: Phaser.GameObjects.Container, display: number): void {
+  const glow = scene.add.graphics()
+  glow.fillStyle(0xfff3e0, 0.28)
+  glow.fillCircle(0, 0, display * 0.5)
+  glow.fillStyle(0xfffaf3, 0.5)
+  glow.fillCircle(0, 0, display * 0.36)
+  const rim = Math.max(3, Math.round(display * 0.055))
+  glow.lineStyle(rim, 0xfff6ea, 0.92)
+  glow.strokeCircle(0, 0, display * 0.42)
+  root.add(glow)
+}
+
 export function monsterToken(
   scene: Phaser.Scene,
   x: number,
@@ -17,7 +33,8 @@ export function monsterToken(
   speciesId: string,
   size = 72,
   rarity?: number,
-  dim = false
+  dim = false,
+  glow = false
 ): Phaser.GameObjects.Container {
   const root = scene.add.container(x, y)
   const slot = monsterSlotScale(speciesId)
@@ -25,6 +42,7 @@ export function monsterToken(
   const fit = framed ? frameMonsterFit(rarity) : 1
   const display = size * fit * slot
   const key = monsterTextureKey(speciesId, display >= 160)
+  if (glow && speciesId !== 'm33') addReadableGlow(scene, root, display)
   // Bergtitan's snow is real transparency. A dark matte keeps that dust readable
   // when the sprite sits on a lighter plate or the arena stone.
   if (speciesId === 'm33') {
