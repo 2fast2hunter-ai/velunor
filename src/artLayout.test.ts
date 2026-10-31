@@ -26,7 +26,7 @@ describe('monster slot scale', () => {
 describe('art manifest', () => {
   it('ships monsters, buildings, frames, icons, and backgrounds', () => {
     expect(shipped).toEqual(manifest)
-    expect(Object.keys(manifest.monsters)).toHaveLength(95)
+    expect(Object.keys(manifest.monsters)).toHaveLength(100)
     expect(Object.keys(manifest.buildings)).toEqual(['townhall', 'goldmine', 'training'])
     expect(Object.keys(manifest.frames).filter((id) => Number.isInteger(Number(id)))).toHaveLength(10)
     expect(manifest.frames.ghost_overlay['512']).toBe('frames/ghost_overlay.png')
@@ -38,7 +38,7 @@ describe('art manifest', () => {
     expect(manifest.icons.rank_diamond).toEqual({ '48': 'icons/rank_diamond.png', '96': 'icons/rank_diamond_96.png' })
     expect(manifest.icons.defense_shield).toEqual({ '128': 'icons/defense_shield.png', '64': 'icons/defense_shield_64.png' })
     expect(manifest.icons.catalog).toEqual({ '128': 'icons/catalog.png', '64': 'icons/catalog_64.png' })
-    for (let id = 1; id <= 95; id++) {
+    for (let id = 1; id <= 100; id++) {
       const key = `m${String(id).padStart(2, '0')}`
       expect(manifest.monsters[key as keyof typeof manifest.monsters]).toEqual({
         '512': `monsters/${key}.png`,
@@ -106,6 +106,10 @@ describe('art manifest', () => {
     expect(url['monster-m86']).toBe('/velunor/assets/monsters/m86_256.png')
     expect(url['monster-m95']).toBe('/velunor/assets/monsters/m95_256.png')
     expect(url['monster-m95-lg']).toBe('/velunor/assets/monsters/m95.png')
+    expect(url['monster-m96']).toBe('/velunor/assets/monsters/m96_256.png')
+    expect(url['monster-m96-lg']).toBe('/velunor/assets/monsters/m96.png')
+    expect(url['monster-m100']).toBe('/velunor/assets/monsters/m100_256.png')
+    expect(url['monster-m100-lg']).toBe('/velunor/assets/monsters/m100.png')
     const typeIcons = manifest.icons as Record<string, { '256'?: string; '128'?: string }>
     for (const id of Object.keys(types.names)) {
       expect(typeIcons[`type_${id}`]).toEqual({

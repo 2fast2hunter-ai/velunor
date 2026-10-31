@@ -379,6 +379,26 @@
     "m95": {
       "512": "monsters/m95.png",
       "256": "monsters/m95_256.png"
+    },
+    "m96": {
+      "512": "monsters/m96.png",
+      "256": "monsters/m96_256.png"
+    },
+    "m97": {
+      "512": "monsters/m97.png",
+      "256": "monsters/m97_256.png"
+    },
+    "m98": {
+      "512": "monsters/m98.png",
+      "256": "monsters/m98_256.png"
+    },
+    "m99": {
+      "512": "monsters/m99.png",
+      "256": "monsters/m99_256.png"
+    },
+    "m100": {
+      "512": "monsters/m100.png",
+      "256": "monsters/m100_256.png"
     }
   },
   "buildings": {
