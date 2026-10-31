@@ -3709,5 +3709,209 @@
     "sprite": "m95",
     "class": "fighter",
     "aussehen": "Hirsch mit Geweih aus Stimmgabeln, vibrierenden Klangringen, leuchtenden Saiten am Hals und Notenfunken."
+  },
+  {
+    "id": "m96",
+    "name": "Drachenwelpe",
+    "type": "dragon",
+    "baseRarity": 1,
+    "role": "front",
+    "base": {
+      "hp": 147,
+      "atk": 23,
+      "def": 14,
+      "spd": 94
+    },
+    "blurb": "Kleiner roter Drache mit Stummelflügeln und Rauchwölkchen aus der Nase.",
+    "skill": {
+      "id": "drachenwelpe_skill",
+      "name": "Drachenwelpe-Ansturm",
+      "description": "Gegnerische Frontreihe: 105 % ATK, 33 % Chance auf Verbrennung.",
+      "cooldown": 4,
+      "initialCooldown": 2,
+      "target": "enemy_front_all",
+      "effects": [
+        {
+          "kind": "damage",
+          "atkMult": 1.05
+        },
+        {
+          "kind": "status",
+          "status": "burn",
+          "chance": 0.33,
+          "duration": 2,
+          "value": 0.3
+        }
+      ]
+    },
+    "sprite": "m96",
+    "class": "fighter",
+    "aussehen": "Kleiner roter Drache mit Stummelflügeln und Rauchwölkchen aus der Nase."
+  },
+  {
+    "id": "m97",
+    "name": "Schuppenwyrm",
+    "type": "dragon",
+    "baseRarity": 2,
+    "role": "back",
+    "base": {
+      "hp": 125,
+      "atk": 31,
+      "def": 11,
+      "spd": 112
+    },
+    "blurb": "Schlanker Wyrm mit Bronzeschuppen, Hornreihe und glühender Kehle.",
+    "skill": {
+      "id": "schuppenwyrm_skill",
+      "name": "Schuppenwyrm-Schuss",
+      "description": "160 % ATK auf das Standardziel, 36 % Chance auf Verbrennung.",
+      "cooldown": 3,
+      "initialCooldown": 2,
+      "target": "default",
+      "effects": [
+        {
+          "kind": "damage",
+          "atkMult": 1.6
+        },
+        {
+          "kind": "status",
+          "status": "burn",
+          "chance": 0.36,
+          "duration": 2,
+          "value": 0.3
+        }
+      ]
+    },
+    "sprite": "m97",
+    "class": "shooter",
+    "aussehen": "Schlanker Wyrm mit Bronzeschuppen, Hornreihe und glühender Kehle."
+  },
+  {
+    "id": "m98",
+    "name": "Wolkendrache",
+    "type": "dragon",
+    "baseRarity": 3,
+    "role": "back",
+    "base": {
+      "hp": 160,
+      "atk": 26,
+      "def": 18,
+      "spd": 102
+    },
+    "blurb": "Langer östlicher Drache mit Wolkenbart, Perlenschnurrhaaren und schwebenden Bändern.",
+    "skill": {
+      "id": "wolkendrache_skill",
+      "name": "Wolkendrache-Schutz",
+      "description": "Schild = 11 % eigene Max-HP auf alle Verbündeten (2 Runden).",
+      "cooldown": 4,
+      "initialCooldown": 2,
+      "target": "ally_all",
+      "effects": [
+        {
+          "kind": "shield",
+          "maxHpPctOfCaster": 0.11,
+          "duration": 2
+        }
+      ]
+    },
+    "sprite": "m98",
+    "class": "support",
+    "aussehen": "Langer östlicher Drache mit Wolkenbart, Perlenschnurrhaaren und schwebenden Bändern."
+  },
+  {
+    "id": "m99",
+    "name": "Hornlindwurm",
+    "type": "dragon",
+    "baseRarity": 4,
+    "role": "front",
+    "base": {
+      "hp": 230,
+      "atk": 22,
+      "def": 29,
+      "spd": 87
+    },
+    "blurb": "Massiger Lindwurm mit Panzerschuppen, Hornkrone, glühenden Rissen und rauchendem Atem.",
+    "skill": {
+      "id": "hornlindwurm_skill",
+      "name": "Hornlindwurm-Bollwerk",
+      "description": "Spott 2 Runden und eigene DEF +38 % (2 Runden).",
+      "cooldown": 4,
+      "initialCooldown": 1,
+      "target": "self",
+      "effects": [
+        {
+          "kind": "status",
+          "status": "taunt",
+          "chance": 1,
+          "duration": 2
+        },
+        {
+          "kind": "status",
+          "status": "def_up",
+          "chance": 1,
+          "duration": 2,
+          "value": 0.38
+        }
+      ]
+    },
+    "sprite": "m99",
+    "class": "guardian",
+    "aussehen": "Massiger Lindwurm mit Panzerschuppen, Hornkrone, glühenden Rissen und rauchendem Atem."
+  },
+  {
+    "id": "m100",
+    "name": "Urdrache Velunor",
+    "type": "dragon",
+    "baseRarity": 9,
+    "role": "front",
+    "base": {
+      "hp": 260,
+      "atk": 42,
+      "def": 25,
+      "spd": 110
+    },
+    "blurb": "Uralter Weltendrache mit Schwingen voller Sternbilder, Krone aus allen 20 Typ-Elementen, schwebenden Ruinenringen, Lichtschweif und einer Aura, die Raum und Farbe verzerrt.",
+    "skill": {
+      "id": "urdrache_velunor_skill",
+      "name": "Urdrache Velunor-Ansturm",
+      "description": "Gegnerische Frontreihe: 145 % ATK, 56 % Chance auf Verbrennung.",
+      "cooldown": 4,
+      "initialCooldown": 2,
+      "target": "enemy_front_all",
+      "effects": [
+        {
+          "kind": "damage",
+          "atkMult": 1.45
+        },
+        {
+          "kind": "status",
+          "status": "burn",
+          "chance": 0.57,
+          "duration": 2,
+          "value": 0.3
+        }
+      ]
+    },
+    "passive": {
+      "id": "urdrache_velunor_passive",
+      "name": "Letzter Wille",
+      "description": "Fällt die HP erstmals unter 50 %: Schild 24 % Max-HP (2 Runden).",
+      "trigger": {
+        "kind": "hp_below",
+        "pct": 0.5
+      },
+      "effects": [
+        {
+          "kind": "shield",
+          "maxHpPctOfCaster": 0.24,
+          "duration": 2,
+          "target": "self"
+        }
+      ],
+      "usesPerBattle": 1
+    },
+    "sprite": "m100",
+    "class": "fighter",
+    "aussehen": "Uralter Weltendrache mit Schwingen voller Sternbilder, Krone aus allen 20 Typ-Elementen, schwebenden Ruinenringen, Lichtschweif und einer Aura, die Raum und Farbe verzerrt."
   }
 ]
