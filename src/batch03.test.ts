@@ -9,7 +9,7 @@ const BATCH = ['m46', 'm47', 'm48', 'm49', 'm50', 'm51', 'm52', 'm53', 'm54', 'm
 
 describe('batch 03', () => {
   it('keeps every new species pullable by base rarity', () => {
-    expect(monsters).toHaveLength(95)
+    expect(monsters).toHaveLength(100)
     const seen = new Set<string>()
     for (const rarity of [0, 1, 2, 3, 4, 5, 6, 7, 8] as Rarity[]) {
       const pool = monsters.filter((monster) => monster.baseRarity === rarity)
@@ -39,8 +39,8 @@ describe('batch 03', () => {
   })
 
   it('activates ice and lightning immediately and does not put them behind a stage', () => {
-    expect(typesCfg.activeTypes).toEqual(['fire', 'water', 'plant', 'earth', 'wind', 'ice', 'lightning', 'metal', 'fighting', 'beast', 'light', 'shadow', 'ghost', 'psychic', 'sound'])
-    expect(typeUnlocks.activeTypesStart).toEqual(['fire', 'water', 'plant', 'earth', 'wind', 'ice', 'lightning', 'metal', 'fighting', 'beast', 'light', 'shadow', 'ghost', 'psychic', 'sound'])
+    expect(typesCfg.activeTypes).toEqual(['fire', 'water', 'plant', 'earth', 'wind', 'ice', 'lightning', 'metal', 'fighting', 'beast', 'light', 'shadow', 'ghost', 'psychic', 'sound', 'dragon'])
+    expect(typeUnlocks.activeTypesStart).toEqual(['fire', 'water', 'plant', 'earth', 'wind', 'ice', 'lightning', 'metal', 'fighting', 'beast', 'light', 'shadow', 'ghost', 'psychic', 'sound', 'dragon'])
     const gated = typeUnlocks.typeUnlocks.map((row) => row.type)
     expect(gated).not.toContain('ice')
     expect(gated).not.toContain('lightning')
@@ -56,12 +56,12 @@ describe('batch 03', () => {
     expect(typeMult('fire', 'ice')).toBe(1.5)
     const save = createSave(1)
     expect(save.version).toBe(5)
-    expect(save.activeTypes).toEqual(['fire', 'water', 'plant', 'earth', 'wind', 'ice', 'lightning', 'metal', 'fighting', 'beast', 'light', 'shadow', 'ghost', 'psychic', 'sound'])
+    expect(save.activeTypes).toEqual(['fire', 'water', 'plant', 'earth', 'wind', 'ice', 'lightning', 'metal', 'fighting', 'beast', 'light', 'shadow', 'ghost', 'psychic', 'sound', 'dragon'])
     save.version = 5
     save.activeTypes = ['fire', 'water', 'plant', 'earth', 'wind']
     const migrated = migrateSaveData(save, 2)
     expect(migrated.version).toBe(5)
-    expect(migrated.activeTypes).toEqual(['fire', 'water', 'plant', 'earth', 'wind', 'ice', 'lightning', 'metal', 'fighting', 'beast', 'light', 'shadow', 'ghost', 'psychic', 'sound'])
+    expect(migrated.activeTypes).toEqual(['fire', 'water', 'plant', 'earth', 'wind', 'ice', 'lightning', 'metal', 'fighting', 'beast', 'light', 'shadow', 'ghost', 'psychic', 'sound', 'dragon'])
     const again = migrateSaveData(migrated, 3)
     expect(again.activeTypes.filter((type) => type === 'ice')).toEqual(['ice'])
     expect(again.activeTypes.filter((type) => type === 'lightning')).toEqual(['lightning'])

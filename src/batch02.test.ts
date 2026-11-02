@@ -8,7 +8,7 @@ const BATCH = ['m36', 'm37', 'm38', 'm39', 'm40', 'm41', 'm42', 'm43', 'm44', 'm
 
 describe('batch 02', () => {
   it('keeps every new species pullable, including cosmic and wind', () => {
-    expect(monsters).toHaveLength(95)
+    expect(monsters).toHaveLength(100)
     const seen = new Set<string>()
     for (const rarity of [0, 1, 2, 3, 4, 5, 6, 7, 8] as Rarity[]) {
       const pool = monsters.filter((monster) => monster.baseRarity === rarity)
@@ -35,11 +35,11 @@ describe('batch 02', () => {
     expect(typeUnlocks.activeTypesStart).toContain('wind')
     expect(typeUnlocks.typeUnlocks.map((row) => row.type)).not.toContain('wind')
     const save = createSave(1)
-    expect(save.activeTypes).toEqual(['fire', 'water', 'plant', 'earth', 'wind', 'ice', 'lightning', 'metal', 'fighting', 'beast', 'light', 'shadow', 'ghost', 'psychic', 'sound'])
+    expect(save.activeTypes).toEqual(['fire', 'water', 'plant', 'earth', 'wind', 'ice', 'lightning', 'metal', 'fighting', 'beast', 'light', 'shadow', 'ghost', 'psychic', 'sound', 'dragon'])
     save.version = 5
     save.activeTypes = ['fire', 'water', 'plant', 'earth', 'insect']
     const migrated = migrateSaveData(save, 2)
-    expect(migrated.activeTypes).toEqual(['fire', 'water', 'plant', 'earth', 'insect', 'wind', 'ice', 'lightning', 'metal', 'fighting', 'beast', 'light', 'shadow', 'ghost', 'psychic', 'sound'])
+    expect(migrated.activeTypes).toEqual(['fire', 'water', 'plant', 'earth', 'insect', 'wind', 'ice', 'lightning', 'metal', 'fighting', 'beast', 'light', 'shadow', 'ghost', 'psychic', 'sound', 'dragon'])
     const again = migrateSaveData(migrated, 3)
     expect(again.activeTypes.filter((type) => type === 'wind')).toEqual(['wind'])
   })

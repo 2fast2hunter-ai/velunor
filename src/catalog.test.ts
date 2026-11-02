@@ -6,8 +6,8 @@ describe('catalog', () => {
   it('lists every active species in file order and grows with the data file', () => {
     const shown = filterCatalog({ type: 'all', rarity: 'all', obtainedOnly: false, collected: new Set() })
     expect(shown.map((monster) => monster.id)).toEqual(monsters.map((monster) => monster.id))
-    expect(monsters).toHaveLength(95)
-    expect(monsters.at(-1)?.id).toBe('m95')
+    expect(monsters).toHaveLength(100)
+    expect(monsters.at(-1)?.id).toBe('m100')
     expect(catalogTypeIds()).toHaveLength(20)
     expect(catalogRarities()).toHaveLength(10)
   })
@@ -46,14 +46,16 @@ describe('catalog', () => {
     expect(psychic.map((monster) => monster.id)).toEqual(['m86', 'm87', 'm88', 'm89', 'm90'])
     const sound = filterCatalog({ type: 'sound', rarity: 'all', obtainedOnly: false, collected: new Set() })
     expect(sound.map((monster) => monster.id)).toEqual(['m91', 'm92', 'm93', 'm94', 'm95'])
+    const dragon = filterCatalog({ type: 'dragon', rarity: 'all', obtainedOnly: false, collected: new Set() })
+    expect(dragon.map((monster) => monster.id)).toEqual(['m96', 'm97', 'm98', 'm99', 'm100'])
   })
 
   it('counts collected species against the active roster and the current selection', () => {
     const shown = filterCatalog({ type: 'insect', rarity: 'all', obtainedOnly: false, collected: new Set() })
-    const progress = catalogProgress(['m01', 'm02', 'm03', 'm34', 'm99'], shown)
-    expect(progress.collectedLabel).toBe('4/95 gesammelt')
+    const progress = catalogProgress(['m01', 'm02', 'm03', 'm34', 'm101'], shown)
+    expect(progress.collectedLabel).toBe('4/100 gesammelt')
     const full = catalogProgress(monsters.map((monster) => monster.id), shown)
-    expect(full.collectedLabel).toBe('95/95 gesammelt')
+    expect(full.collectedLabel).toBe('100/100 gesammelt')
     const insectOwned = shown.filter((monster) => monster.id === 'm34').length
     expect(progress.selectionLabel).toBe(`${insectOwned}/${shown.length} in Auswahl`)
     expect(species('m26').aussehen).toContain('Widder')

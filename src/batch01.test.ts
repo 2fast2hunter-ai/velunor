@@ -29,7 +29,7 @@ describe('batch 01 gacha', () => {
     const origin = pickSpecies(9, () => 0.99)
     expect(cosmic).toEqual({ speciesId: 'm40', upgraded: false })
     expect(cosmicLast).toEqual({ speciesId: 'm80', upgraded: false })
-    expect(origin).toEqual({ speciesId: 'm80', upgraded: true })
+    expect(origin).toEqual({ speciesId: 'm100', upgraded: false })
   })
 
   it('adds a pull to the collection immediately', () => {

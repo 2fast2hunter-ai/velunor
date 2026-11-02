@@ -6,11 +6,11 @@ import { createSave, migrateSaveData } from './state'
 import type { Rarity } from './types'
 
 const BATCH = ['m66', 'm67', 'm68', 'm69', 'm70', 'm71', 'm72', 'm73', 'm74', 'm75'] as const
-const STARTERS = ['fire', 'water', 'plant', 'earth', 'wind', 'ice', 'lightning', 'metal', 'fighting', 'beast', 'light', 'shadow', 'ghost', 'psychic', 'sound'] as const
+const STARTERS = ['fire', 'water', 'plant', 'earth', 'wind', 'ice', 'lightning', 'metal', 'fighting', 'beast', 'light', 'shadow', 'ghost', 'psychic', 'sound', 'dragon'] as const
 
 describe('batch 05', () => {
   it('keeps every new species pullable by base rarity', () => {
-    expect(monsters).toHaveLength(95)
+    expect(monsters).toHaveLength(100)
     const seen = new Set<string>()
     for (const rarity of [0, 1, 2, 3, 4, 5, 6, 7, 8] as Rarity[]) {
       const pool = monsters.filter((monster) => monster.baseRarity === rarity)

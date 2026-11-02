@@ -14,3 +14,4 @@
 - icons/type_{wind,poison,metal,stone,light,dragon,insect,beast,fighting,psychic,sound,crystal}*: KI-generiert mit dem Grok-Bot-Bildgenerator, selbst erstellt.
 - icons/type_ice*, icons/type_lightning*: KI-generiert mit dem Grok-Bot-Bildgenerator, selbst erstellt. type_metal/type_insect mit icons2.py neu entsäumt.
 - monsters/m86–m95: KI-generiert mit dem Grok-Bot-Bildgenerator, selbst erstellt.
+- monsters/m96–m100: KI-generiert mit dem Grok-Bot-Bildgenerator, selbst erstellt.
