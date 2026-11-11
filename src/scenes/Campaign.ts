@@ -1,8 +1,10 @@
 import Phaser from 'phaser'
 import { monsterToken } from '../art'
-import { chapters, hasUnlock, rarityInfo, stages } from '../data'
+import { chapters, hasUnlock, rarityInfo, typeName } from '../data'
+import { idleStatusLine, isBossStage, regionMainType } from '../idleMath'
 import { go, session } from '../session'
-import { canMulti, canSkip, chapterStars, stageEnemyPower, stageUnlocked } from '../state'
+import { regionUnlocked, stageGlobal, stagesInChapter } from '../stageGen'
+import { canSkip, chapterStars, stageEnemyPower, stageUnlocked } from '../state'
 import type { StageDef } from '../types'
 import { openGuide } from '../guide'
 import { INK, MUTED, W, button, openModal, text } from '../ui'
@@ -26,22 +28,52 @@ export class CampaignScene extends Phaser.Scene {
     g.fillRect(0, 0, W, 720)
     g.fillStyle(0x3a6b45, 1)
     g.fillEllipse(640, 430, 1100, 360)
-    text(this, 48, 88, 'Kampagne', 32, '#f0c14a')
+    const region = this.chapter >= 3
+    const title = region ? `Region ${this.chapter}: ${typeName(regionMainType(this.chapter))}` : 'Kampagne'
+    text(this, 48, 88, title, 32, '#f0c14a')
+    text(this, 48, 126, idleStatusLine(session.save.idle.stage, session.save.idle.w), 15, MUTED)
     text(this, 1100, 96, `Sterne ${chapterStars(session.save, this.chapter)}/30`, 16, MUTED)
-    chapters.forEach((chapter, index) => {
-      const locked = chapter.id === 2 && !hasUnlock(session.save.buildings.townhall.level, 'campaign_ch2')
-      button(this, 280 + index * 280, 140, 250, 42, locked ? `${chapter.name.split('·')[0]} 🔒` : chapter.name.split('·')[0].trim(), () => {
-        if (locked) {
-          session.toast('Rathaus Stufe 4')
+    if (!region) {
+      chapters.forEach((chapter, index) => {
+        const locked = chapter.id === 2 && !hasUnlock(session.save.buildings.townhall.level, 'campaign_ch2')
+        button(this, 280 + index * 280, 168, 250, 42, locked ? `${chapter.name.split('·')[0]} 🔒` : chapter.name.split('·')[0].trim(), () => {
+          if (locked) {
+            session.toast('Rathaus Stufe 4')
+            return
+          }
+          const changed = chapter.id !== this.chapter
+          this.chapter = chapter.id
+          this.paint()
+          if (changed) void session.changeChapter()
+        }, { fill: this.chapter === chapter.id ? 0xf0c14a : 0x2c3654, color: this.chapter === chapter.id ? '#2a2112' : INK, size: 16 })
+      })
+      if (regionUnlocked(session.save.campaign.cleared, 3)) {
+        button(this, 840, 168, 250, 42, 'Region 3', () => {
+          this.chapter = 3
+          this.paint()
+        }, { fill: 0x2c3654, color: INK, size: 16 })
+      }
+    } else {
+      button(this, 280, 168, 160, 42, 'Kapitel', () => {
+        this.chapter = 1
+        this.paint()
+      }, { fill: 0x2c3654, color: INK, size: 16 })
+      button(this, 480, 168, 80, 42, '‹', () => {
+        if (this.chapter <= 3) return
+        this.chapter -= 1
+        this.paint()
+      }, { fill: 0x3d4b6e, color: INK, size: 18 })
+      const nextOpen = regionUnlocked(session.save.campaign.cleared, this.chapter + 1)
+      button(this, 680, 168, 80, 42, '›', () => {
+        if (!nextOpen) {
+          session.toast(`Zuerst Boss ${this.chapter}-10`)
           return
         }
-        const changed = chapter.id !== this.chapter
-        this.chapter = chapter.id
+        this.chapter += 1
         this.paint()
-        if (changed) void session.changeChapter()
-      }, { fill: this.chapter === chapter.id ? 0xf0c14a : 0x2c3654, color: this.chapter === chapter.id ? '#2a2112' : INK, size: 16 })
-    })
-    const list = stages.filter((stage) => stage.chapter === this.chapter)
+      }, { disabled: !nextOpen, fill: 0x3d4b6e, color: INK, size: 18 })
+    }
+    const list = stagesInChapter(this.chapter)
     list.forEach((stage, index) => {
       const col = index % 5
       const row = Math.floor(index / 5)
@@ -54,9 +86,12 @@ export class CampaignScene extends Phaser.Scene {
       node.fillCircle(x, y, 46)
       node.lineStyle(4, stars ? 0xf0c14a : 0x6d7eab, 1)
       node.strokeCircle(x, y, 46)
-      text(this, x, y - 8, stage.id, 16, INK, [0.5, 0.5])
+      const global = stageGlobal(stage)
+      const boss = isBossStage(global)
+      const waiting = boss && !stars && session.save.idle.stage + 1 === global
+      text(this, x, y - 8, boss && global >= 20 ? `${stage.id} ◆` : stage.id, 16, INK, [0.5, 0.5])
       text(this, x, y + 14, stars ? '★'.repeat(stars) + '☆'.repeat(3 - stars) : '—', 12, '#f0c14a', [0.5, 0.5])
-      text(this, x, y + 62, stage.name, 13, MUTED, [0.5, 0])
+      text(this, x, y + 62, waiting ? 'Boss wartet' : stage.name, 13, waiting ? '#f0c14a' : MUTED, [0.5, 0])
       const hit = this.add.rectangle(x, y, 110, 110, 0xffffff, 0.001)
       hit.setInteractive({ useHandCursor: true })
       hit.on('pointerup', () => {
@@ -70,7 +105,7 @@ export class CampaignScene extends Phaser.Scene {
   }
 
   private openStage(stage: StageDef): void {
-    const modal = openModal(this, 820, 500, `${stage.id}  ${stage.name}`)
+    const modal = openModal(this, 820, 460, `${stage.id}  ${stage.name}`)
     const enemyKk = stageEnemyPower(stage)
     const recommended = stage.recommendedKK ?? Math.ceil(enemyKk * 1.1)
     modal.root.add(text(this, 280, 170, `Gegner-KK ${enemyKk} · Empfohlen ${recommended}${stage.hint ? ` · ${stage.hint}` : ''}`, 14, MUTED))
@@ -102,6 +137,8 @@ export class CampaignScene extends Phaser.Scene {
       modal.close()
       this.openStage(stage)
     }, { fill: 0x3d4b6e, color: INK, size: 15 }))
+    const waiting = isBossStage(stageGlobal(stage)) && !session.save.campaign.cleared[stage.id] && session.save.idle.stage + 1 === stageGlobal(stage)
+    if (waiting) modal.root.add(text(this, W / 2, 430, 'Boss wartet', 16, '#f0c14a', [0.5, 0]))
     modal.root.add(button(this, 530, 470, 160, 44, 'Kämpfen', () => this.start(stage, 1, false)))
     const skip = canSkip(session.save, stage.id)
     modal.root.add(button(this, 720, 470, 200, 44, skip ? 'Überspringen' : 'Skip ab Rathaus 3', () => {
@@ -111,14 +148,6 @@ export class CampaignScene extends Phaser.Scene {
       }
       this.start(stage, 1, true)
     }, { disabled: !skip, fill: 0x3d4b6e, color: INK, size: 15 }))
-    const multi = canMulti(session.save)
-    modal.root.add(button(this, 530, 530, 200, 44, multi ? '3× kämpfen' : '3×: Rathaus 4', () => {
-      if (!multi) {
-        session.toast('Rathaus Stufe 4')
-        return
-      }
-      this.start(stage, 3, true)
-    }, { disabled: !multi, fill: 0x7e57c2, color: '#fff', size: 15 }))
   }
 
   private start(stage: StageDef, count: 1 | 3, skip: boolean): void {

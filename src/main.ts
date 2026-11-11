@@ -16,7 +16,12 @@ session.boot()
 
 document.addEventListener('visibilitychange', () => {
   onAdVisibility(Date.now())
-  if (document.hidden) session.persist()
+  session.catchUp()
+  session.persist()
+})
+window.addEventListener('pagehide', () => {
+  session.catchUp()
+  session.persist()
 })
 window.addEventListener('beforeunload', () => session.persist())
 

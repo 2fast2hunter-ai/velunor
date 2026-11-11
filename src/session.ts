@@ -10,6 +10,10 @@ import {
   createSave,
   SAVE_KEY,
   commitFightRewards,
+  collectIdlePayout,
+  consumeIdleNotice,
+  debugAdvanceHours,
+  ensureIdleRating,
   equipSkill,
   fightArena,
   fightStage,
@@ -35,7 +39,9 @@ import {
   type FightReport
 } from './state'
 import { claimArenaChest, rerollArena } from './arena'
+import { debugToolsEnabled } from './debugGrant'
 import type { BuildingId, SlotId } from './types'
+import type { IdleNotice } from './state'
 
 export const prefs = { sound: true }
 
@@ -45,9 +51,11 @@ const listeners = new Set<Listener>()
 class Session {
   save = createSave()
   toasts: string[] = []
+  welcome: IdleNotice | null = null
 
   boot(): void {
     this.save = loadGame(Date.now())
+    this.welcome = consumeIdleNotice()
     prefs.sound = this.save.settings.sound
     this.persist()
   }
@@ -74,13 +82,39 @@ class Session {
   }
 
   tick(): void {
+    if (typeof document !== 'undefined' && document.hidden) return
+    this.catchUp()
+  }
+
+  /** Settles idle time. Used on the 1s clock and when the tab is hidden or shown. */
+  catchUp(): void {
     const seasonKey = this.save.arena?.seasonKey
     const pending = this.save.arena?.lastSeasonResult
     const messages = tick(this.save, Date.now())
+    const notice = consumeIdleNotice()
+    if (notice) this.welcome = notice
     const seasonMoved = this.save.arena?.seasonKey !== seasonKey || this.save.arena?.lastSeasonResult !== pending
     if (messages.length) this.toasts.push(...messages)
-    if (messages.length || seasonMoved) {
+    if (messages.length || seasonMoved || notice) {
       this.persist()
+      this.emit()
+    }
+  }
+
+  collectIdle(): void {
+    this.welcome = null
+    this.take(collectIdlePayout(this.save, Date.now()))
+  }
+
+  debugHours(hours: number): void {
+    if (!debugToolsEnabled()) {
+      this.toast('Debug ist aus.')
+      return
+    }
+    this.take(debugAdvanceHours(this.save, hours, Date.now()))
+    const notice = consumeIdleNotice()
+    if (notice) {
+      this.welcome = notice
       this.emit()
     }
   }
@@ -169,6 +203,7 @@ class Session {
 
   setTeam(slot: SlotId, uid: string | null): void {
     const result = setTeam(this.save, slot, uid)
+    if (result.ok) ensureIdleRating(this.save)
     this.take(result)
     if (!result.ok && result.reason) this.toast(result.reason)
   }

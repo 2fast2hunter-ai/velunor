@@ -1,6 +1,7 @@
 import Phaser from 'phaser'
 import { iconSprite, monsterToken } from '../art'
 import { rarityInfo, species, teamSlotLimit, typeName } from '../data'
+import { idleStatusLine, sealStatMult } from '../idleMath'
 import { session } from '../session'
 import { hasUnlock } from '../data'
 import { previewStats } from '../stats'
@@ -83,6 +84,7 @@ export class TeamScene extends Phaser.Scene {
     const synText = synergySummary(teamPower(save), syn.lines)
     const synLabel = text(this, 48, 492, synText, 15, INK)
     synLabel.setWordWrapWidth(1180)
+    text(this, 48, 168, idleStatusLine(save.idle.stage, save.idle.w), 15, '#f0c14a')
     hoverTip(this, 360, 500, 640, 28, 'Zwei gleiche Typen im Team verstärken sich. Das Rathaus schaltet Typ-Synergien auf Stufe 2 frei.')
 
     const roster = save.monsters
@@ -112,13 +114,16 @@ export class TeamScene extends Phaser.Scene {
     if (selectedMonster && open.has(this.selected)) {
       const types = hasUnlock(save.buildings.townhall.level, 'synergies') ? members.map((m) => species(m.speciesId).type) : null
       const stats = previewStats(selectedMonster, SLOT_ROW[this.selected], types)
+      const seal = sealStatMult(save.idle.seals.count)
       const sp = species(selectedMonster.speciesId)
       text(this, 860, 88, sp.name, 22, rarityInfo(selectedMonster.rarity).color)
       const typeIcon = iconSprite(this, 868, 128, `type_${sp.type}`, 16)
       text(this, typeIcon ? 882 : 860, 120, `${typeName(sp.type)} · ${sp.role === 'front' ? 'Front' : 'Hinten'} · Lv. ${selectedMonster.level}`, 15, MUTED)
-      text(this, 860, 150, `HP ${Math.floor(stats.hp)}   ATK ${Math.floor(stats.atk)}   DEF ${Math.floor(stats.def)}   SPD ${Math.floor(stats.spd)}`, 15, INK)
-      text(this, 860, 180, sp.skill.name ?? sp.skill.id, 16, '#f0c14a')
-      const desc = text(this, 860, 206, sp.skill.description ?? '', 14, MUTED)
+      text(this, 860, 150, `HP ${Math.floor(stats.hp * seal)}   ATK ${Math.floor(stats.atk * seal)}   DEF ${Math.floor(stats.def)}   SPD ${Math.floor(stats.spd)}`, 15, INK)
+      const skillY = seal > 1 ? 198 : 180
+      if (seal > 1) text(this, 860, 172, `Regionssiegel +${Math.round((seal - 1) * 100)} % HP/ATK`, 13, '#f0c14a')
+      text(this, 860, skillY, sp.skill.name ?? sp.skill.id, 16, '#f0c14a')
+      const desc = text(this, 860, skillY + 26, sp.skill.description ?? '', 14, MUTED)
       desc.setWordWrapWidth(380)
     }
   }

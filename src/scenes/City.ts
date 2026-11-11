@@ -8,8 +8,9 @@ import {
   hasUnlock,
   species
 } from '../data'
+import { capLabel, sealLabel } from '../idleMath'
 import { go, session } from '../session'
-import { breedPreview, coach, mineFill, monsterByUid, portalOpen, portalUnlockText, skillOffers, trainingQuote, trainingReadyAt, unlockLabel, upgradeInfo } from '../state'
+import { breedPreview, coach, mineCapacityOf, mineFill, monsterByUid, portalOpen, portalUnlockText, skillOffers, trainingQuote, trainingReadyAt, unlockLabel, upgradeInfo } from '../state'
 import type { BuildingId } from '../types'
 import { BUILDING_FOOT, buildingTextureKey } from '../artLayout'
 import { iconSprite, paintBackground } from '../art'
@@ -196,6 +197,14 @@ export class CityScene extends Phaser.Scene {
     }
     this.dynamic.add(text(this, 460, 268, 'Portal', 14, INK, [0.5, 0]))
     this.dynamic.add(text(this, 820, 268, 'Kampagne', 14, INK, [0.5, 0]))
+    const pending = save.idle?.pending
+    if (pending && (pending.gold >= 1 || pending.exp >= 1 || pending.essence >= 1)) {
+      this.dynamic.add(button(this, 820, 320, 200, 40, 'Idle einsammeln', () => {
+        if (!this.inputReady) return
+        session.collectIdle()
+        this.refresh()
+      }, { size: 14 }))
+    }
     const arenaOpen = arenaUnlocked(save)
     const arenaIcon = iconSprite(this, 100, 156, 'arena', 64)
     if (arenaIcon) {
@@ -286,7 +295,7 @@ export class CityScene extends Phaser.Scene {
     y += 36
     if (id === 'goldmine') {
       const def = buildings.goldmine.levels[save.buildings.goldmine.level - 1]
-      modal.root.add(text(this, left, y, `Lager ${formatInt(save.buildings.goldmine.stored)} / ${formatInt(def.capacity)}  ·  ${def.ratePerHour} Gold/Std.`, 16, MUTED))
+      modal.root.add(text(this, left, y, `Lager ${formatInt(save.buildings.goldmine.stored)} / ${formatInt(mineCapacityOf(save))}  ·  ${def.ratePerHour} Gold/Std.`, 16, MUTED))
       y += 48
       modal.root.add(button(this, 320, y, 220, 48, 'Einsammeln', () => {
         const gained = session.collectMine()
@@ -302,6 +311,10 @@ export class CityScene extends Phaser.Scene {
     }
     if (id === 'townhall') {
       const current = buildings.townhall.levels[save.buildings.townhall.level - 1]
+      modal.root.add(text(this, left, y, capLabel(save.buildings.townhall.level), 16, GOLD))
+      y += 24
+      modal.root.add(text(this, left, y, sealLabel(save.idle.seals.count), 16, INK))
+      y += 28
       modal.root.add(text(this, left, y, 'Schon frei:', 16, MUTED))
       y += 26
       current.unlocks.forEach((unlock) => {

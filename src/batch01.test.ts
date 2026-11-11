@@ -45,7 +45,7 @@ describe('batch 01 gacha', () => {
 describe('collection save', () => {
   it('starts at version 5 with the starters collected', () => {
     const save = createSave(1)
-    expect(save.version).toBe(5)
+    expect(save.version).toBe(6)
     expect(save.collection).toEqual(['m01', 'm02', 'm03'])
   })
 
@@ -55,7 +55,7 @@ describe('collection save', () => {
     save.monsters.push({ ...save.monsters[0], uid: 'ram', speciesId: 'm26' })
     delete (save as Partial<typeof save>).collection
     const migrated = migrateSaveData(save, 2)
-    expect(migrated.version).toBe(5)
+    expect(migrated.version).toBe(6)
     expect(migrated.collection).toEqual(['m01', 'm02', 'm03', 'm26'])
   })
 

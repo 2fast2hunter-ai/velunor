@@ -10,6 +10,7 @@ import {
   type CatalogTypeFilter
 } from '../catalog'
 import { rarityInfo, species, typeName } from '../data'
+import { catalogBonusLabel } from '../idleMath'
 import { session } from '../session'
 import { instanceStats } from '../stats'
 import type { MonsterSpecies } from '../types'
@@ -68,6 +69,7 @@ export class CatalogScene extends Phaser.Scene {
     if (this.page < 0) this.page = 0
     const progress = catalogProgress(collected, shown)
     text(this, 48, 82, 'Katalog', 32, GOLD)
+    text(this, 230, 92, catalogBonusLabel(new Set(collected).size), 16, GOLD)
     text(this, 1232, 88, progress.collectedLabel, 22, GOLD, [1, 0])
     text(this, 48, 122, progress.selectionLabel, 15, MUTED)
     if (pages > 1) {

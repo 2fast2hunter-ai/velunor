@@ -1,4 +1,4 @@
-import { maybeInterstitial, tryRewarded } from './ads'
+import { ads, maybeInterstitial, tryRewarded } from './ads'
 import {
   applyArenaOutcome,
   arenaUnlocked,
@@ -12,6 +12,30 @@ import {
 } from './arena'
 import { SAVE_KEY, loadOrMigrateSave } from './saveMigrate'
 import { simulateBattle, battleTip } from './battle'
+import { measureWinRate } from './idleSim'
+import {
+  SAVE_VERSION,
+  bossGrantsSeal,
+  capReachedLabel,
+  counterType,
+  monoCounterTeam,
+  formatAway,
+  incomeBonus,
+  idleDoubleVisible,
+  isBossStage,
+  mineCapacity,
+  offlineCapMs,
+  planIdle,
+  qFromWinRate,
+  regionMainType,
+  sealStatMult,
+  shouldWelcome,
+  stageId,
+  stagesWonLine,
+  welcomeTip,
+  type IdlePlan
+} from './idleMath'
+import { highestClearedStage, resolveStage, stageGlobal } from './stageGen'
 import {
   adsCfg,
   arenaCfg,
@@ -29,7 +53,9 @@ import {
   skillsCfg,
   species,
   stageById,
+  typeName,
   stages,
+  strongAgainst,
   starChests,
   teamSlotLimit,
   typeUnlocks,
@@ -46,6 +72,7 @@ import type {
   BattleUnitInput,
   BuildingId,
   GachaHistoryEntry,
+  IdleState,
   MonsterInstance,
   PullResult,
   Rarity,
@@ -91,7 +118,7 @@ export function createSave(now = Date.now()): SaveData {
   const starters = rewards.start.starters.map((id) => makeMonster(id, 0, now, true))
   const [fox, newt, sprout] = starters
   return {
-    version: 5,
+    version: SAVE_VERSION,
     createdAt: now,
     lastSeen: now,
     rngSeed: freshSeed(),
@@ -117,7 +144,24 @@ export function createSave(now = Date.now()): SaveData {
     settings: { battleSpeed: 1, sound: true },
     sessionStartedAt: now,
     arena: freshArena(dayKey(now), now),
-    collection: [...new Set(starters.map((monster) => monster.speciesId))]
+    collection: [...new Set(starters.map((monster) => monster.speciesId))],
+    idle: freshIdle(now, 0),
+    firstClearGemsClaimed: []
+  }
+}
+
+export function freshIdle(now: number, stage: number): IdleState {
+  return {
+    lastSeenAt: now,
+    stage,
+    w: 0,
+    q: 0,
+    wNext: 0,
+    wNextStage: 0,
+    lastAdvanceCheck: now,
+    pending: { gold: 0, exp: 0, essence: 0, stagesWon: 0 },
+    seals: { count: 0, bosses: [], typeBonus: [] },
+    sig: ''
   }
 }
 
@@ -170,6 +214,7 @@ export function migrateSaveData(save: SaveData, _now: number): SaveData {
     ensureStarterTypes(save)
     ensureArena(save, _now)
     ensureCollection(save)
+    ensureIdle(save, _now)
     return save
   }
   save.version = 2
@@ -217,7 +262,43 @@ export function migrateSaveData(save: SaveData, _now: number): SaveData {
   for (const stageId of Object.keys(save.campaign.cleared)) unlockTypeFor(save, stageId)
   ensureArena(save, _now)
   ensureCollection(save)
+  ensureIdle(save, _now)
   return save
+}
+
+/**
+ * Old velunor.save.v1 profiles gain an idle block whose clock starts now,
+ * so the update does not pay a backlog of offline combat rewards.
+ */
+export function ensureIdle(save: SaveData, now: number): void {
+  const missing = !save.idle || typeof save.idle.lastSeenAt !== 'number'
+  if (missing) {
+    const stage = highestClearedStage(save.campaign?.cleared ?? {})
+    save.idle = freshIdle(now, stage)
+  } else {
+    save.idle.pending = save.idle.pending ?? { gold: 0, exp: 0, essence: 0, stagesWon: 0 }
+    save.idle.pending.gold = save.idle.pending.gold ?? 0
+    save.idle.pending.exp = save.idle.pending.exp ?? 0
+    save.idle.pending.essence = save.idle.pending.essence ?? 0
+    save.idle.pending.stagesWon = save.idle.pending.stagesWon ?? 0
+    save.idle.seals = save.idle.seals ?? { count: 0, bosses: [], typeBonus: [] }
+    save.idle.seals.bosses = Array.isArray(save.idle.seals.bosses) ? save.idle.seals.bosses : []
+    save.idle.seals.typeBonus = Array.isArray(save.idle.seals.typeBonus) ? save.idle.seals.typeBonus : []
+    save.idle.seals.count = save.idle.seals.bosses.length + save.idle.seals.typeBonus.length
+    save.idle.w = save.idle.w ?? 0
+    save.idle.q = save.idle.q ?? 0
+    save.idle.wNext = save.idle.wNext ?? 0
+    save.idle.wNextStage = save.idle.wNextStage ?? 0
+    save.idle.lastAdvanceCheck = save.idle.lastAdvanceCheck ?? now
+    save.idle.stage = save.idle.stage ?? highestClearedStage(save.campaign?.cleared ?? {})
+    save.idle.sig = save.idle.sig ?? ''
+  }
+  if (!Array.isArray(save.firstClearGemsClaimed)) {
+    save.firstClearGemsClaimed = Object.entries(save.campaign?.cleared ?? {})
+      .filter(([, stars]) => stars > 0)
+      .map(([id]) => id)
+  }
+  save.version = Math.max(save.version || 0, SAVE_VERSION)
 }
 
 function rememberCollected(save: SaveData, speciesId: string): void {
@@ -362,9 +443,12 @@ export function tick(save: SaveData, now: number): string[] {
   syncArenaDay(save, now)
   syncArenaSeason(save, now)
   messages.push(...resolveUpgrade(save, 'townhall', now))
+  const mineBefore = save.buildings.goldmine.stored
   messages.push(...resolveMine(save, now))
   messages.push(...resolveUpgrade(save, 'training', now))
   messages.push(...resolveUpgrade(save, 'breeding', now))
+  const mineGain = Math.max(0, save.buildings.goldmine.stored - mineBefore)
+  messages.push(...settleIdle(save, now, mineGain))
   save.lastSeen = now
   return messages
 }
@@ -409,7 +493,8 @@ function produceMine(save: SaveData, until: number): void {
   }
   if (dt === 0) return
   const def = buildings.goldmine.levels[mine.level - 1]
-  mine.stored = Math.min(def.capacity, mine.stored + def.ratePerHour * dt / 3_600_000)
+  const capacity = mineCapacity(def.ratePerHour, save.buildings.townhall.level)
+  mine.stored = Math.min(capacity, mine.stored + def.ratePerHour * dt / 3_600_000)
   mine.lastTick = until
 }
 
@@ -464,6 +549,326 @@ export function unlockLabel(id: string): string {
   return labels[id] ?? id
 }
 
+export interface IdleNotice {
+  awayMs: number
+  countedMs: number
+  capped: boolean
+  capText: string
+  awayLabel: string
+  stagesLabel: string
+  combatGold: number
+  mineGold: number
+  expEach: number
+  expTotal: number
+  essence: number
+  trainingsReady: number
+  breedsReady: number
+  tip: string
+  showAd: boolean
+}
+
+let idleNotice: IdleNotice | null = null
+
+export function consumeIdleNotice(): IdleNotice | null {
+  const notice = idleNotice
+  idleNotice = null
+  return notice
+}
+
+export function collectIdlePayout(save: SaveData, now: number): ActionResult {
+  const mine = collectMine(save, now)
+  const messages = mine.ok ? [...mine.messages] : []
+  ensureIdle(save, now)
+  const gold = Math.floor(save.idle.pending.gold + 1e-9)
+  const exp = Math.floor(save.idle.pending.exp + 1e-9)
+  const essence = Math.floor(save.idle.pending.essence + 1e-9)
+  save.idle.pending.gold -= gold
+  save.idle.pending.exp -= exp
+  save.idle.pending.essence -= essence
+  save.idle.pending.stagesWon = 0
+  if (gold > 0) {
+    save.currencies.gold += gold
+    messages.push(`+${gold} Gold aus dem Idle-Kampf.`)
+  }
+  if (essence > 0) {
+    save.currencies.essence += essence
+    messages.push(`+${essence} Essenz.`)
+  }
+  if (exp > 0) {
+    const levels = grantTeamExp(save, exp)
+    messages.push(`+${exp} EP je Team-Monster.`)
+    if (levels > 0) {
+      messages.push(...noteQuest(save, 'levelup1'))
+      save.idle.sig = ''
+    }
+  }
+  if (!gold && !exp && !essence && !mine.ok) return fail(mine.reason ?? 'Noch nichts zu holen.')
+  return ok(undefined, messages)
+}
+
+/** Rewinds the idle and mine clocks, then settles up to `now`. UI calls this only from the dev debug gate. */
+export function debugAdvanceHours(save: SaveData, hours: number, now = Date.now()): ActionResult {
+  if (!Number.isFinite(hours) || hours <= 0) return fail('Bitte eine Stundenzahl größer als 0.')
+  ensureIdle(save, now)
+  const shift = Math.round(hours * 3_600_000)
+  save.idle.lastSeenAt = now - shift
+  save.idle.lastAdvanceCheck = Math.min(save.idle.lastAdvanceCheck || now - shift, now - shift)
+  save.buildings.goldmine.lastTick = Math.min(save.buildings.goldmine.lastTick, now - shift)
+  save.lastSeen = Math.min(save.lastSeen, now - shift)
+  const messages = tick(save, now)
+  return ok(undefined, messages.length ? messages : ['Zeit vorspulen fertig.'])
+}
+
+export function ensureIdleRating(save: SaveData): void {
+  ensureIdle(save, save.idle.lastSeenAt || Date.now())
+  const sig = idleSig(save)
+  if (save.idle.sig === sig) return
+  save.idle.sig = sig
+  save.idle.wNextStage = 0
+  const id = save.idle.stage > 0 ? stageId(save.idle.stage) : ''
+  if (!id || !save.campaign.cleared[id]) {
+    save.idle.w = 0
+    save.idle.q = 0
+    return
+  }
+  const stage = resolveStage(id)
+  save.idle.w = rateAgainst(save, stage)
+  save.idle.q = qFromWinRate(save.idle.w)
+}
+
+function settleIdle(save: SaveData, now: number, mineGain: number): string[] {
+  ensureIdle(save, now)
+  const away = now - save.idle.lastSeenAt
+  if (!Number.isFinite(away) || away <= 0) {
+    save.idle.lastSeenAt = now
+    if (save.idle.lastAdvanceCheck > now) save.idle.lastAdvanceCheck = now
+    return []
+  }
+  const stageBefore = save.idle.stage
+  const pendingBefore = {
+    gold: save.idle.pending.gold,
+    exp: save.idle.pending.exp,
+    essence: save.idle.pending.essence
+  }
+  ensureIdleRating(save)
+  const sig = save.idle.sig
+  const bonus = incomeBonus(ownedSpeciesCount(save), save.idle.seals.count)
+  const plan: IdlePlan = planIdle({
+    from: save.idle.lastSeenAt,
+    until: now,
+    capMs: offlineCapMs(save.buildings.townhall.level),
+    stage: save.idle.stage,
+    lastAdvanceCheck: save.idle.lastAdvanceCheck,
+    currentW: save.idle.w,
+    wNext: save.idle.wNext,
+    wNextStage: save.idle.wNextStage,
+    bonus,
+    cleared: (stage) => Boolean(save.campaign.cleared[stageId(stage)]),
+    unlocked: (stage) => idleChapterAllowed(save, stage),
+    isBoss: isBossStage,
+    rates: (stage) => {
+      try {
+        const def = resolveStage(stageId(stage))
+        return { repeatGold: def.rewards.repeat.gold, exp: def.rewards.repeat.exp, globalStage: stageGlobal(def) }
+      } catch {
+        return null
+      }
+    },
+    winRate: (stage) => {
+      if (sig && save.idle.sig === sig && save.idle.wNextStage === stage) return save.idle.wNext
+      const def = resolveStage(stageId(stage))
+      const w = rateAgainst(save, def)
+      save.idle.wNext = w
+      save.idle.wNextStage = stage
+      return w
+    }
+  })
+  save.idle.pending.gold += plan.gold
+  save.idle.pending.exp += plan.exp
+  save.idle.pending.essence += plan.essence
+  const messages: string[] = []
+  for (const advance of plan.advances) messages.push(...applyIdleAdvance(save, advance.stage))
+  save.idle.pending.stagesWon += plan.advances.length
+  save.idle.stage = plan.stage
+  save.idle.w = plan.w
+  save.idle.q = plan.q
+  save.idle.wNext = plan.wNext
+  save.idle.wNextStage = plan.wNextStage
+  save.idle.lastAdvanceCheck = plan.lastAdvanceCheck
+  save.idle.lastSeenAt = now
+  if (shouldWelcome(plan.awayMs)) {
+    const won = plan.advances.length
+    const expEach = save.idle.pending.exp - pendingBefore.exp
+    const members = Math.max(1, teamMembers(save).length)
+    idleNotice = {
+      awayMs: plan.awayMs,
+      countedMs: plan.countedMs,
+      capped: plan.capped,
+      capText: plan.capped ? capReachedLabel(save.buildings.townhall.level) : '',
+      awayLabel: formatAway(plan.countedMs),
+      stagesLabel: stagesWonLine(stageBefore, plan.stage, won),
+      combatGold: save.idle.pending.gold - pendingBefore.gold,
+      mineGold: mineGain,
+      expEach,
+      expTotal: expEach * members,
+      essence: save.idle.pending.essence - pendingBefore.essence,
+      trainingsReady: readyTrainings(save, now),
+      breedsReady: save.buildings.breeding.slots.filter((slot) => now >= slot.endsAt).length,
+      tip: welcomeTip({
+        stage: plan.stage,
+        w: plan.w,
+        q: plan.q,
+        bossWaitingId: bossWaitingId(save),
+        counterName: typeName(counterType(regionMainType(chapterOf(plan.stage)), strongAgainst)),
+        upgrade: nextIdleUpgrade(save)
+      }),
+      showAd: idleDoubleVisible(ads.isRewardedAvailable())
+    }
+  }
+  return messages
+}
+
+function chapterOf(globalStage: number): number {
+  if (globalStage <= 0) return 1
+  return Math.floor((globalStage - 1) / 10) + 1
+}
+
+function idleChapterAllowed(save: SaveData, globalStage: number): boolean {
+  try {
+    const stage = resolveStage(stageId(globalStage))
+    if (stage.chapter === 2 && !hasUnlock(save.buildings.townhall.level, 'campaign_ch2')) return false
+    return true
+  } catch {
+    return false
+  }
+}
+
+function applyIdleAdvance(save: SaveData, globalStage: number): string[] {
+  const id = stageId(globalStage)
+  const stage = resolveStage(id)
+  if (save.campaign.cleared[id]) return []
+  save.idle.pending.gold += stage.rewards.firstClear.gold
+  save.idle.pending.exp += stage.rewards.firstClear.exp
+  save.idle.pending.essence += stage.rewards.firstClear.essence ?? 0
+  if (!save.firstClearGemsClaimed.includes(id)) {
+    save.currencies.gems += stage.rewards.firstClear.gems ?? 0
+    save.currencies.tickets += stage.rewards.firstClear.tickets ?? 0
+    if ((stage.rewards.firstClear.gems ?? 0) > 0) save.firstClearGemsClaimed.push(id)
+  }
+  save.campaign.cleared[id] = 1
+  const messages = [`Idle-Sieg: Stage ${id}.`, ...unlockTypeFor(save, id)]
+  const beforeGold = save.currencies.gold
+  grantRetroChests(save)
+  if (save.currencies.gold > beforeGold) messages.push('Sterne-Truhe geöffnet.')
+  if (save.campaign.cleared['1-5']) save.tutorialDone = true
+  return messages
+}
+
+function rememberIdleClear(save: SaveData, id: string): void {
+  ensureIdle(save, save.lastSeen || Date.now())
+  try {
+    const global = stageGlobal(resolveStage(id))
+    if (global > save.idle.stage) {
+      save.idle.stage = global
+      save.idle.sig = ''
+      save.idle.wNextStage = 0
+    }
+  } catch {
+    /* unknown stage ids do not move the idle cursor */
+  }
+}
+
+function grantBossSeal(save: SaveData, id: string, firstClear: boolean): string[] {
+  let stage: StageDef
+  try {
+    stage = resolveStage(id)
+  } catch {
+    return []
+  }
+  const global = stageGlobal(stage)
+  if (!bossGrantsSeal(global)) return []
+  ensureIdle(save, save.lastSeen || Date.now())
+  const messages: string[] = []
+  if (firstClear && !save.idle.seals.bosses.includes(id)) {
+    save.idle.seals.bosses.push(id)
+    messages.push(`Regionssiegel für ${id}.`)
+  }
+  const chapter = stage.chapter
+  const types = teamMembers(save).map((monster) => species(monster.speciesId).type)
+  if (!save.idle.seals.typeBonus.includes(chapter) && monoCounterTeam(types, regionMainType(chapter), strongAgainst)) {
+    save.idle.seals.typeBonus.push(chapter)
+    messages.push(`Bonus-Siegel: Typvorteil in Region ${chapter}.`)
+  }
+  const count = save.idle.seals.bosses.length + save.idle.seals.typeBonus.length
+  if (count !== save.idle.seals.count) save.idle.sig = ''
+  save.idle.seals.count = count
+  return messages
+}
+
+function rateAgainst(save: SaveData, stage: StageDef): number {
+  return measureWinRate({
+    allies: allyInputs(save),
+    enemies: stageEnemyInputs(stage),
+    globalStage: stageGlobal(stage),
+    allySynergy: hasUnlock(save.buildings.townhall.level, 'synergies'),
+    allyClassSynergy: hasUnlock(save.buildings.townhall.level, 'class_synergies'),
+    enemySynergy: Boolean(stage.enemySynergies),
+    enemyClassSynergy: Boolean(stage.enemyClassSynergies)
+  })
+}
+
+function idleSig(save: SaveData): string {
+  const open = new Set(teamSlotLimit(save.buildings.townhall.level))
+  const parts = ALL_SLOTS.filter((slot) => open.has(slot)).map((slot) => {
+    const monster = monsterByUid(save, save.team[slot])
+    if (!monster) return `${slot}:-`
+    const pot = monster.potential
+    return `${slot}:${monster.uid}:${monster.level}:${monster.rarity}:${monster.skills.sigRank}:${monster.skills.slot2 ?? ''}:${monster.skills.slot3 ?? ''}:${pot.hp}:${pot.atk}:${pot.def}`
+  })
+  parts.push(`seals:${save.idle.seals.count}`)
+  parts.push(`syn:${hasUnlock(save.buildings.townhall.level, 'synergies') ? 1 : 0}`)
+  parts.push(`class:${hasUnlock(save.buildings.townhall.level, 'class_synergies') ? 1 : 0}`)
+  return parts.join('|')
+}
+
+function ownedSpeciesCount(save: SaveData): number {
+  const ids = new Set<string>()
+  for (const id of save.collection ?? []) {
+    try {
+      species(id)
+      ids.add(id)
+    } catch {
+      /* dropped species do not pay the catalog bonus */
+    }
+  }
+  return ids.size
+}
+
+function bossWaitingId(save: SaveData): string | null {
+  const next = save.idle.stage + 1
+  if (!isBossStage(next)) return null
+  const id = stageId(next)
+  if (save.campaign.cleared[id]) return null
+  return id
+}
+
+function nextIdleUpgrade(save: SaveData): { name: string; level: number } | null {
+  for (const id of ['townhall', 'goldmine', 'training', 'breeding'] as BuildingId[]) {
+    const info = upgradeInfo(save, id)
+    if (info.next && !info.blocked) return { name: buildings[id].name, level: info.next.level }
+  }
+  return null
+}
+
+function readyTrainings(save: SaveData, now: number): number {
+  let count = 0
+  for (const slot of save.buildings.training.slots) {
+    const monster = monsterByUid(save, slot.monsterUid)
+    if (monster && now >= trainingReadyAt(slot, monster)) count += 1
+  }
+  return count
+}
+
 export function collectMine(save: SaveData, now: number): ActionResult<number> {
   const messages = tick(save, now)
   const mine = save.buildings.goldmine
@@ -483,7 +888,13 @@ export function collectMine(save: SaveData, now: number): ActionResult<number> {
 
 export function mineFill(save: SaveData): number {
   const def = buildings.goldmine.levels[save.buildings.goldmine.level - 1]
-  return def.capacity <= 0 ? 0 : save.buildings.goldmine.stored / def.capacity
+  const capacity = mineCapacity(def.ratePerHour, save.buildings.townhall.level)
+  return capacity <= 0 ? 0 : save.buildings.goldmine.stored / capacity
+}
+
+export function mineCapacityOf(save: SaveData): number {
+  const def = buildings.goldmine.levels[save.buildings.goldmine.level - 1]
+  return mineCapacity(def.ratePerHour, save.buildings.townhall.level)
 }
 
 function requirementMet(save: SaveData, req: { stageCleared?: string; townhall?: number; breeding?: number }): { ok: boolean; reason: string } {
@@ -862,7 +1273,9 @@ function unlockTypeFor(save: SaveData, stageId: string): string[] {
 }
 
 export function chapterStars(save: SaveData, chapter: number): number {
-  return stages.filter((stage) => stage.chapter === chapter).reduce((sum, stage) => sum + (save.campaign.cleared[stage.id] ?? 0), 0)
+  let sum = 0
+  for (let local = 1; local <= 10; local++) sum += save.campaign.cleared[`${chapter}-${local}`] ?? 0
+  return sum
 }
 
 export function claimQuest(save: SaveData, id: string): ActionResult {
@@ -910,9 +1323,15 @@ function autoClaimQuests(save: SaveData): string[] {
 }
 
 export function teamPower(save: SaveData): number {
+  const mult = sealStatMult(save.idle?.seals?.count ?? 0)
   return teamMembers(save).reduce((sum, monster) => {
     const extra = (monster.skills.slot2 ? 1 : 0) + (monster.skills.slot3 ? 1 : 0)
-    return sum + combatPower(instanceStats(monster.speciesId, monster.rarity, monster.level, monster.potential), extra)
+    const stats = instanceStats(monster.speciesId, monster.rarity, monster.level, monster.potential)
+    if (mult !== 1) {
+      stats.hp = Math.floor(stats.hp * mult)
+      stats.atk = Math.floor(stats.atk * mult)
+    }
+    return sum + combatPower(stats, extra)
   }, 0)
 }
 
@@ -992,9 +1411,10 @@ export function stageUnlocked(save: SaveData, stage: StageDef): { ok: boolean; r
   if (stage.chapter === 2 && !hasUnlock(save.buildings.townhall.level, 'campaign_ch2')) {
     return { ok: false, reason: 'Rathaus Stufe 4' }
   }
-  const index = stages.findIndex((s) => s.id === stage.id)
-  if (index > 0 && !save.campaign.cleared[stages[index - 1].id]) {
-    return { ok: false, reason: `Zuerst ${stages[index - 1].id}` }
+  const global = stageGlobal(stage)
+  if (global > 1) {
+    const prev = stageId(global - 1)
+    if (!save.campaign.cleared[prev]) return { ok: false, reason: `Zuerst ${prev}` }
   }
   return { ok: true, reason: '' }
 }
@@ -1032,7 +1452,12 @@ export interface FightReport {
 
 export function fightStage(save: SaveData, stageId: string, count: 1 | 3, now: number): ActionResult<FightReport> {
   tick(save, now)
-  const stage = stageById(stageId)
+  let stage: StageDef
+  try {
+    stage = resolveStage(stageId)
+  } catch {
+    return fail('Unbekannte Stage.')
+  }
   const gate = stageUnlocked(save, stage)
   if (!gate.ok) return fail(gate.reason)
   if (count === 3 && !canMulti(save)) return fail('Rathaus Stufe 4')
@@ -1143,6 +1568,11 @@ export function commitFightRewards(save: SaveData, report: FightReport): string[
     const previous = save.campaign.cleared[report.stageId] ?? 0
     const first = previous <= 0
     save.campaign.cleared[report.stageId] = Math.max(previous, report.stars) as 1 | 2 | 3
+    if (first && report.rewards.gems > 0 && !save.firstClearGemsClaimed.includes(report.stageId)) {
+      save.firstClearGemsClaimed.push(report.stageId)
+    }
+    rememberIdleClear(save, report.stageId)
+    messages.push(...grantBossSeal(save, report.stageId, first))
     if (first) messages.push(...unlockTypeFor(save, report.stageId))
     const beforeGold = save.currencies.gold
     grantRetroChests(save)
@@ -1207,14 +1637,15 @@ function grantTeamExp(save: SaveData, amount: number): number {
   return levels
 }
 
-function allyInputs(save: SaveData): BattleUnitInput[] {
+export function allyInputs(save: SaveData): BattleUnitInput[] {
   const open = new Set(teamSlotLimit(save.buildings.townhall.level))
   const list: BattleUnitInput[] = []
   for (const slot of ALL_SLOTS) {
     if (!open.has(slot) || !save.team[slot]) continue
     const monster = monsterByUid(save, save.team[slot])
     if (!monster) continue
-    list.push({
+    const mult = sealStatMult(save.idle?.seals?.count ?? 0)
+    const unit: BattleUnitInput = {
       speciesId: monster.speciesId,
       rarity: monster.rarity,
       level: monster.level,
@@ -1224,7 +1655,12 @@ function allyInputs(save: SaveData): BattleUnitInput[] {
       learned: monster.skills.slot2,
       slot3: monster.skills.slot3,
       skillOrder: monster.skills.skillOrder
-    })
+    }
+    if (mult !== 1) {
+      unit.hpMult = mult
+      unit.atkMult = mult
+    }
+    list.push(unit)
   }
   return list
 }
@@ -1543,10 +1979,19 @@ export function setSpeed(save: SaveData, speed: 1 | 2 | 4): void {
 }
 
 export function nextCampaignTarget(save: SaveData): string | null {
-  const id = nextStageId(save.campaign.cleared)
-  if (!id) return null
-  const stage = stageById(id)
-  return stageUnlocked(save, stage).ok ? id : null
+  const next = highestClearedStage(save.campaign.cleared) + 1
+  if (next <= 20) {
+    const id = nextStageId(save.campaign.cleared)
+    if (!id) return stageUnlocked(save, resolveStage(stageId(next))).ok ? stageId(next) : null
+    const stage = stageById(id)
+    return stageUnlocked(save, stage).ok ? id : null
+  }
+  try {
+    const stage = resolveStage(stageId(next))
+    return stageUnlocked(save, stage).ok ? stage.id : null
+  } catch {
+    return null
+  }
 }
 
 export function presentPulls<T extends { rarity: number }>(pulls: T[]): T[] {
