@@ -23,10 +23,10 @@ describe('batch 07', () => {
     }
     for (const id of BATCH) expect(seen.has(id)).toBe(true)
     expect(species('m86')).toMatchObject({ name: 'Gedankenqualle', type: 'psychic', baseRarity: 0, role: 'back', class: 'disruptor', base: { hp: 121, atk: 26, def: 10, spd: 103 } })
-    expect(species('m87')).toMatchObject({ name: 'Traumkatze', type: 'psychic', baseRarity: 1, role: 'back', class: 'support', base: { hp: 145, atk: 24, def: 16, spd: 98 } })
+    expect(species('m87')).toMatchObject({ name: 'Traumkatze', type: 'psychic', baseRarity: 1, role: 'back', class: 'support', base: { hp: 145, atk: 23, def: 16, spd: 98 } })
     expect(species('m88')).toMatchObject({ name: 'Augenmotte', type: 'psychic', baseRarity: 2, role: 'back', class: 'shooter', base: { hp: 125, atk: 31, def: 11, spd: 113 } })
     expect(species('m89')).toMatchObject({ name: 'Orakeleule', type: 'psychic', baseRarity: 4, role: 'back', class: 'support', base: { hp: 172, atk: 28, def: 19, spd: 105 } })
-    expect(species('m90')).toMatchObject({ name: 'Astralsphinx', type: 'psychic', baseRarity: 7, role: 'back', class: 'disruptor', base: { hp: 210, atk: 41, def: 18, spd: 117 } })
+    expect(species('m90')).toMatchObject({ name: 'Astralsphinx', type: 'psychic', baseRarity: 7, role: 'back', class: 'disruptor', base: { hp: 210, atk: 40, def: 18, spd: 117 } })
     expect(species('m91')).toMatchObject({ name: 'Summhummel', type: 'sound', baseRarity: 0, role: 'back', class: 'support', base: { hp: 130, atk: 21, def: 14, spd: 96 } })
     expect(species('m92')).toMatchObject({ name: 'Echofledermaus', type: 'sound', baseRarity: 1, role: 'back', class: 'shooter', base: { hp: 112, atk: 26, def: 10, spd: 110 } })
     expect(species('m93')).toMatchObject({ name: 'Trommelfrosch', type: 'sound', baseRarity: 2, role: 'front', class: 'guardian', base: { hp: 205, atk: 22, def: 26, spd: 83 } })

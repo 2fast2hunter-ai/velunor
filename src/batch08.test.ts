@@ -25,7 +25,7 @@ describe('batch 08', () => {
     expect(species('m96')).toMatchObject({ name: 'Drachenwelpe', type: 'dragon', baseRarity: 1, role: 'front', class: 'fighter', base: { hp: 147, atk: 23, def: 14, spd: 94 } })
     expect(species('m97')).toMatchObject({ name: 'Schuppenwyrm', type: 'dragon', baseRarity: 2, role: 'back', class: 'shooter', base: { hp: 125, atk: 31, def: 11, spd: 112 } })
     expect(species('m98')).toMatchObject({ name: 'Wolkendrache', type: 'dragon', baseRarity: 3, role: 'back', class: 'support', base: { hp: 160, atk: 26, def: 18, spd: 102 } })
-    expect(species('m99')).toMatchObject({ name: 'Hornlindwurm', type: 'dragon', baseRarity: 4, role: 'front', class: 'guardian', base: { hp: 230, atk: 22, def: 29, spd: 87 } })
+    expect(species('m99')).toMatchObject({ name: 'Hornlindwurm', type: 'dragon', baseRarity: 4, role: 'front', class: 'guardian', base: { hp: 240, atk: 22, def: 30, spd: 87 } })
     expect(species('m100')).toMatchObject({ name: 'Urdrache Velunor', type: 'dragon', baseRarity: 9, role: 'front', class: 'fighter', base: { hp: 260, atk: 42, def: 25, spd: 110 } })
     expect(species('m96').aussehen).toContain('Stummelflügeln')
     expect(species('m97').aussehen).toContain('Bronzeschuppen')

@@ -3081,9 +3081,9 @@
     "baseRarity": 8,
     "role": "back",
     "base": {
-      "hp": 222,
+      "hp": 230,
       "atk": 47,
-      "def": 19,
+      "def": 20,
       "spd": 124
     },
     "blurb": "Gekrönter Schattendrache-Fürst mit Umhang aus Nacht, schwebenden dunklen Sternen, violetten Flammenaugen und einer Aura verschluckten Lichts.",
@@ -3380,7 +3380,7 @@
     "role": "back",
     "base": {
       "hp": 145,
-      "atk": 24,
+      "atk": 23,
       "def": 16,
       "spd": 98
     },
@@ -3480,7 +3480,7 @@
     "role": "back",
     "base": {
       "hp": 210,
-      "atk": 41,
+      "atk": 40,
       "def": 18,
       "spd": 117
     },
@@ -3825,9 +3825,9 @@
     "baseRarity": 4,
     "role": "front",
     "base": {
-      "hp": 230,
+      "hp": 240,
       "atk": 22,
-      "def": 29,
+      "def": 30,
       "spd": 87
     },
     "blurb": "Massiger Lindwurm mit Panzerschuppen, Hornkrone, glühenden Rissen und rauchendem Atem.",
