@@ -15,3 +15,4 @@
 - icons/type_ice*, icons/type_lightning*: KI-generiert mit dem Grok-Bot-Bildgenerator, selbst erstellt. type_metal/type_insect mit icons2.py neu entsäumt.
 - monsters/m86–m95: KI-generiert mit dem Grok-Bot-Bildgenerator, selbst erstellt.
 - monsters/m96–m100: KI-generiert mit dem Grok-Bot-Bildgenerator, selbst erstellt.
+- backgrounds/bg_gm_{wiese,bach,wald}.jpg/.webp, fx/fx_bannsiegel*.png/jpg: KI-generiert (Grok-Bot-Bildgenerator), 11.11.2026, eigenes Asset, keine Fremdvorlage.

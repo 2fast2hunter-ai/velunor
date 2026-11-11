@@ -1,0 +1,109 @@
+{
+  "regions": [
+    {
+      "id": 1,
+      "name": "Grünmark",
+      "chapters": [
+        {
+          "id": 1,
+          "name": "Wiesenpfad",
+          "scene": "wiese",
+          "levelMin": 2,
+          "levelMax": 6,
+          "cap": 12,
+          "guardian": {
+            "name": "Mira",
+            "epithet": "Wächterin",
+            "badge": "Kieselwappen",
+            "gold": 1750,
+            "team": [
+              { "species": "m17", "level": 9 },
+              { "species": "m04", "level": 10 },
+              { "species": "m18", "level": 12 }
+            ]
+          },
+          "day": [
+            { "species": "m66", "weight": 40 },
+            { "species": "m41", "weight": 35 },
+            { "species": "m11", "weight": 20 },
+            { "species": "m03", "weight": 5 }
+          ],
+          "night": [
+            { "species": "m66", "weight": 35 },
+            { "species": "m76", "weight": 30 },
+            { "species": "m81", "weight": 20 },
+            { "species": "m11", "weight": 15 }
+          ]
+        },
+        {
+          "id": 2,
+          "name": "Bachufer",
+          "scene": "bach",
+          "levelMin": 8,
+          "levelMax": 12,
+          "cap": 18,
+          "guardian": {
+            "name": "Joran",
+            "epithet": "Wächter",
+            "badge": "Wellenwappen",
+            "gold": 2500,
+            "team": [
+              { "species": "m28", "level": 15 },
+              { "species": "m02", "level": 16 },
+              { "species": "m07", "level": 18 }
+            ]
+          },
+          "day": [
+            { "species": "m02", "weight": 25 },
+            { "species": "m28", "weight": 25 },
+            { "species": "m14", "weight": 20 },
+            { "species": "m67", "weight": 15 },
+            { "species": "m01", "weight": 10 },
+            { "species": "m07", "weight": 5 }
+          ],
+          "night": [
+            { "species": "m14", "weight": 30 },
+            { "species": "m28", "weight": 20 },
+            { "species": "m77", "weight": 20 },
+            { "species": "m82", "weight": 15 },
+            { "species": "m36", "weight": 15 }
+          ]
+        },
+        {
+          "id": 3,
+          "name": "Funkenwald",
+          "scene": "wald",
+          "levelMin": 14,
+          "levelMax": 18,
+          "cap": 24,
+          "guardian": {
+            "name": "Vela",
+            "epithet": "Wächterin",
+            "badge": "Funkenwappen",
+            "gold": 3250,
+            "team": [
+              { "species": "m52", "level": 21 },
+              { "species": "m51", "level": 22 },
+              { "species": "m53", "level": 24 }
+            ]
+          },
+          "day": [
+            { "species": "m51", "weight": 25 },
+            { "species": "m71", "weight": 20 },
+            { "species": "m12", "weight": 20 },
+            { "species": "m56", "weight": 15 },
+            { "species": "m52", "weight": 10 },
+            { "species": "m34", "weight": 10 }
+          ],
+          "night": [
+            { "species": "m71", "weight": 30 },
+            { "species": "m34", "weight": 25 },
+            { "species": "m78", "weight": 20 },
+            { "species": "m81", "weight": 15 },
+            { "species": "m52", "weight": 10 }
+          ]
+        }
+      ]
+    }
+  ]
+}
