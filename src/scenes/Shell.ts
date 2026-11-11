@@ -9,7 +9,7 @@ import type { LastSeasonResult } from '../types'
 import { ESSENCE, GEM, GOLD, INK, MUTED, TICKET, W, button, confirm, hoverTip, openModal, panel, text } from '../ui'
 import { formatInt } from '../data'
 import { debugToolsEnabled, grantDebugMonster } from '../debugGrant'
-import { portalOpen, portalUnlockText } from '../state'
+import { portalOpen, portalUnlockText, type IdleNotice } from '../state'
 
 export class BootScene extends Phaser.Scene {
   constructor() { super('Boot') }
@@ -46,6 +46,7 @@ export class HUDScene extends Phaser.Scene {
   private currencies!: Phaser.GameObjects.Container
   private navKey = ''
   private seasonPopup = false
+  private welcomeOpen = false
 
   constructor() { super('HUD') }
 
@@ -60,6 +61,7 @@ export class HUDScene extends Phaser.Scene {
       this.drawNav()
     })
     this.pump()
+    this.maybeWelcome()
     this.maybeSeason()
   }
 
@@ -76,11 +78,60 @@ export class HUDScene extends Phaser.Scene {
       this.drawNav()
     }
     this.game.events.emit('clock')
+    this.maybeWelcome()
     this.maybeSeason()
     this.scene.bringToTop()
   }
 
+  private maybeWelcome(): void {
+    if (!session.welcome) {
+      this.welcomeOpen = false
+      return
+    }
+    if (this.welcomeOpen) return
+    if (this.scene.isActive('Battle') || this.scene.isActive('Result')) return
+    this.welcomeOpen = true
+    this.showWelcome(session.welcome)
+  }
+
+  private showWelcome(notice: IdleNotice): void {
+    const width = 760
+    const height = notice.tip ? 560 : 500
+    const holder = this.add.container(0, 0).setDepth(210)
+    const dim = this.add.rectangle(W / 2, 360, W, 720, 0x07060f, 0.72).setInteractive()
+    const g = this.add.graphics()
+    panel(g, (W - width) / 2, (720 - height) / 2, width, height)
+    holder.add([dim, g])
+    const top = (720 - height) / 2
+    holder.add(text(this, W / 2, top + 36, 'Willkommen zurück', 28, GOLD, [0.5, 0]))
+    const away = notice.capText ? `${notice.awayLabel} · ${notice.capText}` : notice.awayLabel
+    const lines = [
+      `Abwesend: ${away}`,
+      notice.stagesLabel,
+      `Gold aus dem Kampf: +${formatInt(notice.combatGold)}`,
+      `Gold aus der Mine: +${formatInt(notice.mineGold)}`,
+      `EP je Monster: +${formatInt(notice.expEach)} · gesamt +${formatInt(notice.expTotal)}`,
+      `Essenz: +${formatInt(notice.essence)}`,
+      `Training fertig: ${notice.trainingsReady} · Zucht fertig: ${notice.breedsReady}`
+    ]
+    lines.forEach((line, index) => {
+      holder.add(text(this, W / 2, top + 90 + index * 32, line, 18, INK, [0.5, 0]))
+    })
+    if (notice.tip) {
+      const tip = text(this, W / 2, top + 90 + lines.length * 32, notice.tip, 16, GOLD, [0.5, 0])
+      tip.setWordWrapWidth(680)
+      tip.setAlign('center')
+      holder.add(tip)
+    }
+    holder.add(button(this, W / 2, top + height - 56, 280, 52, 'Alles einsammeln', () => {
+      session.collectIdle()
+      this.welcomeOpen = false
+      holder.destroy()
+    }, { fill: 0xf0c14a, color: '#2a2112', size: 18 }))
+  }
+
   private maybeSeason(): void {
+    if (session.welcome || this.welcomeOpen) return
     const result = session.save.arena?.lastSeasonResult
     if (!result) {
       this.seasonPopup = false
@@ -204,7 +255,7 @@ export class HUDScene extends Phaser.Scene {
       const modalW = 520
       let showDebug = false
       if (import.meta.env.DEV) showDebug = debugToolsEnabled()
-      const modalH = showDebug ? 520 : 440
+      const modalH = showDebug ? 640 : 440
       const holder = this.add.container(0, 0).setDepth(140)
       const dim = this.add.rectangle(W / 2, 360, W, 720, 0x07060f, 0.66).setInteractive()
       const g = this.add.graphics()
@@ -250,6 +301,13 @@ export class HUDScene extends Phaser.Scene {
           session.toast(`${result.name} ist im Lager und steht auf ${result.slot}.`)
           done()
           go(this, 'Team')
+        }, { fill: 0x5e35b1, color: INK, size: 15 }))
+        holder.add(button(this, W / 2, 610, 280, 46, 'Debug: +N Stunden', () => {
+          const raw = window.prompt('Stunden vorspulen', '3')
+          if (!raw) return
+          const hours = Number(raw.replace(',', '.'))
+          session.debugHours(hours)
+          done()
         }, { fill: 0x5e35b1, color: INK, size: 15 }))
       }
       return { root: holder, close: done }

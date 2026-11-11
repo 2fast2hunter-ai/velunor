@@ -72,12 +72,12 @@ describe('batch 07', () => {
     expect(typeMult('ghost', 'sound')).toBe(1.5)
     expect(typeMult('beast', 'sound')).toBe(1.5)
     const save = createSave(1)
-    expect(save.version).toBe(5)
+    expect(save.version).toBe(6)
     expect(save.activeTypes).toEqual([...STARTERS])
     save.version = 5
     save.activeTypes = ['fire', 'water', 'plant', 'earth', 'wind', 'ice', 'lightning', 'metal', 'fighting', 'beast', 'light', 'shadow', 'ghost']
     const migrated = migrateSaveData(save, 2)
-    expect(migrated.version).toBe(5)
+    expect(migrated.version).toBe(6)
     expect(migrated.activeTypes).toEqual([...STARTERS])
     const again = migrateSaveData(migrated, 3)
     expect(again.activeTypes.filter((type) => type === 'psychic')).toEqual(['psychic'])

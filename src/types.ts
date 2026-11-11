@@ -250,6 +250,41 @@ export interface SaveData {
   arena: ArenaState
   /** Every species id this profile has ever obtained. Releasing a monster does not remove it. */
   collection: string[]
+  /** Offline campaign. No prestige and no reset currency. */
+  idle: IdleState
+  /** Stage ids whose first-clear gems were already paid. */
+  firstClearGemsClaimed: string[]
+}
+
+export interface IdlePending {
+  gold: number
+  exp: number
+  essence: number
+  stagesWon: number
+}
+
+export interface IdleSeals {
+  count: number
+  /** Boss stage ids that already minted the boss seal. */
+  bosses: string[]
+  /** Chapter numbers that already minted the type-bonus seal. */
+  typeBonus: number[]
+}
+
+export interface IdleState {
+  lastSeenAt: number
+  /** Global stage number currently being farmed. 0 means nothing cleared yet. */
+  stage: number
+  w: number
+  q: number
+  wNext: number
+  /** Stage number the cached wNext belongs to. 0 means unknown. */
+  wNextStage: number
+  lastAdvanceCheck: number
+  pending: IdlePending
+  seals: IdleSeals
+  /** Team fingerprint the cached win rate was measured for. */
+  sig: string
 }
 
 export interface BattleEventBase {
