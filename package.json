@@ -8,6 +8,7 @@
     "build": "tsc --noEmit && vite build",
     "preview": "vite preview",
     "test": "vitest run",
+    "sim:balance": "vite-node src/adventure/balanceSim.ts",
     "test:battle": "node scripts/battle-loop.mjs"
   },
   "dependencies": {
