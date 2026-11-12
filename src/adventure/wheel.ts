@@ -1,4 +1,5 @@
 import { nextFloat } from '../rng'
+import { t } from './i18n'
 import { species } from '../data'
 import { makeMon, takeId } from './save'
 import { wappenCount } from './shop'
@@ -90,29 +91,33 @@ function saveRng(save: SaveV2): () => number {
   }
 }
 
+function say(save: SaveV2, key: string, vars?: Record<string, string | number>): string {
+  return t(save.settings?.lang, key, vars)
+}
+
 export function spinWheel(save: SaveV2, mult: Multiplier, rng?: () => number): SpinResult | string {
-  if (!wheelOpen(save)) return 'Das Glücksrad öffnet nach dem dritten Wappen.'
-  if (!MULTIPLIERS.includes(mult)) return 'Dieser Dreh gilt nicht.'
+  if (!wheelOpen(save)) return say(save, 'err.wheelLock')
+  if (!MULTIPLIERS.includes(mult)) return say(save, 'err.wheelBad')
   const cost = SPIN_COST * mult
-  if (save.gold < cost) return 'Zu wenig Gold.'
+  if (save.gold < cost) return say(save, 'err.gold')
   save.gold -= cost
   const roll = rng ?? saveRng(save)
   const symbols: [SymbolId, SymbolId, SymbolId] = [drawSymbol(roll), drawSymbol(roll), drawSymbol(roll)]
   const marks = scoreSymbols(symbols) * mult
   save.marks += marks
-  const names = symbols.map((id) => faceById(id).name).join(', ')
-  save.log.push({ t: Date.now(), text: `Glücksrad ×${mult}: ${names}. ${marks.toLocaleString('de-DE')} Marken.` })
+  const names = symbols.map((id) => t(save.settings?.lang, `sym.${id}`)).join(', ')
+  save.log.push({ t: Date.now(), text: say(save, 'say.wheel', { mult, symbols: names, marks: marks.toLocaleString(save.settings?.lang === 'en' ? 'en' : 'de-DE') }) })
   if (save.log.length > 50) save.log.splice(0, save.log.length - 50)
   return { symbols, marks }
 }
 
 export function buyPrize(save: SaveV2, speciesId: string, now: number): string | null {
   const prize = PRIZES.find((row) => row.species === speciesId)
-  if (!prize) return 'Das gibt es hier nicht.'
-  if (!wheelOpen(save)) return 'Das Glücksrad öffnet nach dem dritten Wappen.'
-  if (!save.regionsOpen.includes(prize.region)) return `${prize.regionName} folgt später.`
-  if (Object.values(save.mons).some((mon) => mon.species === speciesId)) return 'Schon im Besitz.'
-  if (save.marks < prize.marks) return 'Zu wenig Glücksmarken.'
+  if (!prize) return say(save, 'err.noPrize')
+  if (!wheelOpen(save)) return say(save, 'err.wheelLock')
+  if (!save.regionsOpen.includes(prize.region)) return say(save, 'err.later', { name: prize.regionName })
+  if (Object.values(save.mons).some((mon) => mon.species === speciesId)) return say(save, 'err.owned')
+  if (save.marks < prize.marks) return say(save, 'err.marks')
   save.marks -= prize.marks
   const uid = takeId(save)
   save.mons[uid] = makeMon(speciesId, PRIZE_LEVEL, now, 'rad', false)
@@ -121,7 +126,7 @@ export function buyPrize(save: SaveV2, speciesId: string, now: number): string |
   dex.seen += 1
   dex.caught += 1
   save.dex[speciesId] = dex
-  save.log.push({ t: now, text: `${species(speciesId).name} aus dem Preisladen. Lv ${PRIZE_LEVEL}.` })
+  save.log.push({ t: now, text: say(save, 'say.prize', { name: species(speciesId).name, level: PRIZE_LEVEL }) })
   if (save.log.length > 50) save.log.splice(0, save.log.length - 50)
   return null
 }

@@ -10,6 +10,22 @@ export interface CombatStats {
 }
 
 /** HP/ATK/DEF grow by 6 % per level above 1. SPD stays at the species base. Shimmer is ×1.10 on all four. */
+/** 0, then 1 at level 25 and 2 at level 50. Each step is +15 % stats and +0.25 skill multiplier. */
+export function awakenCount(level: number): number {
+  return (level >= 50 ? 1 : 0) + (level >= 25 ? 1 : 0)
+}
+
+export function awakenFactor(level: number): number {
+  return 1 + 0.15 * awakenCount(level)
+}
+
+export function crossedAwaken(before: number, after: number): (25 | 50)[] {
+  const hits: (25 | 50)[] = []
+  if (before < 25 && after >= 25) hits.push(25)
+  if (before < 50 && after >= 50) hits.push(50)
+  return hits
+}
+
 export function combatStats(speciesId: string, level: number, shiny = false): CombatStats {
   const base = species(speciesId).base
   const growth = 1 + 0.06 * (level - 1)
@@ -36,7 +52,15 @@ export function battleLevel(level: number, cap: number): number {
 }
 
 export function monStats(mon: OwnedMon, level = mon.lvl): CombatStats {
-  return combatStats(mon.species, level, mon.shiny)
+  const raw = combatStats(mon.species, level, mon.shiny)
+  const factor = awakenFactor(level)
+  if (factor === 1) return raw
+  return {
+    hp: Math.round(raw.hp * factor),
+    atk: Math.round(raw.atk * factor),
+    def: Math.round(raw.def * factor),
+    spd: Math.round(raw.spd * factor)
+  }
 }
 
 export function isAlive(mon: OwnedMon): boolean {

@@ -11,6 +11,8 @@ import {
   assetPath
 } from './const'
 import { baseLine, dexPlaces, dexStatus, dexStatusLabel, listCodex, regionProgress, speciesNumber, type DexFilter } from './dex'
+import { goalName, goalTitle, rarityLabel, t, typeLabel, weatherLabel, whenLabel, type Lang } from './i18n'
+import { exportCode } from './save'
 import { fightsHere } from './origin'
 import { chapterById, placeLabel, regionById, regions, routeOf, type NodeKind } from './route'
 import { chapterUnlocked, dexCaughtCount, hereSightings, rarityName } from './sim'
@@ -49,6 +51,8 @@ export type Overlay =
   | { kind: 'welcome'; summary: OfflineSummary; countedMs: number; rawMs: number }
   | { kind: 'card'; uid: string }
   | { kind: 'confirm-reset' }
+  | { kind: 'confirm-import' }
+  | { kind: 'awaken'; uid: string; level: 25 | 50 }
   | { kind: 'offline'; done: number; total: number }
 
 const base = (): string => import.meta.env.BASE_URL || '/'
@@ -69,6 +73,14 @@ function gold(n: number): string {
   return `${Math.floor(n).toLocaleString('de-DE')} G`
 }
 
+function L(save: SaveV2): Lang {
+  return save.settings?.lang === 'en' ? 'en' : 'de'
+}
+
+function tr(save: SaveV2, key: string, vars?: Record<string, string | number>): string {
+  return t(L(save), key, vars)
+}
+
 function icon(kind: NodeKind): string {
   const common = 'fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round"'
   if (kind === 'wild') return `<svg viewBox="0 0 24 24" ${common}><path d="M4 16c2-6 4-6 6 0M10 16c2-6 4-6 6 0M8 10c1.2-3 2.4-3 4 0"/></svg>`
@@ -83,13 +95,13 @@ function nav(save: SaveV2, screen: Screen, step: number): string {
   const region = regionById(save.region)
   const caught = dexCaughtCount(save)
   const items: [Screen, string][] = [
-    ['adventure', 'Abenteuer'],
-    ['progress', 'Fortschritt'],
-    ['team', 'Team/PC'],
-    ['codex', 'Kodex'],
-    ['activities', 'Aktivitäten'],
-    ['shop', 'Laden'],
-    ['achievements', 'Erfolge']
+    ['adventure', 'nav.adventure'],
+    ['progress', 'nav.progress'],
+    ['team', 'nav.team'],
+    ['codex', 'nav.codex'],
+    ['activities', 'nav.activities'],
+    ['shop', 'nav.shop'],
+    ['achievements', 'nav.achievements']
   ]
   return `<aside class="nav">
     <div class="card player">
@@ -97,25 +109,25 @@ function nav(save: SaveV2, screen: Screen, step: number): string {
       <div>
         <div class="who">${esc(save.name)}</div>
         ${equippedTitle(save) ? `<div class="title">${esc(equippedTitle(save))}</div>` : ''}
-        <div class="muted">Kodex ${caught}/100</div>
+        <div class="muted">${tr(save, 'nav.codexCount', { n: caught })}</div>
         <div class="gold" id="gold">${gold(save.gold)}</div>
-        ${wheelOpen(save) || save.marks > 0 ? `<div class="muted">Marken ${save.marks.toLocaleString('de-DE')}</div>` : ''}
+        ${wheelOpen(save) || save.marks > 0 ? `<div class="muted">${tr(save, 'nav.marks', { n: save.marks.toLocaleString(L(save) === 'en' ? 'en' : 'de-DE') })}</div>` : ''}
       </div>
     </div>
     <div class="card chapter">
       <div class="kicker">${esc(region.name)}</div>
       <h2>${esc(chapter.name)}</h2>
-      <div>Wappen: ${save.badges.includes(chapter.guardian.badge) ? esc(chapter.guardian.badge) : '—'}</div>
-      <div>${chapter.council ? `Rat ${step}/${chapter.council.members.length}` : `Schritt ${step}/20`}</div>
-      <div class="muted">${chapter.council ? `Cap ${chapter.council.members[Math.max(0, step - 1)]?.cap ?? chapter.cap}` : `Lv ${chapter.levelMin}–${chapter.levelMax} · Cap ${chapter.cap}`}</div>
-      <label class="switch"><input type="checkbox" data-field="loop" ${save.loop ? 'checked' : ''}/> Kapitel wiederholen</label>
+      <div>${tr(save, 'nav.crest', { name: save.badges.includes(chapter.guardian.badge) ? chapter.guardian.badge : '—' })}</div>
+      <div>${chapter.council ? tr(save, 'nav.council', { step, total: chapter.council.members.length }) : tr(save, 'nav.step', { step })}</div>
+      <div class="muted">${chapter.council ? tr(save, 'nav.councilCap', { cap: chapter.council.members[Math.max(0, step - 1)]?.cap ?? chapter.cap }) : tr(save, 'nav.cap', { min: chapter.levelMin, max: chapter.levelMax, cap: chapter.cap })}</div>
+      <label class="switch"><input type="checkbox" data-field="loop" ${save.loop ? 'checked' : ''}/> ${tr(save, 'nav.loop')}</label>
     </div>
     <div class="card menu">
-      ${items.map(([id, label]) => `<button data-act="screen" data-screen="${id}" class="${screen === id ? 'active' : ''}">${label}</button>`).join('')}
+      ${items.map(([id, label]) => `<button data-act="screen" data-screen="${id}" class="${screen === id ? 'active' : ''}">${tr(save, label)}</button>`).join('')}
     </div>
     <div class="nav-foot">
-      <button class="text-btn" data-act="screen" data-screen="options">Optionen</button>
-      <button class="text-btn" data-act="screen" data-screen="guide">Anleitung</button>
+      <button class="text-btn" data-act="screen" data-screen="options">${tr(save, 'nav.options')}</button>
+      <button class="text-btn" data-act="screen" data-screen="guide">${tr(save, 'nav.guide')}</button>
     </div>
   </aside>`
 }
@@ -156,7 +168,7 @@ function battle(save: SaveV2, now: number): string {
     </button>`
   }).join('')
   const clock = new Date(now)
-  const part = clock.getHours() >= 8 && clock.getHours() <= 19 ? 'Tag' : 'Nacht'
+  const part = tr(save, clock.getHours() >= 8 && clock.getHours() <= 19 ? 'battle.day' : 'battle.night')
   return `<div class="battle" id="battle">
     <picture>
       <source srcset="${art(scene.webp)}" type="image/webp"/>
@@ -173,20 +185,21 @@ function battle(save: SaveV2, now: number): string {
       <div class="hp"><span id="foe-hp" style="width:100%"></span></div>
       <img class="sprite" id="foe-sprite" alt="" hidden/>
     </div>
+    <div class="flash" id="flash"></div>
     <img class="seal" id="seal" alt="" src="${art(SEAL_ADD)}" data-fb="${art(SEAL_FALLBACK)}"/>
     <div class="battle-text">
-      <p id="battle-text">${part}, ${weatherName(weatherForecast(now)[0].weather)} auf dem ${esc(chapter.name)}. ${save.hold ? 'Das Kapitel wartet.' : 'Der Weg läuft.'}</p>
+      <p id="battle-text">${tr(save, 'battle.place', { part, weather: weatherLabel(L(save), weatherForecast(now)[0].weather), place: chapter.name, state: tr(save, save.hold ? 'battle.waiting' : 'battle.walking') })}</p>
       <div class="speed">
         ${([1, 2, 3] as const).map((speed) => `<button data-act="speed" data-speed="${speed}" class="${save.settings.speed === speed ? 'on' : ''}">×${speed}</button>`).join('')}
       </div>
-      ${save.badges.includes(chapter.guardian.badge) ? '' : `<button class="primary" data-act="challenge">${chapter.council ? 'Rat fortsetzen' : 'Wächter herausfordern'}</button>`}
+      ${save.badges.includes(chapter.guardian.badge) ? '' : `<button class="primary" data-act="challenge">${tr(save, chapter.council ? 'battle.resume' : 'battle.challenge')}</button>`}
     </div>
   </div>`
 }
 
 function logBox(save: SaveV2): string {
   const lines = [...save.log].reverse().map((line) => `<div>${esc(line.text)}</div>`).join('')
-  return `<div class="card log" id="log">${lines || '<div class="muted">Noch keine Ereignisse.</div>'}</div>`
+  return `<div class="card log" id="log">${lines || `<div class="muted">${tr(save, 'log.empty')}</div>`}</div>`
 }
 
 function weatherIcon(id: WeatherId): string {
@@ -217,12 +230,12 @@ function sightings(save: SaveV2, now: number, open: boolean): string {
   return `<aside class="side">
     <div class="card side-card">
       <div style="display:flex;justify-content:space-between;align-items:center">
-        <h2>Hier gesichtet</h2>
-        <button class="ghost" data-act="side">${open ? 'Zu' : 'Auf'}</button>
+        <h2>${tr(save, 'side.seen')}</h2>
+        <button class="ghost" data-act="side">${tr(save, open ? 'side.close' : 'side.open')}</button>
       </div>
-      ${open ? `<div class="clock"><span class="wx">${weatherIcon(current.weather)}</span> ${night ? 'Nacht' : 'Tag'} · ${weatherName(current.weather)}</div>
-        <div class="forecast" aria-label="24 Stunden">${preview}</div>
-        <div class="sight">${body || '<div class="muted">Hier gibt es keine Wildnis.</div>'}</div>` : `<div class="clock"><span class="wx">${weatherIcon(current.weather)}</span></div>`}
+      ${open ? `<div class="clock"><span class="wx">${weatherIcon(current.weather)}</span> ${tr(save, night ? 'battle.night' : 'battle.day')} · ${weatherLabel(L(save), current.weather)}</div>
+        <div class="forecast" aria-label="${tr(save, 'side.forecast')}">${preview}</div>
+        <div class="sight">${body || `<div class="muted">${tr(save, 'side.empty')}</div>`}</div>` : `<div class="clock"><span class="wx">${weatherIcon(current.weather)}</span></div>`}
     </div>
     ${fruitCard(save, now, open)}
   </aside>`
@@ -232,8 +245,8 @@ function fruitCard(save: SaveV2, now: number, open: boolean): string {
   const active = save.activeFruits.filter((fruit) => fruit.until > now)
   const rows = active.map((fruit) => `<div class="fruit-row"><b>${esc(fruitDef(fruit.id).name)}</b><span>${fruitMinutes(fruit.until, now)} min</span></div>`).join('')
   return `<div class="card side-card">
-    <h2>Aktive Früchte</h2>
-    ${open ? (rows || '<p class="muted">Keine Frucht aktiv.</p>') : `<p class="muted">${active.length}</p>`}
+    <h2>${tr(save, 'fruit.title')}</h2>
+    ${open ? (rows || `<p class="muted">${tr(save, 'fruit.none')}</p>`) : `<p class="muted">${active.length}</p>`}
   </div>`
 }
 
@@ -258,9 +271,9 @@ function progress(save: SaveV2): string {
       <div class="muted">${range}, ${esc(mark)}</div>
     </button>`
   }).join('')
-  return `<div class="card panel"><h2>Fortschritt · ${esc(region.name)}</h2>
+  return `<div class="card panel"><h2>${tr(save, 'nav.progress')} · ${esc(region.name)}</h2>
     <div class="row-actions">${switches}</div>
-    <p class="muted">In einer neuen Region kämpfen nur dort gefangene Monster. Ältere Regionen bleiben offen.</p>
+    <p class="muted">${tr(save, 'progress.note')}</p>
     <div class="chapters">${buttons}</div>
   </div>`
 }
@@ -308,12 +321,12 @@ function team(save: SaveV2, pc: PcQuery, selected: string | null): string {
     return `<button class="mon-card ${selected === uid ? 'on' : ''}" data-act="select" data-uid="${uid}" data-index="${index}" draggable="true" data-drag="team">
       <img src="${monsterArt(mon.species)}" alt=""/>
       <div>${index + 1}. ${esc(species(mon.species).name)}</div>
-      <div class="muted">Lv ${mon.lvl}${save.buddy === uid ? ' · Begleiter' : ''}${fightsHere(save, mon) ? '' : ' · andere Region'}</div>
+      <div class="muted">Lv ${mon.lvl}${save.buddy === uid ? ` · ${tr(save, 'team.buddy')}` : ''}${fightsHere(save, mon) ? '' : ` · ${tr(save, 'team.other')}`}</div>
     </button>`
   }).join('')
   return `<div class="card panel">
-    <h2>Team</h2>
-    <p class="muted">Vorne kämpft zuerst. Ziehen tauscht die Reihenfolge, ein langer Druck startet das Ziehen. Mindestens ein Monster bleibt im Team. In dieser Region kämpfen nur hier gefangene Monster, bis auf den Hort.</p>
+    <h2>${tr(save, 'team.title')}</h2>
+    <p class="muted">${tr(save, 'team.note')}</p>
     <div class="grid" id="team-grid">${roster}</div>
     <div class="row-actions">
       <button data-act="nudge" data-dir="-1">Nach vorn</button>
@@ -322,7 +335,7 @@ function team(save: SaveV2, pc: PcQuery, selected: string | null): string {
       <button data-act="to-team">Ins Team</button>
       <button data-act="card" data-uid="${selected ?? ''}">Monsterkarte</button>
     </div>
-    <h2>PC</h2>
+    <h2>${tr(save, 'team.pc')}</h2>
     <div class="filters">
       <input data-field="q" placeholder="Name" value="${esc(pc.q)}"/>
       <select data-field="type"><option value="">Typ</option>${types.map((type) => `<option value="${type}" ${pc.type === type ? 'selected' : ''}>${esc(typeName(type as TypeId))}</option>`).join('')}</select>
@@ -369,7 +382,7 @@ function codex(save: SaveV2, filter: CodexQuery): string {
     </button>`
   }).join('')
   return `<div class="card panel">
-    <h2>Velunor-Kodex ${dexCaughtCount(save)}/100</h2>
+    <h2>${tr(save, 'nav.codex')} ${dexCaughtCount(save)}/100</h2>
     <div class="region-bars">${bars}</div>
     <div class="filters">
       <input data-field="dex-q" placeholder="Name oder Nr." value="${esc(filter.q)}"/>
@@ -410,12 +423,12 @@ function shop(save: SaveV2, now: number): string {
       <button data-act="use-fruit" data-id="${item.id}">Essen</button>
     </div>`).join('')
   return `<div class="card panel">
-    <h2>Laden und Tasche</h2>
+    <h2>${tr(save, 'shop.title')}</h2>
     <p class="muted">Wappen: ${crests}. Verkauf bringt 25 %. Eine gleiche Frucht setzt die Stunde zurück, sie verlängert sie nicht.</p>
     <label>Kristall an <select id="crystal-target">${mons}</select></label>
-    <h2>EP-Kristalle</h2>
+    <h2>${tr(save, 'shop.crystals')}</h2>
     ${crystals}
-    <h2>Früchte</h2>
+    <h2>${tr(save, 'shop.fruits')}</h2>
     ${fruits}
     <p class="muted">Stand ${new Date(now).toLocaleTimeString('de-DE', { hour: '2-digit', minute: '2-digit' })}</p>
   </div>`
@@ -441,7 +454,7 @@ function activitiesView(save: SaveV2, now: number, selected: string | null, whee
 
 function wheelView(save: SaveV2, wheel: WheelPanel): string {
   if (!wheelOpen(save)) {
-    return `<div class="card panel"><h2>Glücksrad</h2><p>Das Rad öffnet nach dem dritten Wappen. Ein Dreh kostet Spielgold und zahlt Glücksmarken. Kein Echtgeld.</p></div>`
+    return `<div class="card panel"><h2>${tr(save, 'act.wheel')}</h2><p>${tr(save, 'wheel.locked')}</p></div>`
   }
   const shown = wheel.symbols ?? (['funke', 'blatt', 'tropfen'] as [SymbolId, SymbolId, SymbolId])
   const reels = shown.map((id) => `<div class="reel">${glyph(id)}<span>${esc(faceById(id).name)}</span></div>`).join('')
@@ -464,15 +477,15 @@ function wheelView(save: SaveV2, wheel: WheelPanel): string {
     return `<h2>${esc(name)}</h2>${rows}`
   }).join('')
   return `<div class="card panel">
-    <h2>Glücksrad</h2>
+    <h2>${tr(save, 'act.wheel')}</h2>
     <p class="muted">Ein Dreh kostet ${(SPIN_COST * wheel.mult).toLocaleString('de-DE')} G. Die Marken gelten im Preisladen. Nur Spielgold, kein Echtgeld. Marken: ${save.marks.toLocaleString('de-DE')}</p>
     <div class="reels">${reels}</div>
     <div class="row-actions">${bets}<button class="primary" data-act="spin">Drehen</button></div>
     ${wheel.note ? `<p>${esc(wheel.note)}</p>` : ''}
-    <h2>Marken</h2>
+    <h2>${tr(save, 'wheel.marks')}</h2>
     ${pay}
     <p class="muted">Zwei gleiche Formen: 2. Drei verschiedene mit einem Stern: 1. Sonst 0. Der Einsatz ×5 oder ×10 vervielfacht Kosten und Marken.</p>
-    <h2>Preisladen</h2>
+    <h2>${tr(save, 'wheel.shop')}</h2>
     ${shop}
   </div>`
 }
@@ -495,10 +508,10 @@ function hortView(save: SaveV2, now: number, selected: string | null): string {
     return `<div class="fruit-row"><b>${esc(species(egg.species).name)}</b><span>${left <= 0 ? 'schlüpft' : `${hours} h ${mins} min`}</span></div>`
   }).join('')
   const buy = offer
-    ? `<button class="primary" data-act="buy-hort" ${offer.locked ? 'disabled' : ''}>Platz ${offer.slot} · ${offer.price.toLocaleString('de-DE')} G${offer.locked ? ` · ${esc(offer.locked)}` : ''}</button>`
+    ? `<button class="primary" data-act="buy-hort" ${offer.locked ? 'disabled' : ''}>${tr(save, 'hort.buy', { slot: offer.slot, price: offer.price.toLocaleString(L(save) === 'en' ? 'en' : 'de-DE') })}${offer.locked ? ` · ${esc(tr(save, offer.locked))}` : ''}</button>`
     : '<p class="muted">Alle vier Plätze sind offen.</p>'
   return `<div class="card panel">
-    <h2>Hort</h2>
+    <h2>${tr(save, 'hort.title')}</h2>
     <p class="muted">Platz 1 ist frei. Weitere Plätze kosten ${HORT_PRICES[1].toLocaleString('de-DE')} G, ${HORT_PRICES[2].toLocaleString('de-DE')} G nach dem Hohen Rat 1 und ${HORT_PRICES[3].toLocaleString('de-DE')} G nach dem Hohen Rat 2. Monster im Hort sammeln Art-EP. Zwei vom selben Typ können alle 2 Stunden ein Ei legen.</p>
     <p>Offene Plätze: ${save.hortSlots} · Eier ${save.eggs.length}/${save.hortSlots}</p>
     ${buy}
@@ -507,7 +520,7 @@ function hortView(save: SaveV2, now: number, selected: string | null): string {
       <button data-act="from-hort">In den PC</button>
     </div>
     <div class="grid">${residents || '<div class="muted">Der Hort ist leer.</div>'}</div>
-    <h2>Eier</h2>
+    <h2>${tr(save, 'hort.eggs')}</h2>
     ${eggs || '<p class="muted">Kein Ei.</p>'}
   </div>`
 }
@@ -516,47 +529,59 @@ function achievementsView(save: SaveV2): string {
   const done = save.claimed.length
   const rows = GOALS.map((goal) => {
     const have = save.claimed.includes(goal.id)
+    const typeId = goal.id.startsWith('type-') ? goal.id.slice(5) : ''
+    const typeBit = typeId ? typeLabel(L(save), typeId, typeName(typeId as TypeId)) : ''
+    const name = goalName(L(save), goal.id, goal.name, typeBit)
+    const title = goalTitle(L(save), goal.id, goal.title, typeBit)
     return `<div class="achieve ${have ? 'done' : ''}">
-      <div><b>${esc(goal.name)}</b><div class="muted">${have ? `Titel „${esc(goal.title)}“ · Rahmen ${esc(goal.frame)}` : 'Noch offen'} · ${goal.gold.toLocaleString('de-DE')} G</div></div>
-      ${have ? `<button data-act="equip-title" data-id="${goal.id}">Titel</button><button data-act="equip-frame" data-id="${goal.id}">Rahmen</button>` : ''}
+      <div><b>${esc(name)}</b><div class="muted">${have ? tr(save, 'ach.have', { title, frame: goal.frame }) : tr(save, 'ach.open')} · ${goal.gold.toLocaleString(L(save) === 'en' ? 'en' : 'de-DE')} G</div></div>
+      ${have ? `<button data-act="equip-title" data-id="${goal.id}">${tr(save, 'ach.titleBtn')}</button><button data-act="equip-frame" data-id="${goal.id}">${tr(save, 'ach.frameBtn')}</button>` : ''}
     </div>`
   }).join('')
   return `<div class="card panel">
-    <h2>Erfolge ${done}/${GOALS.length}</h2>
-    <p class="muted">Titel und Rahmen schmücken die Spielerkarte. Gold gibt es einmal. Manche Ziele warten auf spätere Regionen.</p>
+    <h2>${tr(save, 'ach.title', { done, total: GOALS.length })}</h2>
+    <p class="muted">${tr(save, 'ach.note')}</p>
     ${rows}
   </div>`
 }
 
 function options(save: SaveV2, debug: boolean): string {
+  const power = (minutes: 0 | 2 | 5, key: string) => `<button data-act="power" data-min="${minutes}" class="${save.settings.powerSave === minutes ? 'primary' : ''}">${tr(save, key)}</button>`
   return `<div class="card panel">
-    <h2>Optionen</h2>
-    <label class="switch"><input type="checkbox" data-field="auto" ${save.settings.autoSwitch ? 'checked' : ''}/> Auto-Wechsel</label>
-    <label class="switch"><input type="checkbox" data-field="card" ${save.settings.catchCard ? 'checked' : ''}/> Karte bei neuem Fang</label>
-    <label class="switch"><input type="checkbox" data-field="loop" ${save.loop ? 'checked' : ''}/> Kapitel wiederholen</label>
+    <h2>${tr(save, 'opt.title')}</h2>
     <div class="row-actions">
-      <span>Tempo</span>
+      <span>${tr(save, 'opt.lang')}</span>
+      <button data-act="lang" data-lang="de" class="${L(save) === 'de' ? 'primary' : ''}">Deutsch</button>
+      <button data-act="lang" data-lang="en" class="${L(save) === 'en' ? 'primary' : ''}">English</button>
+    </div>
+    <div class="row-actions">
+      <span>${tr(save, 'opt.speed')}</span>
       ${([1, 2, 3] as const).map((speed) => `<button data-act="speed" data-speed="${speed}" class="${save.settings.speed === speed ? 'primary' : ''}">×${speed}</button>`).join('')}
     </div>
-    ${debug ? `<div class="card" style="padding:12px;margin-top:12px"><b>Abnahme</b><p class="muted">Nur im Dev-Build mit ?debug=1. +10 Stunden rechnen 8 Stunden.</p><input id="debug-hours" type="number" min="0" step="0.1" value="10"/> <button class="primary" data-act="jump">Stunden springen</button></div>` : ''}
-    <p><button class="ghost" data-act="reset">Spielstand zurücksetzen</button></p>
+    <label class="switch"><input type="checkbox" data-field="auto" ${save.settings.autoSwitch ? 'checked' : ''}/> ${tr(save, 'opt.auto')}</label>
+    <label class="switch"><input type="checkbox" data-field="card" ${save.settings.catchCard ? 'checked' : ''}/> ${tr(save, 'opt.card')}</label>
+    <label class="switch"><input type="checkbox" data-field="shake" ${save.settings.shake ? 'checked' : ''}/> ${tr(save, 'opt.shake')}</label>
+    <label class="switch"><input type="checkbox" data-field="flash" ${save.settings.flashes ? 'checked' : ''}/> ${tr(save, 'opt.flash')}</label>
+    <label class="switch"><input type="checkbox" data-field="motion" ${save.settings.reduceMotion ? 'checked' : ''}/> ${tr(save, 'opt.motion')}</label>
+    <label class="switch"><input type="checkbox" data-field="loop" ${save.loop ? 'checked' : ''}/> ${tr(save, 'nav.loop')}</label>
+    <div class="row-actions">
+      <span>${tr(save, 'opt.power')}</span>
+      ${power(0, 'opt.powerOff')}${power(2, 'opt.power2')}${power(5, 'opt.power5')}
+    </div>
+    <h2>${tr(save, 'opt.export')}</h2>
+    <textarea id="export-code" readonly rows="3">${esc(exportCode(save))}</textarea>
+    <p><button data-act="copy-code">${tr(save, 'opt.copy')}</button></p>
+    <h2>${tr(save, 'opt.import')}</h2>
+    <textarea id="import-code" rows="3"></textarea>
+    <p><button class="primary" data-act="import-ask">${tr(save, 'opt.importBtn')}</button></p>
+    ${debug ? `<div class="card" style="padding:12px;margin-top:12px"><b>${tr(save, 'opt.debug')}</b><p class="muted">${tr(save, 'opt.debugNote')}</p><input id="debug-hours" type="number" min="0" step="0.1" value="10"/> <button class="primary" data-act="jump">${tr(save, 'opt.jump')}</button></div>` : ''}
+    <p><button class="ghost" data-act="reset">${tr(save, 'opt.reset')}</button></p>
   </div>`
 }
 
-function guide(): string {
-  return `<div class="card panel"><h2>Anleitung</h2>
-    <p>Du wanderst einen Weg mit 20 Schritten. Kämpfe laufen von selbst, Tempo ×1, ×2 oder ×3.</p>
-    <p>Nach dem K.O. eines wilden Monsters versucht das Bannsiegel den Fang. Eine neue Art kommt ins Team oder in den PC. Ein Duplikat wird zu Art-EP, außer du behältst es.</p>
-    <p>Heilquellen heilen das Team. Fällt das ganze Team, kehrt ihr zur letzten Heilquelle zurück, ohne etwas zu verlieren.</p>
-    <p>Der Wächter am Schritt 20 bringt ein Wappen. Mit „Kapitel wiederholen“ farmst du ein geschafftes Kapitel weiter. Nach Kapitel 8 wartet der Hohe Rat: vier Räte und der Großwächter direkt hintereinander. Jedes Ratsiegel öffnet die nächste Region. Dort kämpfen nur Monster, die du dort gefangen hast. Ältere Regionen bleiben spielbar.</p>
-    <p>Seltenheit 8 und 9, Prismadrache, Finsterfürst und Urdrache Velunor, leben nur im Urgrund. Der öffnet nach dem Hohen Rat des Himmelsthrons oder mit vollständigem Regionalkodex ohne diese drei.</p>
-    <p>Der Kodex zeigt alle 100 Arten: besessen, nicht mehr besessen, gesichtet oder fehlend, mit Fundort und Bedingung.</p>
-    <p>Das Wetter wechselt jede Stunde und ist für alle gleich. Manche Arten zeigen sich nur dann, mit einem kleinen Anteil. Ein Schimmer ist selten und stärker. Pro Art steht höchstens einer im Team.</p>
-    <p>Im Laden gibt es EP-Kristalle und Früchte. Kristalle gelten ab einer Zahl von Wappen. Früchte halten eine Stunde, auch wenn du weg bist. Auf einem Fund liegt manchmal eine Frucht.</p>
-    <p>Im Hort sammeln Monster Art-EP. Zwei vom selben Typ können ein Ei legen. Das Junge kommt auf Level 1 in den PC.</p>
-    <p>Erfolge bringen Gold, einen Titel und einen Rahmen für die Spielerkarte.</p>
-    <p>Nach dem dritten Wappen öffnet das Glücksrad. Ein Dreh kostet Spielgold und zahlt Glücksmarken für den Preisladen. Kein Echtgeld.</p>
-    <p>Bis zu 8 Stunden Abwesenheit werden nachgerechnet. Der Begleiter bekommt mehr Kampf-EP.</p>
+function guide(save: SaveV2): string {
+  return `<div class="card panel"><h2>${tr(save, 'guide.title')}</h2>
+    ${[1, 2, 3, 4, 5, 6, 7, 8, 9, 10, 11, 12].map((n) => `<p>${tr(save, `guide.${n}`)}</p>`).join('')}
   </div>`
 }
 
@@ -569,11 +594,11 @@ function center(save: SaveV2, screen: Screen, now: number, pc: PcQuery, dex: Cod
   if (screen === 'shop') return shop(save, now)
   if (screen === 'achievements') return achievementsView(save)
   if (screen === 'options') return options(save, debug)
-  return guide()
+  return guide(save)
 }
 
 export function gameHtml(save: SaveV2, screen: Screen, now: number, pc: PcQuery, dex: CodexQuery, selected: string | null, sideOpen: boolean, debug: boolean, overlay: Overlay | null, step = save.step, wheel: WheelPanel = { tab: 'hort', mult: 1, symbols: null, note: '' }): string {
-  return `<div id="stage" class="${sideOpen ? '' : 'side-shut'}">
+  return `<div id="stage" class="${sideOpen ? '' : 'side-shut'} ${save.settings.reduceMotion ? 'reduce-motion' : ''}">
     ${nav(save, screen, step)}
     <main class="center">${center(save, screen, now, pc, dex, selected, debug, step, wheel)}</main>
     ${sightings(save, now, sideOpen)}
@@ -584,35 +609,47 @@ export function gameHtml(save: SaveV2, screen: Screen, now: number, pc: PcQuery,
 function overlayHtml(save: SaveV2, overlay: Overlay): string {
   if (overlay.kind === 'offline') {
     const pct = overlay.total ? Math.round((overlay.done / overlay.total) * 100) : 0
-    return `<div class="modal"><h2>Nachrechnen …</h2><div class="progress-track"><span style="width:${pct}%"></span></div><p>${overlay.done.toLocaleString('de-DE')} / ${overlay.total.toLocaleString('de-DE')}</p></div>`
+    return `<div class="modal"><h2>${tr(save, 'offline.title')}</h2><div class="progress-track"><span style="width:${pct}%"></span></div><p>${overlay.done.toLocaleString(L(save) === 'en' ? 'en' : 'de-DE')} / ${overlay.total.toLocaleString(L(save) === 'en' ? 'en' : 'de-DE')}</p></div>`
   }
   if (overlay.kind === 'confirm-reset') {
-    return `<div class="modal"><h2>Spielstand zurücksetzen?</h2><p>Der Fang-Speicher wird geleert. Der alte Speicher bleibt liegen.</p><button class="primary" data-act="reset-yes">Ja, neu anfangen</button> <button class="ghost" data-act="close">Abbrechen</button></div>`
+    return `<div class="modal"><h2>${tr(save, 'reset.title')}</h2><p>${tr(save, 'reset.body')}</p><button class="primary" data-act="reset-yes">${tr(save, 'reset.yes')}</button> <button class="ghost" data-act="close">${tr(save, 'reset.no')}</button></div>`
+  }
+  if (overlay.kind === 'confirm-import') {
+    return `<div class="modal"><h2>${tr(save, 'import.title')}</h2><p>${tr(save, 'import.body')}</p><button class="primary" data-act="import-yes">${tr(save, 'import.yes')}</button> <button class="ghost" data-act="close">${tr(save, 'reset.no')}</button></div>`
+  }
+  if (overlay.kind === 'awaken') {
+    const mon = save.mons[overlay.uid]
+    const sp = mon ? species(mon.species) : null
+    return `<div class="modal"><div class="kicker">${tr(save, 'awaken.title')}</div><h2>${sp ? esc(sp.name) : ''}</h2>
+      ${sp ? `<img class="hero" src="${monsterArt(sp.id, true)}" alt=""/>` : ''}
+      <p>${tr(save, 'awaken.body', { name: sp?.name ?? '', level: overlay.level })}</p>
+      <button class="primary" data-act="close">${tr(save, 'welcome.next')}</button></div>`
   }
   if (overlay.kind === 'welcome') {
     const hours = overlay.countedMs / 3600000
-    const away = hours >= 1 ? `${hours.toLocaleString('de-DE', { maximumFractionDigits: 1 })} Stunden` : `${Math.round(overlay.countedMs / 60000)} Minuten`
+    const locale = L(save) === 'en' ? 'en' : 'de-DE'
+    const away = hours >= 1 ? tr(save, 'welcome.hours', { n: hours.toLocaleString(locale, { maximumFractionDigits: 1 }) }) : tr(save, 'welcome.minutes', { n: Math.round(overlay.countedMs / 60000) })
     const capped = overlay.rawMs > overlay.countedMs + 1000
     const sprites = overlay.summary.catches.map((id) => `<img src="${monsterArt(id, true)}" alt="${esc(species(id).name)}" title="${esc(species(id).name)}"/>`).join('')
     const levels = overlay.summary.levels.map((row) => `<div>${esc(row.name)} ${row.from} → ${row.to}</div>`).join('')
-    return `<div class="modal"><h2>Willkommen zurück</h2>
-      <p>Zeit: ${away}${capped ? ' (Obergrenze 8 Stunden)' : ''}.</p>
-      <p>Kämpfe: ${overlay.summary.fights.toLocaleString('de-DE')} · Duplikate: ${overlay.summary.dupes.toLocaleString('de-DE')} · Gold: ${gold(overlay.summary.gold)}</p>
-      <div class="catches">${sprites || '<span class="muted">Keine neue Art.</span>'}</div>
-      ${levels || '<p class="muted">Keine Level-Aufstiege.</p>'}
-      <p>Wappen: ${overlay.summary.badges.length ? esc(overlay.summary.badges.join(', ')) : '—'}</p>
-      <button class="primary" data-act="close">Weiter</button>
+    return `<div class="modal"><h2>${tr(save, 'welcome.title')}</h2>
+      <p>${tr(save, 'welcome.time', { away, cap: capped ? tr(save, 'welcome.cap') : '' })}</p>
+      <p>${tr(save, 'welcome.stats', { fights: overlay.summary.fights.toLocaleString(locale), dupes: overlay.summary.dupes.toLocaleString(locale), gold: gold(overlay.summary.gold) })}</p>
+      <div class="catches">${sprites || `<span class="muted">${tr(save, 'welcome.none')}</span>`}</div>
+      ${levels || `<p class="muted">${tr(save, 'welcome.levels')}</p>`}
+      <p>${tr(save, 'welcome.badges', { names: overlay.summary.badges.length ? overlay.summary.badges.join(', ') : '—' })}</p>
+      <button class="primary" data-act="close">${tr(save, 'welcome.next')}</button>
     </div>`
   }
   if (overlay.kind === 'dex') return dexEntry(save, overlay.species)
   if (overlay.kind === 'catch') {
     const sp = species(overlay.species)
-    return `<div class="modal"><div class="kicker">gefangen!</div><h2>${esc(sp.name)}</h2>
+    return `<div class="modal"><div class="kicker">${tr(save, 'catch.got')}</div><h2>${esc(sp.name)}</h2>
       <img class="hero" src="${monsterArt(sp.id, true)}" alt=""/>
-      <p>${esc(typeName(sp.type))} · ${esc(rarityName(sp.id))} · Lv ${overlay.level}</p>
+      <p>${esc(typeLabel(L(save), sp.type, typeName(sp.type)))} · ${esc(rarityLabel(L(save), sp.baseRarity, rarityName(sp.id)))} · Lv ${overlay.level}</p>
       <p>${esc(sp.blurb)}</p>
-      <p>${overlay.place === 'team' ? 'Im Team.' : 'Im PC.'}</p>
-      <button class="primary" data-act="close">Weiter</button>
+      <p>${tr(save, overlay.place === 'team' ? 'catch.team' : 'catch.pc')}</p>
+      <button class="primary" data-act="close">${tr(save, 'welcome.next')}</button>
     </div>`
   }
   return card(save, overlay.uid)
@@ -625,7 +662,7 @@ function dexEntry(save: SaveV2, id: string): string {
   const places = dexPlaces(id)
   const hidden = status === 'missing'
   const where = places.length
-    ? places.map((place) => `<div>${esc(place.region)} · ${esc(place.chapter)} · ${esc(place.when)}</div>`).join('')
+    ? places.map((place) => `<div>${esc(place.region)} · ${esc(place.chapter)} · ${esc(whenLabel(L(save), place.when))}</div>`).join('')
     : '<div class="muted">Noch kein Fundort in Grünmark.</div>'
   return `<div class="modal">
     <img class="hero ${hidden ? 'sil' : ''}" src="${monsterArt(id, true)}" alt=""/>
@@ -648,7 +685,7 @@ function dexEntry(save: SaveV2, id: string): string {
 
 function card(save: SaveV2, uid: string): string {
   const mon = save.mons[uid]
-  if (!mon) return `<div class="modal"><p>Kein Monster.</p><button data-act="close">Schließen</button></div>`
+  if (!mon) return `<div class="modal"><p>${tr(save, 'card.none')}</p><button data-act="close">${tr(save, 'codex.close')}</button></div>`
   const sp = species(mon.species)
   const stats = monStats(mon)
   const need = expToNext(mon.lvl)
@@ -657,7 +694,7 @@ function card(save: SaveV2, uid: string): string {
   return `<div class="modal">
     <img class="hero" src="${monsterArt(sp.id, true)}" alt=""/>
     <h2>${esc(sp.name)}${mon.shiny ? ' · Schimmer' : ''}</h2>
-    <p>${esc(typeName(sp.type))} · ${esc(rarityInfo(sp.baseRarity).name)} · Lv ${mon.lvl}</p>
+    <p>${esc(typeLabel(L(save), sp.type, typeName(sp.type)))} · ${esc(rarityLabel(L(save), sp.baseRarity, rarityInfo(sp.baseRarity).name))} · Lv ${mon.lvl} · ${tr(save, 'card.awaken', { n: mon.lvl >= 50 ? 2 : mon.lvl >= 25 ? 1 : 0 })}</p>
     <div class="bar-exp"><span style="width:${pct}%"></span></div>
     <p class="muted">EP ${mon.exp.toLocaleString('de-DE')} / ${need.toLocaleString('de-DE')}</p>
     <div class="stats">
@@ -668,30 +705,31 @@ function card(save: SaveV2, uid: string): string {
     </div>
     <p><b>${esc(sp.skill.name ?? 'Fähigkeit')}</b> — ${esc(sp.skill.description ?? '')}</p>
     <p>${esc(sp.blurb)}</p>
-    <p class="muted">Gefangen ${esc(when)} · ${esc(placeLabel(mon.caughtWhere))}</p>
-    <label class="switch"><input type="checkbox" data-field="buddy" data-uid="${uid}" ${save.buddy === uid ? 'checked' : ''}/> Begleiter</label>
-    <label class="switch"><input type="checkbox" data-field="keep" data-uid="${uid}" ${mon.keepDupes ? 'checked' : ''}/> Duplikate behalten</label>
-    <p><button class="primary" data-act="close">Schließen</button></p>
+    <p class="muted">${tr(save, 'card.caught', { when, where: placeLabel(mon.caughtWhere, L(save)) })}</p>
+    <label class="switch"><input type="checkbox" data-field="buddy" data-uid="${uid}" ${save.buddy === uid ? 'checked' : ''}/> ${tr(save, 'team.buddy')}</label>
+    <label class="switch"><input type="checkbox" data-field="keep" data-uid="${uid}" ${mon.keepDupes ? 'checked' : ''}/> ${tr(save, 'card.keep')}</label>
+    <p><button class="primary" data-act="close">${tr(save, 'codex.close')}</button></p>
   </div>`
 }
 
-export function onboardingHtml(name: string, avatar: 'A' | 'B', picked: string): string {
+export function onboardingHtml(name: string, avatar: 'A' | 'B', picked: string, lang: Lang = 'de'): string {
   const chosen = picked ? species(picked) : null
   const stats = picked ? monStats(makePreview(picked)) : null
   return `<div id="stage" class="onboard">
     <div>
-      <div class="kicker">Velunor</div>
+      <div class="kicker">${t(lang, 'start.kicker')}</div>
       <h1>Grünmark</h1>
-      <p>Ein Fang-Idle-Abenteuer. Drei Starter, ein Weg, ein Bannsiegel.</p>
+      <p>${t(lang, 'start.lead')}</p>
+      <div class="row-actions"><button data-act="lang" data-lang="de" class="${lang === 'de' ? 'primary' : ''}">Deutsch</button><button data-act="lang" data-lang="en" class="${lang === 'en' ? 'primary' : ''}">English</button></div>
     </div>
     <div class="card panel">
-      <label>Name<br/><input class="start-name" data-field="name" maxlength="24" value="${esc(name)}"/></label>
-      <p>Avatar</p>
+      <label>${t(lang, 'start.name')}<br/><input class="start-name" data-field="name" maxlength="24" value="${esc(name)}"/></label>
+      <p>${t(lang, 'start.avatar')}</p>
       <div class="choices">
         <button class="choice ${avatar === 'A' ? 'on' : ''}" data-act="avatar" data-avatar="A"><div class="avatar">A</div>A</button>
         <button class="choice ${avatar === 'B' ? 'on' : ''}" data-act="avatar" data-avatar="B"><div class="avatar b">B</div>B</button>
       </div>
-      <p>Starter</p>
+      <p>${t(lang, 'start.starter')}</p>
       <div class="choices">
         ${STARTERS.map((starter) => `<button class="pick ${picked === starter.id ? 'on' : ''}" data-act="pick" data-species="${starter.id}"><img src="${monsterArt(starter.id, true)}" alt=""/><div>${esc(starter.label)}</div></button>`).join('')}
       </div>
@@ -703,8 +741,8 @@ export function onboardingHtml(name: string, avatar: 'A' | 'B', picked: string):
         </div>
         <p><b>${esc(chosen.skill.name ?? '')}</b> — ${esc(chosen.skill.description ?? '')}</p>
         <p>${esc(chosen.blurb)}</p>
-        <button class="primary" data-act="start">Los geht's!</button>
-      </div>` : '<p class="muted">Wähle einen Starter.</p>'}
+        <button class="primary" data-act="start">${t(lang, 'start.go')}</button>
+      </div>` : `<p class="muted">${t(lang, 'start.pick')}</p>`}
     </div>
   </div>`
 }

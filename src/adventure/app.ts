@@ -16,7 +16,8 @@ import {
   tempoScale,
   type Speed
 } from './const'
-import { beginAdventure, loadAdventure, writeSave } from './save'
+import { t, type Lang } from './i18n'
+import { beginAdventure, exportCode, importCode, loadAdventure, writeSave } from './save'
 import { equipFrame, equipTitle } from './achievements'
 import { buyHortSlot, moveFromHort, moveToHort } from './hort'
 import { buyCrystal, buyFruit, sellCrystal, sellFruit, useCrystal, useFruit } from './shop'
@@ -62,6 +63,9 @@ let overlay: Overlay | null = null
 let draftName = 'Abenteurer'
 let draftAvatar: 'A' | 'B' = 'A'
 let draftPick = ''
+let draftLang: Lang = 'de'
+let pendingImport: SaveV2 | null = null
+let lastInput = Date.now()
 let timer = 0
 let animating = false
 let lastTick = 0
@@ -89,6 +93,9 @@ export function bootAdventure(): void {
   root.addEventListener('pointerdown', onPointerDown)
   root.addEventListener('pointerup', onPointerUp)
   window.addEventListener('resize', fit)
+  window.addEventListener('pointerdown', wake)
+  window.addEventListener('keydown', wake)
+  draftLang = localStorage.getItem('velunor_lang') === 'en' ? 'en' : 'de'
   window.addEventListener('pagehide', () => {
     if (!save) return
     if (Date.now() - lastTick < encounterMs(save.settings.speed) * 2) save.lastSeenAt = Date.now()
@@ -113,7 +120,7 @@ export function bootAdventure(): void {
 
 function showOnboarding(): void {
   save = null
-  paint(onboardingHtml(draftName, draftAvatar, draftPick))
+  paint(onboardingHtml(draftName, draftAvatar, draftPick, draftLang))
 }
 
 async function start(next: SaveV2): Promise<void> {
@@ -162,6 +169,34 @@ function fit(): void {
   host.style.transform = `translate(-50%, -50%) scale(${scale})`
 }
 
+function wake(): void {
+  lastInput = Date.now()
+  document.getElementById('blackout')?.remove()
+}
+
+function powerCheck(): void {
+  if (!save) return
+  const minutes = save.settings.powerSave
+  if (minutes !== 2 && minutes !== 5) {
+    document.getElementById('blackout')?.remove()
+    return
+  }
+  if (Date.now() - lastInput < minutes * 60_000) return
+  if (document.getElementById('blackout')) return
+  const dim = document.createElement('div')
+  dim.id = 'blackout'
+  document.body.appendChild(dim)
+}
+
+function showAwaken(): boolean {
+  if (!save?.pendingAwaken.length || overlay) return false
+  const next = save.pendingAwaken.shift()
+  if (!next) return false
+  overlay = { kind: 'awaken', uid: next.uid, level: next.level }
+  render()
+  return true
+}
+
 function kick(): void {
   window.clearTimeout(timer)
   if (!save?.started || animating || overlay || save.hold) return
@@ -169,6 +204,7 @@ function kick(): void {
 }
 
 function loop(): void {
+  powerCheck()
   if (!save?.started || animating || overlay || (save.hold && !save.challengeNow)) return
   const dur = encounterMs(save.settings.speed)
   const now = Date.now()
@@ -213,12 +249,26 @@ function finishPresent(outcome: EncounterOutcome): void {
     render()
     return
   }
+  if (showAwaken()) return
   if (save.hold) render()
   else kick()
 }
 
 function play(outcome: EncounterOutcome, speed: Speed, done: () => void): void {
   const dur = encounterMs(speed)
+  if (save?.settings.reduceMotion) {
+    const last = outcome.traces[outcome.traces.length - 1]
+    const allyHp = document.getElementById('ally-hp')
+    const foeHp = document.getElementById('foe-hp')
+    const text = document.getElementById('battle-text')
+    if (last && allyHp && foeHp) {
+      allyHp.style.width = `${(last.allyHp / last.allyMax) * 100}%`
+      foeHp.style.width = `${(last.foeHp / last.foeMax) * 100}%`
+    }
+    if (text) text.textContent = outcome.lines[outcome.lines.length - 1] ?? ''
+    done()
+    return
+  }
   const k = tempoScale(speed)
   const started = performance.now()
   const seal = document.getElementById('seal') as HTMLImageElement | null
@@ -231,6 +281,8 @@ function play(outcome: EncounterOutcome, speed: Speed, done: () => void): void {
   const text = document.getElementById('battle-text')
   const traces = outcome.traces
   const catching = Boolean(outcome.catch)
+  let prevAlly: number | null = null
+  let prevFoe: number | null = null
   const frame = (now: number) => {
     const elapsed = now - started
     const battleEnd = catching ? dur * 0.54 : dur
@@ -245,6 +297,17 @@ function play(outcome: EncounterOutcome, speed: Speed, done: () => void): void {
       if (shot && allyHp && foeHp) {
         allyHp.style.width = `${(shot.allyHp / trace.allyMax) * 100}%`
         foeHp.style.width = `${(shot.foeHp / trace.foeMax) * 100}%`
+        const dropped = (prevAlly != null && shot.allyHp < prevAlly) || (prevFoe != null && shot.foeHp < prevFoe)
+        if (dropped && save?.settings.shake) {
+          const battle = document.getElementById('battle')
+          battle?.classList.remove('shake')
+          void battle?.offsetWidth
+          battle?.classList.add('shake')
+        }
+        if (dropped && save?.settings.flashes) document.getElementById('flash')?.classList.add('on')
+        else document.getElementById('flash')?.classList.remove('on')
+        prevAlly = shot.allyHp
+        prevFoe = shot.foeHp
       }
       if (text && shot && elapsed < battleEnd) text.textContent = shot.text
       if (allyName) allyName.textContent = trace.allyName
@@ -283,16 +346,17 @@ function paintSeal(seal: HTMLImageElement, t: number, k: number, caught: boolean
   const flareAt = 1000 * k
   if (t > flareAt) {
     const p = (t - flareAt) / (300 * k)
-    if (caught) {
+    if (caught && save?.settings.flashes) {
       const flare = Math.min(1, p * 2)
       scale = 1 + (CAUGHT_SCALE - 1) * flare
       flat = SEAL_FLAT_Y + (1 - SEAL_FLAT_Y) * flare
       alpha = pulse * Math.max(0, 1 - Math.max(0, p - 0.25) / 0.75)
-    } else {
+    } else if (!caught) {
       alpha = pulse * Math.max(0, 1 - p * 1.7)
-      shake = Math.sin(p * 20) * 12 * Math.max(0, 1 - p)
-    }
+      if (save?.settings.shake) shake = Math.sin(p * 20) * 12 * Math.max(0, 1 - p)
+    } else alpha = pulse * Math.max(0, 1 - Math.max(0, p - 0.25) / 0.75)
   }
+  if (!save?.settings.shake) shake = 0
   seal.style.opacity = String(Math.max(0, alpha))
   seal.style.transform = `translate(-50%, -50%) translateX(${shake}px) rotate(${spin}deg) scale(${scale}, ${scale * flat})`
 }
@@ -337,6 +401,17 @@ function onClick(event: Event): void {
   const node = target.closest('[data-act]')
   if (!node) return
   const act = node.getAttribute('data-act')
+  if (act === 'lang') {
+    draftLang = node.getAttribute('data-lang') === 'en' ? 'en' : 'de'
+    localStorage.setItem('velunor_lang', draftLang)
+    if (!save) {
+      showOnboarding()
+      return
+    }
+    save.settings.lang = draftLang
+    render()
+    return
+  }
   if (act === 'avatar') {
     draftAvatar = node.getAttribute('data-avatar') === 'B' ? 'B' : 'A'
     showOnboarding()
@@ -351,7 +426,10 @@ function onClick(event: Event): void {
     if (!draftPick) return
     const field = document.querySelector('[data-field="name"]')
     if (field instanceof HTMLInputElement) draftName = field.value
-    void start(beginAdventure(draftName, draftAvatar, draftPick, Date.now()))
+    const next = beginAdventure(draftName, draftAvatar, draftPick, Date.now())
+    next.settings.lang = draftLang
+    if (draftLang === 'en' && next.log[0]) next.log[0].text = t('en', 'say.start', { name: next.name })
+    void start(next)
     return
   }
   if (!save) return
@@ -423,6 +501,7 @@ function onClick(event: Event): void {
   }
   if (act === 'close') {
     overlay = null
+    if (showAwaken()) return
     render()
     kick()
     return
@@ -538,6 +617,48 @@ function onClick(event: Event): void {
     render()
     return
   }
+  if (act === 'power') {
+    const minutes = Number(node.getAttribute('data-min'))
+    save.settings.powerSave = minutes === 2 || minutes === 5 ? minutes : 0
+    wake()
+    render()
+    return
+  }
+  if (act === 'copy-code') {
+    const code = exportCode(save)
+    const box = document.getElementById('export-code')
+    if (box instanceof HTMLTextAreaElement) {
+      box.value = code
+      box.focus()
+      box.select()
+    }
+    navigator.clipboard?.writeText(code).catch(() => {})
+    return
+  }
+  if (act === 'import-ask') {
+    const box = document.getElementById('import-code')
+    const loaded = importCode(box instanceof HTMLTextAreaElement ? box.value : '', Date.now())
+    if (!loaded) {
+      save.log.push({ t: Date.now(), text: t(save.settings.lang, 'import.bad') })
+      if (save.log.length > 50) save.log.splice(0, save.log.length - 50)
+      render()
+      return
+    }
+    pendingImport = loaded
+    overlay = { kind: 'confirm-import' }
+    render()
+    return
+  }
+  if (act === 'import-yes' && pendingImport) {
+    save = pendingImport
+    pendingImport = null
+    overlay = null
+    screen = 'adventure'
+    try { writeSave(localStorage, save) } catch { /* ignore */ }
+    render()
+    kick()
+    return
+  }
   if (act === 'reset') {
     overlay = { kind: 'confirm-reset' }
     render()
@@ -581,6 +702,9 @@ function syncField(target: EventTarget | null): void {
   if (field === 'loop') setLoop(save, target instanceof HTMLInputElement ? target.checked : save.loop)
   if (field === 'auto' && target instanceof HTMLInputElement) save.settings.autoSwitch = target.checked
   if (field === 'card' && target instanceof HTMLInputElement) save.settings.catchCard = target.checked
+  if (field === 'shake' && target instanceof HTMLInputElement) save.settings.shake = target.checked
+  if (field === 'flash' && target instanceof HTMLInputElement) save.settings.flashes = target.checked
+  if (field === 'motion' && target instanceof HTMLInputElement) save.settings.reduceMotion = target.checked
   if (field === 'buddy' && target instanceof HTMLInputElement) setBuddy(save, target.dataset.uid ?? '')
   if (field === 'keep' && target instanceof HTMLInputElement) setKeepDupes(save, target.dataset.uid ?? '', target.checked)
   if (field === 'type' || field === 'rarity' || field === 'shiny' || field === 'sort') {

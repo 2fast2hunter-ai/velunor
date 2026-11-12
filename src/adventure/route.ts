@@ -1,5 +1,6 @@
 import regionsJson from '../../data/regions.json'
 import { species } from '../data'
+import { t, type Lang } from './i18n'
 import { hashSeed, mulberry32 } from '../rng'
 import { GUARDIAN_STEP, HEAL_STEPS, PATH_LENGTH } from './const'
 import { weatherAt, type WeatherId } from './weather'
@@ -215,12 +216,13 @@ export function findGold(chapterId: number): number {
   return 50 * chapterId
 }
 
-export function placeLabel(where: string): string {
+export function placeLabel(where: string, lang: Lang = 'de'): string {
   const match = /^r(\d+)c(\d+)$/.exec(where)
   if (!match) {
-    if (where === 'alt') return 'Früherer Speicher'
-    if (where === 'hort') return 'Hort'
-    return 'Grünmark'
+    if (where === 'alt') return t(lang, 'where.old')
+    if (where === 'hort') return t(lang, 'where.hort')
+    if (where === 'rad') return t(lang, 'wheel.shop')
+    return t(lang, 'where.fallback')
   }
   const region = regionById(Number(match[1]))
   const chapter = chapterById(Number(match[1]), Number(match[2]))
