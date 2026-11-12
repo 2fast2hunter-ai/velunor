@@ -4,7 +4,7 @@ import { SAVE_KEY_V2 } from './const'
 import { settleGauntlet } from './gauntlet'
 import { chapterById, ratscap } from './route'
 import { beginAdventure, loadAdventure, makeMon } from './save'
-import { challengeGuardian, resolveEncounter } from './sim'
+import { catchChance, challengeGuardian, expectedCatchAttempts, resolveEncounter } from './sim'
 import { addExp } from './stats'
 import type { StorageLike } from './types'
 
@@ -18,6 +18,21 @@ function memory(): StorageLike {
 }
 
 describe('section A wards and court', () => {
+  it('adds half a point of seal progress after a miss and resets it', () => {
+    expect(catchChance(8, 30, 30, 1, 0.6, 10)).toBeCloseTo(0.13)
+    expect(expectedCatchAttempts(8)).toBeGreaterThan(10)
+    expect(expectedCatchAttempts(9)).toBeLessThan(20)
+    const save = beginAdventure('Ada', 'A', 'm01', 1_000)
+    save.mons[save.team[0]].lvl = 20
+    let moved = false
+    for (let i = 0; i < 40 && !moved; i++) {
+      save.step = 1
+      resolveEncounter(save, 2_000 + i, { offline: false, trace: false })
+      moved = Object.values(save.sealPity).some((value) => value >= 0.5)
+    }
+    expect(moved).toBe(true)
+  })
+
   it('lays the court path and the new caps', () => {
     const court = chapterById(1, 9)
     expect(court.foyer).toBe(true)

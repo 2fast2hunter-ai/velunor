@@ -52,6 +52,7 @@ export function blankSave(now: number): SaveV2 {
     guardMark: 0,
     guardWins: 0,
     layout: 1,
+    sealPity: {},
     hold: false,
     log: [],
     migratedFrom: null,
@@ -262,6 +263,15 @@ export function normalize(save: SaveV2, now: number): SaveV2 {
   save.guardMark = Math.max(0, Math.floor(Number(save.guardMark)) || 0)
   save.guardWins = Math.max(0, Math.floor(Number(save.guardWins)) || 0)
   save.layout = Math.max(1, Math.floor(Number(save.layout)) || 1)
+  const pity: Record<string, number> = {}
+  if (save.sealPity && typeof save.sealPity === 'object') {
+    for (const [id, value] of Object.entries(save.sealPity)) {
+      if (!speciesKnown(id)) continue
+      const points = Math.max(0, Math.min(10, Number(value) || 0))
+      if (points > 0) pity[id] = points
+    }
+  }
+  save.sealPity = pity
   save.hold = false
   save.log = Array.isArray(save.log) ? save.log.slice(-50) : []
   save.migratedFrom = save.migratedFrom ?? null

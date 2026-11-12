@@ -13,7 +13,6 @@ import {
   FOE_X,
   ALLY_X,
   OFFLINE_CAP_MS,
-  OFFLINE_LEVEL_CAP,
   SAVE_KEY_V1,
   SAVE_KEY_V2,
   SEAL_ADD,
@@ -33,7 +32,7 @@ import {
 import { chapterById, chapterFormula, dayPart, findGold, routeOf, sightingShares } from './route'
 import { beginAdventure, loadAdventure, makeMon, migrateFromV1 } from './save'
 import { applyCatch, awardCombatExp, catchChance, chapterUnlocked, healTeam, hereSightings, moveToPc, moveToTeam, resolveEncounter, setKeepDupes, simulateOffline, travelTo } from './sim'
-import { addExp, battleLevel, combatStats, expToNext, speciesExp } from './stats'
+import { EXP_EXPONENT, EXP_FACTOR, addExp, battleLevel, combatStats, expToNext, speciesExp } from './stats'
 import type { SaveV2, StorageLike } from './types'
 
 function memory(): StorageLike {
@@ -62,10 +61,10 @@ function fixed(name: string, hp: number, atk: number, def: number, spd: number):
 
 describe('step 1 numbers', () => {
   it('uses the new level curve and keeps speed flat', () => {
-    expect(expToNext(5)).toBe(263)
-    expect(expToNext(10)).toBe(796)
-    expect(expToNext(20)).toBe(2414)
-    expect(expToNext(50)).toBe(Math.round(20 * 50 ** 1.6))
+    expect(expToNext(5)).toBe(Math.round(EXP_FACTOR * 5 ** EXP_EXPONENT))
+    expect(expToNext(10)).toBe(Math.round(EXP_FACTOR * 10 ** EXP_EXPONENT))
+    expect(expToNext(20)).toBe(Math.round(EXP_FACTOR * 20 ** EXP_EXPONENT))
+    expect(expToNext(50)).toBe(Math.round(EXP_FACTOR * 50 ** EXP_EXPONENT))
     expect(speciesExp(5)).toBe(expToNext(5) + expToNext(6) + expToNext(7))
     const low = combatStats('m01', 5, false)
     const high = combatStats('m01', 10, false)
@@ -85,12 +84,12 @@ describe('step 1 numbers', () => {
     expect(mon.exp).toBe(0)
   })
 
-  it('stops an absence after 12 levels even when the EP would go further', () => {
+  it('lets one absence pass more than 12 levels', () => {
     const mon = makeMon('m01', 5, 0, 'r1c1')
-    const granted = addExp(mon, 5_000_000, 99, OFFLINE_LEVEL_CAP)
-    expect(mon.lvl).toBe(5 + OFFLINE_LEVEL_CAP)
-    expect(granted.levels).toBe(OFFLINE_LEVEL_CAP)
-    expect(mon.exp).toBe(0)
+    const granted = addExp(mon, 5_000_000, 99, null)
+    expect(mon.lvl).toBeGreaterThan(17)
+    expect(granted.levels).toBe(mon.lvl - 5)
+    expect(mon.lvl).toBeLessThanOrEqual(99)
   })
 
   it('keeps the published strike and the type table', () => {
@@ -329,7 +328,8 @@ describe('acceptance loop', () => {
     save.mons[uid].lvl = 5
     save.mons[uid].exp = 0
     awardCombatExp(save, 99, 100000, 0, uid, offline, 1)
-    expect(save.mons[uid].lvl).toBe(5 + OFFLINE_LEVEL_CAP)
+    expect(save.mons[uid].lvl).toBeGreaterThan(17)
+    expect(save.mons[uid].lvl).toBeLessThanOrEqual(99)
   })
 
   it('simulates an 8 hour absence quickly', () => {

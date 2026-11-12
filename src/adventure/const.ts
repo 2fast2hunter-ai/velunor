@@ -14,8 +14,9 @@ export const LOG_LIMIT = 50
 export const ACTION_LIMIT = 30
 export const CATCH_CAP = 0.6
 export const OFFLINE_EXP_FACTOR = 0.5
-export const OFFLINE_LEVEL_CAP = 12
 export const BUDDY_BONUS = 0.3
+/** Added to combat EP per rarity step. */
+export const RARITY_EXP = 0.15
 export const BENCH_EXP = 0.5
 
 export const BASE_ENCOUNTER_MS = 2800
@@ -44,7 +45,10 @@ export const SCENE_FILES = {
   wald: { webp: 'backgrounds/bg_gm_wald.webp', jpg: 'backgrounds/bg_gm_wald.jpg' }
 } as const
 
-export const CATCH_BASE = [0.6, 0.5, 0.4, 0.3, 0.22, 0.15, 0.1, 0.06, 0.04, 0.02] as const
+export const CATCH_BASE = [0.6, 0.5, 0.4, 0.3, 0.22, 0.15, 0.1, 0.05, 0.03, 0.015] as const
+/** Extra catch chance per failed seal of the same species, in percentage points. */
+export const SEAL_PITY_STEP = 0.5
+export const SEAL_PITY_CAP = 10
 
 export const STARTERS = [
   { id: 'm01', label: 'Funkfuchs' },

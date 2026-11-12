@@ -25,19 +25,19 @@ function memory(): StorageLike {
 }
 
 describe('hort places', () => {
-  it('sells slot 2 for 20000 and holds slot 3 and 4 behind the councils', () => {
+  it('sells slot 2 for 50000 and holds slot 3 and 4 behind the councils', () => {
     const save = beginAdventure('Ada', 'A', 'm01', 1)
     expect(save.hortSlots).toBe(1)
-    save.gold = 20_000
+    save.gold = 50_000
     expect(buyHortSlot(save)).toBeNull()
     expect(save.hortSlots).toBe(2)
     expect(save.gold).toBe(1500)
-    save.gold = 120_000
+    save.gold = 400_000
     expect(buyHortSlot(save)).toMatch(/Hohen Rat 1/)
     save.badges.push('Ratsiegel')
     expect(buyHortSlot(save)).toBeNull()
     expect(save.hortSlots).toBe(3)
-    save.gold = 500_000
+    save.gold = 3_000_000
     expect(buyHortSlot(save)).toMatch(/Hohen Rat 2/)
     save.badges.push(RAT_2_BADGE)
     expect(buyHortSlot(save)).toBeNull()

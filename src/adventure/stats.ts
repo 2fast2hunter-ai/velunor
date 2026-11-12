@@ -39,8 +39,12 @@ export function combatStats(speciesId: string, level: number, shiny = false): Co
   }
 }
 
+/** EP to the next level. The exponent stays fixed; only EXP_FACTOR may be retuned. */
+export const EXP_FACTOR = 12
+export const EXP_EXPONENT = 2.45
+
 export function expToNext(level: number): number {
-  return Math.round(20 * Math.pow(level, 1.6))
+  return Math.round(EXP_FACTOR * Math.pow(level, EXP_EXPONENT))
 }
 
 /** Art-EP for a duplicate: the cost of the next three levels of the highest specimen. */

@@ -5,18 +5,17 @@ import {
   BUDDY_BONUS,
   CATCH_BASE,
   CATCH_CAP,
-  OFFLINE_CAP_MS,
   OFFLINE_EXP_FACTOR,
-  OFFLINE_LEVEL_CAP,
+  RARITY_EXP,
   START_GOLD,
   STARTER_LEVEL,
   type Speed
 } from './const'
-import { clearRate, referenceTeam } from './gauntlet'
-import { catchChance } from './sim'
+import { bossScale, clearRate, referenceTeam } from './gauntlet'
+import { catchChance, expectedCatchAttempts } from './sim'
 import { HORT_PRICES } from './hort'
 import { regions, routeOf, type ChapterDef } from './route'
-import { CRYSTALS, FRUITS } from './shop'
+import { FRUITS, crystalExp, sig2, wildFightValue } from './shop'
 import { addExp, expToNext } from './stats'
 import type { OwnedMon } from './types'
 import { MARK_GOLD, PRIZES, SPIN_COST, exactPayoutRate } from './wheel'
@@ -51,6 +50,7 @@ interface WinRow {
   label: string
   kind: 'early' | 'late' | 'council' | 'grand'
   factor: number
+  scale: string
   cap: number
   foes: string
   rate: number
@@ -110,7 +110,7 @@ function isOffline(index: number, share: number): boolean {
 }
 
 function fightExp(level: number, rarity: number, offline: boolean): number {
-  const base = EXP_PER_LEVEL * level * (1 + 0.25 * rarity) * (1 + BUDDY_BONUS)
+  const base = EXP_PER_LEVEL * level * (1 + RARITY_EXP * rarity) * (1 + BUDDY_BONUS)
   return offline ? base * OFFLINE_EXP_FACTOR : base
 }
 
@@ -126,8 +126,6 @@ interface Clock {
   onlineMs: number
   offlineMs: number
   gold: number
-  offlineSeen: number
-  offlineLevels: number
   stopped: boolean
 }
 
@@ -143,31 +141,21 @@ function tick(clock: Clock, offline: boolean, interval: number, onlineCapMs: num
 function grindChapter(chapter: ChapterDef, mon: OwnedMon, clock: Clock, share: number, interval: number, onlineCapMs: number): boolean {
   const level = meanLevel(chapter)
   const rarity = expectedRarity(chapter)
-  const window = Math.floor(OFFLINE_CAP_MS / BASE_ENCOUNTER_MS)
   const route = routeOf(chapter.id)
   const started = clock.encounters
   while (mon.lvl < chapter.cap && clock.encounters - started < MAX_ENCOUNTERS && !clock.stopped) {
     const step = ((clock.encounters - started) % 20) + 1
     const kind = route[step]
     const offline = isOffline(clock.encounters, share)
-    if (offline && clock.offlineSeen >= window) {
-      clock.offlineSeen = 0
-      clock.offlineLevels = OFFLINE_LEVEL_CAP
-    }
-    const before = mon.lvl
     if (kind === 'wild') {
-      addExp(mon, fightExp(level, rarity, offline), chapter.cap, offline ? clock.offlineLevels : null)
+      addExp(mon, fightExp(level, rarity, offline), chapter.cap, null)
       clock.gold += 4 * level
     } else if (kind === 'trainer') {
       for (let foe = 0; foe < TRAINER_COUNT; foe++) {
-        addExp(mon, fightExp(level, rarity, offline), chapter.cap, offline ? clock.offlineLevels : null)
+        addExp(mon, fightExp(level, rarity, offline), chapter.cap, null)
       }
       clock.gold += 25 * level * TRAINER_COUNT
     } else if (kind === 'find') clock.gold += 50 * chapter.id
-    if (offline) {
-      clock.offlineSeen += 1
-      clock.offlineLevels = Math.max(0, clock.offlineLevels - (mon.lvl - before))
-    }
     tick(clock, offline, interval, onlineCapMs)
   }
   return mon.lvl >= chapter.cap
@@ -182,8 +170,6 @@ function climb(options: BalanceOptions): ClimbRow[] {
     onlineMs: 0,
     offlineMs: 0,
     gold: START_GOLD,
-    offlineSeen: 0,
-    offlineLevels: OFFLINE_LEVEL_CAP,
     stopped: false
   }
   let carry = monAt(STARTER_LEVEL)
@@ -234,9 +220,7 @@ function climb(options: BalanceOptions): ClimbRow[] {
           const rarity = expectedRarity(roads[roads.length - 1] ?? council)
           for (const foe of member.team) {
             const offline = isOffline(clock.encounters, options.offlineShare)
-            const beforeLevel = carry.lvl
-            addExp(carry, fightExp(foe.level, rarity, offline), member.cap, offline ? clock.offlineLevels : null)
-            if (offline) clock.offlineLevels = Math.max(0, clock.offlineLevels - (carry.lvl - beforeLevel))
+            addExp(carry, fightExp(foe.level, rarity, offline), member.cap, null)
             tick(clock, offline, interval, onlineCapMs)
           }
           clock.gold += member.gold
@@ -268,6 +252,11 @@ const BANDS = {
   grand: { cap: [0.45, 0.65], low: [0.15, 0.35] }
 } as const
 
+function scaleText(source: { factor?: number; hpFactor?: number; atkFactor?: number; defFactor?: number }): string {
+  const scale = bossScale(source)
+  return `${fmt(scale.hp, 2)}/${fmt(scale.atk, 2)}/${fmt(scale.def, 2)}`
+}
+
 function inBand(rate: number, band: readonly [number, number]): boolean {
   return rate >= band[0] - 1e-9 && rate <= band[1] + 1e-9
 }
@@ -286,10 +275,11 @@ function winRows(trials: number, seed: number): WinRow[] {
         label: `${region.name} · ${chapter.name}`,
         kind,
         factor,
+        scale: scaleText(chapter.guardian),
         cap: chapter.cap,
         foes: foes.map((mon) => mon.level).join('/'),
-        rate: clearRate(team, chapter.cap, foes, factor, trials, salt++),
-        low: clearRate(team, chapter.cap - 3, foes, factor, trials, salt++)
+        rate: clearRate(team, chapter.cap, foes, chapter.guardian, trials, salt++),
+        low: clearRate(team, chapter.cap - 3, foes, chapter.guardian, trials, salt++)
       })
     }
     const councilChapter = region.chapters.find((chapter) => chapter.council)
@@ -302,10 +292,11 @@ function winRows(trials: number, seed: number): WinRow[] {
         label: `${region.name} · ${member.epithet} ${member.name}`,
         kind,
         factor,
+        scale: scaleText(member),
         cap: councilChapter.cap,
         foes: member.team.map((mon) => mon.level).join('/'),
-        rate: clearRate(team, councilChapter.cap, member.team, factor, trials, salt++),
-        low: clearRate(team, councilChapter.cap - 3, member.team, factor, trials, salt++)
+        rate: clearRate(team, councilChapter.cap, member.team, member, trials, salt++),
+        low: clearRate(team, councilChapter.cap - 3, member.team, member, trials, salt++)
       })
     })
   }
@@ -317,11 +308,19 @@ function catchLines(): string[] {
   for (let rarity = 0; rarity <= 9; rarity++) {
     const even = catchChance(rarity, 30, 30)
     const under = catchChance(rarity, 30, 20)
-    lines.push(`| ${rarity} | ${fmt(CATCH_BASE[rarity], 2)} | ${pct(even)} | ${fmt(1 / even, 1)} | ${pct(under)} | ${fmt(1 / under, 1)} |`)
+    lines.push(`| ${rarity} | ${fmt(CATCH_BASE[rarity], 3)} | ${pct(even)} | ${fmt(expectedCatchAttempts(rarity, 30, 30), 1)} | ${pct(under)} | ${fmt(expectedCatchAttempts(rarity, 30, 20), 1)} |`)
   }
   lines.push('')
   lines.push(`Deckel der Fangchance: ${pct(CATCH_CAP)}. „Gegner höher“ setzt den Kämpfer 10 Level unter den Gegner und damit den Faktor 0,8.`)
   return lines
+}
+
+function crystalCost(row: ClimbRow | undefined, id: 's' | 'm' | 'l' | 'xl'): number {
+  if (!row) return 0
+  const chapter = regions.find((region) => region.id === row.regionId)?.chapters.find((item) => item.name === row.name)
+  if (!chapter) return 0
+  const wild = wildFightValue(chapter)
+  return sig2(2 * (crystalExp(id, Math.max(1, row.levelOut)) / Math.max(1, wild.exp)) * wild.gold)
 }
 
 function priceLines(rows: ClimbRow[]): string[] {
@@ -334,10 +333,10 @@ function priceLines(rows: ClimbRow[]): string[] {
   }
   const chapter = (regionId: number, name: string) => reached.find((row) => row.regionId === regionId && row.name === name)
   const gates: { name: string; cost: number; at: ClimbRow | undefined; note: string }[] = [
-    { name: 'EP-Kristall S', cost: CRYSTALS[0].price, at: chapter(1, 'Wiesenpfad'), note: 'sofort' },
-    { name: 'EP-Kristall M', cost: CRYSTALS[1].price, at: chapter(1, 'Moorsenke'), note: 'ab 3 Wappen' },
-    { name: 'EP-Kristall L', cost: CRYSTALS[2].price, at: chapter(1, 'Frostgrat'), note: 'ab 6 Wappen' },
-    { name: 'EP-Kristall XL', cost: CRYSTALS[3].price, at: chapter(1, 'Klingenschmiede'), note: 'ab 8 Wappen' },
+    { name: 'EP-Kristall S', cost: crystalCost(chapter(1, 'Wiesenpfad'), 's'), at: chapter(1, 'Wiesenpfad'), note: 'sofort' },
+    { name: 'EP-Kristall M', cost: crystalCost(chapter(1, 'Moorsenke'), 'm'), at: chapter(1, 'Moorsenke'), note: 'ab 3 Wappen' },
+    { name: 'EP-Kristall L', cost: crystalCost(chapter(1, 'Frostgrat'), 'l'), at: chapter(1, 'Frostgrat'), note: 'ab 6 Wappen' },
+    { name: 'EP-Kristall XL', cost: crystalCost(chapter(1, 'Klingenschmiede'), 'xl'), at: chapter(1, 'Klingenschmiede'), note: 'ab 8 Wappen' },
     { name: 'teuerste Frucht', cost: Math.max(...FRUITS.map((fruit) => fruit.price)), at: chapter(1, 'Wiesenpfad'), note: 'Glanzfrucht' },
     { name: 'Hortplatz 2', cost: HORT_PRICES[1], at: chapter(1, 'Wiesenpfad'), note: 'ohne Siegel' },
     { name: 'Hortplatz 3', cost: HORT_PRICES[2], at: chapter(1, 'Klingenschmiede'), note: 'nach Ratsiegel, Einkommen aus Klingenschmiede' },
@@ -399,7 +398,7 @@ function findings(rows: ClimbRow[], wins: WinRow[]): string[] {
   const rate = lastRoad ? fightExp(meanLevel(lastRoad), expectedRarity(lastRoad), false) : 1
   const fights = to260 / Math.max(rate, 1)
   notes.push(`EP von Level ${STARTER_LEVEL} bis 260: ${fmt(to260, 0)}. Mit der Wild-EP von ${lastRoad?.name ?? 'dem letzten Kapitel'} (${fmt(rate, 0)} EP je Online-Kampf) sind das ${fmt(fights, 0)} Kämpfe und ${hours(fights * BASE_ENCOUNTER_MS)}. Die Kurve hat kein eigenes Höchstlevel. Das Kapitel-Cap schneidet sie ab, der Rat selbst füttert sie nicht.`)
-  notes.push(`Seltenheit 9 braucht im Schnitt ${fmt(1 / catchChance(9, 30, 30), 0)} Versuche bei gleichem Level (Basis ${fmt(CATCH_BASE[9], 2)}). Seltenheit 0 ist bei ${pct(CATCH_CAP)} gedeckelt. Seltenheit 8 braucht ${fmt(1 / catchChance(8, 30, 30), 0)} Versuche.`)
+  notes.push(`Seltenheit 9 braucht mit Bannsiegel-Fortschritt im Schnitt ${fmt(expectedCatchAttempts(9), 1)} Versuche (Basis ${fmt(CATCH_BASE[9], 3)}). Seltenheit 8 braucht ${fmt(expectedCatchAttempts(8), 1)}. Seltenheit 0 bleibt bei ${pct(CATCH_CAP)} gedeckelt.`)
   return notes
 }
 
@@ -410,14 +409,14 @@ export function buildReport(options: BalanceOptions): string {
   const lines: string[] = []
   lines.push('# Balance-Messung')
   lines.push('')
-  lines.push('Abschnitt A. Wächterlevel, Boss-Faktoren, Vorhof und die Sechs-K.o.-Regel sind die neuen Werte. Fang, EP-Kurve und Ladenpreise sind unverändert.')
+  lines.push('Abschnitt B–E gegen die Werte nach Schritt 10a. EP-Faktor 12, Exponent 2,45. Offline ohne Level-Deckel, weiter 8 Stunden und EP ×0,5.')
   lines.push('')
   lines.push(`Parameter: Tempo ×${options.speed} (${fmt(BASE_ENCOUNTER_MS / options.speed / 1000, 2)} s je Begegnung), Offline-Anteil ${pct(options.offlineShare)}, Stichprobe ${options.trials} Kämpfe, Seed ${options.seed}. Online-Stundenlimit: ${options.onlineHours > 0 ? fmt(options.onlineHours, 1) : 'keins'}.`)
   lines.push('')
   lines.push('## Annahmen')
   lines.push('')
   lines.push('- Ein Träger kämpft immer selbst und ist der Begleiter (+30 % EP). Wegkämpfe werden gewonnen.')
-  lines.push('- EP je besiegtem Gegner: 8 × Level × (1 + 0,25 × Seltenheit), wie im Kampf. Offline halbiert und höchstens 12 Level je 8 Stunden Abwesenheit.')
+  lines.push('- EP je besiegtem Gegner: 8 × Level × (1 + 0,15 × Seltenheit), Kämpfer 100 %, Team 50 %, Begleiter +30 %. Offline halbiert, ohne Level-Deckel.')
   lines.push('- Der Träger schleift ein Kapitel bis zum Cap. Schritt 20 wird dabei nicht als Wächterkampf gewertet. Das Wappen-Gold gibt es einmal beim Erreichen.')
   lines.push('- In einer neuen Region zählt der erste Fang. Das Tier startet auf dem mittleren Wild-Level. Der alte Träger darf diesen Fang noch bestreiten.')
   lines.push('- Die Siegquote ist ein Sechser-Team aus dem Pool der Region. Der Kampf endet erst, wenn alle Verbündeten oder alle Gegner k.o. sind. HP bleiben. Der Boss-Faktor liegt auf HP, ATK und DEF.')
@@ -434,9 +433,9 @@ export function buildReport(options: BalanceOptions): string {
   lines.push('')
   lines.push('## Wächter und Rat')
   lines.push('')
-  lines.push('| Kampf | Faktor | Cap | Gegner | Quote auf Cap | Quote auf Cap−3 |')
+  lines.push('| Kampf | Faktor HP/ATK/DEF | Cap | Gegner | Quote auf Cap | Quote auf Cap−3 |')
   lines.push('|---|---:|---:|---|---:|---:|')
-  for (const win of wins) lines.push(`| ${win.label} | ${fmt(win.factor, 2)} | ${win.cap} | ${win.foes} | ${pct(win.rate)} | ${pct(win.low)} |`)
+  for (const win of wins) lines.push(`| ${win.label} | ${win.scale} | ${win.cap} | ${win.foes} | ${pct(win.rate)} | ${pct(win.low)} |`)
   lines.push('')
   lines.push('## Fang')
   lines.push('')
@@ -450,7 +449,64 @@ export function buildReport(options: BalanceOptions): string {
   lines.push('')
   for (const note of findings(rows, wins)) lines.push(`- ${note}`)
   lines.push('')
+  lines.push(...acceptanceLines(online, wins))
   return lines.join('\n')
+}
+
+const REGION_GOALS: Record<string, number> = {
+  Grünmark: 10,
+  Frostküste: 30,
+  Glutgebirge: 50,
+  Schattenmoor: 70,
+  Himmelsthron: 90
+}
+
+function acceptanceLines(online: ClimbRow[], wins: WinRow[]): string[] {
+  const lines = ['## Abnahme', '']
+  let previous = 0
+  let gold = START_GOLD
+  const hours = new Map<string, number>()
+  const bank = new Map<string, number>()
+  const level = new Map<string, number>()
+  for (const row of online) {
+    const slice = row.hours - previous
+    previous = row.hours
+    hours.set(row.region, (hours.get(row.region) ?? 0) + slice)
+    gold += row.goldGain
+    bank.set(row.region, gold)
+    level.set(row.region, row.levelOut)
+  }
+  lines.push('| Region | Stunden online | Ziel | Spanne ±20 % |')
+  lines.push('|---|---:|---:|---|')
+  let sum = 0
+  for (const [name, goal] of Object.entries(REGION_GOALS)) {
+    const got = hours.get(name) ?? 0
+    sum += got
+    const low = goal * 0.8
+    const high = goal * 1.2
+    lines.push(`| ${name} | ${fmt(got, 2)} | ${goal} | ${fmt(low, 1)}–${fmt(high, 1)} ${got >= low && got <= high ? 'im Band' : 'daneben'} |`)
+  }
+  lines.push('')
+  lines.push(`Summe ${fmt(sum, 1)} h. Ziel 200–300 h: ${sum >= 200 && sum <= 300 ? 'erfüllt' : 'daneben'}.`)
+  const outside = wins.filter((win) => win.rate < 0.45 - 1e-9 || win.rate > 0.9 + 1e-9)
+  const caps = wins.map((win) => win.rate).sort((a, b) => a - b)
+  lines.push(`Cap-Quoten ${pct(caps[0])} bis ${pct(caps[caps.length - 1])}. Außerhalb 45–90 %: ${outside.length ? outside.map((win) => `${win.label} ${pct(win.rate)}`).join('; ') : 'keine'}.`)
+  lines.push(`Fangversuche mit Bannsiegel-Fortschritt: Seltenheit 8 im Schnitt ${fmt(expectedCatchAttempts(8), 1)}, Seltenheit 9 im Schnitt ${fmt(expectedCatchAttempts(9), 1)}. Ziel 10–20.`)
+  lines.push('Gold: Wild- und Trainer-Gold unverändert. Kristallpreise folgen 2 × (Kristall-EP ÷ Wild-EP) × Wild-Gold, zwei signifikante Stellen. Hort 0 / 50.000 / 400.000 / 3.000.000 G. Rad 1.000 × Regionsnummer² G, weiter 1,7 Marken je Dreh.')
+  for (const region of regions) {
+    const road = [...region.chapters].reverse().find((chapter) => !chapter.council && !chapter.special)
+    if (!road) continue
+    const at = level.get(region.name) ?? road.cap
+    const wild = wildFightValue(road)
+    const xl = sig2(2 * (crystalExp('xl', at) / Math.max(1, wild.exp)) * wild.gold)
+    const fruit = 25_000 * region.id
+    const hort = region.id <= 1 ? 400_000 : 3_000_000
+    const dearest = Math.max(xl, fruit, hort)
+    const held = bank.get(region.name) ?? 0
+    lines.push(`- ${region.name}: Kontostand ${fmt(held, 0)} G, teuerster Preis ${fmt(dearest, 0)} G (XL ${fmt(xl, 0)}), Verhältnis ${fmt(held / dearest, 1)}.`)
+  }
+  lines.push('')
+  return lines
 }
 
 if (!process.env.VITEST) {

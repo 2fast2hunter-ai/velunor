@@ -18,9 +18,9 @@ import { chapterById, gateBadge, placeLabel, regionById, regions, routeOf, type 
 import { chapterUnlocked, dexCaughtCount, hereSightings, rarityName } from './sim'
 import { equippedFrame, equippedTitle, GOALS } from './achievements'
 import { HORT_PRICES, hortOffer } from './hort'
-import { CRYSTALS, FRUITS, crystalUnlocked, fruitDef, fruitMinutes, sellValue, wappenCount } from './shop'
+import { CRYSTALS, FRUITS, crystalExp, crystalPrice, crystalUnlocked, fruitDef, fruitMinutes, fruitPrice, sellValue, shopLevel, wappenCount } from './shop'
 import { weatherForecast, weatherName, type WeatherId } from './weather'
-import { FACES, MULTIPLIERS, PRIZES, SPIN_COST, faceById, wheelOpen, type Multiplier, type SymbolId } from './wheel'
+import { FACES, MULTIPLIERS, PRIZES, faceById, spinCost, wheelOpen, type Multiplier, type SymbolId } from './wheel'
 import { expToNext, isAlive, monStats, realHp } from './stats'
 import type { OfflineSummary } from './sim'
 import type { SaveV2 } from './types'
@@ -219,7 +219,9 @@ function sightings(save: SaveV2, now: number, open: boolean): string {
   const forecast = weatherForecast(now)
   const current = forecast[0]
   const body = rows.map((row) => `<div class="sight-row">
-      <img class="${row.caught ? '' : 'sil'}" src="${monsterArt(row.species)}" alt=""/>
+      <span class="seal-ring" style="--pity:${Math.max(0, Math.min(1, row.pity / 10))}" title="${row.pity ? `Bannsiegel +${row.pity.toLocaleString('de-DE')} Pp` : ''}">
+        <img class="${row.caught ? '' : 'sil'}" src="${monsterArt(row.species)}" alt=""/>
+      </span>
       <div><b>${row.caught ? esc(row.name) : '???'}</b><div class="muted">${esc(row.type)}</div></div>
       <span class="pct">${Math.round(row.pct)} %</span>
     </div>`).join('')
@@ -405,18 +407,21 @@ function shop(save: SaveV2, now: number): string {
     const mon = save.mons[uid]
     return `<option value="${uid}">${esc(species(mon.species).name)} Lv ${mon.lvl}</option>`
   }).join('')
+  const level = shopLevel(save)
   const crystals = CRYSTALS.map((item) => {
     const open = crystalUnlocked(save, item.id)
+    const price = crystalPrice(save, item.id)
+    const exp = crystalExp(item.id, level)
     return `<div class="shop-row">
-      <div><b>${esc(item.name)}</b><div class="muted">+${item.exp.toLocaleString('de-DE')} EP · ${item.price.toLocaleString('de-DE')} G${item.wappen ? ` · ab ${item.wappen} Wappen` : ''}</div></div>
+      <div><b>${esc(item.name)}</b><div class="muted">+${exp.toLocaleString('de-DE')} EP · ${price.toLocaleString('de-DE')} G${item.wappen ? ` · ab ${item.wappen} Wappen` : ''}</div></div>
       <span>×${save.bag.crystals[item.id]}</span>
       <button data-act="buy-crystal" data-id="${item.id}" ${open ? '' : 'disabled'}>Kaufen</button>
-      <button data-act="sell-crystal" data-id="${item.id}">Verkauf ${sellValue(item.price)} G</button>
+      <button data-act="sell-crystal" data-id="${item.id}">Verkauf ${sellValue(price)} G</button>
       <button data-act="use-crystal" data-id="${item.id}">Geben</button>
     </div>`
   }).join('')
   const fruits = FRUITS.map((item) => `<div class="shop-row">
-      <div><b>${esc(item.name)}</b><div class="muted">${esc(item.effect)} · ${item.price.toLocaleString('de-DE')} G · 1 h</div></div>
+      <div><b>${esc(item.name)}</b><div class="muted">${esc(item.effect)} · ${fruitPrice(save, item.id).toLocaleString('de-DE')} G · 1 h</div></div>
       <span>×${save.bag.fruits[item.id]}</span>
       <button data-act="buy-fruit" data-id="${item.id}">Kaufen</button>
       <button data-act="sell-fruit" data-id="${item.id}">Verkauf ${sellValue(item.price)} G</button>
@@ -478,7 +483,7 @@ function wheelView(save: SaveV2, wheel: WheelPanel): string {
   }).join('')
   return `<div class="card panel">
     <h2>${tr(save, 'act.wheel')}</h2>
-    <p class="muted">Ein Dreh kostet ${(SPIN_COST * wheel.mult).toLocaleString('de-DE')} G. Die Marken gelten im Preisladen. Nur Spielgold, kein Echtgeld. Marken: ${save.marks.toLocaleString('de-DE')}</p>
+    <p class="muted">Ein Dreh kostet ${(spinCost(save.region) * wheel.mult).toLocaleString('de-DE')} G. Die Marken gelten im Preisladen. Nur Spielgold, kein Echtgeld. Marken: ${save.marks.toLocaleString('de-DE')}</p>
     <div class="reels">${reels}</div>
     <div class="row-actions">${bets}<button class="primary" data-act="spin">Drehen</button></div>
     ${wheel.note ? `<p>${esc(wheel.note)}</p>` : ''}

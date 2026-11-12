@@ -1,8 +1,9 @@
 import { syncAchievements } from './achievements'
+import { RARITY_EXP } from './const'
 import { t } from './i18n'
-import { addExp, crossedAwaken } from './stats'
+import { chapterById, type ChapterDef, type Spawn } from './route'
+import { addExp, crossedAwaken, expToNext } from './stats'
 import { species } from '../data'
-import type { Spawn } from './route'
 import type { CrystalId, FruitId, SaveV2 } from './types'
 
 export type { CrystalId, FruitId }
@@ -37,11 +38,13 @@ export interface FruitDef {
   effect: string
 }
 
+export const CRYSTAL_SHARE: Record<CrystalId, number> = { s: 0.1, m: 0.5, l: 1, xl: 3 }
+
 export const CRYSTALS: CrystalDef[] = [
-  { id: 's', name: 'EP-Kristall S', exp: 500, price: 1000, wappen: 0 },
-  { id: 'm', name: 'EP-Kristall M', exp: 8000, price: 12000, wappen: 3 },
-  { id: 'l', name: 'EP-Kristall L', exp: 120000, price: 150000, wappen: 6 },
-  { id: 'xl', name: 'EP-Kristall XL', exp: 500000, price: 500000, wappen: 8 }
+  { id: 's', name: 'EP-Kristall S', exp: 0, price: 0, wappen: 0 },
+  { id: 'm', name: 'EP-Kristall M', exp: 0, price: 0, wappen: 3 },
+  { id: 'l', name: 'EP-Kristall L', exp: 0, price: 0, wappen: 6 },
+  { id: 'xl', name: 'EP-Kristall XL', exp: 0, price: 0, wappen: 8 }
 ]
 
 export const FRUITS: FruitDef[] = [
@@ -66,6 +69,40 @@ export function emptyBag(): SaveV2['bag'] {
 
 export function crystalDef(id: CrystalId): CrystalDef {
   return CRYSTALS.find((row) => row.id === id) ?? CRYSTALS[0]
+}
+
+export function crystalExp(id: CrystalId, level: number): number {
+  return Math.max(1, Math.round(CRYSTAL_SHARE[id] * expToNext(Math.max(1, level))))
+}
+
+export function shopLevel(save: SaveV2): number {
+  const levels = save.team.map((uid) => save.mons[uid]?.lvl ?? 1)
+  return Math.max(1, ...levels)
+}
+
+/** Round to two significant figures. */
+export function sig2(value: number): number {
+  if (!Number.isFinite(value) || value <= 0) return 1
+  const mag = 10 ** (Math.floor(Math.log10(value)) - 1)
+  return Math.max(1, Math.round(value / mag) * mag)
+}
+
+export function wildFightValue(chapter: ChapterDef): { exp: number; gold: number } {
+  const level = Math.max(1, Math.round((chapter.levelMin + chapter.levelMax) / 2))
+  const rows = chapter.day.length ? chapter.day : chapter.night
+  const total = rows.reduce((sum, row) => sum + row.weight, 0) || 1
+  const rarity = rows.reduce((sum, row) => sum + row.weight * species(row.species).baseRarity, 0) / total
+  return { exp: 8 * level * (1 + RARITY_EXP * rarity), gold: 4 * level }
+}
+
+export function crystalPrice(save: SaveV2, id: CrystalId, chapter = chapterById(save.region, save.chapter)): number {
+  const wild = wildFightValue(chapter)
+  const raw = 2 * (crystalExp(id, shopLevel(save)) / Math.max(1, wild.exp)) * wild.gold
+  return sig2(raw)
+}
+
+export function fruitPrice(save: SaveV2, id: FruitId): number {
+  return fruitDef(id).price * Math.max(1, Math.floor(save.region) || 1)
 }
 
 export function fruitDef(id: FruitId): FruitDef {
@@ -140,17 +177,18 @@ function say(save: SaveV2, key: string, vars?: Record<string, string | number>):
 
 export function buyCrystal(save: SaveV2, id: CrystalId): string | null {
   const item = crystalDef(id)
+  const price = crystalPrice(save, id)
   if (!crystalUnlocked(save, id)) return say(save, 'err.crystalLock', { name: item.name, n: item.wappen })
-  if (save.gold < item.price) return say(save, 'err.gold')
-  save.gold -= item.price
+  if (save.gold < price) return say(save, 'err.gold')
+  save.gold -= price
   save.bag.crystals[id] += 1
   return null
 }
 
 export function buyFruit(save: SaveV2, id: FruitId): string | null {
-  const item = fruitDef(id)
-  if (save.gold < item.price) return say(save, 'err.gold')
-  save.gold -= item.price
+  const price = fruitPrice(save, id)
+  if (save.gold < price) return say(save, 'err.gold')
+  save.gold -= price
   save.bag.fruits[id] += 1
   return null
 }
@@ -158,14 +196,14 @@ export function buyFruit(save: SaveV2, id: FruitId): string | null {
 export function sellCrystal(save: SaveV2, id: CrystalId): string | null {
   if (save.bag.crystals[id] <= 0) return say(save, 'err.nothing')
   save.bag.crystals[id] -= 1
-  save.gold += sellValue(crystalDef(id).price)
+  save.gold += sellValue(crystalPrice(save, id))
   return null
 }
 
 export function sellFruit(save: SaveV2, id: FruitId): string | null {
   if (save.bag.fruits[id] <= 0) return say(save, 'err.nothing')
   save.bag.fruits[id] -= 1
-  save.gold += sellValue(fruitDef(id).price)
+  save.gold += sellValue(fruitPrice(save, id))
   return null
 }
 
@@ -175,7 +213,7 @@ export function useCrystal(save: SaveV2, id: CrystalId, uid: string, cap: number
   if (save.bag.crystals[id] <= 0) return say(save, 'err.noCrystal')
   save.bag.crystals[id] -= 1
   const before = mon.lvl
-  const gained = addExp(mon, crystalDef(id).exp, cap, null)
+  const gained = addExp(mon, crystalExp(id, mon.lvl), cap, null)
   if (gained.gained <= 0) {
     save.bag.crystals[id] += 1
     return say(save, 'err.cap')

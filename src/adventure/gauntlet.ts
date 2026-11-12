@@ -7,6 +7,25 @@ import { fight1v1 } from './battle'
 import { awakenCount, monStats } from './stats'
 import type { SkillDef } from '../types'
 
+export interface BossScale {
+  hp: number
+  atk: number
+  def: number
+}
+
+export function bossScale(source: number | { factor?: number; hpFactor?: number; atkFactor?: number; defFactor?: number }): BossScale {
+  if (typeof source === 'number') {
+    const scale = source > 0 ? source : 1
+    return { hp: scale, atk: scale, def: scale }
+  }
+  const base = source.factor && source.factor > 0 ? source.factor : 1
+  return {
+    hp: source.hpFactor && source.hpFactor > 0 ? source.hpFactor : base,
+    atk: source.atkFactor && source.atkFactor > 0 ? source.atkFactor : base,
+    def: source.defFactor && source.defFactor > 0 ? source.defFactor : base
+  }
+}
+
 export interface GauntletMon {
   species: string
   level: number
@@ -14,6 +33,9 @@ export interface GauntletMon {
   hpFraction: number
   skillBonus: boolean
   factor: number
+  hpFactor?: number
+  atkFactor?: number
+  defFactor?: number
 }
 
 function scaledSkill(skill: SkillDef, level: number, bonus: boolean): SkillDef {
@@ -56,8 +78,8 @@ export function referenceTeam(regionId: number): string[] {
 export function gauntletSide(mon: GauntletMon): FightSide {
   const sp = species(mon.species)
   const stats = monStats({ species: mon.species, lvl: mon.level, exp: 0, hp: null, shiny: false, caughtAt: 0, caughtWhere: '', keepDupes: false })
-  const factor = mon.factor > 0 ? mon.factor : 1
-  const maxHp = Math.max(1, Math.round(stats.hp * factor))
+  const scale = bossScale(mon)
+  const maxHp = Math.max(1, Math.round(stats.hp * scale.hp))
   const fraction = Math.max(0, Math.min(1, mon.hpFraction))
   return {
     speciesId: sp.id,
@@ -65,8 +87,8 @@ export function gauntletSide(mon: GauntletMon): FightSide {
     type: sp.type,
     maxHp,
     hp: Math.max(1, Math.round(maxHp * (fraction || 0.001))),
-    atk: Math.max(1, Math.round(stats.atk * factor)),
-    def: Math.max(1, Math.round(stats.def * factor)),
+    atk: Math.max(1, Math.round(stats.atk * scale.atk)),
+    def: Math.max(1, Math.round(stats.def * scale.def)),
     spd: stats.spd,
     skill: scaledSkill(sp.skill, mon.level, mon.skillBonus),
     passive: sp.passive ?? null
@@ -128,15 +150,25 @@ export function clearRate(
   team: string[],
   level: number,
   foes: { species: string; level: number }[],
-  factor: number,
+  scale: number | { factor?: number; hpFactor?: number; atkFactor?: number; defFactor?: number },
   trials: number,
   seed: number
 ): number {
+  const boss = bossScale(scale)
   const rng = mulberry32(seed)
   let wins = 0
   for (let trial = 0; trial < trials; trial++) {
     const allies = team.map((id) => ({ species: id, level, hpFraction: 1, skillBonus: true, factor: 1 }))
-    const enemies = foes.map((foe) => ({ species: foe.species, level: foe.level, hpFraction: 1, skillBonus: false, factor }))
+    const enemies = foes.map((foe) => ({
+      species: foe.species,
+      level: foe.level,
+      hpFraction: 1,
+      skillBonus: false,
+      factor: 1,
+      hpFactor: boss.hp,
+      atkFactor: boss.atk,
+      defFactor: boss.def
+    }))
     if (settleGauntlet(allies, enemies, rng).win) wins += 1
   }
   return trials ? wins / trials : 0

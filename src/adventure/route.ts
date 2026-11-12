@@ -26,8 +26,11 @@ export interface GuardianDef {
   epithet: string
   badge: string
   gold: number
-  /** Multiplier on HP, ATK and DEF. Steps of 0.05, starting at 1. */
+  /** Multiplier on HP, ATK and DEF when a stat has no own factor. */
   factor?: number
+  hpFactor?: number
+  atkFactor?: number
+  defFactor?: number
   team: GuardianMon[]
 }
 
@@ -37,8 +40,11 @@ export interface CouncilMember {
   epithet: string
   cap: number
   gold: number
-  /** Multiplier on HP, ATK and DEF. Steps of 0.05, starting at 1. */
+  /** Multiplier on HP, ATK and DEF when a stat has no own factor. */
   factor?: number
+  hpFactor?: number
+  atkFactor?: number
+  defFactor?: number
   team: GuardianMon[]
 }
 
