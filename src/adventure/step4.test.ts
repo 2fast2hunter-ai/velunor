@@ -11,6 +11,8 @@ import {
   FRUITS,
   applyFruitWeights,
   buyCrystal,
+  crystalExp,
+  crystalPrice,
   crystalUnlocked,
   fruitActive,
   grantGold,
@@ -35,11 +37,11 @@ function memory(): StorageLike {
 
 describe('shop', () => {
   it('prices crystals and fruits and unlocks them by wappen count', () => {
-    expect(CRYSTALS.map((item) => [item.id, item.exp, item.price, item.wappen])).toEqual([
-      ['s', 500, 1000, 0],
-      ['m', 8000, 12000, 3],
-      ['l', 120000, 150000, 6],
-      ['xl', 500000, 500000, 8]
+    expect(CRYSTALS.map((item) => [item.id, item.wappen])).toEqual([
+      ['s', 0],
+      ['m', 3],
+      ['l', 6],
+      ['xl', 8]
     ])
     expect(FRUITS).toHaveLength(7)
     expect(sellValue(1000)).toBe(250)
@@ -53,23 +55,25 @@ describe('shop', () => {
     expect(wappenCount(save)).toBe(3)
     expect(crystalUnlocked(save, 'm')).toBe(true)
     expect(crystalUnlocked(save, 'l')).toBe(false)
-    save.gold = 1000
+    const price = crystalPrice(save, 's')
+    save.gold = price
     expect(buyCrystal(save, 's')).toBeNull()
     expect(save.bag.crystals.s).toBe(1)
     expect(save.gold).toBe(0)
     expect(sellCrystal(save, 's')).toBeNull()
-    expect(save.gold).toBe(250)
+    expect(save.gold).toBe(sellValue(price))
     expect(save.bag.crystals.s).toBe(0)
   })
 
   it('gives crystal EP and stops at the cap', () => {
     const save = beginAdventure('Ada', 'A', 'm01', 1)
-    save.gold = 1000
+    save.gold = crystalPrice(save, 's')
     buyCrystal(save, 's')
     const uid = save.team[0]
+    const gain = crystalExp('s', save.mons[uid].lvl)
     expect(useCrystal(save, 's', uid, 99)).toBeNull()
-    expect(save.mons[uid].lvl).toBe(6)
-    expect(save.mons[uid].exp).toBe(500 - 263)
+    expect(save.mons[uid].lvl).toBe(5)
+    expect(save.mons[uid].exp).toBe(gain)
     save.mons[uid].lvl = 12
     save.mons[uid].exp = 0
     save.bag.crystals.s = 1
@@ -97,7 +101,7 @@ describe('fruit effects', () => {
   it('raises catch chance, combat EP and gold while a fruit is active', () => {
     expect(catchChance(0, 1, 5, 1.5, 0.7)).toBe(0.7)
     expect(catchChance(0, 1, 5, 1.25, 0.6)).toBe(0.6)
-    expect(catchChance(9, 1, 5, 1.5, 0.7)).toBeCloseTo(0.03)
+    expect(catchChance(9, 1, 5, 1.5, 0.7)).toBeCloseTo(0.015 * 1.5)
     const save = beginAdventure('Ada', 'A', 'm01', 1)
     const uid = save.team[0]
     save.mons[uid].exp = 0

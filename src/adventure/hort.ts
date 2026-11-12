@@ -6,7 +6,7 @@ import { rollShiny, SHINY_HORT_RATE } from './shiny'
 import type { SaveV2 } from './types'
 
 export const HORT_EP_RATE = 0.3
-export const HORT_PRICES = [0, 20_000, 120_000, 500_000] as const
+export const HORT_PRICES = [0, 50_000, 400_000, 3_000_000] as const
 export const BREED_MS = 2 * 60 * 60 * 1000
 export const HATCH_MS = 4 * 60 * 60 * 1000
 export const BREED_CHANCE = 0.5

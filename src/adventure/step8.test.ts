@@ -96,7 +96,7 @@ describe('regions 2 to 5', () => {
     expect(won.gold).toBe(14000 + 50000)
     save.hortSlots = 3
     expect(hortOffer(save)?.locked).toBeNull()
-    expect(hortOffer(save)?.price).toBe(500000)
+    expect(hortOffer(save)?.price).toBe(3_000_000)
     expect(travelTo(save, 1, 1)).toBeNull()
     expect(save.region).toBe(1)
     expect(save.chapter).toBe(1)

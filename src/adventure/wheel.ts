@@ -95,10 +95,15 @@ function say(save: SaveV2, key: string, vars?: Record<string, string | number>):
   return t(save.settings?.lang, key, vars)
 }
 
+export function spinCost(regionId = 1): number {
+  const region = Math.max(1, Math.floor(regionId) || 1)
+  return SPIN_COST * region * region
+}
+
 export function spinWheel(save: SaveV2, mult: Multiplier, rng?: () => number): SpinResult | string {
   if (!wheelOpen(save)) return say(save, 'err.wheelLock')
   if (!MULTIPLIERS.includes(mult)) return say(save, 'err.wheelBad')
-  const cost = SPIN_COST * mult
+  const cost = spinCost(save.region) * mult
   if (save.gold < cost) return say(save, 'err.gold')
   save.gold -= cost
   const roll = rng ?? saveRng(save)

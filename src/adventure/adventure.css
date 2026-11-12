@@ -266,7 +266,15 @@ textarea { width: 100%; box-sizing: border-box; background: #121a30; color: inhe
 .side { display: flex; flex-direction: column; gap: 12px; }
 .sight { display: flex; flex-direction: column; gap: 8px; overflow: auto; }
 .sight-row { display: flex; align-items: center; gap: 8px; }
-.sight-row img { width: 42px; height: 42px; object-fit: contain; }
+.sight-row img { width: 38px; height: 38px; object-fit: contain; border-radius: 50%; background: #121c36; }
+.seal-ring {
+  width: 42px;
+  height: 42px;
+  border-radius: 50%;
+  display: grid;
+  place-items: center;
+  background: conic-gradient(#f0c14a calc(var(--pity) * 360deg), rgba(255, 255, 255, 0.16) 0);
+}
 img.sil { filter: brightness(0); opacity: 0.8; }
 .pct { margin-left: auto; font-weight: 800; }
 .clock { font-size: 18px; display: flex; align-items: center; gap: 8px; }

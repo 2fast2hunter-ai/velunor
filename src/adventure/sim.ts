@@ -12,8 +12,10 @@ import {
   LOG_LIMIT,
   OFFLINE_CAP_MS,
   OFFLINE_EXP_FACTOR,
-  OFFLINE_LEVEL_CAP,
+  RARITY_EXP,
   RETRY_WINS,
+  SEAL_PITY_CAP,
+  SEAL_PITY_STEP,
   TEAM_MAX
 } from './const'
 import {
@@ -40,6 +42,7 @@ import { rollShiny, shinyChance, teamBlocksShiny } from './shiny'
 import { syncAchievements } from './achievements'
 import { advanceHort, HORT_EP_RATE } from './hort'
 import { applyFruitWeights, catchMods, combatExpFactor, fruitActive, fruitDef, grantGold, rollFindFruit } from './shop'
+import { bossScale, type BossScale } from './gauntlet'
 import { battleRoster, fightsHere, ownsRegional, seatRegional } from './origin'
 import { makeMon, takeId } from './save'
 import { addExp, awakenCount, battleLevel, crossedAwaken, isAlive, monStats, realHp, speciesExp } from './stats'
@@ -93,10 +96,23 @@ export function emptySummary(): OfflineSummary {
   return { encounters: 0, fights: 0, gold: 0, dupes: 0, catches: [], levels: [], badges: [] }
 }
 
-export function catchChance(rarity: number, foeLevel: number, fighterLevel: number, mult = 1, cap = CATCH_CAP): number {
+export function catchChance(rarity: number, foeLevel: number, fighterLevel: number, mult = 1, cap = CATCH_CAP, pityPp = 0): number {
   const base = CATCH_BASE[Math.max(0, Math.min(9, rarity))] ?? CATCH_BASE[0]
   const levelFactor = foeLevel <= fighterLevel ? 1 : 0.8
-  return Math.min(cap, base * levelFactor * mult)
+  const pity = Math.max(0, Math.min(SEAL_PITY_CAP, pityPp)) / 100
+  return Math.min(cap, base * levelFactor * mult + pity)
+}
+
+/** Mean tries until the seal lands, including the +0.5 pp pity per miss. */
+export function expectedCatchAttempts(rarity: number, foeLevel = 30, fighterLevel = 30): number {
+  let survive = 1
+  let expected = 0
+  for (let fails = 0; fails < 400 && survive > 1e-9; fails++) {
+    const chance = catchChance(rarity, foeLevel, fighterLevel, 1, CATCH_CAP, Math.min(SEAL_PITY_CAP, fails * SEAL_PITY_STEP))
+    expected += (fails + 1) * survive * chance
+    survive *= 1 - chance
+  }
+  return expected
 }
 
 export function hasBadge(save: SaveV2, badge: string): boolean {
@@ -219,13 +235,6 @@ function noteLevel(summary: OfflineSummary | undefined, uid: string, mon: OwnedM
   else summary.levels.push({ uid, name: species(mon.species).name, from: before, to: mon.lvl })
 }
 
-function budget(opts: ResolveOpts, uid: string): number | null {
-  if (!opts.offline) return null
-  if (!opts.levelLeft) opts.levelLeft = new Map()
-  if (!opts.levelLeft.has(uid)) opts.levelLeft.set(uid, OFFLINE_LEVEL_CAP)
-  return opts.levelLeft.get(uid) ?? 0
-}
-
 function spendBudget(opts: ResolveOpts, uid: string, levels: number): void {
   if (!opts.offline || !opts.levelLeft || levels <= 0) return
   opts.levelLeft.set(uid, Math.max(0, (opts.levelLeft.get(uid) ?? 0) - levels))
@@ -240,7 +249,7 @@ export function awardCombatExp(
   opts: ResolveOpts,
   now: number
 ): void {
-  const base = 8 * foeLevel * (1 + 0.25 * rarity)
+  const base = 8 * foeLevel * (1 + RARITY_EXP * rarity)
   for (const uid of save.team) {
     const mon = save.mons[uid]
     if (!mon) continue
@@ -249,7 +258,7 @@ export function awardCombatExp(
     share *= combatExpFactor(save, now)
     if (opts.offline) share *= OFFLINE_EXP_FACTOR
     const before = mon.lvl
-    const gained = addExp(mon, share, cap, budget(opts, uid))
+    const gained = addExp(mon, share, cap, null)
     spendBudget(opts, uid, gained.levels)
     noteLevel(opts.summary, uid, mon, before)
     rememberAwaken(save, uid, before, mon.lvl)
@@ -260,7 +269,7 @@ export function awardCombatExp(
     const mon = save.mons[uid]
     if (!mon) continue
     const before = mon.lvl
-    const gained = addExp(mon, hortShare, cap, budget(opts, uid))
+    const gained = addExp(mon, hortShare, cap, null)
     spendBudget(opts, uid, gained.levels)
     rememberAwaken(save, uid, before, mon.lvl)
     noteLevel(opts.summary, uid, mon, before)
@@ -302,11 +311,10 @@ function sideFrom(mon: OwnedMon, cap: number): FightSide {
   }
 }
 
-function foeSide(speciesId: string, level: number, shiny = false, factor = 1, hpFraction = 1): FightSide {
+function foeSide(speciesId: string, level: number, shiny = false, scale: BossScale = { hp: 1, atk: 1, def: 1 }, hpFraction = 1): FightSide {
   const sp = species(speciesId)
   const stats = monStats({ species: speciesId, lvl: level, exp: 0, hp: null, shiny, caughtAt: 0, caughtWhere: '', keepDupes: false })
-  const scale = factor > 0 ? factor : 1
-  const maxHp = Math.max(1, Math.round(stats.hp * scale))
+  const maxHp = Math.max(1, Math.round(stats.hp * scale.hp))
   const fraction = Math.max(0, Math.min(1, hpFraction))
   return {
     speciesId: sp.id,
@@ -314,8 +322,8 @@ function foeSide(speciesId: string, level: number, shiny = false, factor = 1, hp
     type: sp.type,
     maxHp,
     hp: Math.max(1, Math.round(maxHp * (fraction > 0 ? fraction : 1))),
-    atk: Math.max(1, Math.round(stats.atk * scale)),
-    def: Math.max(1, Math.round(stats.def * scale)),
+    atk: Math.max(1, Math.round(stats.atk * scale.atk)),
+    def: Math.max(1, Math.round(stats.def * scale.def)),
     spd: stats.spd,
     skill: sp.skill,
     passive: sp.passive ?? null
@@ -456,7 +464,7 @@ export function applyCatch(save: SaveV2, speciesId: string, level: number, shiny
   if (target) {
     const mon = save.mons[target]
     const before = mon.lvl
-    const gained = addExp(mon, speciesExp(before), chapter.cap, budget(opts, target))
+    const gained = addExp(mon, speciesExp(before), chapter.cap, null)
     spendBudget(opts, target, gained.levels)
     rememberAwaken(save, target, before, mon.lvl)
     noteLevel(opts.summary, target, mon, before)
@@ -563,7 +571,8 @@ function doWild(save: SaveV2, chapter: ChapterDef, now: number, opts: ResolveOpt
     const fighter = save.mons[bouts.lastFighter]
     const rarity = species(speciesId).baseRarity
     const mods = catchMods(save, now)
-    const chance = catchChance(rarity, level, fighter.lvl, mods.mult, mods.cap)
+    const pity = save.sealPity?.[speciesId] ?? 0
+    const chance = catchChance(rarity, level, fighter.lvl, mods.mult, mods.cap, pity)
     const roll = rngOf(save)()
     const success = roll < chance
     const percent = Math.round(chance * 100)
@@ -575,8 +584,10 @@ function doWild(save: SaveV2, chapter: ChapterDef, now: number, opts: ResolveOpt
       if (caught.place === 'exp') say(save, outcome, now, line(save, 'say.dupeExp', { name: caught.name }), quiet)
       else if (caught.place === 'kept') say(save, outcome, now, line(save, 'say.dupeKeep', { name: caught.name }), quiet)
       else say(save, outcome, now, line(save, 'say.caught', { name: caught.name, place: line(save, caught.place === 'team' ? 'say.placeTeam' : 'say.placePc') }), quiet)
+      save.sealPity[speciesId] = 0
     } else {
       outcome.catch = { species: speciesId, name, chance, success: false, place: null, shiny, level }
+      save.sealPity[speciesId] = Math.min(SEAL_PITY_CAP, pity + SEAL_PITY_STEP)
       say(save, outcome, now, line(save, 'say.escaped'), quiet)
     }
   }
@@ -629,7 +640,7 @@ function runGauntlet(
   save: SaveV2,
   chapter: ChapterDef,
   foes: { species: string; level: number; shiny?: boolean }[],
-  factor: number,
+  scale: BossScale,
   opts: ResolveOpts,
   now: number
 ): { traces: FightTrace[]; wins: number; lastFighter: string | null; wiped: boolean } {
@@ -655,7 +666,7 @@ function runGauntlet(
     save.active = fighter
     const allyMon = save.mons[fighter]
     const cap = chapterCapNow(save, chapter)
-    const trace = fight1v1(sideFrom(allyMon, cap), foeSide(foe.species, foe.level, foe.shiny ?? false, factor, foeFraction), rngOf(save), opts.trace)
+    const trace = fight1v1(sideFrom(allyMon, cap), foeSide(foe.species, foe.level, foe.shiny ?? false, scale, foeFraction), rngOf(save), opts.trace)
     traces.push(trace)
     lastFighter = fighter
     if (opts.summary) opts.summary.fights += 1
@@ -699,7 +710,7 @@ function doGuardian(save: SaveV2, chapter: ChapterDef, now: number, opts: Resolv
   }
   say(save, outcome, now, line(save, 'say.guard', { epithet: guard.epithet, name: guard.name, type: typeName(species(guard.team[0].species).type) }), quiet)
   const foes = guard.team.map((mon) => ({ species: mon.species, level: mon.level }))
-  const bouts = runGauntlet(save, chapter, foes, guard.factor ?? 1, opts, now)
+  const bouts = runGauntlet(save, chapter, foes, bossScale(guard), opts, now)
   outcome.traces = bouts.traces
   if (bouts.wins < foes.length) {
     outcome.win = false
@@ -822,7 +833,7 @@ function doCouncil(save: SaveV2, chapter: ChapterDef, now: number, opts: Resolve
   save.step = index + 1
   say(save, outcome, now, line(save, 'say.councilEnter', { epithet: member.epithet, name: member.name, cap: chapter.cap }), quiet)
   const foes = member.team.map((mon) => ({ species: mon.species, level: mon.level }))
-  const bouts = runGauntlet(save, chapter, foes, member.factor ?? 1, opts, now)
+  const bouts = runGauntlet(save, chapter, foes, bossScale(member), opts, now)
   outcome.traces = bouts.traces
   if (bouts.wins < foes.length) {
     outcome.win = false
@@ -1022,14 +1033,15 @@ export function dexCaughtCount(save: SaveV2): number {
   return Object.values(save.dex).filter((entry) => entry.caught > 0).length
 }
 
-export function hereSightings(save: SaveV2, now: number): { species: string; name: string; pct: number; caught: boolean; type: string }[] {
+export function hereSightings(save: SaveV2, now: number): { species: string; name: string; pct: number; caught: boolean; type: string; pity: number }[] {
   const chapter = chapterById(save.region, save.chapter)
   return sightingShares(applyFruitWeights(encounterTable(chapter, now), save, now)).map((row) => ({
     species: row.species,
     name: species(row.species).name,
     pct: row.pct,
     caught: (save.dex[row.species]?.caught ?? 0) > 0,
-    type: typeName(species(row.species).type)
+    type: typeName(species(row.species).type),
+    pity: save.sealPity?.[row.species] ?? 0
   }))
 }
 

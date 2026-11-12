@@ -42,7 +42,10 @@
                 "level": 10
               }
             ],
-            "factor": 1.4
+            "factor": 1.4,
+            "hpFactor": 1.4,
+            "atkFactor": 1.34,
+            "defFactor": 1.4
           },
           "day": [
             {
@@ -119,7 +122,10 @@
                 "level": 16
               }
             ],
-            "factor": 1.2
+            "factor": 1.2,
+            "hpFactor": 1.2,
+            "atkFactor": 1.24,
+            "defFactor": 1.2
           },
           "day": [
             {
@@ -208,7 +214,10 @@
                 "level": 22
               }
             ],
-            "factor": 1.15
+            "factor": 1.15,
+            "hpFactor": 1.15,
+            "atkFactor": 1.17,
+            "defFactor": 1.15
           },
           "day": [
             {
@@ -298,7 +307,10 @@
                 "level": 28
               }
             ],
-            "factor": 1.2
+            "factor": 1.2,
+            "hpFactor": 1.2,
+            "atkFactor": 1.19,
+            "defFactor": 1.2
           },
           "day": [
             {
@@ -384,7 +396,10 @@
                 "level": 34
               }
             ],
-            "factor": 1.25
+            "factor": 1.25,
+            "hpFactor": 1.25,
+            "atkFactor": 1.31,
+            "defFactor": 1.25
           },
           "day": [
             {
@@ -466,7 +481,10 @@
                 "level": 40
               }
             ],
-            "factor": 1.25
+            "factor": 1.25,
+            "hpFactor": 1.25,
+            "atkFactor": 1.27,
+            "defFactor": 1.25
           },
           "day": [
             {
@@ -532,7 +550,10 @@
                 "level": 46
               }
             ],
-            "factor": 1.35
+            "factor": 1.35,
+            "hpFactor": 1.35,
+            "atkFactor": 1.34,
+            "defFactor": 1.35
           },
           "day": [
             {
@@ -598,7 +619,10 @@
                 "level": 52
               }
             ],
-            "factor": 1.4
+            "factor": 1.4,
+            "hpFactor": 1.4,
+            "atkFactor": 1.35,
+            "defFactor": 1.4
           },
           "day": [
             {
@@ -754,7 +778,10 @@
                     "level": 56
                   }
                 ],
-                "factor": 1.25
+                "factor": 1.25,
+                "hpFactor": 1.25,
+                "atkFactor": 1.29,
+                "defFactor": 1.25
               },
               {
                 "id": "rat2",
@@ -776,7 +803,10 @@
                     "level": 57
                   }
                 ],
-                "factor": 1.3
+                "factor": 1.3,
+                "hpFactor": 1.3,
+                "atkFactor": 1.28,
+                "defFactor": 1.3
               },
               {
                 "id": "rat3",
@@ -798,7 +828,10 @@
                     "level": 58
                   }
                 ],
-                "factor": 1.35
+                "factor": 1.35,
+                "hpFactor": 1.35,
+                "atkFactor": 1.36,
+                "defFactor": 1.35
               },
               {
                 "id": "rat4",
@@ -820,7 +853,10 @@
                     "level": 59
                   }
                 ],
-                "factor": 1.2
+                "factor": 1.2,
+                "hpFactor": 1.2,
+                "atkFactor": 1.17,
+                "defFactor": 1.2
               },
               {
                 "id": "grand",
@@ -842,7 +878,10 @@
                     "level": 60
                   }
                 ],
-                "factor": 1.1
+                "factor": 1.1,
+                "hpFactor": 1.1,
+                "atkFactor": 1.15,
+                "defFactor": 1.1
               }
             ]
           }
@@ -892,7 +931,10 @@
                 "level": 64
               }
             ],
-            "factor": 1.05
+            "factor": 1.05,
+            "hpFactor": 1.05,
+            "atkFactor": 1.01,
+            "defFactor": 1.05
           },
           "day": [
             {
@@ -998,7 +1040,10 @@
                 "level": 70
               }
             ],
-            "factor": 1.15
+            "factor": 1.15,
+            "hpFactor": 1.15,
+            "atkFactor": 1.18,
+            "defFactor": 1.15
           },
           "day": [
             {
@@ -1104,7 +1149,10 @@
                 "level": 76
               }
             ],
-            "factor": 1.25
+            "factor": 1.25,
+            "hpFactor": 1.25,
+            "atkFactor": 1.28,
+            "defFactor": 1.25
           },
           "day": [
             {
@@ -1202,7 +1250,10 @@
                 "level": 82
               }
             ],
-            "factor": 1.35
+            "factor": 1.35,
+            "hpFactor": 1.35,
+            "atkFactor": 1.33,
+            "defFactor": 1.35
           },
           "day": [
             {
@@ -1300,7 +1351,10 @@
                 "level": 88
               }
             ],
-            "factor": 1.2
+            "factor": 1.2,
+            "hpFactor": 1.2,
+            "atkFactor": 1.22,
+            "defFactor": 1.2
           },
           "day": [
             {
@@ -1398,7 +1452,10 @@
                 "level": 94
               }
             ],
-            "factor": 1.25
+            "factor": 1.25,
+            "hpFactor": 1.25,
+            "atkFactor": 1.19,
+            "defFactor": 1.25
           },
           "day": [
             {
@@ -1496,7 +1553,10 @@
                 "level": 100
               }
             ],
-            "factor": 1.3
+            "factor": 1.3,
+            "hpFactor": 1.3,
+            "atkFactor": 1.27,
+            "defFactor": 1.3
           },
           "day": [
             {
@@ -1594,7 +1654,10 @@
                 "level": 106
               }
             ],
-            "factor": 1.2
+            "factor": 1.2,
+            "hpFactor": 1.2,
+            "atkFactor": 1.18,
+            "defFactor": 1.2
           },
           "day": [
             {
@@ -1846,7 +1909,10 @@
                     "level": 110
                   }
                 ],
-                "factor": 1.05
+                "factor": 1.05,
+                "hpFactor": 1.05,
+                "atkFactor": 1.08,
+                "defFactor": 1.05
               },
               {
                 "id": "r2b",
@@ -1868,7 +1934,10 @@
                     "level": 111
                   }
                 ],
-                "factor": 1.05
+                "factor": 1.05,
+                "hpFactor": 1.05,
+                "atkFactor": 1.07,
+                "defFactor": 1.05
               },
               {
                 "id": "r2c",
@@ -1890,7 +1959,10 @@
                     "level": 112
                   }
                 ],
-                "factor": 1.05
+                "factor": 1.05,
+                "hpFactor": 1.05,
+                "atkFactor": 1.04,
+                "defFactor": 1.05
               },
               {
                 "id": "r2d",
@@ -1912,7 +1984,10 @@
                     "level": 113
                   }
                 ],
-                "factor": 1.05
+                "factor": 1.05,
+                "hpFactor": 1.05,
+                "atkFactor": 1.04,
+                "defFactor": 1.05
               },
               {
                 "id": "r2e",
@@ -1934,7 +2009,10 @@
                     "level": 114
                   }
                 ],
-                "factor": 1.05
+                "factor": 1.05,
+                "hpFactor": 1.05,
+                "atkFactor": 1.02,
+                "defFactor": 1.05
               }
             ]
           }
@@ -1984,7 +2062,10 @@
                 "level": 118
               }
             ],
-            "factor": 0.95
+            "factor": 0.95,
+            "hpFactor": 0.95,
+            "atkFactor": 0.85,
+            "defFactor": 0.95
           },
           "day": [
             {
@@ -2082,7 +2163,10 @@
                 "level": 124
               }
             ],
-            "factor": 1.05
+            "factor": 1.05,
+            "hpFactor": 1.05,
+            "atkFactor": 1.1,
+            "defFactor": 1.05
           },
           "day": [
             {
@@ -2180,7 +2264,10 @@
                 "level": 130
               }
             ],
-            "factor": 0.8
+            "factor": 0.8,
+            "hpFactor": 0.8,
+            "atkFactor": 0.85,
+            "defFactor": 0.8
           },
           "day": [
             {
@@ -2278,7 +2365,10 @@
                 "level": 136
               }
             ],
-            "factor": 1.1
+            "factor": 1.1,
+            "hpFactor": 1.1,
+            "atkFactor": 1.13,
+            "defFactor": 1.1
           },
           "day": [
             {
@@ -2376,7 +2466,10 @@
                 "level": 142
               }
             ],
-            "factor": 1
+            "factor": 1,
+            "hpFactor": 1,
+            "atkFactor": 1.05,
+            "defFactor": 1
           },
           "day": [
             {
@@ -2474,7 +2567,10 @@
                 "level": 148
               }
             ],
-            "factor": 1.05
+            "factor": 1.05,
+            "hpFactor": 1.05,
+            "atkFactor": 1.09,
+            "defFactor": 1.05
           },
           "day": [
             {
@@ -2564,7 +2660,10 @@
                 "level": 154
               }
             ],
-            "factor": 1.05
+            "factor": 1.05,
+            "hpFactor": 1.05,
+            "atkFactor": 1.01,
+            "defFactor": 1.05
           },
           "day": [
             {
@@ -2654,7 +2753,10 @@
                 "level": 160
               }
             ],
-            "factor": 1.25
+            "factor": 1.25,
+            "hpFactor": 1.25,
+            "atkFactor": 1.3,
+            "defFactor": 1.25
           },
           "day": [
             {
@@ -2882,7 +2984,10 @@
                     "level": 164
                   }
                 ],
-                "factor": 0.8
+                "factor": 0.8,
+                "hpFactor": 0.8,
+                "atkFactor": 0.82,
+                "defFactor": 0.8
               },
               {
                 "id": "r3b",
@@ -2904,7 +3009,10 @@
                     "level": 165
                   }
                 ],
-                "factor": 0.8
+                "factor": 0.8,
+                "hpFactor": 0.8,
+                "atkFactor": 0.81,
+                "defFactor": 0.8
               },
               {
                 "id": "r3c",
@@ -2926,7 +3034,10 @@
                     "level": 166
                   }
                 ],
-                "factor": 0.8
+                "factor": 0.8,
+                "hpFactor": 0.8,
+                "atkFactor": 0.81,
+                "defFactor": 0.8
               },
               {
                 "id": "r3d",
@@ -2948,7 +3059,10 @@
                     "level": 167
                   }
                 ],
-                "factor": 0.8
+                "factor": 0.8,
+                "hpFactor": 0.8,
+                "atkFactor": 0.79,
+                "defFactor": 0.8
               },
               {
                 "id": "r3e",
@@ -2970,7 +3084,10 @@
                     "level": 168
                   }
                 ],
-                "factor": 0.8
+                "factor": 0.8,
+                "hpFactor": 0.8,
+                "atkFactor": 0.81,
+                "defFactor": 0.8
               }
             ]
           }
@@ -3020,7 +3137,10 @@
                 "level": 172
               }
             ],
-            "factor": 1.4
+            "factor": 1.4,
+            "hpFactor": 1.4,
+            "atkFactor": 1.42,
+            "defFactor": 1.4
           },
           "day": [
             {
@@ -3094,7 +3214,10 @@
                 "level": 178
               }
             ],
-            "factor": 1.2
+            "factor": 1.2,
+            "hpFactor": 1.2,
+            "atkFactor": 1.17,
+            "defFactor": 1.2
           },
           "day": [
             {
@@ -3168,7 +3291,10 @@
                 "level": 184
               }
             ],
-            "factor": 1.4
+            "factor": 1.4,
+            "hpFactor": 1.4,
+            "atkFactor": 1.38,
+            "defFactor": 1.4
           },
           "day": [
             {
@@ -3242,7 +3368,10 @@
                 "level": 190
               }
             ],
-            "factor": 0.95
+            "factor": 0.95,
+            "hpFactor": 0.95,
+            "atkFactor": 0.97,
+            "defFactor": 0.95
           },
           "day": [
             {
@@ -3311,7 +3440,10 @@
                 "level": 196
               }
             ],
-            "factor": 1.35
+            "factor": 1.35,
+            "hpFactor": 1.35,
+            "atkFactor": 1.34,
+            "defFactor": 1.35
           },
           "day": [
             {
@@ -3372,7 +3504,10 @@
                 "level": 202
               }
             ],
-            "factor": 1.05
+            "factor": 1.05,
+            "hpFactor": 1.05,
+            "atkFactor": 1.05,
+            "defFactor": 1.05
           },
           "day": [
             {
@@ -3433,7 +3568,10 @@
                 "level": 208
               }
             ],
-            "factor": 1.15
+            "factor": 1.15,
+            "hpFactor": 1.15,
+            "atkFactor": 1.13,
+            "defFactor": 1.15
           },
           "day": [
             {
@@ -3494,7 +3632,10 @@
                 "level": 214
               }
             ],
-            "factor": 1.25
+            "factor": 1.25,
+            "hpFactor": 1.25,
+            "atkFactor": 1.22,
+            "defFactor": 1.25
           },
           "day": [
             {
@@ -3645,7 +3786,10 @@
                     "level": 218
                   }
                 ],
-                "factor": 1.25
+                "factor": 1.25,
+                "hpFactor": 1.25,
+                "atkFactor": 1.28,
+                "defFactor": 1.25
               },
               {
                 "id": "r4b",
@@ -3667,7 +3811,10 @@
                     "level": 219
                   }
                 ],
-                "factor": 1.25
+                "factor": 1.25,
+                "hpFactor": 1.25,
+                "atkFactor": 1.26,
+                "defFactor": 1.25
               },
               {
                 "id": "r4c",
@@ -3689,7 +3836,10 @@
                     "level": 220
                   }
                 ],
-                "factor": 1.25
+                "factor": 1.25,
+                "hpFactor": 1.25,
+                "atkFactor": 1.25,
+                "defFactor": 1.25
               },
               {
                 "id": "r4d",
@@ -3711,7 +3861,10 @@
                     "level": 221
                   }
                 ],
-                "factor": 1.25
+                "factor": 1.25,
+                "hpFactor": 1.25,
+                "atkFactor": 1.23,
+                "defFactor": 1.25
               },
               {
                 "id": "r4e",
@@ -3733,7 +3886,10 @@
                     "level": 222
                   }
                 ],
-                "factor": 1.25
+                "factor": 1.25,
+                "hpFactor": 1.25,
+                "atkFactor": 1.26,
+                "defFactor": 1.25
               }
             ]
           }
@@ -3778,7 +3934,10 @@
                 "level": 226
               }
             ],
-            "factor": 1.1
+            "factor": 1.1,
+            "hpFactor": 1.1,
+            "atkFactor": 1.06,
+            "defFactor": 1.1
           },
           "day": [
             {
@@ -3839,7 +3998,10 @@
                 "level": 232
               }
             ],
-            "factor": 1.4
+            "factor": 1.4,
+            "hpFactor": 1.4,
+            "atkFactor": 1.41,
+            "defFactor": 1.4
           },
           "day": [
             {
@@ -3892,7 +4054,10 @@
                 "level": 238
               }
             ],
-            "factor": 1.05
+            "factor": 1.05,
+            "hpFactor": 1.05,
+            "atkFactor": 1.06,
+            "defFactor": 1.05
           },
           "day": [
             {
@@ -3945,7 +4110,10 @@
                 "level": 244
               }
             ],
-            "factor": 1.25
+            "factor": 1.25,
+            "hpFactor": 1.25,
+            "atkFactor": 1.25,
+            "defFactor": 1.25
           },
           "day": [
             {
@@ -3998,7 +4166,10 @@
                 "level": 250
               }
             ],
-            "factor": 1.3
+            "factor": 1.3,
+            "hpFactor": 1.3,
+            "atkFactor": 1.28,
+            "defFactor": 1.3
           },
           "day": [
             {
@@ -4051,7 +4222,10 @@
                 "level": 256
               }
             ],
-            "factor": 1.5
+            "factor": 1.5,
+            "hpFactor": 1.5,
+            "atkFactor": 1.52,
+            "defFactor": 1.5
           },
           "day": [
             {
@@ -4104,7 +4278,10 @@
                 "level": 262
               }
             ],
-            "factor": 1.1
+            "factor": 1.1,
+            "hpFactor": 1.1,
+            "atkFactor": 1.09,
+            "defFactor": 1.1
           },
           "day": [
             {
@@ -4157,7 +4334,10 @@
                 "level": 268
               }
             ],
-            "factor": 1.45
+            "factor": 1.45,
+            "hpFactor": 1.45,
+            "atkFactor": 1.52,
+            "defFactor": 1.45
           },
           "day": [
             {
@@ -4284,7 +4464,10 @@
                     "level": 272
                   }
                 ],
-                "factor": 1.25
+                "factor": 1.25,
+                "hpFactor": 1.25,
+                "atkFactor": 1.26,
+                "defFactor": 1.25
               },
               {
                 "id": "r5b",
@@ -4306,7 +4489,10 @@
                     "level": 273
                   }
                 ],
-                "factor": 1.25
+                "factor": 1.25,
+                "hpFactor": 1.25,
+                "atkFactor": 1.27,
+                "defFactor": 1.25
               },
               {
                 "id": "r5c",
@@ -4328,7 +4514,10 @@
                     "level": 274
                   }
                 ],
-                "factor": 1.25
+                "factor": 1.25,
+                "hpFactor": 1.25,
+                "atkFactor": 1.13,
+                "defFactor": 1.25
               },
               {
                 "id": "r5d",
@@ -4350,7 +4539,10 @@
                     "level": 275
                   }
                 ],
-                "factor": 1.25
+                "factor": 1.25,
+                "hpFactor": 1.25,
+                "atkFactor": 1.25,
+                "defFactor": 1.25
               },
               {
                 "id": "r5e",
@@ -4372,7 +4564,10 @@
                     "level": 276
                   }
                 ],
-                "factor": 1.25
+                "factor": 1.25,
+                "hpFactor": 1.25,
+                "atkFactor": 1.24,
+                "defFactor": 1.25
               }
             ]
           }
