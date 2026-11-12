@@ -91,7 +91,8 @@ export function gauntletSide(mon: GauntletMon): FightSide {
     def: Math.max(1, Math.round(stats.def * scale.def)),
     spd: stats.spd,
     skill: scaledSkill(sp.skill, mon.level, mon.skillBonus),
-    passive: sp.passive ?? null
+    passive: sp.passive ?? null,
+    level: mon.level
   }
 }
 

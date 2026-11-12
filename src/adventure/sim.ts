@@ -307,7 +307,8 @@ function sideFrom(mon: OwnedMon, cap: number): FightSide {
     def: stats.def,
     spd: stats.spd,
     skill: awakenSkill(sp.skill, level),
-    passive: sp.passive ?? null
+    passive: sp.passive ?? null,
+    level
   }
 }
 
@@ -326,7 +327,8 @@ function foeSide(speciesId: string, level: number, shiny = false, scale: BossSca
     def: Math.max(1, Math.round(stats.def * scale.def)),
     spd: stats.spd,
     skill: sp.skill,
-    passive: sp.passive ?? null
+    passive: sp.passive ?? null,
+    level
   }
 }
 

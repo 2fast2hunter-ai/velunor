@@ -170,21 +170,31 @@ function battle(save: SaveV2, now: number): string {
   const clock = new Date(now)
   const part = tr(save, clock.getHours() >= 8 && clock.getHours() <= 19 ? 'battle.day' : 'battle.night')
   return `<div class="battle" id="battle">
-    <picture>
-      <source srcset="${art(scene.webp)}" type="image/webp"/>
-      <img class="plate ${chapter.tint ? `tint-${chapter.tint}` : ''}" src="${art(scene.jpg)}" alt=""/>
-    </picture>
+    <div class="battle-world" id="battle-world">
+      <picture>
+        <source srcset="${art(scene.webp)}" type="image/webp"/>
+        <img class="plate ${chapter.tint ? `tint-${chapter.tint}` : ''}" src="${art(scene.jpg)}" alt=""/>
+      </picture>
+      <div class="parallax far" id="parallax-far"></div>
+      <div class="parallax mid" id="parallax-mid"></div>
+      <div class="parallax near" id="parallax-near"></div>
+      <div id="battle-fx"></div>
+      <div class="combatant foe" id="foe-actor" style="left:${FOE_X}%;top:56%">
+        <b id="foe-name"></b>
+        <div class="hp"><span id="foe-hp" style="width:100%"></span></div>
+        <img class="sprite" id="foe-sprite" alt="" hidden/>
+        <span class="ground-shadow"></span>
+      </div>
+      <div class="combatant ally" id="ally-actor" style="left:${ALLY_X}%;top:${FEET_Y}%">
+        <b id="ally-name">${mon ? esc(species(mon.species).name) : ''}</b>
+        <div class="hp"><span id="ally-hp" style="width:${(hp.hp / hp.max) * 100}%"></span></div>
+        ${mon ? `<img class="sprite ${mon.shiny ? 'is-shiny' : ''}" id="ally-sprite" src="${monsterArt(mon.species, true)}" alt=""/>` : ''}
+        <span class="ground-shadow"></span>
+      </div>
+      <div id="floats"></div>
+      <div class="crit-flash" id="crit-flash"></div>
+    </div>
     <div class="team-rail">${minis}</div>
-    <div class="combatant ally" style="left:${ALLY_X}%;top:${FEET_Y}%">
-      <b id="ally-name">${mon ? esc(species(mon.species).name) : ''}</b>
-      <div class="hp"><span id="ally-hp" style="width:${(hp.hp / hp.max) * 100}%"></span></div>
-      ${mon ? `<img class="sprite ${mon.shiny ? 'is-shiny' : ''}" id="ally-sprite" src="${monsterArt(mon.species, true)}" alt=""/>` : ''}
-    </div>
-    <div class="combatant foe" style="left:${FOE_X}%;top:${FEET_Y}%">
-      <b id="foe-name"></b>
-      <div class="hp"><span id="foe-hp" style="width:100%"></span></div>
-      <img class="sprite" id="foe-sprite" alt="" hidden/>
-    </div>
     <div class="flash" id="flash"></div>
     <img class="seal" id="seal" alt="" src="${art(SEAL_ADD)}" data-fb="${art(SEAL_FALLBACK)}"/>
     <div class="battle-text">

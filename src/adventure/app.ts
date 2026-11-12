@@ -18,6 +18,9 @@ import {
 } from './const'
 import { t, type Lang } from './i18n'
 import { shotAt, shouldRecover } from './present'
+import { actorTransform, numberStyle, parallaxShift } from '../battle/stage'
+import { clearBattleFx, holdBattleFx, mountBattleFx, playBattleFx } from '../battle/phaserFx'
+import { CRIT_HITSTOP_MS, FIGHTING_LUNGE_PX, LUNGE_PX, STONE_CRIT_HITSTOP_MS, typeFx } from '../battle/typeFx'
 import { beginAdventure, exportCode, importCode, loadAdventure, writeSave } from './save'
 import { equipFrame, equipTitle } from './achievements'
 import { buyHortSlot, moveFromHort, moveToHort } from './hort'
@@ -124,10 +127,51 @@ export function bootAdventure(): void {
     try { writeSave(localStorage, save) } catch { /* keep playing */ }
   }, AUTOSAVE_MS)
 
+  const fxDemo = new URLSearchParams(window.location.search).get('fx')
+  if (debug && (fxDemo === 'fire' || fxDemo === 'crit')) {
+    showFxDemo(fxDemo)
+    return
+  }
   const skipLegacy = localStorage.getItem(RESET_FLAG) === '1' && !localStorage.getItem(SAVE_KEY_V2)
   const loaded = skipLegacy ? null : loadAdventure(localStorage, Date.now())
   if (!loaded?.started) showOnboarding()
   else void start(loaded)
+}
+
+function showFxDemo(kind: 'fire' | 'crit'): void {
+  const crit = kind === 'crit'
+  paint(`<div id="stage" class="side-shut"><main class="center"><div class="battle" id="battle" data-fx="live" style="height:720px">
+    <div class="battle-world" id="battle-world">
+      <div class="parallax far" id="parallax-far"></div>
+      <div class="parallax mid" id="parallax-mid"></div>
+      <div class="parallax near" id="parallax-near"></div>
+      <div id="battle-fx"></div>
+      <div class="combatant foe" id="foe-actor" style="left:72%;top:56%"><b>Ziel</b><img class="sprite" src="${monsterArt('m66', true)}" alt=""/><span class="ground-shadow"></span></div>
+      <div class="combatant ally" id="ally-actor" style="left:28%;top:68%"><b>Funkfuchs</b><img class="sprite" src="${monsterArt('m01', true)}" alt=""/><span class="ground-shadow"></span></div>
+      <div id="floats"></div>
+      <div class="crit-flash" id="crit-flash"></div>
+    </div>
+  </div></main></div>`)
+  const host = document.getElementById('battle-fx')
+  if (host) mountBattleFx(host)
+  window.setTimeout(() => {
+    const host = document.getElementById('battle-fx')
+    const ally = document.getElementById('ally-actor')
+    const foe = document.getElementById('foe-actor')
+    const from = host && ally ? stagePoint(ally, host) : { x: 180, y: 280 }
+    const to = host && foe ? stagePoint(foe, host) : { x: 420, y: 180 }
+    playBattleFx({ type: 'fire', crit, band: crit ? 'strong' : 'neutral', awaken: crit, shimmer: false, reduced: false, tempo: 1, from, to })
+    if (crit) {
+      const flash = document.getElementById('crit-flash')
+      if (flash) flash.style.opacity = '0.15'
+      spawnFloat(document.getElementById('floats'), { amount: 48, crit: true, band: 'strong' }, '#ff7043')
+      document.getElementById('battle-world')?.classList.add('shake-crit')
+    }
+    window.setTimeout(() => {
+      holdBattleFx(crit ? 0.86 : 0.5)
+      document.getElementById('battle')?.setAttribute('data-fx', 'hold')
+    }, 180)
+  }, 400)
 }
 
 function showOnboarding(): void {
@@ -373,20 +417,13 @@ function play(outcome: EncounterOutcome, speed: Speed, done: () => void): void {
     done()
   }
   const dur = encounterMs(speed)
-  if (save?.settings.reduceMotion) {
-    const last = outcome.traces[outcome.traces.length - 1]
-    const allyHp = document.getElementById('ally-hp')
-    const foeHp = document.getElementById('foe-hp')
-    const text = document.getElementById('battle-text')
-    if (last?.frames?.length && allyHp && foeHp && last.allyMax > 0 && last.foeMax > 0) {
-      const shot = last.frames[last.frames.length - 1]
-      allyHp.style.width = `${(shot.allyHp / last.allyMax) * 100}%`
-      foeHp.style.width = `${(shot.foeHp / last.foeMax) * 100}%`
-    }
-    if (text) text.textContent = outcome.lines[outcome.lines.length - 1] ?? ''
+  let backstop = 0
+  const finishOnce = () => {
+    window.clearTimeout(backstop)
+    clearBattleFx()
     finish()
-    return
   }
+  backstop = window.setTimeout(finishOnce, dur + 40)
   const k = tempoScale(speed)
   const started = performance.now()
   const seal = document.getElementById('seal') as HTMLImageElement | null
@@ -397,10 +434,20 @@ function play(outcome: EncounterOutcome, speed: Speed, done: () => void): void {
   const allyName = document.getElementById('ally-name')
   const foeName = document.getElementById('foe-name')
   const text = document.getElementById('battle-text')
+  const allyActor = document.getElementById('ally-actor')
+  const foeActor = document.getElementById('foe-actor')
+  const fxHost = document.getElementById('battle-fx')
+  const floats = document.getElementById('floats')
+  const critFlash = document.getElementById('crit-flash')
+  if (fxHost) mountBattleFx(fxHost)
+  const reduced = Boolean(save?.settings.reduceMotion)
+  const allowShake = Boolean(save?.settings.shake) && !reduced
+  const allowFlash = Boolean(save?.settings.flashes) && !reduced
   const catching = Boolean(outcome.catch)
   const battleEnd = catching ? dur * 0.54 : dur
   let prevAlly: number | null = null
   let prevFoe: number | null = null
+  let hitAt = -1
   const frame = (now: number) => {
     if (gen !== playGen) return
     try {
@@ -410,17 +457,48 @@ function play(outcome: EncounterOutcome, speed: Speed, done: () => void): void {
         allyHp.style.width = `${(shot.allyHp / shot.allyMax) * 100}%`
         foeHp.style.width = `${(shot.foeHp / shot.foeMax) * 100}%`
         const dropped = (prevAlly != null && shot.allyHp < prevAlly) || (prevFoe != null && shot.foeHp < prevFoe)
-        if (dropped && save?.settings.shake) {
-          const battle = document.getElementById('battle')
-          battle?.classList.remove('shake')
-          void battle?.offsetWidth
-          battle?.classList.add('shake')
-        }
-        if (dropped && save?.settings.flashes) document.getElementById('flash')?.classList.add('on')
-        else document.getElementById('flash')?.classList.remove('on')
+        if (dropped) {
+          hitAt = elapsed
+          const hit = shot.hits.find((row) => row.kind === 'hit') ?? shot.hits[0]
+          if (hit && fxHost && allyActor && foeActor) {
+            const allyPt = stagePoint(allyActor, fxHost)
+            const foePt = stagePoint(foeActor, fxHost)
+            const from = hit.from === 'ally' ? allyPt : foePt
+            const to = hit.from === 'ally' ? foePt : allyPt
+            playBattleFx({ type: hit.type, crit: hit.crit, band: hit.band, awaken: Boolean(hit.awaken), shimmer: Boolean(outcome.shiny), reduced, tempo: speed, from, to, kind: hit.kind })
+            if (hit.kind === 'hit') spawnFloat(floats, hit, typeFx(hit.type).base, save?.settings.lang)
+            const struck = hit.from === 'ally' ? foeImg : allyImg
+            if (struck) {
+              struck.style.filter = `drop-shadow(0 0 12px ${typeFx(hit.type).accent})`
+              window.setTimeout(() => { struck.style.filter = '' }, 60 * k)
+            }
+          }
+          if (allowShake) {
+            const world = document.getElementById('battle-world')
+            world?.classList.remove('shake', 'shake-crit')
+            void world?.offsetWidth
+            world?.classList.add(shot.hits.some((row) => row.crit) ? 'shake-crit' : 'shake')
+          }
+          if (allowFlash && shot.hits.some((row) => row.crit) && critFlash) critFlash.style.opacity = '0.15'
+        } else if (critFlash && elapsed - hitAt > 50 * k) critFlash.style.opacity = '0'
         prevAlly = shot.allyHp
         prevFoe = shot.foeHp
       }
+      const hit = shot?.hits.find((row) => row.kind === 'hit')
+      const hitstop = (hit?.crit ? (hit.type === 'stone' ? STONE_CRIT_HITSTOP_MS : CRIT_HITSTOP_MS) : 0) * k
+      const age = hitAt < 0 ? -1 : elapsed - hitAt
+      const pose = age < 0 ? -1 : age < hitstop ? 0 : (age - hitstop) / k
+      const allyDist = hit?.type === 'fighting' && hit.from === 'ally' ? FIGHTING_LUNGE_PX : LUNGE_PX
+      const foeDist = hit?.type === 'fighting' && hit.from === 'foe' ? FIGHTING_LUNGE_PX : LUNGE_PX
+      if (allyActor) allyActor.style.transform = actorTransform('ally', pose, pose, shot?.allyHp === 0 ? Math.min(1, Math.max(0, age) / 400) : 0, elapsed, allyDist)
+      if (foeActor) foeActor.style.transform = actorTransform('foe', pose, pose, shot?.foeHp === 0 ? Math.min(1, Math.max(0, age) / 400) : 0, elapsed + 180, foeDist)
+      const layers = parallaxShift(age > 0 && age < 200 ? 12 : 0, allowShake && age > 0 && age < 120 ? 4 : 0)
+      const far = document.getElementById('parallax-far')
+      const mid = document.getElementById('parallax-mid')
+      const near = document.getElementById('parallax-near')
+      if (far) far.style.transform = `translateX(${layers.far}px)`
+      if (mid) mid.style.transform = `translateX(${layers.mid}px)`
+      if (near) near.style.transform = `translateX(${layers.near}px)`
       if (text && shot && elapsed < battleEnd) text.textContent = shot.text
       if (allyName && shot) allyName.textContent = shot.allyName
       if (foeName && shot) foeName.textContent = outcome.shiny ? `${shot.foeName} · ${t(save?.settings.lang, 'battle.shimmer')}` : shot.foeName
@@ -435,13 +513,48 @@ function play(outcome: EncounterOutcome, speed: Speed, done: () => void): void {
         if (text && age >= 0) text.textContent = sealCaption(outcome, age >= 900 * k)
       }
       if (elapsed < dur) raf = requestAnimationFrame(frame)
-      else finish()
+      else finishOnce()
     } catch (err) {
       console.error(err)
-      finish()
+      finishOnce()
     }
   }
   raf = requestAnimationFrame(frame)
+}
+
+const floatPool: HTMLDivElement[] = []
+
+function stagePoint(actor: HTMLElement, host: HTMLElement): { x: number; y: number } {
+  const box = actor.getBoundingClientRect()
+  const frame = host.getBoundingClientRect()
+  const width = host.clientWidth || frame.width || 1
+  const height = host.clientHeight || frame.height || 1
+  return {
+    x: ((box.left + box.width / 2) - frame.left) / (frame.width || 1) * width,
+    y: ((box.top + box.height * 0.62) - frame.top) / (frame.height || 1) * height
+  }
+}
+
+function spawnFloat(host: HTMLElement | null, hit: { amount: number; crit: boolean; band: 'strong' | 'weak' | 'neutral'; awaken?: boolean }, base: string, lang?: Lang): void {
+  if (!host || hit.amount <= 0) return
+  let node = floatPool.find((row) => row.hidden)
+  if (!node) {
+    node = floatPool.length >= 8 ? floatPool[0] : document.createElement('div')
+    if (!floatPool.includes(node)) floatPool.push(node)
+    node.className = 'float-num'
+  }
+  if (node.parentElement !== host) host.appendChild(node)
+  const style = numberStyle(hit.band, hit.crit, Boolean(hit.awaken), base)
+  const label = !lang ? style.label : hit.crit ? t(lang, 'battle.crit') : hit.band === 'strong' ? t(lang, 'battle.strong') : hit.band === 'weak' ? t(lang, 'battle.weak') : ''
+  node.hidden = false
+  node.textContent = label ? `${label} ${hit.amount}` : String(hit.amount)
+  node.style.left = '68%'
+  node.style.top = '42%'
+  node.style.color = style.color
+  node.style.fontSize = `${Math.round(18 * style.scale)}px`
+  node.style.opacity = hit.band === 'weak' ? '0.5' : '1'
+  const shown = node
+  window.setTimeout(() => { shown.hidden = true }, 700)
 }
 
 function paintSeal(seal: HTMLImageElement, t: number, k: number, caught: boolean): void {
