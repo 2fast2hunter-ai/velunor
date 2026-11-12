@@ -1,6 +1,10 @@
 # Velunor
 
-Browser prototype of the monster-city gacha RPG. TypeScript, Phaser 3, and Vite. Monsters, buildings, rarity frames, icons, and the city, arena, and portal backgrounds live in `public/assets` (see `public/assets/LICENSES.md`). The save stays in `localStorage` under `velunor.save.v1`. An older `mstadt.save.v1` save is migrated once.
+Browser idle adventure. TypeScript and Vite. The step-1 loop is a landscape Fang-Abenteuer: three starters, a 20-step road, 1-on-1 auto battles, and a Bannsiegel catch after every wild KO. Monsters, type art, Grünmark battle plates, and the seal effect live in `public/assets` (see `public/assets/LICENSES.md`).
+
+The new save key is `velunor_v2`. An existing `velunor.save.v1` profile is read once: every specimen is kept (level 1–4 rise to 5) and the old key stays in place. City, gacha, the 5-monster lineup, arena, and ads are not mounted; their code is still in the repo.
+
+Region 1 data is `data/regions.json`. A dev build opened with `?debug=1` can jump the clock for the offline check.
 
 Design notes live in [`docs/konzept.md`](docs/konzept.md) and [`docs/gdd-prototyp.md`](docs/gdd-prototyp.md). Balance numbers live in [`data/`](data/).
 
