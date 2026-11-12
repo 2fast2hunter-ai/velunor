@@ -1,16 +1,18 @@
-import { ARC_APEX_PX, effectScale, HIT_FLASH_MS, HIT_SHAKE_PX, LUNGE_BACK_MS, LUNGE_OUT_MS, LUNGE_PX, LUNGE_SCALE } from './typeFx'
+import { ARC_APEX_PX, effectScale, HIT_FLASH_MS, HIT_SHAKE_PX, LUNGE_BACK_MS, LUNGE_HOLD_MS, LUNGE_OUT_MS, LUNGE_PX, LUNGE_SCALE } from './typeFx'
 
 export function lungeOffset(elapsed: number, distance = LUNGE_PX): number {
   const out = LUNGE_OUT_MS
+  const hold = LUNGE_HOLD_MS
   const back = LUNGE_BACK_MS
   if (elapsed <= 0) return 0
   if (elapsed < out) return distance * (elapsed / out)
-  if (elapsed < out + back) return distance * (1 - (elapsed - out) / back)
+  if (elapsed < out + hold) return distance
+  if (elapsed < out + hold + back) return distance * (1 - (elapsed - out - hold) / back)
   return 0
 }
 
 export function lungeScale(elapsed: number): number {
-  const moving = elapsed > 0 && elapsed < LUNGE_OUT_MS + LUNGE_BACK_MS
+  const moving = elapsed > 0 && elapsed < LUNGE_OUT_MS + LUNGE_HOLD_MS + LUNGE_BACK_MS
   return moving ? LUNGE_SCALE : 1
 }
 
@@ -33,7 +35,7 @@ export function idleBob(timeMs: number): { y: number; scale: number } {
 
 export function koPose(progress: number): { rotate: number; opacity: number; drop: number } {
   const t = Math.max(0, Math.min(1, progress))
-  return { rotate: t * 80, opacity: 1 - t, drop: t * 28 }
+  return { rotate: t * 96, opacity: 1 - t, drop: t * 70 }
 }
 
 export function actorTransform(side: 'ally' | 'foe', elapsed: number, hitAge: number, ko: number, idleT: number, distance = LUNGE_PX): string {

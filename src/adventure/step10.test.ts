@@ -124,11 +124,32 @@ describe('section A wards and court', () => {
     expect(loaded?.councilBeaten).toEqual(['rat1'])
     expect(loaded?.mons.u1.lvl).toBe(90)
     expect(loaded?.layout).toBe(1)
+    expect(loaded?.settings.shake).toBe(false)
+    expect(loaded?.fxShake).toBe(1)
     const capped = makeMon('m01', 280, 1, 'r1c1')
     addExp(capped, 5_000_000, 999, null)
     expect(capped.lvl).toBe(280)
     const over = makeMon('m01', 300, 1, 'r1c1')
     addExp(over, 5_000_000, 280, null)
     expect(over.lvl).toBe(300)
+  })
+
+  it('turns screen shake off once and then keeps the choice', () => {
+    const storage = memory()
+    const save = beginAdventure('Ada', 'A', 'm01', 1_000)
+    expect(save.settings.shake).toBe(false)
+    expect(save.fxShake).toBe(1)
+    save.settings.shake = true
+    save.fxShake = 0
+    storage.setItem(SAVE_KEY_V2, JSON.stringify(save))
+    const once = loadAdventure(storage, 2_000)
+    expect(once?.settings.shake).toBe(false)
+    expect(once?.fxShake).toBe(1)
+    if (!once) return
+    once.settings.shake = true
+    storage.setItem(SAVE_KEY_V2, JSON.stringify(once))
+    const kept = loadAdventure(storage, 3_000)
+    expect(kept?.settings.shake).toBe(true)
+    expect(kept?.fxShake).toBe(1)
   })
 })

@@ -216,7 +216,34 @@ textarea { width: 100%; box-sizing: border-box; background: #121a30; color: inhe
 #battle-fx { position: absolute; inset: 0; pointer-events: none; z-index: 4; }
 #battle-fx canvas { width: 100% !important; height: 100% !important; }
 #floats { position: absolute; inset: 0; pointer-events: none; z-index: 4; }
-.float-num { position: absolute; font-weight: 800; text-shadow: 0 2px 6px #000; }
+.float-num {
+  position: absolute;
+  z-index: 6;
+  font-weight: 900;
+  letter-spacing: 0.02em;
+  -webkit-text-stroke: 3px #0c1220;
+  paint-order: stroke fill;
+  text-shadow: 0 4px 0 #0c1220;
+}
+.move-banner {
+  position: absolute;
+  z-index: 6;
+  transform: translate(-50%, -120%);
+  padding: 8px 18px;
+  border-radius: 999px;
+  background: rgba(8, 12, 24, 0.88);
+  border: 3px solid #f0c14a;
+  color: #fff8e1;
+  font-weight: 800;
+  font-size: 28px;
+  pointer-events: none;
+}
+.combatant.recoil img.sprite { animation-name: sprite-blink; animation-timing-function: linear; animation-iteration-count: 1; }
+@keyframes sprite-blink {
+  0%, 100% { filter: brightness(1); }
+  22%, 68% { filter: brightness(3.4); }
+  45% { filter: brightness(1); }
+}
 .crit-flash { position: absolute; inset: 0; background: #fff; opacity: 0; pointer-events: none; z-index: 5; }
 .ground-shadow { position: absolute; left: 50%; bottom: -8px; width: 46%; height: 16px; transform: translateX(-50%); background: rgba(0,0,0,0.25); border-radius: 50%; }
 .combatant.ally { left: 28%; z-index: 3; }

@@ -18,9 +18,11 @@ import {
 } from './const'
 import { t, type Lang } from './i18n'
 import { shotAt, shouldRecover } from './present'
-import { actorTransform, numberStyle, parallaxShift } from '../battle/stage'
+import { species } from '../data'
+import { actorTransform, hitShake, koPose, lungeOffset, numberStyle, parallaxShift } from '../battle/stage'
 import { clearBattleFx, holdBattleFx, mountBattleFx, playBattleFx } from '../battle/phaserFx'
-import { CRIT_HITSTOP_MS, FIGHTING_LUNGE_PX, LUNGE_PX, STONE_CRIT_HITSTOP_MS, typeFx } from '../battle/typeFx'
+import { BANNER_MS, CRIT_HITSTOP_MS, KO_MS, LUNGE_HOLD_MS, LUNGE_OUT_MS, moveLabel, NUMBER_MS, RECOIL_MS, STONE_CRIT_HITSTOP_MS, typeFx } from '../battle/typeFx'
+import type { TypeId } from '../types'
 import { beginAdventure, exportCode, importCode, loadAdventure, writeSave } from './save'
 import { equipFrame, equipTitle } from './achievements'
 import { buyHortSlot, moveFromHort, moveToHort } from './hort'
@@ -128,7 +130,7 @@ export function bootAdventure(): void {
   }, AUTOSAVE_MS)
 
   const fxDemo = new URLSearchParams(window.location.search).get('fx')
-  if (debug && (fxDemo === 'fire' || fxDemo === 'crit')) {
+  if (debug && (fxDemo === 'fire' || fxDemo === 'hit' || fxDemo === 'ko')) {
     showFxDemo(fxDemo)
     return
   }
@@ -138,39 +140,51 @@ export function bootAdventure(): void {
   else void start(loaded)
 }
 
-function showFxDemo(kind: 'fire' | 'crit'): void {
-  const crit = kind === 'crit'
-  paint(`<div id="stage" class="side-shut"><main class="center"><div class="battle" id="battle" data-fx="live" style="height:720px">
+function showFxDemo(kind: 'fire' | 'hit' | 'ko'): void {
+  paint(`<div id="stage" class="side-shut"><div class="nav"></div><main class="center"><div class="battle" id="battle" data-fx="live" style="height:820px">
     <div class="battle-world" id="battle-world">
       <div class="parallax far" id="parallax-far"></div>
       <div class="parallax mid" id="parallax-mid"></div>
       <div class="parallax near" id="parallax-near"></div>
       <div id="battle-fx"></div>
-      <div class="combatant foe" id="foe-actor" style="left:72%;top:56%"><b>Ziel</b><img class="sprite" src="${monsterArt('m66', true)}" alt=""/><span class="ground-shadow"></span></div>
-      <div class="combatant ally" id="ally-actor" style="left:28%;top:68%"><b>Funkfuchs</b><img class="sprite" src="${monsterArt('m01', true)}" alt=""/><span class="ground-shadow"></span></div>
+      <div class="combatant foe" id="foe-actor" style="left:72%;top:58%"><b>Ziel</b><img class="sprite" src="${monsterArt('m66', true)}" alt=""/><span class="ground-shadow"></span></div>
+      <div class="combatant ally" id="ally-actor" style="left:28%;top:72%"><b>Funkfuchs</b><img class="sprite" src="${monsterArt('m01', true)}" alt=""/><span class="ground-shadow"></span></div>
       <div id="floats"></div>
+      <div class="move-banner" id="move-banner" hidden></div>
       <div class="crit-flash" id="crit-flash"></div>
     </div>
-  </div></main></div>`)
+  </div></main><div class="side"></div></div>`)
   const host = document.getElementById('battle-fx')
   if (host) mountBattleFx(host)
   window.setTimeout(() => {
-    const host = document.getElementById('battle-fx')
+    const fx = document.getElementById('battle-fx')
     const ally = document.getElementById('ally-actor')
     const foe = document.getElementById('foe-actor')
-    const from = host && ally ? stagePoint(ally, host) : { x: 180, y: 280 }
-    const to = host && foe ? stagePoint(foe, host) : { x: 420, y: 180 }
-    playBattleFx({ type: 'fire', crit, band: crit ? 'strong' : 'neutral', awaken: crit, shimmer: false, reduced: false, tempo: 1, from, to })
-    if (crit) {
-      const flash = document.getElementById('crit-flash')
-      if (flash) flash.style.opacity = '0.15'
-      spawnFloat(document.getElementById('floats'), { amount: 48, crit: true, band: 'strong' }, '#ff7043')
-      document.getElementById('battle-world')?.classList.add('shake-crit')
+    if (!fx || !ally || !foe) return
+    const distance = reachDistance(ally, foe, 0.76)
+    if (kind === 'ko') {
+      const pose = koPose(0.82)
+      foe.style.transform = `translate(-50%, -100%) translate(0px, ${pose.drop}px) rotate(${pose.rotate}deg) scale(0.72)`
+      foe.style.opacity = String(pose.opacity)
+      showMove(attackTitle('m01', 'fire'), ally, 1)
+      spawnFloat(document.getElementById('floats'), { amount: 54, crit: false, band: 'neutral' }, '#ffffff', undefined, '70%')
+    } else {
+      ally.style.transform = actorTransform('ally', kind === 'hit' ? LUNGE_OUT_MS + LUNGE_HOLD_MS : LUNGE_OUT_MS * 0.85, -1, 0, 0, distance)
+      showMove(attackTitle('m01', 'fire'), ally, 1)
+      const from = stagePoint(ally, fx)
+      const to = stagePoint(foe, fx)
+      playBattleFx({ type: 'fire', crit: false, band: 'neutral', awaken: false, shimmer: false, reduced: false, tempo: 1, from, to })
+      if (kind === 'hit') {
+        const picture = foe.querySelector('img')
+        if (picture instanceof HTMLImageElement) picture.style.filter = 'brightness(2.8)'
+        foe.style.transform = `translate(-50%, -100%) translate(${hitShake(40)}px, 0px) scale(0.72)`
+        spawnFloat(document.getElementById('floats'), { amount: 36, crit: false, band: 'strong' }, typeFx('fire').base, undefined, '70%')
+      }
     }
     window.setTimeout(() => {
-      holdBattleFx(crit ? 0.86 : 0.5)
+      if (kind !== 'ko') holdBattleFx(kind === 'hit' ? 0.92 : 0.5)
       document.getElementById('battle')?.setAttribute('data-fx', 'hold')
-    }, 180)
+    }, 220)
   }, 400)
 }
 
@@ -466,12 +480,17 @@ function play(outcome: EncounterOutcome, speed: Speed, done: () => void): void {
             const from = hit.from === 'ally' ? allyPt : foePt
             const to = hit.from === 'ally' ? foePt : allyPt
             playBattleFx({ type: hit.type, crit: hit.crit, band: hit.band, awaken: Boolean(hit.awaken), shimmer: Boolean(outcome.shiny), reduced, tempo: speed, from, to, kind: hit.kind })
-            if (hit.kind === 'hit') spawnFloat(floats, hit, typeFx(hit.type).base, save?.settings.lang)
-            const struck = hit.from === 'ally' ? foeImg : allyImg
-            if (struck) {
-              struck.style.filter = `drop-shadow(0 0 12px ${typeFx(hit.type).accent})`
-              window.setTimeout(() => { struck.style.filter = '' }, 60 * k)
+            const attackerId = hit.from === 'ally' ? shot.allySpecies : shot.foeSpecies
+            if (hit.kind === 'hit') {
+              showMove(attackTitle(attackerId, hit.type), hit.from === 'ally' ? allyActor : foeActor, k)
+              spawnFloat(floats, hit, typeFx(hit.type).base, save?.settings.lang, hit.from === 'ally' ? '70%' : '30%', NUMBER_MS * k)
             }
+            const struck = hit.from === 'ally' ? foeActor : allyActor
+            struck.classList.remove('recoil')
+            void struck.offsetWidth
+            struck.classList.add('recoil')
+            const picture = struck.querySelector('img')
+            if (picture instanceof HTMLImageElement) picture.style.animationDuration = `${RECOIL_MS * k}ms`
           }
           if (allowShake) {
             const world = document.getElementById('battle-world')
@@ -488,11 +507,22 @@ function play(outcome: EncounterOutcome, speed: Speed, done: () => void): void {
       const hitstop = (hit?.crit ? (hit.type === 'stone' ? STONE_CRIT_HITSTOP_MS : CRIT_HITSTOP_MS) : 0) * k
       const age = hitAt < 0 ? -1 : elapsed - hitAt
       const pose = age < 0 ? -1 : age < hitstop ? 0 : (age - hitstop) / k
-      const allyDist = hit?.type === 'fighting' && hit.from === 'ally' ? FIGHTING_LUNGE_PX : LUNGE_PX
-      const foeDist = hit?.type === 'fighting' && hit.from === 'foe' ? FIGHTING_LUNGE_PX : LUNGE_PX
-      if (allyActor) allyActor.style.transform = actorTransform('ally', pose, pose, shot?.allyHp === 0 ? Math.min(1, Math.max(0, age) / 400) : 0, elapsed, allyDist)
-      if (foeActor) foeActor.style.transform = actorTransform('foe', pose, pose, shot?.foeHp === 0 ? Math.min(1, Math.max(0, age) / 400) : 0, elapsed + 180, foeDist)
-      const layers = parallaxShift(age > 0 && age < 200 ? 12 : 0, allowShake && age > 0 && age < 120 ? 4 : 0)
+      const reach = allyActor && foeActor ? reachDistance(allyActor, foeActor, hit?.type === 'fighting' ? 0.88 : 0.76) : 160
+      const allyMove = hit?.from === 'ally' ? pose : -1
+      const foeMove = hit?.from === 'foe' ? pose : -1
+      const allyHit = hit?.from === 'foe' ? pose : -1
+      const foeHit = hit?.from === 'ally' ? pose : -1
+      const allyKo = shot?.allyHp === 0 ? Math.min(1, Math.max(0, age) / (KO_MS * k)) : 0
+      const foeKo = shot?.foeHp === 0 ? Math.min(1, Math.max(0, age) / (KO_MS * k)) : 0
+      if (allyActor) {
+        allyActor.style.transform = actorTransform('ally', allyMove, allyHit, allyKo, elapsed, reach)
+        allyActor.style.opacity = String(koPose(allyKo).opacity)
+      }
+      if (foeActor) {
+        foeActor.style.transform = actorTransform('foe', foeMove, foeHit, foeKo, elapsed + 180, reach)
+        foeActor.style.opacity = String(koPose(foeKo).opacity)
+      }
+      const layers = parallaxShift(pose > 0 ? lungeOffset(pose, reach) : 0, 0)
       const far = document.getElementById('parallax-far')
       const mid = document.getElementById('parallax-mid')
       const near = document.getElementById('parallax-near')
@@ -535,7 +565,34 @@ function stagePoint(actor: HTMLElement, host: HTMLElement): { x: number; y: numb
   }
 }
 
-function spawnFloat(host: HTMLElement | null, hit: { amount: number; crit: boolean; band: 'strong' | 'weak' | 'neutral'; awaken?: boolean }, base: string, lang?: Lang): void {
+function attackTitle(speciesId: string, type: TypeId): string {
+  try {
+    const named = species(speciesId).skill.name?.trim()
+    if (named) return named
+  } catch { /* type label below */ }
+  return moveLabel(type)
+}
+
+function showMove(name: string, actor: HTMLElement, k: number): void {
+  const banner = document.getElementById('move-banner')
+  if (!banner) return
+  actor.appendChild(banner)
+  banner.hidden = false
+  banner.textContent = name
+  banner.style.left = '50%'
+  banner.style.top = '0px'
+  window.setTimeout(() => { banner.hidden = true }, BANNER_MS * k)
+}
+
+function reachDistance(from: HTMLElement, toward: HTMLElement, portion: number): number {
+  const fitScale = Math.min(window.innerWidth / 1920, window.innerHeight / 1080) || 1
+  const a = from.getBoundingClientRect()
+  const b = toward.getBoundingClientRect()
+  const gap = Math.abs((b.left + b.width / 2) - (a.left + a.width / 2)) / fitScale
+  return Math.max(140, gap * portion)
+}
+
+function spawnFloat(host: HTMLElement | null, hit: { amount: number; crit: boolean; band: 'strong' | 'weak' | 'neutral'; awaken?: boolean }, base: string, lang?: Lang, left = '68%', holdMs = NUMBER_MS): void {
   if (!host || hit.amount <= 0) return
   let node = floatPool.find((row) => row.hidden)
   if (!node) {
@@ -548,13 +605,13 @@ function spawnFloat(host: HTMLElement | null, hit: { amount: number; crit: boole
   const label = !lang ? style.label : hit.crit ? t(lang, 'battle.crit') : hit.band === 'strong' ? t(lang, 'battle.strong') : hit.band === 'weak' ? t(lang, 'battle.weak') : ''
   node.hidden = false
   node.textContent = label ? `${label} ${hit.amount}` : String(hit.amount)
-  node.style.left = '68%'
-  node.style.top = '42%'
+  node.style.left = left
+  node.style.top = '38%'
   node.style.color = style.color
-  node.style.fontSize = `${Math.round(18 * style.scale)}px`
+  node.style.fontSize = `${Math.round(36 * style.scale)}px`
   node.style.opacity = hit.band === 'weak' ? '0.5' : '1'
   const shown = node
-  window.setTimeout(() => { shown.hidden = true }, 700)
+  window.setTimeout(() => { shown.hidden = true }, holdMs)
 }
 
 function paintSeal(seal: HTMLImageElement, t: number, k: number, caught: boolean): void {

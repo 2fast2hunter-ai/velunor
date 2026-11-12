@@ -70,7 +70,7 @@ export function tempoScale(speed: Speed): number {
   return encounterMs(speed) / BASE_ENCOUNTER_MS
 }
 
-/** No encounter progress for this long, and no dialog open, means the battle loop is stuck. */
+/** No encounter progress for this long, and no dialog open, means the battle loop is stuck. One attack is at most 1.2 s and a beat is 2.8 s, so this stays clear of a healthy fight. */
 export const WATCHDOG_MS = 10_000
 
 export function watchdogLimit(speed: Speed): number {

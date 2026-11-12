@@ -4,16 +4,24 @@ import type { TypeId } from '../types'
 /** Base colours live in data/types.json. Accents are fixed by the effect spec. */
 const BASE = typesJson.colors as Record<TypeId, string>
 
-export const ATTACK_MAX_MS = 700
-export const ATTACK_MIN_MS = 150
-export const LUNGE_OUT_MS = 80
-export const LUNGE_BACK_MS = 120
-export const LUNGE_PX = 12
-export const LUNGE_SCALE = 1.05
+export const ATTACK_MAX_MS = 1200
+export const ATTACK_MIN_MS = 300
+export const LUNGE_OUT_MS = 520
+export const LUNGE_HOLD_MS = 180
+export const LUNGE_BACK_MS = 400
+export const LUNGE_PX = 160
+export const LUNGE_SCALE = 1.12
 export const ARC_APEX_PX = 20
-export const HIT_SHAKE_PX = 6
-export const HIT_FLASH_MS = 60
-export const HIT_MS = 220
+export const HIT_SHAKE_PX = 22
+export const HIT_FLASH_MS = 140
+export const HIT_MS = 240
+export const RECOIL_MS = 280
+export const BANNER_MS = 600
+export const NUMBER_MS = 900
+export const KO_MS = 700
+export const FX_SIZE = 2
+export const PARTICLE_BOOST = 1.75
+export const POOL_SIZE = 96
 export const STRONG_SCALE = 1.3
 export const WEAK_SCALE = 0.7
 export const CRIT_SCALE = 1.4
@@ -26,8 +34,8 @@ export const CRIT_HITSTOP_MS = 60
 export const STONE_CRIT_HITSTOP_MS = 100
 export const FIGHTING_LUNGE_PX = 40
 export const AWAKEN_SCALE = 1.15
-export const PARTICLE_CAP = 40
-export const CRIT_PARTICLE_CAP = 60
+export const PARTICLE_CAP = 72
+export const CRIT_PARTICLE_CAP = 96
 export const REDUCED_PARTICLE_SCALE = 0.3
 export const TEMPO3_PARTICLE_SCALE = 0.5
 
@@ -103,16 +111,35 @@ export function typeBase(type: TypeId): string {
   return BASE[type]
 }
 
-/** Whole attack length after the tempo split, clamped to 150 ms. */
+const MOVE_LABEL: Record<TypeId, string> = {
+  fire: 'Feuerstoß', water: 'Wasserstrahl', plant: 'Rankenhieb', earth: 'Erdriss', wind: 'Windsichel',
+  ice: 'Eissplitter', lightning: 'Blitzschlag', poison: 'Giftblase', stone: 'Steinwurf', crystal: 'Prismablitz',
+  metal: 'Metallklinge', fighting: 'Schlaghagel', beast: 'Krallenhieb', insect: 'Schwarmstich', light: 'Lichtsäule',
+  shadow: 'Schattensog', ghost: 'Geisterflamme', psychic: 'Psychowelle', sound: 'Schallstoß', dragon: 'Drachenodem'
+}
+
+/** Type name used when a species skill has no title. */
+export function moveLabel(type: TypeId): string {
+  return MOVE_LABEL[type] ?? MOVE_LABEL.fire
+}
+
+/** Dash, hold and return. Tempo divides it. The floor stays above a readable flash. */
 export function attackDuration(travelMs: number, tempo: number): number {
   const pace = tempo === 2 || tempo === 3 ? tempo : 1
-  const total = LUNGE_OUT_MS + LUNGE_BACK_MS + travelMs + HIT_MS
+  const flight = Math.round(Math.max(0, travelMs) * 0.35)
+  const total = LUNGE_OUT_MS + LUNGE_HOLD_MS + LUNGE_BACK_MS + flight + HIT_MS
   return Math.max(ATTACK_MIN_MS, Math.min(ATTACK_MAX_MS, total) / pace)
+}
+
+/** How long the projectile stays on screen, inside the attack. */
+export function flightMs(travelMs: number, tempo: number): number {
+  const pace = tempo === 2 || tempo === 3 ? tempo : 1
+  return Math.max(ATTACK_MIN_MS / 2, (LUNGE_OUT_MS + LUNGE_HOLD_MS + Math.round(travelMs * 0.4)) / pace)
 }
 
 export function particleBudget(entry: TypeFxDef, opts: { crit: boolean; tempo: number; reduced: boolean }): number {
   const cap = opts.crit ? CRIT_PARTICLE_CAP : PARTICLE_CAP
-  let count = Math.min(cap, opts.crit ? entry.critParticles : entry.particles)
+  let count = Math.min(cap, Math.round((opts.crit ? entry.critParticles : entry.particles) * PARTICLE_BOOST))
   if (opts.tempo >= 3) count = Math.round(count * TEMPO3_PARTICLE_SCALE)
   if (opts.reduced) count = Math.round(count * REDUCED_PARTICLE_SCALE)
   return Math.max(0, Math.min(cap, count))

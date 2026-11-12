@@ -41,7 +41,7 @@ export function blankSave(now: number): SaveV2 {
     buddy: null,
     mons: {},
     dex: {},
-    settings: { speed: 1, autoSwitch: true, catchCard: true, shake: true, flashes: true, reduceMotion: false, powerSave: 0, lang: 'de' },
+    settings: { speed: 1, autoSwitch: true, catchCard: true, shake: false, flashes: true, reduceMotion: false, powerSave: 0, lang: 'de' },
     stats: { wins: 0, catches: 0, dupes: 0, eggs: 0, shinies: 0, fruitsUsed: 0, crystalsUsed: 0 },
     rng: freshSeed(),
     nextId: 1,
@@ -52,6 +52,7 @@ export function blankSave(now: number): SaveV2 {
     guardMark: 0,
     guardWins: 0,
     layout: 1,
+    fxShake: 1,
     sealPity: {},
     hold: false,
     log: [],
@@ -232,11 +233,15 @@ export function normalize(save: SaveV2, now: number): SaveV2 {
   save.dex = save.dex ?? {}
   const speed = save.settings?.speed
   const power = save.settings?.powerSave
+  const storedShake = save.settings?.shake === true
+  save.fxShake = Math.max(0, Math.floor(Number(save.fxShake)) || 0)
+  const shake = save.fxShake < 1 ? false : storedShake
+  if (save.fxShake < 1) save.fxShake = 1
   save.settings = {
     speed: speed === 2 || speed === 3 ? speed : 1,
     autoSwitch: save.settings?.autoSwitch !== false,
     catchCard: save.settings?.catchCard !== false,
-    shake: save.settings?.shake !== false,
+    shake,
     flashes: save.settings?.flashes !== false,
     reduceMotion: save.settings?.reduceMotion === true,
     powerSave: power === 2 || power === 5 ? power : 0,

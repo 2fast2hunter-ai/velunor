@@ -1,7 +1,7 @@
 import Phaser from 'phaser'
 import { FxPool } from './fxPool'
 import { arcHeight } from './stage'
-import { effectScale, particleBudget, typeFx, type TypeFxDef } from './typeFx'
+import { effectScale, flightMs, FX_SIZE, particleBudget, POOL_SIZE, typeFx, type TypeFxDef } from './typeFx'
 
 export interface FxBurst {
   type: TypeFxDef['type']
@@ -43,8 +43,8 @@ class FxScene extends Phaser.Scene {
 
   create(): void {
     this.gfx = this.add.graphics()
-    for (let i = 0; i < 60; i++) {
-      const dot = this.add.circle(0, 0, 4, 0xffffff, 1)
+    for (let i = 0; i < POOL_SIZE; i++) {
+      const dot = this.add.circle(0, 0, 8, 0xffffff, 1)
       dot.setVisible(false)
       this.slots.push({ dot, alive: false, x: 0, y: 0, vx: 0, vy: 0, life: 0, max: 1, color: 0xffffff })
     }
@@ -123,15 +123,15 @@ class FxScene extends Phaser.Scene {
   update(time: number): void {
     if (!this.burst || !this.gfx) return
     const spec = typeFx(this.burst.type)
-    const dur = Math.max(150, spec.travelMs / Math.max(1, this.burst.tempo))
+    const dur = flightMs(spec.travelMs, this.burst.tempo)
     const age = this.hold ? dur * this.holdAt : time - this.started
     const t = Math.max(0, Math.min(1, age / dur))
-    const scale = effectScale(this.burst.band, this.burst.crit, this.burst.awaken)
+    const scale = effectScale(this.burst.band, this.burst.crit, this.burst.awaken) * FX_SIZE
     const alpha = this.burst.band === 'weak' ? 0.5 : 0.95
     const base = this.hex(spec.base)
     const accent = this.hex(spec.accent)
     const { from, to } = this.burst
-    const apex = spec.draw === 'bubble' ? 72 : spec.projectile ? 20 : 0
+    const apex = (spec.draw === 'bubble' ? 72 : spec.projectile ? 20 : 0) * FX_SIZE
     const x = from.x + (to.x - from.x) * t
     const y = from.y + (to.y - from.y) * t - arcHeight(t, apex)
     const g = this.gfx
@@ -140,7 +140,7 @@ class FxScene extends Phaser.Scene {
     if (kind === 'heal') this.drawHeal(from, base, scale)
     else if (kind === 'status') this.drawStatus(to, base, t)
     else this.drawForm(spec, t, x, y, scale, alpha, base, accent)
-    if (kind === 'hit' && t > 0.72 && !this.spawned) {
+    if (kind === 'hit' && t > 0.82 && !this.spawned) {
       this.spawned = true
       const count = particleBudget(spec, { crit: this.burst.crit, tempo: this.burst.tempo, reduced: this.burst.reduced })
       const mode = spec.draw === 'orb' ? 'down' : spec.draw === 'void' ? 'in' : spec.draw === 'beam' || spec.draw === 'bubble' ? 'up' : 'out'
@@ -148,7 +148,7 @@ class FxScene extends Phaser.Scene {
     }
     for (const slot of this.slots) {
       if (!slot.alive) continue
-      slot.life -= 0.03
+      slot.life -= 0.012
       slot.x += slot.vx * 0.16
       slot.y += slot.vy * 0.16
       slot.dot.setPosition(slot.x, slot.y)
@@ -318,13 +318,13 @@ class FxScene extends Phaser.Scene {
         g.strokeLineShape(new Phaser.Geom.Line(to.x - 20 + ox, to.y - 16, to.x + 16 + ox, to.y + 16))
       }
     }
-    if (t > 0.72) this.drawImpact(spec, t, scale, alpha, base, accent)
+    if (t > 0.82) this.drawImpact(spec, t, scale, alpha, base, accent)
   }
 
   private drawImpact(spec: TypeFxDef, t: number, scale: number, alpha: number, base: number, accent: number): void {
     const burst = this.burst
     if (!burst) return
-    const grow = (t - 0.72) / 0.28
+    const grow = (t - 0.82) / 0.18
     const to = burst.to
     const g = this.gfx
     const radius = (spec.draw === 'orb' ? 48 : 28) * scale * Math.max(0.2, grow)
@@ -351,7 +351,7 @@ class FxScene extends Phaser.Scene {
 
 let game: Phaser.Game | null = null
 let scene: FxScene | null = null
-const pool = new FxPool(60)
+const pool = new FxPool(POOL_SIZE)
 
 export function fxPoolSize(): number {
   return pool.allocated

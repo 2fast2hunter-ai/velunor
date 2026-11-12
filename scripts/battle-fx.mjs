@@ -26,7 +26,8 @@ async function run() {
   page.on('pageerror', (err) => errors.push(err.message))
   try {
     await shot(page, 'fire')
-    await shot(page, 'crit')
+    await shot(page, 'hit')
+    await shot(page, 'ko')
     if (errors.length) throw new Error(errors.join('\n'))
     console.log('fx screens saved')
   } finally {

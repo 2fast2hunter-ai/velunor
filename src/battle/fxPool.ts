@@ -4,7 +4,7 @@ export class FxPool {
   private readonly slots: { alive: boolean; x: number; y: number; vx: number; vy: number; life: number; color: string }[]
   highWater = 0
 
-  constructor(capacity = 60) {
+  constructor(capacity = 96) {
     this.capacity = capacity
     this.slots = Array.from({ length: capacity }, () => ({ alive: false, x: 0, y: 0, vx: 0, vy: 0, life: 0, color: '#fff' }))
   }

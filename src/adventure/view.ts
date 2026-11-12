@@ -192,6 +192,7 @@ function battle(save: SaveV2, now: number): string {
         <span class="ground-shadow"></span>
       </div>
       <div id="floats"></div>
+      <div class="move-banner" id="move-banner" hidden></div>
       <div class="crit-flash" id="crit-flash"></div>
     </div>
     <div class="team-rail">${minis}</div>
