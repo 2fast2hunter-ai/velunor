@@ -21,21 +21,42 @@ export interface GuardianDef {
   team: GuardianMon[]
 }
 
+export interface CouncilMember {
+  id: string
+  name: string
+  epithet: string
+  cap: number
+  gold: number
+  team: GuardianMon[]
+}
+
+export interface CouncilDef {
+  rewardGold: number
+  unlocksRegion: number
+  members: CouncilMember[]
+}
+
+export type SceneTint = 'moor' | 'fels' | 'sturm' | 'frost' | 'schmiede' | 'rat'
+
 export interface ChapterDef {
   id: number
   name: string
   scene: 'wiese' | 'bach' | 'wald'
+  /** Recolour of an existing Grünmark plate. No extra image files. */
+  tint?: SceneTint
   levelMin: number
   levelMax: number
   cap: number
   guardian: GuardianDef
   day: Spawn[]
   night: Spawn[]
+  council?: CouncilDef
 }
 
 export interface RegionDef {
   id: number
   name: string
+  placeholder?: boolean
   chapters: ChapterDef[]
 }
 

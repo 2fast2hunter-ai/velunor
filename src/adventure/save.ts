@@ -49,7 +49,9 @@ export function blankSave(now: number): SaveV2 {
     challengeNow: false,
     hold: false,
     log: [],
-    migratedFrom: null
+    migratedFrom: null,
+    councilBeaten: [],
+    regionsOpen: [1]
   }
 }
 
@@ -166,8 +168,10 @@ export function normalize(save: SaveV2, now: number): SaveV2 {
   save.gold = Math.max(0, Math.floor(save.gold) || 0)
   save.lastSeenAt = save.lastSeenAt || now
   save.region = 1
-  save.chapter = [1, 2, 3].includes(save.chapter) ? save.chapter : 1
-  save.step = Math.min(20, Math.max(1, Math.floor(save.step) || 1))
+  const chapter = Math.floor(Number(save.chapter))
+  save.chapter = chapter >= 1 && chapter <= 9 ? chapter : 1
+  const stepMax = save.chapter === 9 ? 5 : 20
+  save.step = Math.min(stepMax, Math.max(1, Math.floor(save.step) || 1))
   save.loop = save.loop !== false
   save.lastHealStep = save.lastHealStep || 1
   save.badges = Array.isArray(save.badges) ? save.badges.filter((badge) => typeof badge === 'string') : []
@@ -211,6 +215,11 @@ export function normalize(save: SaveV2, now: number): SaveV2 {
   save.hold = Boolean(save.hold)
   save.log = Array.isArray(save.log) ? save.log.slice(-50) : []
   save.migratedFrom = save.migratedFrom ?? null
+  save.councilBeaten = Array.isArray(save.councilBeaten) ? save.councilBeaten.filter((id) => typeof id === 'string') : []
+  const open = Array.isArray(save.regionsOpen) ? save.regionsOpen.map((id) => Math.floor(Number(id))).filter((id) => id > 0) : []
+  if (!open.includes(1)) open.unshift(1)
+  if (save.badges.includes('Ratsiegel') && !open.includes(2)) open.push(2)
+  save.regionsOpen = [...new Set(open)]
   return save
 }
 

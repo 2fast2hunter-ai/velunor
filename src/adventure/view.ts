@@ -10,6 +10,7 @@ import {
   STARTERS,
   assetPath
 } from './const'
+import { baseLine, dexPlaces, dexStatus, dexStatusLabel, listCodex, regionProgress, speciesNumber, type DexFilter } from './dex'
 import { chapterById, placeLabel, regionById, routeOf, type NodeKind } from './route'
 import { dexCaughtCount, hereSightings, rarityName } from './sim'
 import { expToNext, isAlive, monStats, realHp } from './stats'
@@ -27,8 +28,11 @@ export interface PcQuery {
   dir: number
 }
 
+export type CodexQuery = DexFilter
+
 export type Overlay =
   | { kind: 'catch'; species: string; level: number; place: string }
+  | { kind: 'dex'; species: string }
   | { kind: 'welcome'; summary: OfflineSummary; countedMs: number; rawMs: number }
   | { kind: 'card'; uid: string }
   | { kind: 'confirm-reset' }
@@ -87,8 +91,8 @@ function nav(save: SaveV2, screen: Screen, step: number): string {
       <div class="kicker">${esc(region.name)}</div>
       <h2>${esc(chapter.name)}</h2>
       <div>Wappen: ${save.badges.includes(chapter.guardian.badge) ? esc(chapter.guardian.badge) : '—'}</div>
-      <div>Schritt ${step}/20</div>
-      <div class="muted">Lv ${chapter.levelMin}–${chapter.levelMax} · Cap ${chapter.cap}</div>
+      <div>${chapter.council ? `Rat ${step}/${chapter.council.members.length}` : `Schritt ${step}/20`}</div>
+      <div class="muted">${chapter.council ? `Cap ${chapter.council.members[Math.max(0, step - 1)]?.cap ?? chapter.cap}` : `Lv ${chapter.levelMin}–${chapter.levelMax} · Cap ${chapter.cap}`}</div>
       <label class="switch"><input type="checkbox" data-field="loop" ${save.loop ? 'checked' : ''}/> Kapitel wiederholen</label>
     </div>
     <div class="card menu">
@@ -102,6 +106,15 @@ function nav(save: SaveV2, screen: Screen, step: number): string {
 }
 
 function path(save: SaveV2, here: number): string {
+  const chapter = chapterById(save.region, save.chapter)
+  if (chapter.council) {
+    const cells = chapter.council.members.map((member, index) => {
+      const step = index + 1
+      const cls = step === here ? 'is-here' : step < here ? 'is-done' : ''
+      return `<div class="node ${cls}" title="${esc(member.name)}">${icon('guardian')}<small>${step}</small></div>`
+    })
+    return `<div class="card path council-path" id="path">${cells.join('')}</div>`
+  }
   const route = routeOf(save.chapter)
   const cells = []
   for (let step = 1; step <= 20; step++) {
@@ -132,7 +145,7 @@ function battle(save: SaveV2, now: number): string {
   return `<div class="battle" id="battle">
     <picture>
       <source srcset="${art(scene.webp)}" type="image/webp"/>
-      <img class="plate" src="${art(scene.jpg)}" alt=""/>
+      <img class="plate ${chapter.tint ? `tint-${chapter.tint}` : ''}" src="${art(scene.jpg)}" alt=""/>
     </picture>
     <div class="team-rail">${minis}</div>
     <div class="combatant ally" style="left:${ALLY_X}%;top:${FEET_Y}%">
@@ -151,7 +164,7 @@ function battle(save: SaveV2, now: number): string {
       <div class="speed">
         ${([1, 2, 3] as const).map((speed) => `<button data-act="speed" data-speed="${speed}" class="${save.settings.speed === speed ? 'on' : ''}">×${speed}</button>`).join('')}
       </div>
-      ${save.badges.includes(chapter.guardian.badge) ? '' : '<button class="primary" data-act="challenge">Wächter herausfordern</button>'}
+      ${save.badges.includes(chapter.guardian.badge) ? '' : `<button class="primary" data-act="challenge">${chapter.council ? 'Rat fortsetzen' : 'Wächter herausfordern'}</button>`}
     </div>
   </div>`
 }
@@ -176,7 +189,7 @@ function sightings(save: SaveV2, now: number, open: boolean): string {
         <h2>Hier gesichtet</h2>
         <button class="ghost" data-act="side">${open ? 'Zu' : 'Auf'}</button>
       </div>
-      ${open ? `<div class="clock">${night ? 'Nacht' : 'Tag'}</div><div class="sight">${body}</div>` : ''}
+      ${open ? `<div class="clock">${night ? 'Nacht' : 'Tag'}</div><div class="sight">${body || '<div class="muted">Hier gibt es keine Wildnis.</div>'}</div>` : ''}
     </div>
   </aside>`
 }
@@ -186,12 +199,16 @@ function progress(save: SaveV2): string {
   const buttons = region.chapters.map((chapter) => {
     const open = chapter.id === 1 || save.badges.includes(region.chapters[chapter.id - 2].guardian.badge)
     const here = save.chapter === chapter.id
+    const range = chapter.council ? `Vier Räte und der Großwächter, Cap ${chapter.council.members.map((member) => member.cap).join('/')}` : `Lv ${chapter.levelMin}–${chapter.levelMax}, Cap ${chapter.cap}`
     return `<button class="text-btn" data-act="travel" data-chapter="${chapter.id}" ${open ? '' : 'disabled'}>
       <b>${esc(chapter.name)}</b> ${here ? '· hier' : ''}
-      <div class="muted">Lv ${chapter.levelMin}–${chapter.levelMax}, Cap ${chapter.cap}, ${save.badges.includes(chapter.guardian.badge) ? esc(chapter.guardian.badge) : 'Wappen fehlt'}</div>
+      <div class="muted">${range}, ${save.badges.includes(chapter.guardian.badge) ? esc(chapter.guardian.badge) : 'Wappen fehlt'}</div>
     </button>`
   }).join('')
-  return `<div class="card panel"><h2>Fortschritt · ${esc(region.name)}</h2><div class="chapters">${buttons}</div><p class="muted">Kapitel 4 folgt später. Der Hohe Rat ebenfalls.</p></div>`
+  const coast = save.regionsOpen.includes(2)
+    ? `<p>Region 2 ${esc(regionById(2).name)} ist frei und folgt später.</p>`
+    : '<p class="muted">Region 2 bleibt zu, bis das Ratsiegel errungen ist.</p>'
+  return `<div class="card panel"><h2>Fortschritt · ${esc(region.name)}</h2><div class="chapters">${buttons}</div>${coast}</div>`
 }
 
 function team(save: SaveV2, pc: PcQuery, selected: string | null): string {
@@ -279,17 +296,42 @@ function rarityOptions(current: string): string {
   return rows.join('')
 }
 
-function codex(save: SaveV2): string {
-  const cells = monsters.map((mon) => {
-    const caught = (save.dex[mon.id]?.caught ?? 0) > 0
-    const seen = (save.dex[mon.id]?.seen ?? 0) > 0
-    return `<div class="mon-card">
-      <img class="${caught ? '' : 'sil'}" src="${monsterArt(mon.id)}" alt="" style="${seen || caught ? '' : 'opacity:.25'}"/>
-      <div>${caught ? esc(mon.name) : mon.id.toUpperCase()}</div>
-      <div class="muted">${caught ? esc(typeName(mon.type)) : seen ? 'gesichtet' : 'fehlt'}</div>
-    </div>`
+function codex(save: SaveV2, filter: CodexQuery): string {
+  const types = [...new Set(monsters.map((mon) => mon.type))]
+  const bars = [1, 2].map((id) => {
+    const row = regionProgress(save, id)
+    const pct = row.total ? Math.round((row.caught / row.total) * 100) : 0
+    const label = row.placeholder
+      ? (row.open ? `${esc(row.name)} folgt später` : `${esc(row.name)} gesperrt`)
+      : `${esc(row.name)} ${row.caught}/${row.total}`
+    return `<div><div class="muted">${label}</div><div class="progress-track"><span style="width:${row.placeholder ? 0 : pct}%"></span></div></div>`
   }).join('')
-  return `<div class="card panel"><h2>Velunor-Kodex ${dexCaughtCount(save)}/100</h2><p class="muted">Die ausführliche Kodex-Ansicht mit Fundorten folgt später. Hier zählt, was du schon besitzt.</p><div class="grid">${cells}</div></div>`
+  const rows = listCodex(save, filter)
+  const cells = rows.map((mon) => {
+    const status = dexStatus(save, mon.id)
+    const hidden = status === 'missing'
+    return `<button class="mon-card" data-act="dex" data-species="${mon.id}">
+      <img class="${status === 'owned' || status === 'released' ? '' : 'sil'}" src="${monsterArt(mon.id)}" alt="" style="${hidden ? 'opacity:.25' : ''}"/>
+      <div>${hidden ? `Nr. ${speciesNumber(mon.id)}` : esc(mon.name)}</div>
+      <div class="muted">${dexStatusLabel(status)}</div>
+    </button>`
+  }).join('')
+  return `<div class="card panel">
+    <h2>Velunor-Kodex ${dexCaughtCount(save)}/100</h2>
+    <div class="region-bars">${bars}</div>
+    <div class="filters">
+      <input data-field="dex-q" placeholder="Name oder Nr." value="${esc(filter.q)}"/>
+      <select data-field="dex-type"><option value="">Typ</option>${types.map((type) => `<option value="${type}" ${filter.type === type ? 'selected' : ''}>${esc(typeName(type as TypeId))}</option>`).join('')}</select>
+      <select data-field="dex-rarity"><option value="">Seltenheit</option>${rarityOptions(filter.rarity)}</select>
+      <select data-field="dex-shiny">
+        <option value="" ${filter.shiny === '' ? 'selected' : ''}>Schimmer</option>
+        <option value="1" ${filter.shiny === '1' ? 'selected' : ''}>Mit Schimmer</option>
+        <option value="0" ${filter.shiny === '0' ? 'selected' : ''}>Ohne Schimmer</option>
+      </select>
+    </div>
+    <p class="muted">Schimmer im Abenteuer folgt später. Der Filter zeigt nur Exemplare, die schon schimmern.</p>
+    <div class="grid">${cells || '<div class="muted">Keine Einträge für diesen Filter.</div>'}</div>
+  </div>`
 }
 
 function placeholder(title: string, text: string): string {
@@ -316,16 +358,17 @@ function guide(): string {
     <p>Du wanderst einen Weg mit 20 Schritten. Kämpfe laufen von selbst, Tempo ×1, ×2 oder ×3.</p>
     <p>Nach dem K.O. eines wilden Monsters versucht das Bannsiegel den Fang. Eine neue Art kommt ins Team oder in den PC. Ein Duplikat wird zu Art-EP, außer du behältst es.</p>
     <p>Heilquellen heilen das Team. Fällt das ganze Team, kehrt ihr zur letzten Heilquelle zurück, ohne etwas zu verlieren.</p>
-    <p>Der Wächter am Schritt 20 bringt ein Wappen und öffnet das nächste Kapitel. Mit „Kapitel wiederholen“ farmst du weiter.</p>
+    <p>Der Wächter am Schritt 20 bringt ein Wappen. Mit „Kapitel wiederholen“ farmst du ein geschafftes Kapitel weiter. Nach Kapitel 8 wartet der Hohe Rat: vier Räte und der Großwächter direkt hintereinander. Das Ratsiegel öffnet Region 2, die später folgt.</p>
+    <p>Der Kodex zeigt alle 100 Arten: besessen, nicht mehr besessen, gesichtet oder fehlend, mit Fundort und Bedingung.</p>
     <p>Bis zu 8 Stunden Abwesenheit werden nachgerechnet. Der Begleiter bekommt mehr Kampf-EP.</p>
   </div>`
 }
 
-function center(save: SaveV2, screen: Screen, now: number, pc: PcQuery, selected: string | null, debug: boolean, step: number): string {
+function center(save: SaveV2, screen: Screen, now: number, pc: PcQuery, dex: CodexQuery, selected: string | null, debug: boolean, step: number): string {
   if (screen === 'adventure') return `${path(save, step)}${battle(save, now)}${logBox(save)}`
   if (screen === 'progress') return progress(save)
   if (screen === 'team') return team(save, pc, selected)
-  if (screen === 'codex') return codex(save)
+  if (screen === 'codex') return codex(save, dex)
   if (screen === 'activities') return placeholder('Aktivitäten', 'Hort und Glücksrad folgen in einem späteren Schritt.')
   if (screen === 'shop') return placeholder('Laden', 'EP-Kristalle und Früchte folgen in einem späteren Schritt.')
   if (screen === 'achievements') return placeholder('Erfolge', 'Die Erfolgsliste folgt in einem späteren Schritt.')
@@ -333,10 +376,10 @@ function center(save: SaveV2, screen: Screen, now: number, pc: PcQuery, selected
   return guide()
 }
 
-export function gameHtml(save: SaveV2, screen: Screen, now: number, pc: PcQuery, selected: string | null, sideOpen: boolean, debug: boolean, overlay: Overlay | null, step = save.step): string {
+export function gameHtml(save: SaveV2, screen: Screen, now: number, pc: PcQuery, dex: CodexQuery, selected: string | null, sideOpen: boolean, debug: boolean, overlay: Overlay | null, step = save.step): string {
   return `<div id="stage" class="${sideOpen ? '' : 'side-shut'}">
     ${nav(save, screen, step)}
-    <main class="center">${center(save, screen, now, pc, selected, debug, step)}</main>
+    <main class="center">${center(save, screen, now, pc, dex, selected, debug, step)}</main>
     ${sightings(save, now, sideOpen)}
     ${overlay ? `<div class="overlay">${overlayHtml(save, overlay)}</div>` : ''}
   </div>`
@@ -365,6 +408,7 @@ function overlayHtml(save: SaveV2, overlay: Overlay): string {
       <button class="primary" data-act="close">Weiter</button>
     </div>`
   }
+  if (overlay.kind === 'dex') return dexEntry(save, overlay.species)
   if (overlay.kind === 'catch') {
     const sp = species(overlay.species)
     return `<div class="modal"><div class="kicker">gefangen!</div><h2>${esc(sp.name)}</h2>
@@ -376,6 +420,34 @@ function overlayHtml(save: SaveV2, overlay: Overlay): string {
     </div>`
   }
   return card(save, overlay.uid)
+}
+
+function dexEntry(save: SaveV2, id: string): string {
+  const sp = species(id)
+  const base = baseLine(id)
+  const status = dexStatus(save, id)
+  const places = dexPlaces(id)
+  const hidden = status === 'missing'
+  const where = places.length
+    ? places.map((place) => `<div>${esc(place.region)} · ${esc(place.chapter)} · ${esc(place.when)}</div>`).join('')
+    : '<div class="muted">Noch kein Fundort in Grünmark.</div>'
+  return `<div class="modal">
+    <img class="hero ${hidden ? 'sil' : ''}" src="${monsterArt(id, true)}" alt=""/>
+    <div class="kicker">Nr. ${speciesNumber(id)} · ${dexStatusLabel(status)}</div>
+    <h2>${esc(sp.name)}</h2>
+    <p>${esc(typeName(sp.type))} · ${esc(rarityInfo(sp.baseRarity).name)} · Fangzahl ${(save.dex[id]?.caught ?? 0).toLocaleString('de-DE')}</p>
+    <div class="stats">
+      <div class="stat">HP<br/>${base.hp}</div>
+      <div class="stat">ATK<br/>${base.atk}</div>
+      <div class="stat">DEF<br/>${base.def}</div>
+      <div class="stat">SPD<br/>${base.spd}</div>
+    </div>
+    <p><b>${esc(sp.skill.name ?? 'Fähigkeit')}</b> — ${esc(sp.skill.description ?? '')}</p>
+    <p>${esc(sp.blurb)}</p>
+    <p><b>Fundorte</b></p>
+    ${where}
+    <p><button class="primary" data-act="close">Schließen</button></p>
+  </div>`
 }
 
 function card(save: SaveV2, uid: string): string {
