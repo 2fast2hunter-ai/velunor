@@ -102,8 +102,256 @@
             { "species": "m81", "weight": 15 },
             { "species": "m52", "weight": 10 }
           ]
+        },
+        {
+          "id": 4,
+          "name": "Moorsenke",
+          "scene": "wald",
+          "tint": "moor",
+          "levelMin": 20,
+          "levelMax": 24,
+          "cap": 30,
+          "guardian": {
+            "name": "Morva",
+            "epithet": "Wächterin",
+            "badge": "Moorwappen",
+            "gold": 4000,
+            "team": [
+              { "species": "m15", "level": 27 },
+              { "species": "m82", "level": 28 },
+              { "species": "m84", "level": 30 }
+            ]
+          },
+          "day": [
+            { "species": "m14", "weight": 30 },
+            { "species": "m81", "weight": 25 },
+            { "species": "m36", "weight": 20 },
+            { "species": "m82", "weight": 15 },
+            { "species": "m15", "weight": 10 }
+          ],
+          "night": [
+            { "species": "m81", "weight": 30 },
+            { "species": "m14", "weight": 25 },
+            { "species": "m82", "weight": 20 },
+            { "species": "m36", "weight": 10 },
+            { "species": "m84", "weight": 15 }
+          ]
+        },
+        {
+          "id": 5,
+          "name": "Felsklamm",
+          "scene": "wiese",
+          "tint": "fels",
+          "levelMin": 26,
+          "levelMax": 30,
+          "cap": 36,
+          "guardian": {
+            "name": "Brom",
+            "epithet": "Wächter",
+            "badge": "Felswappen",
+            "gold": 4750,
+            "team": [
+              { "species": "m32", "level": 33 },
+              { "species": "m18", "level": 34 },
+              { "species": "m38", "level": 36 }
+            ]
+          },
+          "day": [
+            { "species": "m04", "weight": 30 },
+            { "species": "m17", "weight": 25 },
+            { "species": "m18", "weight": 25 },
+            { "species": "m32", "weight": 20 }
+          ],
+          "night": [
+            { "species": "m18", "weight": 30 },
+            { "species": "m04", "weight": 25 },
+            { "species": "m17", "weight": 15 },
+            { "species": "m32", "weight": 15 },
+            { "species": "m38", "weight": 15 }
+          ]
+        },
+        {
+          "id": 6,
+          "name": "Sturmhöhe",
+          "scene": "wiese",
+          "tint": "sturm",
+          "levelMin": 32,
+          "levelMax": 36,
+          "cap": 42,
+          "guardian": {
+            "name": "Veya",
+            "epithet": "Wächterin",
+            "badge": "Sturmwappen",
+            "gold": 5500,
+            "team": [
+              { "species": "m42", "level": 39 },
+              { "species": "m41", "level": 40 },
+              { "species": "m44", "level": 42 }
+            ]
+          },
+          "day": [
+            { "species": "m41", "weight": 60 },
+            { "species": "m42", "weight": 40 }
+          ],
+          "night": [
+            { "species": "m41", "weight": 40 },
+            { "species": "m42", "weight": 25 },
+            { "species": "m44", "weight": 35 }
+          ]
+        },
+        {
+          "id": 7,
+          "name": "Frostgrat",
+          "scene": "bach",
+          "tint": "frost",
+          "levelMin": 38,
+          "levelMax": 42,
+          "cap": 48,
+          "guardian": {
+            "name": "Isko",
+            "epithet": "Wächter",
+            "badge": "Frostwappen",
+            "gold": 6250,
+            "team": [
+              { "species": "m46", "level": 45 },
+              { "species": "m41", "level": 46 },
+              { "species": "m70", "level": 48 }
+            ]
+          },
+          "day": [
+            { "species": "m41", "weight": 40 },
+            { "species": "m46", "weight": 60 }
+          ],
+          "night": [
+            { "species": "m46", "weight": 45 },
+            { "species": "m41", "weight": 20 },
+            { "species": "m70", "weight": 35 }
+          ]
+        },
+        {
+          "id": 8,
+          "name": "Klingenschmiede",
+          "scene": "wald",
+          "tint": "schmiede",
+          "levelMin": 44,
+          "levelMax": 48,
+          "cap": 54,
+          "guardian": {
+            "name": "Runa",
+            "epithet": "Wächterin",
+            "badge": "Klingenwappen",
+            "gold": 7000,
+            "team": [
+              { "species": "m61", "level": 51 },
+              { "species": "m56", "level": 52 },
+              { "species": "m59", "level": 54 }
+            ]
+          },
+          "day": [
+            { "species": "m56", "weight": 55 },
+            { "species": "m61", "weight": 45 }
+          ],
+          "night": [
+            { "species": "m61", "weight": 30 },
+            { "species": "m56", "weight": 25 },
+            { "species": "m59", "weight": 45 }
+          ]
+        },
+        {
+          "id": 9,
+          "name": "Hoher Rat",
+          "scene": "wald",
+          "tint": "rat",
+          "levelMin": 55,
+          "levelMax": 68,
+          "cap": 68,
+          "guardian": {
+            "name": "Orim",
+            "epithet": "Großwächter",
+            "badge": "Ratsiegel",
+            "gold": 8000,
+            "team": [
+              { "species": "m84", "level": 66 },
+              { "species": "m59", "level": 67 },
+              { "species": "m38", "level": 68 }
+            ]
+          },
+          "day": [],
+          "night": [],
+          "council": {
+            "rewardGold": 25000,
+            "unlocksRegion": 2,
+            "members": [
+              {
+                "id": "rat1",
+                "name": "Eldon",
+                "epithet": "Rat",
+                "cap": 55,
+                "gold": 4000,
+                "team": [
+                  { "species": "m38", "level": 53 },
+                  { "species": "m44", "level": 54 },
+                  { "species": "m84", "level": 55 }
+                ]
+              },
+              {
+                "id": "rat2",
+                "name": "Sura",
+                "epithet": "Rätin",
+                "cap": 58,
+                "gold": 5000,
+                "team": [
+                  { "species": "m15", "level": 56 },
+                  { "species": "m42", "level": 57 },
+                  { "species": "m59", "level": 58 }
+                ]
+              },
+              {
+                "id": "rat3",
+                "name": "Kelm",
+                "epithet": "Rat",
+                "cap": 61,
+                "gold": 6000,
+                "team": [
+                  { "species": "m46", "level": 59 },
+                  { "species": "m61", "level": 60 },
+                  { "species": "m70", "level": 61 }
+                ]
+              },
+              {
+                "id": "rat4",
+                "name": "Nyra",
+                "epithet": "Rätin",
+                "cap": 64,
+                "gold": 7000,
+                "team": [
+                  { "species": "m32", "level": 62 },
+                  { "species": "m18", "level": 63 },
+                  { "species": "m44", "level": 64 }
+                ]
+              },
+              {
+                "id": "grand",
+                "name": "Orim",
+                "epithet": "Großwächter",
+                "cap": 68,
+                "gold": 8000,
+                "team": [
+                  { "species": "m84", "level": 66 },
+                  { "species": "m59", "level": 67 },
+                  { "species": "m38", "level": 68 }
+                ]
+              }
+            ]
+          }
         }
       ]
+    },
+    {
+      "id": 2,
+      "name": "Frostküste",
+      "placeholder": true,
+      "chapters": []
     }
   ]
 }

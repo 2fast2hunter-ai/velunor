@@ -127,6 +127,14 @@ button, input, select { font: inherit; color: inherit; }
   border-radius: 22px;
 }
 .battle picture, .battle img.plate { position: absolute; inset: 0; width: 100%; height: 100%; object-fit: cover; }
+.plate.tint-moor { filter: hue-rotate(78deg) saturate(0.75) brightness(0.72); }
+.plate.tint-fels { filter: sepia(0.55) saturate(0.65) brightness(0.86) contrast(1.05); }
+.plate.tint-sturm { filter: saturate(0.35) brightness(0.78) contrast(1.12); }
+.plate.tint-frost { filter: hue-rotate(176deg) saturate(0.55) brightness(1.08); }
+.plate.tint-schmiede { filter: hue-rotate(-18deg) saturate(1.35) brightness(0.68) contrast(1.12); }
+.plate.tint-rat { filter: sepia(0.25) saturate(0.7) brightness(0.62) hue-rotate(10deg); }
+.council-path { grid-template-columns: repeat(5, 1fr); }
+.region-bars { display: grid; gap: 8px; margin: 8px 0 12px; }
 .team-rail {
   position: absolute;
   left: 12px;

@@ -69,6 +69,10 @@ export interface SaveV2 {
   hold: boolean
   log: LogLine[]
   migratedFrom: string | null
+  /** Council member ids already beaten before the Ratsiegel. */
+  councilBeaten: string[]
+  /** Region ids the player may see. Region 2 stays a placeholder. */
+  regionsOpen: number[]
 }
 
 export interface StorageLike {

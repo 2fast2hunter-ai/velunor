@@ -37,6 +37,7 @@ import {
   gameHtml,
   monsterArt,
   onboardingHtml,
+  type CodexQuery,
   type Overlay,
   type PcQuery,
   type Screen
@@ -47,6 +48,7 @@ const RESET_FLAG = 'velunor_v2_reset'
 let save: SaveV2 | null = null
 let screen: Screen = 'adventure'
 let pc: PcQuery = { q: '', type: '', rarity: '', shiny: '', sort: 'newest', dir: -1 }
+let dex: CodexQuery = { q: '', type: '', rarity: '', shiny: '' }
 let selected: string | null = null
 let sideOpen = true
 let overlay: Overlay | null = null
@@ -119,7 +121,7 @@ async function start(next: SaveV2): Promise<void> {
 
 function render(step = save?.step): void {
   if (!save) return
-  paint(gameHtml(save, screen, Date.now(), pc, selected, sideOpen, debug, overlay, step ?? save.step))
+  paint(gameHtml(save, screen, Date.now(), pc, dex, selected, sideOpen, debug, overlay, step ?? save.step))
   const seal = document.getElementById('seal') as HTMLImageElement | null
   if (seal) {
     seal.style.mixBlendMode = SEAL_BLEND
@@ -380,6 +382,12 @@ function onClick(event: Event): void {
     render()
     return
   }
+  if (act === 'dex') {
+    const speciesId = node.getAttribute('data-species')
+    if (speciesId) overlay = { kind: 'dex', species: speciesId }
+    render()
+    return
+  }
   if (act === 'card') {
     const uid = node.getAttribute('data-uid') || selected || save.team[0] || save.pc[0]
     if (uid && save.mons[uid]) overlay = { kind: 'card', uid }
@@ -445,11 +453,13 @@ function onInput(event: Event): void {
     draftName = target.value
     return
   }
-  if (target.dataset.field === 'q') {
-    pc.q = target.value
+  if (target.dataset.field === 'q' || target.dataset.field === 'dex-q') {
+    if (target.dataset.field === 'q') pc.q = target.value
+    else dex.q = target.value
     const caret = target.selectionStart
+    const field = target.dataset.field
     render()
-    const next = document.querySelector('[data-field="q"]')
+    const next = document.querySelector(`[data-field="${field}"]`)
     if (next instanceof HTMLInputElement) {
       next.focus()
       next.setSelectionRange(caret, caret)
@@ -468,6 +478,9 @@ function syncField(target: EventTarget | null): void {
   if (field === 'type' || field === 'rarity' || field === 'shiny' || field === 'sort') {
     pc[field] = target.value
   }
+  if (field === 'dex-type') dex.type = target.value
+  if (field === 'dex-rarity') dex.rarity = target.value
+  if (field === 'dex-shiny') dex.shiny = target.value
   if (field !== 'q' && field !== 'name') render()
   if (field === 'loop') kick()
 }

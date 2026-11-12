@@ -30,6 +30,7 @@ import {
   type ChapterDef,
   type NodeKind
 } from './route'
+import { chapterCapNow } from './dex'
 import { makeMon, takeId } from './save'
 import { addExp, battleLevel, isAlive, monStats, realHp, speciesExp } from './stats'
 import type { OwnedMon, SaveV2 } from './types'
@@ -238,9 +239,13 @@ export function pickFighter(save: SaveV2, foeType: TypeId): string | null {
 
 function wipe(save: SaveV2, now: number, quiet: boolean): void {
   healTeam(save)
-  save.step = save.lastHealStep || 1
+  const chapter = chapterById(save.region, save.chapter)
+  save.step = chapter.council ? 1 : (save.lastHealStep || 1)
   save.hold = false
-  log(save, now, 'Das Team ist erschöpft und kehrt zur letzten Heilquelle zurück. Nichts geht verloren.', quiet)
+  const text = chapter.council
+    ? 'Das Team ist erschöpft. Der Hohe Rat beginnt wieder bei Rat 1. Nichts geht verloren.'
+    : 'Das Team ist erschöpft und kehrt zur letzten Heilquelle zurück. Nichts geht verloren.'
+  log(save, now, text, quiet)
 }
 
 function finish(save: SaveV2, chapter: ChapterDef, outcome: EncounterOutcome): EncounterOutcome {
@@ -349,12 +354,13 @@ function fightOne(save: SaveV2, chapter: ChapterDef, speciesId: string, level: n
   if (!fighter) return null
   save.active = fighter
   const allyMon = save.mons[fighter]
-  const ally = sideFrom(allyMon, chapter.cap)
+  const cap = chapterCapNow(save, chapter)
+  const ally = sideFrom(allyMon, cap)
   const trace = fight1v1(ally, foe, rngOf(save), opts.trace)
   storeHp(allyMon, trace.allyHp, trace.allyMax)
   if (trace.win) {
     save.stats.wins += 1
-    awardCombatExp(save, chapter.cap, level, species(speciesId).baseRarity, fighter, opts, now)
+    awardCombatExp(save, cap, level, species(speciesId).baseRarity, fighter, opts, now)
     if (opts.summary) opts.summary.fights += 1
     return { trace, fighter }
   }
@@ -551,6 +557,86 @@ function doGuardian(save: SaveV2, chapter: ChapterDef, now: number, opts: Resolv
   return finish(save, chapter, outcome)
 }
 
+/** Gold for one council member. Repeat wins pay half until the Ratsiegel exists. */
+export function councilPurse(save: SaveV2, memberId: string, baseGold: number): number {
+  const repeat = save.councilBeaten.includes(memberId) && !hasBadge(save, 'Ratsiegel')
+  return repeat ? Math.floor(baseGold / 2) : baseGold
+}
+
+export function recordCouncilWin(save: SaveV2, now: number, quiet: boolean): EncounterOutcome {
+  const chapter = chapterById(save.region, save.chapter)
+  const council = chapter.council
+  if (!council) throw new Error('Kein Hoher Rat')
+  const outcome = baseOutcome('guardian', save.step, chapter)
+  const index = Math.min(council.members.length - 1, Math.max(0, save.step - 1))
+  const member = council.members[index]
+  const pay = councilPurse(save, member.id, member.gold)
+  if (!save.councilBeaten.includes(member.id)) save.councilBeaten.push(member.id)
+  save.gold += pay
+  outcome.gold = pay
+  say(save, outcome, now, `${member.epithet} ${member.name} weicht. +${pay} G.`, quiet)
+  if (index < council.members.length - 1) {
+    save.step = index + 2
+    say(save, outcome, now, `Als Nächstes: ${council.members[index + 1].epithet} ${council.members[index + 1].name}.`, quiet)
+    return finish(save, chapter, outcome)
+  }
+  const firstSeal = !hasBadge(save, chapter.guardian.badge)
+  if (firstSeal) {
+    save.gold += council.rewardGold
+    outcome.gold += council.rewardGold
+    save.badges.push(chapter.guardian.badge)
+    outcome.badge = chapter.guardian.badge
+    if (!save.regionsOpen.includes(council.unlocksRegion)) save.regionsOpen.push(council.unlocksRegion)
+    say(save, outcome, now, `Ratsiegel errungen. +${council.rewardGold} G. Region 2 ist sichtbar und folgt später.`, quiet)
+  }
+  healTeam(save)
+  outcome.win = true
+  if (save.loop) {
+    save.step = 1
+    save.hold = false
+  } else {
+    save.step = council.members.length
+    save.hold = true
+  }
+  return finish(save, chapter, outcome)
+}
+
+function doCouncil(save: SaveV2, chapter: ChapterDef, now: number, opts: ResolveOpts): EncounterOutcome {
+  const quiet = opts.offline
+  const council = chapter.council
+  if (!council) return doGuardian(save, chapter, now, opts, false)
+  const outcome = baseOutcome('guardian', save.step, chapter)
+  if (hasBadge(save, chapter.guardian.badge) && !save.loop && save.hold) {
+    say(save, outcome, now, 'Der Hohe Rat wartet.', quiet)
+    return finish(save, chapter, outcome)
+  }
+  const index = Math.min(council.members.length - 1, Math.max(0, save.step - 1))
+  const member = council.members[index]
+  say(save, outcome, now, `${member.epithet} ${member.name} tritt vor. Cap ${member.cap}.`, quiet)
+  const foes = member.team.map((mon) => ({ species: mon.species, level: mon.level }))
+  const bouts = runBouts(save, chapter, foes, opts, now, () => 0)
+  outcome.traces = bouts.traces
+  if (bouts.wiped || bouts.wins < foes.length) {
+    outcome.win = false
+    outcome.wiped = bouts.wiped
+    save.loopsUntilRetry = 0
+    if (bouts.wiped) wipe(save, now, quiet)
+    else {
+      save.step = 1
+      save.hold = false
+      say(save, outcome, now, 'Niederlage. Es geht zurück zu Rat 1.', quiet)
+    }
+    return finish(save, chapter, outcome)
+  }
+  const won = recordCouncilWin(save, now, quiet)
+  won.traces = bouts.traces
+  if (opts.summary) {
+    opts.summary.gold += won.gold
+    if (won.badge) opts.summary.badges.push(won.badge)
+  }
+  return won
+}
+
 export function resolveEncounter(save: SaveV2, now: number, opts: ResolveOpts): EncounterOutcome {
   if (opts.summary) opts.summary.encounters += 1
   const chapter = chapterById(save.region, save.chapter)
@@ -561,6 +647,7 @@ export function resolveEncounter(save: SaveV2, now: number, opts: ResolveOpts): 
     wipe(save, now, quiet)
     return finish(save, chapter, outcome)
   }
+  if (chapter.council) return doCouncil(save, chapter, now, opts)
   if (save.challengeNow && !hasBadge(save, chapter.guardian.badge)) {
     save.challengeNow = false
     save.loopsUntilRetry = 0
