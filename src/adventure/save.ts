@@ -28,6 +28,7 @@ export function blankSave(now: number): SaveV2 {
     name: 'Abenteurer',
     avatar: 'A',
     gold: START_GOLD,
+    marks: 0,
     lastSeenAt: now,
     region: 1,
     chapter: 1,
@@ -176,6 +177,7 @@ export function normalize(save: SaveV2, now: number): SaveV2 {
   save.name = (save.name || 'Abenteurer').toString().slice(0, 24)
   save.avatar = save.avatar === 'B' ? 'B' : 'A'
   save.gold = Math.max(0, Math.floor(save.gold) || 0)
+  save.marks = Math.max(0, Math.floor(save.marks) || 0)
   save.lastSeenAt = save.lastSeenAt || now
   save.region = 1
   const chapter = Math.floor(Number(save.chapter))
