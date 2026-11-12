@@ -62,6 +62,13 @@ export function tempoScale(speed: Speed): number {
   return encounterMs(speed) / BASE_ENCOUNTER_MS
 }
 
+/** No encounter progress for this long, and no dialog open, means the battle loop is stuck. */
+export const WATCHDOG_MS = 10_000
+
+export function watchdogLimit(speed: Speed): number {
+  return WATCHDOG_MS * tempoScale(speed)
+}
+
 export function offlineEncounterCount(rawMs: number): number {
   if (!Number.isFinite(rawMs) || rawMs <= 0) return 0
   const counted = Math.min(rawMs, OFFLINE_CAP_MS)

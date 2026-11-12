@@ -17,6 +17,7 @@ import {
   type Speed
 } from './const'
 import { t, type Lang } from './i18n'
+import { shotAt, shouldRecover } from './present'
 import { beginAdventure, exportCode, importCode, loadAdventure, writeSave } from './save'
 import { equipFrame, equipTitle } from './achievements'
 import { buyHortSlot, moveFromHort, moveToHort } from './hort'
@@ -69,6 +70,10 @@ let lastInput = Date.now()
 let timer = 0
 let animating = false
 let lastTick = 0
+let progressAt = Date.now()
+let raf = 0
+let playGen = 0
+let pendingOutcome: EncounterOutcome | null = null
 let activity: WheelPanel['tab'] = 'hort'
 let wheelMult: Multiplier = 1
 let wheelSymbols: [SymbolId, SymbolId, SymbolId] | null = null
@@ -102,10 +107,17 @@ export function bootAdventure(): void {
     writeSave(localStorage, save)
   })
   document.addEventListener('visibilitychange', () => {
-    if (!save?.started || document.hidden || overlay) return
+    if (!save?.started) return
+    if (document.hidden) {
+      releasePresentation(true)
+      kick()
+      return
+    }
+    if (overlay) return
     const raw = Date.now() - save.lastSeenAt
     if (raw >= WELCOME_AFTER_MS) void runOffline(raw)
   })
+  window.setInterval(watchdog, 1000)
   window.setInterval(() => {
     if (!save?.started || overlay?.kind === 'offline') return
     save.lastSeenAt = Date.now()
@@ -128,6 +140,7 @@ async function start(next: SaveV2): Promise<void> {
   localStorage.removeItem(RESET_FLAG)
   try { writeSave(localStorage, save) } catch { /* ignore */ }
   screen = 'adventure'
+  noteProgress()
   render()
   const raw = Date.now() - save.lastSeenAt
   if (raw >= WELCOME_AFTER_MS) await runOffline(raw)
@@ -197,6 +210,49 @@ function showAwaken(): boolean {
   return true
 }
 
+function noteProgress(): void {
+  progressAt = Date.now()
+}
+
+function dropFrame(): void {
+  playGen += 1
+  if (raf) cancelAnimationFrame(raf)
+  raf = 0
+}
+
+function releasePresentation(quiet: boolean): void {
+  const outcome = pendingOutcome
+  dropFrame()
+  pendingOutcome = null
+  animating = false
+  if (!quiet && save) {
+    save.log.push({ t: Date.now(), text: t(save.settings.lang, 'say.recover') })
+    if (save.log.length > 50) save.log.splice(0, save.log.length - 50)
+    console.debug('battle watchdog', save.region, save.chapter, save.step)
+  }
+  noteProgress()
+  if (outcome) finishPresent(outcome)
+  else if (!quiet) kick()
+}
+
+function watchdog(): void {
+  if (!save?.started) return
+  if (overlay || (save.hold && !save.challengeNow)) {
+    noteProgress()
+    return
+  }
+  const stalled = shouldRecover({
+    started: true,
+    overlay: false,
+    hold: false,
+    since: progressAt,
+    now: Date.now(),
+    speed: save.settings.speed
+  })
+  if (!stalled) return
+  releasePresentation(false)
+}
+
 function kick(): void {
   window.clearTimeout(timer)
   if (!save?.started || animating || overlay || save.hold) return
@@ -209,13 +265,24 @@ function loop(): void {
   const dur = encounterMs(save.settings.speed)
   const now = Date.now()
   if (document.hidden) {
+    if (animating) {
+      dropFrame()
+      pendingOutcome = null
+      animating = false
+    }
     let steps = 0
     while (now - lastTick >= dur && steps < 200 && !save.hold) {
-      resolveEncounter(save, Date.now(), { offline: false, trace: false })
+      try {
+        resolveEncounter(save, Date.now(), { offline: false, trace: false })
+      } catch (err) {
+        console.error(err)
+        break
+      }
       lastTick += dur
       steps += 1
     }
     save.lastSeenAt = lastTick
+    noteProgress()
     try { writeSave(localStorage, save) } catch { /* ignore */ }
     timer = window.setTimeout(loop, dur)
     return
@@ -225,12 +292,26 @@ function loop(): void {
     return
   }
   lastTick = now
-  const outcome = resolveEncounter(save, now, { offline: false, trace: true })
+  noteProgress()
+  let outcome: EncounterOutcome
+  try {
+    outcome = resolveEncounter(save, now, { offline: false, trace: true })
+  } catch (err) {
+    console.error(err)
+    animating = false
+    save.log.push({ t: now, text: t(save.settings.lang, 'say.recover') })
+    if (save.log.length > 50) save.log.splice(0, save.log.length - 50)
+    noteProgress()
+    kick()
+    return
+  }
   save.lastSeenAt = now
   try { writeSave(localStorage, save) } catch { /* ignore */ }
   animating = true
+  pendingOutcome = outcome
   if (screen !== 'adventure') {
     animating = false
+    pendingOutcome = null
     const gold = document.getElementById('gold')
     if (gold) gold.textContent = `${Math.floor(save.gold).toLocaleString('de-DE')} G`
     timer = window.setTimeout(loop, 0)
@@ -242,6 +323,8 @@ function loop(): void {
 
 function finishPresent(outcome: EncounterOutcome): void {
   animating = false
+  if (pendingOutcome === outcome) pendingOutcome = null
+  noteProgress()
   if (!save) return
   const fresh = outcome.catch
   if (fresh?.success && (fresh.place === 'team' || fresh.place === 'pc') && save.settings.catchCard) {
@@ -254,19 +337,53 @@ function finishPresent(outcome: EncounterOutcome): void {
   else kick()
 }
 
+function sealCaption(outcome: EncounterOutcome, result: boolean): string {
+  const caught = outcome.catch
+  if (!save || !caught) return ''
+  const lang = save.settings.lang
+  if (!result) return t(lang, 'say.seal', { pct: Math.round(caught.chance * 100) })
+  if (!caught.success) return t(lang, 'say.escaped')
+  if (caught.place === 'exp') return t(lang, 'say.dupeExp', { name: caught.name })
+  if (caught.place === 'kept') return t(lang, 'say.dupeKeep', { name: caught.name })
+  return t(lang, 'say.caught', { name: caught.name, place: t(lang, caught.place === 'team' ? 'say.placeTeam' : 'say.placePc') })
+}
+
+function paintSprite(img: HTMLImageElement | null, speciesId: string, shiny: boolean | null): void {
+  if (!img) return
+  img.hidden = false
+  if (shiny != null) img.classList.toggle('is-shiny', shiny)
+  if (img.dataset.species !== speciesId) {
+    img.dataset.species = speciesId
+    img.src = monsterArt(speciesId, true)
+  }
+}
+
 function play(outcome: EncounterOutcome, speed: Speed, done: () => void): void {
+  playGen += 1
+  const gen = playGen
+  if (raf) cancelAnimationFrame(raf)
+  raf = 0
+  let settled = false
+  const finish = () => {
+    if (settled || gen !== playGen) return
+    settled = true
+    if (raf) cancelAnimationFrame(raf)
+    raf = 0
+    done()
+  }
   const dur = encounterMs(speed)
   if (save?.settings.reduceMotion) {
     const last = outcome.traces[outcome.traces.length - 1]
     const allyHp = document.getElementById('ally-hp')
     const foeHp = document.getElementById('foe-hp')
     const text = document.getElementById('battle-text')
-    if (last && allyHp && foeHp) {
-      allyHp.style.width = `${(last.allyHp / last.allyMax) * 100}%`
-      foeHp.style.width = `${(last.foeHp / last.foeMax) * 100}%`
+    if (last?.frames?.length && allyHp && foeHp && last.allyMax > 0 && last.foeMax > 0) {
+      const shot = last.frames[last.frames.length - 1]
+      allyHp.style.width = `${(shot.allyHp / last.allyMax) * 100}%`
+      foeHp.style.width = `${(shot.foeHp / last.foeMax) * 100}%`
     }
     if (text) text.textContent = outcome.lines[outcome.lines.length - 1] ?? ''
-    done()
+    finish()
     return
   }
   const k = tempoScale(speed)
@@ -279,24 +396,18 @@ function play(outcome: EncounterOutcome, speed: Speed, done: () => void): void {
   const allyName = document.getElementById('ally-name')
   const foeName = document.getElementById('foe-name')
   const text = document.getElementById('battle-text')
-  const traces = outcome.traces
   const catching = Boolean(outcome.catch)
+  const battleEnd = catching ? dur * 0.54 : dur
   let prevAlly: number | null = null
   let prevFoe: number | null = null
   const frame = (now: number) => {
-    const elapsed = now - started
-    const battleEnd = catching ? dur * 0.54 : dur
-    const bt = Math.min(1, elapsed / battleEnd)
-    if (traces.length) {
-      const slice = 1 / traces.length
-      const index = Math.min(traces.length - 1, Math.floor(bt / slice))
-      const local = Math.min(1, (bt - index * slice) / slice)
-      const trace = traces[index]
-      const at = Math.min(trace.frames.length - 1, Math.floor(local * Math.max(1, trace.frames.length)))
-      const shot = trace.frames[Math.max(0, at)]
+    if (gen !== playGen) return
+    try {
+      const elapsed = now - started
+      const shot = shotAt(outcome.traces, Math.min(elapsed, battleEnd), battleEnd)
       if (shot && allyHp && foeHp) {
-        allyHp.style.width = `${(shot.allyHp / trace.allyMax) * 100}%`
-        foeHp.style.width = `${(shot.foeHp / trace.foeMax) * 100}%`
+        allyHp.style.width = `${(shot.allyHp / shot.allyMax) * 100}%`
+        foeHp.style.width = `${(shot.foeHp / shot.foeMax) * 100}%`
         const dropped = (prevAlly != null && shot.allyHp < prevAlly) || (prevFoe != null && shot.foeHp < prevFoe)
         if (dropped && save?.settings.shake) {
           const battle = document.getElementById('battle')
@@ -310,29 +421,26 @@ function play(outcome: EncounterOutcome, speed: Speed, done: () => void): void {
         prevFoe = shot.foeHp
       }
       if (text && shot && elapsed < battleEnd) text.textContent = shot.text
-      if (allyName) allyName.textContent = trace.allyName
-      if (foeName) foeName.textContent = outcome.shiny ? `${trace.foeName} · Schimmer` : trace.foeName
-      if (allyImg) allyImg.src = monsterArt(trace.allySpecies, true)
-      if (foeImg) {
-        foeImg.hidden = false
-        foeImg.classList.toggle('is-shiny', outcome.shiny)
-        foeImg.src = monsterArt(trace.foeSpecies, true)
+      if (allyName && shot) allyName.textContent = shot.allyName
+      if (foeName && shot) foeName.textContent = outcome.shiny ? `${shot.foeName} · ${t(save?.settings.lang, 'battle.shimmer')}` : shot.foeName
+      if (shot) {
+        paintSprite(allyImg, shot.allySpecies, null)
+        paintSprite(foeImg, shot.foeSpecies, outcome.shiny)
+      } else if (text && outcome.lines[0] && elapsed < battleEnd) text.textContent = outcome.lines[0]
+      if (seal && catching && outcome.catch) {
+        const age = elapsed - battleEnd
+        if (age < 0) seal.style.opacity = '0'
+        else paintSeal(seal, age, k, outcome.catch.success)
+        if (text && age >= 0) text.textContent = sealCaption(outcome, age >= 900 * k)
       }
-    } else if (text && outcome.lines[0]) text.textContent = outcome.lines[0]
-    if (seal && catching && outcome.catch) {
-      const t = elapsed - battleEnd
-      if (t < 0) seal.style.opacity = '0'
-      else paintSeal(seal, t, k, outcome.catch.success)
-      if (text && t >= 0) {
-        const sealLine = outcome.lines.find((line) => line.startsWith('Bannsiegel'))
-        const resultLine = outcome.lines.find((line) => line.startsWith('gefangen') || line.startsWith('entkommen') || line.startsWith('Duplikat'))
-        text.textContent = t < 900 * k ? (sealLine ?? '') : (resultLine ?? sealLine ?? '')
-      }
+      if (elapsed < dur) raf = requestAnimationFrame(frame)
+      else finish()
+    } catch (err) {
+      console.error(err)
+      finish()
     }
-    if (elapsed < dur) requestAnimationFrame(frame)
-    else done()
   }
-  requestAnimationFrame(frame)
+  raf = requestAnimationFrame(frame)
 }
 
 function paintSeal(seal: HTMLImageElement, t: number, k: number, caught: boolean): void {
