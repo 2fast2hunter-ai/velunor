@@ -26,6 +26,8 @@ export interface GuardianDef {
   epithet: string
   badge: string
   gold: number
+  /** Multiplier on HP, ATK and DEF. Steps of 0.05, starting at 1. */
+  factor?: number
   team: GuardianMon[]
 }
 
@@ -35,6 +37,8 @@ export interface CouncilMember {
   epithet: string
   cap: number
   gold: number
+  /** Multiplier on HP, ATK and DEF. Steps of 0.05, starting at 1. */
+  factor?: number
   team: GuardianMon[]
 }
 
@@ -62,6 +66,8 @@ export interface ChapterDef {
   council?: CouncilDef
   /** Wild-only area. Rarity 8–9 live here, not on the road. */
   special?: boolean
+  /** Ninth path. Node 20 opens the council. No crest of its own. */
+  foyer?: boolean
 }
 
 export interface RegionDef {
@@ -112,16 +118,41 @@ export function chapterFormula(n: number): { levelMin: number; levelMax: number;
   return { levelMin: 6 * n - 4, levelMax: 6 * n, cap: 6 * n + 6, gold: 1000 + 750 * n }
 }
 
-/** Road chapters keep counting across regions. Region 2 chapter 1 is index 9. */
+/** Road index, counting the Vorhof slot. Region 2 chapter 1 is index 10. */
 export function continuedIndex(regionId: number, chapterId: number): number {
+  return (regionId - 1) * 9 + chapterId
+}
+
+/** Crest gold stays on the index from before the Vorhof. Section A does not retune gold. */
+export function goldIndex(regionId: number, chapterId: number): number {
   return (regionId - 1) * 8 + chapterId
 }
 
-/** Council caps and gold continue from the eighth chapter the same way Grünmark does. */
+/** Cap after the eighth crest: the eighth chapter cap plus 6. */
+export function ratscap(regionId: number): number {
+  return chapterFormula(continuedIndex(regionId, 8)).cap + 6
+}
+
+export function councilOf(regionId: number): ChapterDef | null {
+  return regionById(regionId).chapters.find((chapter) => chapter.council) ?? null
+}
+
+export function foyerOf(regionId: number): ChapterDef | null {
+  return regionById(regionId).chapters.find((chapter) => chapter.foyer) ?? null
+}
+
+/** Crest that closes this chapter. The Vorhof uses the council seal. */
+export function gateBadge(regionId: number, chapter: ChapterDef): string {
+  if (chapter.foyer) return councilOf(regionId)?.guardian.badge ?? ''
+  return chapter.guardian.badge
+}
+
+/** Council caps sit on the Ratscap. Gold stays on the old schedule. */
 export function councilFormula(regionId: number): { caps: number[]; gold: number[]; reward: number } {
-  const last = chapterFormula(continuedIndex(regionId, 8))
+  const cap = ratscap(regionId)
+  const last = chapterFormula(goldIndex(regionId, 8))
   return {
-    caps: [1, 4, 7, 10, 14].map((add) => last.cap + add),
+    caps: [cap, cap, cap, cap, cap],
     gold: [-3000, -2000, -1000, 0, 1000].map((add) => last.gold + add),
     reward: 25000 * regionId
   }
@@ -131,7 +162,7 @@ export function councilFormula(regionId: number): { caps: number[]; gold: number
 export function routeOf(chapterId: number): NodeKind[] {
   const cached = routeCache.get(chapterId)
   if (cached) return cached
-  if (chapterId === 10) {
+  if (chapterId === 11) {
     const wild = Array.from({ length: PATH_LENGTH + 1 }, () => 'wild' as NodeKind)
     routeCache.set(chapterId, wild)
     return wild

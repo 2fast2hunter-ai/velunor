@@ -1,7 +1,7 @@
 import { freshSeed, nextFloat } from '../rng'
 import { emptyBag } from './shop'
 import { SAVE_KEY_V1, SAVE_KEY_V2, START_GOLD, STARTER_LEVEL } from './const'
-import { chapterById, findChapter, speciesKnown } from './route'
+import { chapterById, councilOf, findChapter, speciesKnown } from './route'
 import { expToNext } from './stats'
 import type { OwnedMon, SaveV2, StorageLike } from './types'
 
@@ -49,6 +49,9 @@ export function blankSave(now: number): SaveV2 {
     active: null,
     loopsUntilRetry: 0,
     challengeNow: false,
+    guardMark: 0,
+    guardWins: 0,
+    layout: 1,
     hold: false,
     log: [],
     migratedFrom: null,
@@ -184,6 +187,25 @@ export function normalize(save: SaveV2, now: number): SaveV2 {
   save.region = askedRegion
   const askedChapter = Math.floor(Number(save.chapter))
   save.chapter = askedChapter >= 1 ? askedChapter : 1
+  save.layout = Math.max(0, Math.floor(Number(save.layout)) || 0)
+  if (save.layout < 1) {
+    const badges = Array.isArray(save.badges) ? save.badges.filter((badge) => typeof badge === 'string') : []
+    if (save.region === 5 && save.chapter === 10) save.chapter = 11
+    const council = councilOf(save.region)
+    const eighth = findChapter(save.region, 8)
+    const sealed = Boolean(council && badges.includes(council.guardian.badge))
+    const roadDone = Boolean(eighth && badges.includes(eighth.guardian.badge))
+    if (save.chapter === 9 && sealed && council) {
+      save.chapter = council.id
+      save.step = council.council?.members.length ?? 1
+      save.hold = false
+    } else if (save.chapter === 9 || (save.chapter === 8 && save.hold && roadDone && !sealed)) {
+      save.chapter = findChapter(save.region, 9)?.id ?? save.chapter
+      save.step = 1
+      save.hold = false
+    }
+    save.layout = 1
+  }
   const stepMax = chapterById(save.region, save.chapter).council ? 5 : 20
   save.step = Math.min(stepMax, Math.max(1, Math.floor(save.step) || 1))
   save.loop = save.loop !== false
@@ -237,7 +259,10 @@ export function normalize(save: SaveV2, now: number): SaveV2 {
   save.started = Boolean(save.started && Object.keys(save.mons).length)
   save.loopsUntilRetry = Math.max(0, Math.floor(save.loopsUntilRetry) || 0)
   save.challengeNow = Boolean(save.challengeNow)
-  save.hold = Boolean(save.hold)
+  save.guardMark = Math.max(0, Math.floor(Number(save.guardMark)) || 0)
+  save.guardWins = Math.max(0, Math.floor(Number(save.guardWins)) || 0)
+  save.layout = Math.max(1, Math.floor(Number(save.layout)) || 1)
+  save.hold = false
   save.log = Array.isArray(save.log) ? save.log.slice(-50) : []
   save.migratedFrom = save.migratedFrom ?? null
   save.councilBeaten = Array.isArray(save.councilBeaten) ? save.councilBeaten.filter((id) => typeof id === 'string') : []

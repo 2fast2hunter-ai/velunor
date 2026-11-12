@@ -6,6 +6,10 @@ export const SAVE_KEY_V1 = 'velunor.save.v1'
 export const START_GOLD = 3000
 export const STARTER_LEVEL = 5
 export const TEAM_MAX = 6
+/** Absolute level ceiling. Existing levels above it are kept. */
+export const MAX_LEVEL = 280
+/** Wins on the road after a warden loss before the next automatic try. */
+export const RETRY_WINS = 10
 export const LOG_LIMIT = 50
 export const ACTION_LIMIT = 30
 export const CATCH_CAP = 0.6
