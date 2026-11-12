@@ -77,7 +77,7 @@ export interface SaveV2 {
   migratedFrom: string | null
   /** Council member ids already beaten before the Ratsiegel. */
   councilBeaten: string[]
-  /** Region ids the player may see. Region 2 stays a placeholder. */
+  /** Region ids the player may enter. Each council seal opens the next one. */
   regionsOpen: number[]
   bag: BagState
   activeFruits: ActiveFruit[]

@@ -10,7 +10,7 @@ export const BREED_MS = 2 * 60 * 60 * 1000
 export const HATCH_MS = 4 * 60 * 60 * 1000
 export const BREED_CHANCE = 0.5
 export const SHINY_PARENT_RATE = 0.1
-/** Prepared for the second council. Nothing grants this badge yet. */
+/** Granted by the Frostküste council. It opens hort slot 4. */
 export const RAT_2_BADGE = 'Zweites Ratsiegel'
 
 export function hortOffer(save: SaveV2): { slot: number; price: number; locked: string | null } | null {

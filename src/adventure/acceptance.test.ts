@@ -269,7 +269,7 @@ describe('acceptance loop', () => {
     expect(save.gold).toBe(START_GOLD + 1750 + 1000 + 400 + 2000)
     expect(chapterUnlocked(save, 2)).toBe(true)
     expect(save.step).toBe(1)
-    expect(travelTo(save, 2)).toBeNull()
+    expect(travelTo(save, 1, 2)).toBeNull()
     expect(save.chapter).toBe(2)
     save.badges.push('Wellenwappen')
     save.loop = true

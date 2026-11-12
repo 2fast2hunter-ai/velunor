@@ -387,8 +387,18 @@ function onClick(event: Event): void {
     render()
     return
   }
+  if (act === 'region') {
+    const regionId = Number(node.getAttribute('data-region'))
+    if (regionId !== save.region) {
+      travelTo(save, regionId, 1)
+      screen = 'adventure'
+    }
+    render()
+    kick()
+    return
+  }
   if (act === 'travel') {
-    travelTo(save, Number(node.getAttribute('data-chapter')))
+    travelTo(save, Number(node.getAttribute('data-region')) || save.region, Number(node.getAttribute('data-chapter')))
     screen = 'adventure'
     render()
     kick()

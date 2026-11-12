@@ -116,8 +116,8 @@ describe('Hoher Rat', () => {
     expect(grand.gold).toBe(8000 + 25000)
     expect(grand.badge).toBe('Ratsiegel')
     expect(save.regionsOpen).toContain(2)
-    expect(regionById(2).placeholder).toBe(true)
-    expect(regionById(2).chapters).toHaveLength(0)
+    expect(regionById(2).name).toBe('Frostküste')
+    expect(regionById(2).chapters.length).toBeGreaterThan(0)
     save.step = 1
     expect(recordCouncilWin(save, 1, true).gold).toBe(4000)
   })
@@ -147,7 +147,8 @@ describe('codex', () => {
     save.dex.m84 = { seen: 1, caught: 1 }
     expect(regionProgress(save, 1).caught).toBe(before + 1)
     expect(regionRoster(1).length).toBe(regionProgress(save, 1).total)
-    expect(regionProgress(save, 2).placeholder).toBe(true)
+    expect(regionProgress(save, 2).open).toBe(false)
+    expect(regionProgress(save, 2).total).toBeGreaterThan(0)
     expect(dexPlaces('m84').some((place) => place.when === 'direkt hintereinander')).toBe(true)
   })
 })

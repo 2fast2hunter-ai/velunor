@@ -147,6 +147,11 @@ button, input, select { font: inherit; color: inherit; }
 .plate.tint-frost { filter: hue-rotate(176deg) saturate(0.55) brightness(1.08); }
 .plate.tint-schmiede { filter: hue-rotate(-18deg) saturate(1.35) brightness(0.68) contrast(1.12); }
 .plate.tint-rat { filter: sepia(0.25) saturate(0.7) brightness(0.62) hue-rotate(10deg); }
+.plate.tint-kueste { filter: hue-rotate(188deg) saturate(0.72) brightness(1.06); }
+.plate.tint-glut { filter: hue-rotate(-28deg) saturate(1.45) brightness(0.74) contrast(1.08); }
+.plate.tint-schatten { filter: hue-rotate(236deg) saturate(0.4) brightness(0.52); }
+.plate.tint-himmel { filter: hue-rotate(205deg) saturate(0.35) brightness(1.22); }
+.plate.tint-horst { filter: hue-rotate(18deg) saturate(1.15) brightness(0.62) contrast(1.1); }
 .council-path { grid-template-columns: repeat(5, 1fr); }
 .region-bars { display: grid; gap: 8px; margin: 8px 0 12px; }
 .shop-row, .fruit-row { display: flex; gap: 8px; align-items: center; justify-content: space-between; padding: 8px 0; border-bottom: 1px solid rgba(168, 190, 240, 0.15); }
