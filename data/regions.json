@@ -12,8 +12,16 @@
           "levelMax": 6,
           "cap": 12,
           "weather": [
-            { "weather": "klar", "species": "m72", "pct": 6 },
-            { "weather": "wind", "species": "m43", "pct": 6 }
+            {
+              "weather": "klar",
+              "species": "m72",
+              "pct": 6
+            },
+            {
+              "weather": "wind",
+              "species": "m43",
+              "pct": 6
+            }
           ],
           "guardian": {
             "name": "Mira",
@@ -21,22 +29,56 @@
             "badge": "Kieselwappen",
             "gold": 1750,
             "team": [
-              { "species": "m17", "level": 9 },
-              { "species": "m04", "level": 10 },
-              { "species": "m18", "level": 12 }
-            ]
+              {
+                "species": "m17",
+                "level": 7
+              },
+              {
+                "species": "m04",
+                "level": 8
+              },
+              {
+                "species": "m18",
+                "level": 10
+              }
+            ],
+            "factor": 1.4
           },
           "day": [
-            { "species": "m66", "weight": 40 },
-            { "species": "m41", "weight": 35 },
-            { "species": "m11", "weight": 20 },
-            { "species": "m03", "weight": 5 }
+            {
+              "species": "m66",
+              "weight": 40
+            },
+            {
+              "species": "m41",
+              "weight": 35
+            },
+            {
+              "species": "m11",
+              "weight": 20
+            },
+            {
+              "species": "m03",
+              "weight": 5
+            }
           ],
           "night": [
-            { "species": "m66", "weight": 35 },
-            { "species": "m76", "weight": 30 },
-            { "species": "m81", "weight": 20 },
-            { "species": "m11", "weight": 15 }
+            {
+              "species": "m66",
+              "weight": 35
+            },
+            {
+              "species": "m76",
+              "weight": 30
+            },
+            {
+              "species": "m81",
+              "weight": 20
+            },
+            {
+              "species": "m11",
+              "weight": 15
+            }
           ]
         },
         {
@@ -47,8 +89,16 @@
           "levelMax": 12,
           "cap": 18,
           "weather": [
-            { "weather": "regen", "species": "m24", "pct": 6 },
-            { "weather": "nebel", "species": "m78", "pct": 6 }
+            {
+              "weather": "regen",
+              "species": "m24",
+              "pct": 6
+            },
+            {
+              "weather": "nebel",
+              "species": "m78",
+              "pct": 6
+            }
           ],
           "guardian": {
             "name": "Joran",
@@ -56,25 +106,68 @@
             "badge": "Wellenwappen",
             "gold": 2500,
             "team": [
-              { "species": "m28", "level": 15 },
-              { "species": "m02", "level": 16 },
-              { "species": "m07", "level": 18 }
-            ]
+              {
+                "species": "m28",
+                "level": 13
+              },
+              {
+                "species": "m02",
+                "level": 14
+              },
+              {
+                "species": "m07",
+                "level": 16
+              }
+            ],
+            "factor": 1.2
           },
           "day": [
-            { "species": "m02", "weight": 25 },
-            { "species": "m28", "weight": 25 },
-            { "species": "m14", "weight": 20 },
-            { "species": "m67", "weight": 15 },
-            { "species": "m01", "weight": 10 },
-            { "species": "m07", "weight": 5 }
+            {
+              "species": "m02",
+              "weight": 25
+            },
+            {
+              "species": "m28",
+              "weight": 25
+            },
+            {
+              "species": "m14",
+              "weight": 20
+            },
+            {
+              "species": "m67",
+              "weight": 15
+            },
+            {
+              "species": "m01",
+              "weight": 10
+            },
+            {
+              "species": "m07",
+              "weight": 5
+            }
           ],
           "night": [
-            { "species": "m14", "weight": 30 },
-            { "species": "m28", "weight": 20 },
-            { "species": "m77", "weight": 20 },
-            { "species": "m82", "weight": 15 },
-            { "species": "m36", "weight": 15 }
+            {
+              "species": "m14",
+              "weight": 30
+            },
+            {
+              "species": "m28",
+              "weight": 20
+            },
+            {
+              "species": "m77",
+              "weight": 20
+            },
+            {
+              "species": "m82",
+              "weight": 15
+            },
+            {
+              "species": "m36",
+              "weight": 15
+            }
           ]
         },
         {
@@ -85,8 +178,16 @@
           "levelMax": 18,
           "cap": 24,
           "weather": [
-            { "weather": "gewitter", "species": "m54", "pct": 7 },
-            { "weather": "wind", "species": "m45", "pct": 5 }
+            {
+              "weather": "gewitter",
+              "species": "m54",
+              "pct": 7
+            },
+            {
+              "weather": "wind",
+              "species": "m45",
+              "pct": 5
+            }
           ],
           "guardian": {
             "name": "Vela",
@@ -94,25 +195,68 @@
             "badge": "Funkenwappen",
             "gold": 3250,
             "team": [
-              { "species": "m52", "level": 21 },
-              { "species": "m51", "level": 22 },
-              { "species": "m53", "level": 24 }
-            ]
+              {
+                "species": "m52",
+                "level": 19
+              },
+              {
+                "species": "m51",
+                "level": 20
+              },
+              {
+                "species": "m53",
+                "level": 22
+              }
+            ],
+            "factor": 1.15
           },
           "day": [
-            { "species": "m51", "weight": 25 },
-            { "species": "m71", "weight": 20 },
-            { "species": "m12", "weight": 20 },
-            { "species": "m56", "weight": 15 },
-            { "species": "m52", "weight": 10 },
-            { "species": "m34", "weight": 10 }
+            {
+              "species": "m51",
+              "weight": 25
+            },
+            {
+              "species": "m71",
+              "weight": 20
+            },
+            {
+              "species": "m12",
+              "weight": 20
+            },
+            {
+              "species": "m56",
+              "weight": 15
+            },
+            {
+              "species": "m52",
+              "weight": 10
+            },
+            {
+              "species": "m34",
+              "weight": 10
+            }
           ],
           "night": [
-            { "species": "m71", "weight": 30 },
-            { "species": "m34", "weight": 25 },
-            { "species": "m78", "weight": 20 },
-            { "species": "m81", "weight": 15 },
-            { "species": "m52", "weight": 10 }
+            {
+              "species": "m71",
+              "weight": 30
+            },
+            {
+              "species": "m34",
+              "weight": 25
+            },
+            {
+              "species": "m78",
+              "weight": 20
+            },
+            {
+              "species": "m81",
+              "weight": 15
+            },
+            {
+              "species": "m52",
+              "weight": 10
+            }
           ]
         },
         {
@@ -124,8 +268,16 @@
           "levelMax": 24,
           "cap": 30,
           "weather": [
-            { "weather": "nebel", "species": "m83", "pct": 6 },
-            { "weather": "regen", "species": "m16", "pct": 6 }
+            {
+              "weather": "nebel",
+              "species": "m83",
+              "pct": 6
+            },
+            {
+              "weather": "regen",
+              "species": "m16",
+              "pct": 6
+            }
           ],
           "guardian": {
             "name": "Morva",
@@ -133,24 +285,64 @@
             "badge": "Moorwappen",
             "gold": 4000,
             "team": [
-              { "species": "m15", "level": 27 },
-              { "species": "m82", "level": 28 },
-              { "species": "m84", "level": 30 }
-            ]
+              {
+                "species": "m15",
+                "level": 25
+              },
+              {
+                "species": "m82",
+                "level": 26
+              },
+              {
+                "species": "m84",
+                "level": 28
+              }
+            ],
+            "factor": 1.2
           },
           "day": [
-            { "species": "m14", "weight": 30 },
-            { "species": "m81", "weight": 25 },
-            { "species": "m36", "weight": 20 },
-            { "species": "m82", "weight": 15 },
-            { "species": "m15", "weight": 10 }
+            {
+              "species": "m14",
+              "weight": 30
+            },
+            {
+              "species": "m81",
+              "weight": 25
+            },
+            {
+              "species": "m36",
+              "weight": 20
+            },
+            {
+              "species": "m82",
+              "weight": 15
+            },
+            {
+              "species": "m15",
+              "weight": 10
+            }
           ],
           "night": [
-            { "species": "m81", "weight": 30 },
-            { "species": "m14", "weight": 25 },
-            { "species": "m82", "weight": 20 },
-            { "species": "m36", "weight": 10 },
-            { "species": "m84", "weight": 15 }
+            {
+              "species": "m81",
+              "weight": 30
+            },
+            {
+              "species": "m14",
+              "weight": 25
+            },
+            {
+              "species": "m82",
+              "weight": 20
+            },
+            {
+              "species": "m36",
+              "weight": 10
+            },
+            {
+              "species": "m84",
+              "weight": 15
+            }
           ]
         },
         {
@@ -162,8 +354,16 @@
           "levelMax": 30,
           "cap": 36,
           "weather": [
-            { "weather": "wind", "species": "m43", "pct": 6 },
-            { "weather": "schnee", "species": "m49", "pct": 6 }
+            {
+              "weather": "wind",
+              "species": "m43",
+              "pct": 6
+            },
+            {
+              "weather": "schnee",
+              "species": "m49",
+              "pct": 6
+            }
           ],
           "guardian": {
             "name": "Brom",
@@ -171,23 +371,60 @@
             "badge": "Felswappen",
             "gold": 4750,
             "team": [
-              { "species": "m32", "level": 33 },
-              { "species": "m18", "level": 34 },
-              { "species": "m38", "level": 36 }
-            ]
+              {
+                "species": "m32",
+                "level": 31
+              },
+              {
+                "species": "m18",
+                "level": 32
+              },
+              {
+                "species": "m38",
+                "level": 34
+              }
+            ],
+            "factor": 1.25
           },
           "day": [
-            { "species": "m04", "weight": 30 },
-            { "species": "m17", "weight": 25 },
-            { "species": "m18", "weight": 25 },
-            { "species": "m32", "weight": 20 }
+            {
+              "species": "m04",
+              "weight": 30
+            },
+            {
+              "species": "m17",
+              "weight": 25
+            },
+            {
+              "species": "m18",
+              "weight": 25
+            },
+            {
+              "species": "m32",
+              "weight": 20
+            }
           ],
           "night": [
-            { "species": "m18", "weight": 30 },
-            { "species": "m04", "weight": 25 },
-            { "species": "m17", "weight": 15 },
-            { "species": "m32", "weight": 15 },
-            { "species": "m38", "weight": 15 }
+            {
+              "species": "m18",
+              "weight": 30
+            },
+            {
+              "species": "m04",
+              "weight": 25
+            },
+            {
+              "species": "m17",
+              "weight": 15
+            },
+            {
+              "species": "m32",
+              "weight": 15
+            },
+            {
+              "species": "m38",
+              "weight": 15
+            }
           ]
         },
         {
@@ -199,8 +436,16 @@
           "levelMax": 36,
           "cap": 42,
           "weather": [
-            { "weather": "wind", "species": "m45", "pct": 8 },
-            { "weather": "gewitter", "species": "m53", "pct": 6 }
+            {
+              "weather": "wind",
+              "species": "m45",
+              "pct": 8
+            },
+            {
+              "weather": "gewitter",
+              "species": "m53",
+              "pct": 6
+            }
           ],
           "guardian": {
             "name": "Veya",
@@ -208,19 +453,44 @@
             "badge": "Sturmwappen",
             "gold": 5500,
             "team": [
-              { "species": "m42", "level": 39 },
-              { "species": "m41", "level": 40 },
-              { "species": "m44", "level": 42 }
-            ]
+              {
+                "species": "m42",
+                "level": 37
+              },
+              {
+                "species": "m41",
+                "level": 38
+              },
+              {
+                "species": "m44",
+                "level": 40
+              }
+            ],
+            "factor": 1.25
           },
           "day": [
-            { "species": "m41", "weight": 60 },
-            { "species": "m42", "weight": 40 }
+            {
+              "species": "m41",
+              "weight": 60
+            },
+            {
+              "species": "m42",
+              "weight": 40
+            }
           ],
           "night": [
-            { "species": "m41", "weight": 40 },
-            { "species": "m42", "weight": 25 },
-            { "species": "m44", "weight": 35 }
+            {
+              "species": "m41",
+              "weight": 40
+            },
+            {
+              "species": "m42",
+              "weight": 25
+            },
+            {
+              "species": "m44",
+              "weight": 35
+            }
           ]
         },
         {
@@ -232,8 +502,16 @@
           "levelMax": 42,
           "cap": 48,
           "weather": [
-            { "weather": "schnee", "species": "m47", "pct": 7 },
-            { "weather": "nebel", "species": "m48", "pct": 6 }
+            {
+              "weather": "schnee",
+              "species": "m47",
+              "pct": 7
+            },
+            {
+              "weather": "nebel",
+              "species": "m48",
+              "pct": 6
+            }
           ],
           "guardian": {
             "name": "Isko",
@@ -241,19 +519,44 @@
             "badge": "Frostwappen",
             "gold": 6250,
             "team": [
-              { "species": "m46", "level": 45 },
-              { "species": "m41", "level": 46 },
-              { "species": "m70", "level": 48 }
-            ]
+              {
+                "species": "m46",
+                "level": 43
+              },
+              {
+                "species": "m41",
+                "level": 44
+              },
+              {
+                "species": "m70",
+                "level": 46
+              }
+            ],
+            "factor": 1.35
           },
           "day": [
-            { "species": "m41", "weight": 40 },
-            { "species": "m46", "weight": 60 }
+            {
+              "species": "m41",
+              "weight": 40
+            },
+            {
+              "species": "m46",
+              "weight": 60
+            }
           ],
           "night": [
-            { "species": "m46", "weight": 45 },
-            { "species": "m41", "weight": 20 },
-            { "species": "m70", "weight": 35 }
+            {
+              "species": "m46",
+              "weight": 45
+            },
+            {
+              "species": "m41",
+              "weight": 20
+            },
+            {
+              "species": "m70",
+              "weight": 35
+            }
           ]
         },
         {
@@ -265,8 +568,16 @@
           "levelMax": 48,
           "cap": 54,
           "weather": [
-            { "weather": "gewitter", "species": "m54", "pct": 6 },
-            { "weather": "wind", "species": "m45", "pct": 5 }
+            {
+              "weather": "gewitter",
+              "species": "m54",
+              "pct": 6
+            },
+            {
+              "weather": "wind",
+              "species": "m45",
+              "pct": 5
+            }
           ],
           "guardian": {
             "name": "Runa",
@@ -274,39 +585,148 @@
             "badge": "Klingenwappen",
             "gold": 7000,
             "team": [
-              { "species": "m61", "level": 51 },
-              { "species": "m56", "level": 52 },
-              { "species": "m59", "level": 54 }
-            ]
+              {
+                "species": "m61",
+                "level": 49
+              },
+              {
+                "species": "m56",
+                "level": 50
+              },
+              {
+                "species": "m59",
+                "level": 52
+              }
+            ],
+            "factor": 1.4
           },
           "day": [
-            { "species": "m56", "weight": 55 },
-            { "species": "m61", "weight": 45 }
+            {
+              "species": "m56",
+              "weight": 55
+            },
+            {
+              "species": "m61",
+              "weight": 45
+            }
           ],
           "night": [
-            { "species": "m61", "weight": 30 },
-            { "species": "m56", "weight": 25 },
-            { "species": "m59", "weight": 45 }
+            {
+              "species": "m61",
+              "weight": 30
+            },
+            {
+              "species": "m56",
+              "weight": 25
+            },
+            {
+              "species": "m59",
+              "weight": 45
+            }
           ]
         },
         {
           "id": 9,
+          "name": "Vorhof des Rates",
+          "scene": "wald",
+          "tint": "schmiede",
+          "foyer": true,
+          "levelMin": 52,
+          "levelMax": 57,
+          "cap": 60,
+          "weather": [
+            {
+              "weather": "gewitter",
+              "species": "m54",
+              "pct": 6
+            },
+            {
+              "weather": "wind",
+              "species": "m45",
+              "pct": 5
+            }
+          ],
+          "guardian": {
+            "name": "Ratstor",
+            "epithet": "Eingang",
+            "badge": "",
+            "gold": 0,
+            "factor": 1,
+            "team": []
+          },
+          "day": [
+            {
+              "species": "m56",
+              "weight": 28
+            },
+            {
+              "species": "m61",
+              "weight": 22
+            },
+            {
+              "species": "m41",
+              "weight": 20
+            },
+            {
+              "species": "m46",
+              "weight": 30
+            }
+          ],
+          "night": [
+            {
+              "species": "m61",
+              "weight": 15
+            },
+            {
+              "species": "m56",
+              "weight": 13
+            },
+            {
+              "species": "m59",
+              "weight": 23
+            },
+            {
+              "species": "m46",
+              "weight": 22
+            },
+            {
+              "species": "m41",
+              "weight": 10
+            },
+            {
+              "species": "m70",
+              "weight": 17
+            }
+          ]
+        },
+        {
+          "id": 10,
           "name": "Hoher Rat",
           "scene": "wald",
           "tint": "rat",
-          "levelMin": 55,
-          "levelMax": 68,
-          "cap": 68,
+          "levelMin": 56,
+          "levelMax": 60,
+          "cap": 60,
           "guardian": {
             "name": "Orim",
             "epithet": "Großwächter",
             "badge": "Ratsiegel",
             "gold": 8000,
             "team": [
-              { "species": "m84", "level": 66 },
-              { "species": "m59", "level": 67 },
-              { "species": "m38", "level": 68 }
-            ]
+              {
+                "species": "m84",
+                "level": 58
+              },
+              {
+                "species": "m59",
+                "level": 59
+              },
+              {
+                "species": "m38",
+                "level": 60
+              }
+            ],
+            "factor": 1.1
           },
           "day": [],
           "night": [],
@@ -318,61 +738,111 @@
                 "id": "rat1",
                 "name": "Eldon",
                 "epithet": "Rat",
-                "cap": 55,
+                "cap": 60,
                 "gold": 4000,
                 "team": [
-                  { "species": "m38", "level": 53 },
-                  { "species": "m44", "level": 54 },
-                  { "species": "m84", "level": 55 }
-                ]
+                  {
+                    "species": "m38",
+                    "level": 54
+                  },
+                  {
+                    "species": "m44",
+                    "level": 55
+                  },
+                  {
+                    "species": "m84",
+                    "level": 56
+                  }
+                ],
+                "factor": 1.25
               },
               {
                 "id": "rat2",
                 "name": "Sura",
                 "epithet": "Rätin",
-                "cap": 58,
+                "cap": 60,
                 "gold": 5000,
                 "team": [
-                  { "species": "m15", "level": 56 },
-                  { "species": "m42", "level": 57 },
-                  { "species": "m59", "level": 58 }
-                ]
+                  {
+                    "species": "m15",
+                    "level": 55
+                  },
+                  {
+                    "species": "m42",
+                    "level": 56
+                  },
+                  {
+                    "species": "m59",
+                    "level": 57
+                  }
+                ],
+                "factor": 1.3
               },
               {
                 "id": "rat3",
                 "name": "Kelm",
                 "epithet": "Rat",
-                "cap": 61,
+                "cap": 60,
                 "gold": 6000,
                 "team": [
-                  { "species": "m46", "level": 59 },
-                  { "species": "m61", "level": 60 },
-                  { "species": "m70", "level": 61 }
-                ]
+                  {
+                    "species": "m46",
+                    "level": 56
+                  },
+                  {
+                    "species": "m61",
+                    "level": 57
+                  },
+                  {
+                    "species": "m70",
+                    "level": 58
+                  }
+                ],
+                "factor": 1.35
               },
               {
                 "id": "rat4",
                 "name": "Nyra",
                 "epithet": "Rätin",
-                "cap": 64,
+                "cap": 60,
                 "gold": 7000,
                 "team": [
-                  { "species": "m32", "level": 62 },
-                  { "species": "m18", "level": 63 },
-                  { "species": "m44", "level": 64 }
-                ]
+                  {
+                    "species": "m32",
+                    "level": 57
+                  },
+                  {
+                    "species": "m18",
+                    "level": 58
+                  },
+                  {
+                    "species": "m44",
+                    "level": 59
+                  }
+                ],
+                "factor": 1.2
               },
               {
                 "id": "grand",
                 "name": "Orim",
                 "epithet": "Großwächter",
-                "cap": 68,
+                "cap": 60,
                 "gold": 8000,
                 "team": [
-                  { "species": "m84", "level": 66 },
-                  { "species": "m59", "level": 67 },
-                  { "species": "m38", "level": 68 }
-                ]
+                  {
+                    "species": "m84",
+                    "level": 58
+                  },
+                  {
+                    "species": "m59",
+                    "level": 59
+                  },
+                  {
+                    "species": "m38",
+                    "level": 60
+                  }
+                ],
+                "factor": 1.1
               }
             ]
           }
@@ -388,9 +858,9 @@
           "name": "Eissaum",
           "scene": "bach",
           "tint": "kueste",
-          "levelMin": 50,
-          "levelMax": 54,
-          "cap": 60,
+          "levelMin": 56,
+          "levelMax": 60,
+          "cap": 66,
           "weather": [
             {
               "weather": "klar",
@@ -411,17 +881,18 @@
             "team": [
               {
                 "species": "m89",
-                "level": 57
+                "level": 61
               },
               {
                 "species": "m19",
-                "level": 58
+                "level": 62
               },
               {
                 "species": "m53",
-                "level": 60
+                "level": 64
               }
-            ]
+            ],
+            "factor": 1.05
           },
           "day": [
             {
@@ -493,9 +964,9 @@
           "name": "Gischtbucht",
           "scene": "wiese",
           "tint": "kueste",
-          "levelMin": 56,
-          "levelMax": 60,
-          "cap": 66,
+          "levelMin": 62,
+          "levelMax": 66,
+          "cap": 72,
           "weather": [
             {
               "weather": "regen",
@@ -516,17 +987,18 @@
             "team": [
               {
                 "species": "m99",
-                "level": 63
+                "level": 67
               },
               {
                 "species": "m24",
-                "level": 64
+                "level": 68
               },
               {
                 "species": "m59",
-                "level": 66
+                "level": 70
               }
-            ]
+            ],
+            "factor": 1.15
           },
           "day": [
             {
@@ -598,9 +1070,9 @@
           "name": "Treibholz",
           "scene": "wald",
           "tint": "kueste",
-          "levelMin": 62,
-          "levelMax": 66,
-          "cap": 72,
+          "levelMin": 68,
+          "levelMax": 72,
+          "cap": 78,
           "weather": [
             {
               "weather": "gewitter",
@@ -621,17 +1093,18 @@
             "team": [
               {
                 "species": "m25",
-                "level": 69
+                "level": 73
               },
               {
                 "species": "m70",
-                "level": 70
+                "level": 74
               },
               {
                 "species": "m09",
-                "level": 72
+                "level": 76
               }
-            ]
+            ],
+            "factor": 1.25
           },
           "day": [
             {
@@ -695,9 +1168,9 @@
           "name": "Packeis",
           "scene": "bach",
           "tint": "kueste",
-          "levelMin": 68,
-          "levelMax": 72,
-          "cap": 78,
+          "levelMin": 74,
+          "levelMax": 78,
+          "cap": 84,
           "weather": [
             {
               "weather": "schnee",
@@ -718,17 +1191,18 @@
             "team": [
               {
                 "species": "m31",
-                "level": 75
+                "level": 79
               },
               {
                 "species": "m73",
-                "level": 76
+                "level": 80
               },
               {
                 "species": "m16",
-                "level": 78
+                "level": 82
               }
-            ]
+            ],
+            "factor": 1.35
           },
           "day": [
             {
@@ -792,9 +1266,9 @@
           "name": "Nordklippe",
           "scene": "wiese",
           "tint": "kueste",
-          "levelMin": 74,
-          "levelMax": 78,
-          "cap": 84,
+          "levelMin": 80,
+          "levelMax": 84,
+          "cap": 90,
           "weather": [
             {
               "weather": "nebel",
@@ -815,17 +1289,18 @@
             "team": [
               {
                 "species": "m49",
-                "level": 81
+                "level": 85
               },
               {
                 "species": "m84",
-                "level": 82
+                "level": 86
               },
               {
                 "species": "m22",
-                "level": 84
+                "level": 88
               }
-            ]
+            ],
+            "factor": 1.2
           },
           "day": [
             {
@@ -889,9 +1364,9 @@
           "name": "Salzmarsch",
           "scene": "wald",
           "tint": "kueste",
-          "levelMin": 80,
-          "levelMax": 84,
-          "cap": 90,
+          "levelMin": 86,
+          "levelMax": 90,
+          "cap": 96,
           "weather": [
             {
               "weather": "wind",
@@ -912,17 +1387,18 @@
             "team": [
               {
                 "species": "m54",
-                "level": 87
+                "level": 91
               },
               {
                 "species": "m94",
-                "level": 88
+                "level": 92
               },
               {
                 "species": "m35",
-                "level": 90
+                "level": 94
               }
-            ]
+            ],
+            "factor": 1.25
           },
           "day": [
             {
@@ -986,9 +1462,9 @@
           "name": "Fjordwacht",
           "scene": "bach",
           "tint": "kueste",
-          "levelMin": 86,
-          "levelMax": 90,
-          "cap": 96,
+          "levelMin": 92,
+          "levelMax": 96,
+          "cap": 102,
           "weather": [
             {
               "weather": "klar",
@@ -1009,17 +1485,18 @@
             "team": [
               {
                 "species": "m64",
-                "level": 93
+                "level": 97
               },
               {
                 "species": "m98",
-                "level": 94
+                "level": 98
               },
               {
                 "species": "m38",
-                "level": 96
+                "level": 100
               }
-            ]
+            ],
+            "factor": 1.3
           },
           "day": [
             {
@@ -1083,9 +1560,9 @@
           "name": "Polarnacht",
           "scene": "wiese",
           "tint": "kueste",
-          "levelMin": 92,
-          "levelMax": 96,
-          "cap": 102,
+          "levelMin": 98,
+          "levelMax": 102,
+          "cap": 108,
           "weather": [
             {
               "weather": "regen",
@@ -1106,17 +1583,18 @@
             "team": [
               {
                 "species": "m79",
-                "level": 99
+                "level": 103
               },
               {
                 "species": "m13",
-                "level": 100
+                "level": 104
               },
               {
                 "species": "m44",
-                "level": 102
+                "level": 106
               }
-            ]
+            ],
+            "factor": 1.2
           },
           "day": [
             {
@@ -1177,12 +1655,150 @@
         },
         {
           "id": 9,
+          "name": "Vorhof des Rates",
+          "scene": "wiese",
+          "tint": "kueste",
+          "foyer": true,
+          "levelMin": 106,
+          "levelMax": 111,
+          "cap": 114,
+          "weather": [
+            {
+              "weather": "regen",
+              "species": "m42",
+              "pct": 6
+            },
+            {
+              "weather": "gewitter",
+              "species": "m87",
+              "pct": 5
+            }
+          ],
+          "guardian": {
+            "name": "Ratstor",
+            "epithet": "Eingang",
+            "badge": "",
+            "gold": 0,
+            "factor": 1,
+            "team": []
+          },
+          "day": [
+            {
+              "species": "m42",
+              "weight": 10
+            },
+            {
+              "species": "m87",
+              "weight": 10
+            },
+            {
+              "species": "m34",
+              "weight": 9
+            },
+            {
+              "species": "m88",
+              "weight": 9
+            },
+            {
+              "species": "m44",
+              "weight": 8
+            },
+            {
+              "species": "m79",
+              "weight": 6
+            },
+            {
+              "species": "m36",
+              "weight": 9
+            },
+            {
+              "species": "m82",
+              "weight": 9
+            },
+            {
+              "species": "m30",
+              "weight": 8
+            },
+            {
+              "species": "m83",
+              "weight": 8
+            },
+            {
+              "species": "m38",
+              "weight": 7
+            },
+            {
+              "species": "m98",
+              "weight": 7
+            }
+          ],
+          "night": [
+            {
+              "species": "m42",
+              "weight": 9
+            },
+            {
+              "species": "m87",
+              "weight": 9
+            },
+            {
+              "species": "m34",
+              "weight": 8
+            },
+            {
+              "species": "m88",
+              "weight": 8
+            },
+            {
+              "species": "m44",
+              "weight": 7
+            },
+            {
+              "species": "m13",
+              "weight": 6
+            },
+            {
+              "species": "m79",
+              "weight": 6
+            },
+            {
+              "species": "m36",
+              "weight": 8
+            },
+            {
+              "species": "m82",
+              "weight": 8
+            },
+            {
+              "species": "m30",
+              "weight": 7
+            },
+            {
+              "species": "m83",
+              "weight": 7
+            },
+            {
+              "species": "m38",
+              "weight": 6
+            },
+            {
+              "species": "m98",
+              "weight": 6
+            },
+            {
+              "species": "m64",
+              "weight": 5
+            }
+          ]
+        },
+        {
+          "id": 10,
           "name": "Hoher Rat",
           "scene": "wald",
           "tint": "kueste",
-          "levelMin": 103,
-          "levelMax": 116,
-          "cap": 116,
+          "levelMin": 110,
+          "levelMax": 114,
+          "cap": 114,
           "guardian": {
             "name": "Hrim",
             "epithet": "Großwächterin",
@@ -1191,17 +1807,18 @@
             "team": [
               {
                 "species": "m13",
-                "level": 114
+                "level": 112
               },
               {
                 "species": "m19",
-                "level": 115
+                "level": 113
               },
               {
                 "species": "m24",
-                "level": 116
+                "level": 114
               }
-            ]
+            ],
+            "factor": 1.05
           },
           "day": [],
           "night": [],
@@ -1213,71 +1830,52 @@
                 "id": "r2a",
                 "name": "Veyr",
                 "epithet": "Rat",
-                "cap": 103,
+                "cap": 114,
                 "gold": 10000,
                 "team": [
                   {
                     "species": "m13",
-                    "level": 101
+                    "level": 108
                   },
                   {
                     "species": "m19",
-                    "level": 102
+                    "level": 109
                   },
                   {
                     "species": "m24",
-                    "level": 103
+                    "level": 110
                   }
-                ]
+                ],
+                "factor": 1.05
               },
               {
                 "id": "r2b",
                 "name": "Signe",
                 "epithet": "Rätin",
-                "cap": 106,
+                "cap": 114,
                 "gold": 11000,
                 "team": [
                   {
                     "species": "m13",
-                    "level": 104
+                    "level": 109
                   },
                   {
                     "species": "m19",
-                    "level": 105
+                    "level": 110
                   },
                   {
                     "species": "m24",
-                    "level": 106
+                    "level": 111
                   }
-                ]
+                ],
+                "factor": 1.05
               },
               {
                 "id": "r2c",
                 "name": "Odun",
                 "epithet": "Rat",
-                "cap": 109,
+                "cap": 114,
                 "gold": 12000,
-                "team": [
-                  {
-                    "species": "m13",
-                    "level": 107
-                  },
-                  {
-                    "species": "m19",
-                    "level": 108
-                  },
-                  {
-                    "species": "m24",
-                    "level": 109
-                  }
-                ]
-              },
-              {
-                "id": "r2d",
-                "name": "Mael",
-                "epithet": "Rätin",
-                "cap": 112,
-                "gold": 13000,
                 "team": [
                   {
                     "species": "m13",
@@ -1291,28 +1889,52 @@
                     "species": "m24",
                     "level": 112
                   }
-                ]
+                ],
+                "factor": 1.05
+              },
+              {
+                "id": "r2d",
+                "name": "Mael",
+                "epithet": "Rätin",
+                "cap": 114,
+                "gold": 13000,
+                "team": [
+                  {
+                    "species": "m13",
+                    "level": 111
+                  },
+                  {
+                    "species": "m19",
+                    "level": 112
+                  },
+                  {
+                    "species": "m24",
+                    "level": 113
+                  }
+                ],
+                "factor": 1.05
               },
               {
                 "id": "r2e",
                 "name": "Hrim",
                 "epithet": "Großwächterin",
-                "cap": 116,
+                "cap": 114,
                 "gold": 14000,
                 "team": [
                   {
                     "species": "m13",
-                    "level": 114
+                    "level": 112
                   },
                   {
                     "species": "m19",
-                    "level": 115
+                    "level": 113
                   },
                   {
                     "species": "m24",
-                    "level": 116
+                    "level": 114
                   }
-                ]
+                ],
+                "factor": 1.05
               }
             ]
           }
@@ -1328,9 +1950,9 @@
           "name": "Aschenhang",
           "scene": "bach",
           "tint": "glut",
-          "levelMin": 98,
-          "levelMax": 102,
-          "cap": 108,
+          "levelMin": 110,
+          "levelMax": 114,
+          "cap": 120,
           "weather": [
             {
               "weather": "klar",
@@ -1351,17 +1973,18 @@
             "team": [
               {
                 "species": "m27",
-                "level": 105
+                "level": 115
               },
               {
                 "species": "m10",
-                "level": 106
+                "level": 116
               },
               {
                 "species": "m25",
-                "level": 108
+                "level": 118
               }
-            ]
+            ],
+            "factor": 0.95
           },
           "day": [
             {
@@ -1425,9 +2048,9 @@
           "name": "Schlackental",
           "scene": "wiese",
           "tint": "glut",
-          "levelMin": 104,
-          "levelMax": 108,
-          "cap": 114,
+          "levelMin": 116,
+          "levelMax": 120,
+          "cap": 126,
           "weather": [
             {
               "weather": "regen",
@@ -1448,17 +2071,18 @@
             "team": [
               {
                 "species": "m39",
-                "level": 111
+                "level": 121
               },
               {
                 "species": "m23",
-                "level": 112
+                "level": 122
               },
               {
                 "species": "m31",
-                "level": 114
+                "level": 124
               }
-            ]
+            ],
+            "factor": 1.05
           },
           "day": [
             {
@@ -1522,9 +2146,9 @@
           "name": "Kraterpfad",
           "scene": "wald",
           "tint": "glut",
-          "levelMin": 110,
-          "levelMax": 114,
-          "cap": 120,
+          "levelMin": 122,
+          "levelMax": 126,
+          "cap": 132,
           "weather": [
             {
               "weather": "gewitter",
@@ -1545,17 +2169,18 @@
             "team": [
               {
                 "species": "m50",
-                "level": 117
+                "level": 127
               },
               {
                 "species": "m29",
-                "level": 118
+                "level": 128
               },
               {
                 "species": "m49",
-                "level": 120
+                "level": 130
               }
-            ]
+            ],
+            "factor": 0.8
           },
           "day": [
             {
@@ -1619,9 +2244,9 @@
           "name": "Brandstufe",
           "scene": "bach",
           "tint": "glut",
-          "levelMin": 116,
-          "levelMax": 120,
-          "cap": 126,
+          "levelMin": 128,
+          "levelMax": 132,
+          "cap": 138,
           "weather": [
             {
               "weather": "schnee",
@@ -1642,17 +2267,18 @@
             "team": [
               {
                 "species": "m65",
-                "level": 123
+                "level": 133
               },
               {
                 "species": "m37",
-                "level": 124
+                "level": 134
               },
               {
                 "species": "m54",
-                "level": 126
+                "level": 136
               }
-            ]
+            ],
+            "factor": 1.1
           },
           "day": [
             {
@@ -1716,9 +2342,9 @@
           "name": "Magmarinne",
           "scene": "wiese",
           "tint": "glut",
-          "levelMin": 122,
-          "levelMax": 126,
-          "cap": 132,
+          "levelMin": 134,
+          "levelMax": 138,
+          "cap": 144,
           "weather": [
             {
               "weather": "nebel",
@@ -1739,17 +2365,18 @@
             "team": [
               {
                 "species": "m85",
-                "level": 129
+                "level": 139
               },
               {
                 "species": "m45",
-                "level": 130
+                "level": 140
               },
               {
                 "species": "m64",
-                "level": 132
+                "level": 142
               }
-            ]
+            ],
+            "factor": 1
           },
           "day": [
             {
@@ -1813,9 +2440,9 @@
           "name": "Rußkamm",
           "scene": "wald",
           "tint": "glut",
-          "levelMin": 128,
-          "levelMax": 132,
-          "cap": 138,
+          "levelMin": 140,
+          "levelMax": 144,
+          "cap": 150,
           "weather": [
             {
               "weather": "wind",
@@ -1836,17 +2463,18 @@
             "team": [
               {
                 "species": "m60",
-                "level": 135
+                "level": 145
               },
               {
                 "species": "m79",
-                "level": 136
+                "level": 146
               },
               {
                 "species": "m13",
-                "level": 138
+                "level": 148
               }
-            ]
+            ],
+            "factor": 1.05
           },
           "day": [
             {
@@ -1902,9 +2530,9 @@
           "name": "Essengrund",
           "scene": "bach",
           "tint": "glut",
-          "levelMin": 134,
-          "levelMax": 138,
-          "cap": 144,
+          "levelMin": 146,
+          "levelMax": 150,
+          "cap": 156,
           "weather": [
             {
               "weather": "klar",
@@ -1925,17 +2553,18 @@
             "team": [
               {
                 "species": "m74",
-                "level": 141
+                "level": 151
               },
               {
                 "species": "m89",
-                "level": 142
+                "level": 152
               },
               {
                 "species": "m19",
-                "level": 144
+                "level": 154
               }
-            ]
+            ],
+            "factor": 1.05
           },
           "day": [
             {
@@ -1991,9 +2620,9 @@
           "name": "Glutgipfel",
           "scene": "wiese",
           "tint": "glut",
-          "levelMin": 140,
-          "levelMax": 144,
-          "cap": 150,
+          "levelMin": 152,
+          "levelMax": 156,
+          "cap": 162,
           "weather": [
             {
               "weather": "regen",
@@ -2014,17 +2643,18 @@
             "team": [
               {
                 "species": "m95",
-                "level": 147
+                "level": 157
               },
               {
                 "species": "m99",
-                "level": 148
+                "level": 158
               },
               {
                 "species": "m24",
-                "level": 150
+                "level": 160
               }
-            ]
+            ],
+            "factor": 1.25
           },
           "day": [
             {
@@ -2077,12 +2707,134 @@
         },
         {
           "id": 9,
+          "name": "Vorhof des Rates",
+          "scene": "wiese",
+          "tint": "glut",
+          "foyer": true,
+          "levelMin": 160,
+          "levelMax": 165,
+          "cap": 168,
+          "weather": [
+            {
+              "weather": "regen",
+              "species": "m48",
+              "pct": 6
+            },
+            {
+              "weather": "gewitter",
+              "species": "m97",
+              "pct": 5
+            }
+          ],
+          "guardian": {
+            "name": "Ratstor",
+            "epithet": "Eingang",
+            "badge": "",
+            "gold": 0,
+            "factor": 1,
+            "team": []
+          },
+          "day": [
+            {
+              "species": "m48",
+              "weight": 12
+            },
+            {
+              "species": "m97",
+              "weight": 12
+            },
+            {
+              "species": "m59",
+              "weight": 10
+            },
+            {
+              "species": "m24",
+              "weight": 9
+            },
+            {
+              "species": "m99",
+              "weight": 9
+            },
+            {
+              "species": "m43",
+              "weight": 11
+            },
+            {
+              "species": "m93",
+              "weight": 11
+            },
+            {
+              "species": "m53",
+              "weight": 10
+            },
+            {
+              "species": "m19",
+              "weight": 8
+            },
+            {
+              "species": "m89",
+              "weight": 8
+            }
+          ],
+          "night": [
+            {
+              "species": "m48",
+              "weight": 10
+            },
+            {
+              "species": "m97",
+              "weight": 11
+            },
+            {
+              "species": "m59",
+              "weight": 9
+            },
+            {
+              "species": "m24",
+              "weight": 8
+            },
+            {
+              "species": "m99",
+              "weight": 8
+            },
+            {
+              "species": "m95",
+              "weight": 6
+            },
+            {
+              "species": "m43",
+              "weight": 9
+            },
+            {
+              "species": "m93",
+              "weight": 10
+            },
+            {
+              "species": "m53",
+              "weight": 9
+            },
+            {
+              "species": "m19",
+              "weight": 7
+            },
+            {
+              "species": "m89",
+              "weight": 7
+            },
+            {
+              "species": "m74",
+              "weight": 6
+            }
+          ]
+        },
+        {
+          "id": 10,
           "name": "Hoher Rat",
           "scene": "wald",
           "tint": "glut",
-          "levelMin": 151,
-          "levelMax": 164,
-          "cap": 164,
+          "levelMin": 164,
+          "levelMax": 168,
+          "cap": 168,
           "guardian": {
             "name": "Pyr",
             "epithet": "Großwächter",
@@ -2091,17 +2843,18 @@
             "team": [
               {
                 "species": "m27",
-                "level": 162
+                "level": 166
               },
               {
                 "species": "m39",
-                "level": 163
+                "level": 167
               },
               {
                 "species": "m50",
-                "level": 164
+                "level": 168
               }
-            ]
+            ],
+            "factor": 0.8
           },
           "day": [],
           "night": [],
@@ -2113,92 +2866,8 @@
                 "id": "r3a",
                 "name": "Ignaz",
                 "epithet": "Rat",
-                "cap": 151,
+                "cap": 168,
                 "gold": 16000,
-                "team": [
-                  {
-                    "species": "m27",
-                    "level": 149
-                  },
-                  {
-                    "species": "m39",
-                    "level": 150
-                  },
-                  {
-                    "species": "m50",
-                    "level": 151
-                  }
-                ]
-              },
-              {
-                "id": "r3b",
-                "name": "Vesta",
-                "epithet": "Rätin",
-                "cap": 154,
-                "gold": 17000,
-                "team": [
-                  {
-                    "species": "m27",
-                    "level": 152
-                  },
-                  {
-                    "species": "m39",
-                    "level": 153
-                  },
-                  {
-                    "species": "m50",
-                    "level": 154
-                  }
-                ]
-              },
-              {
-                "id": "r3c",
-                "name": "Harun",
-                "epithet": "Rat",
-                "cap": 157,
-                "gold": 18000,
-                "team": [
-                  {
-                    "species": "m27",
-                    "level": 155
-                  },
-                  {
-                    "species": "m39",
-                    "level": 156
-                  },
-                  {
-                    "species": "m50",
-                    "level": 157
-                  }
-                ]
-              },
-              {
-                "id": "r3d",
-                "name": "Mila",
-                "epithet": "Rätin",
-                "cap": 160,
-                "gold": 19000,
-                "team": [
-                  {
-                    "species": "m27",
-                    "level": 158
-                  },
-                  {
-                    "species": "m39",
-                    "level": 159
-                  },
-                  {
-                    "species": "m50",
-                    "level": 160
-                  }
-                ]
-              },
-              {
-                "id": "r3e",
-                "name": "Pyr",
-                "epithet": "Großwächter",
-                "cap": 164,
-                "gold": 20000,
                 "team": [
                   {
                     "species": "m27",
@@ -2212,7 +2881,96 @@
                     "species": "m50",
                     "level": 164
                   }
-                ]
+                ],
+                "factor": 0.8
+              },
+              {
+                "id": "r3b",
+                "name": "Vesta",
+                "epithet": "Rätin",
+                "cap": 168,
+                "gold": 17000,
+                "team": [
+                  {
+                    "species": "m27",
+                    "level": 163
+                  },
+                  {
+                    "species": "m39",
+                    "level": 164
+                  },
+                  {
+                    "species": "m50",
+                    "level": 165
+                  }
+                ],
+                "factor": 0.8
+              },
+              {
+                "id": "r3c",
+                "name": "Harun",
+                "epithet": "Rat",
+                "cap": 168,
+                "gold": 18000,
+                "team": [
+                  {
+                    "species": "m27",
+                    "level": 164
+                  },
+                  {
+                    "species": "m39",
+                    "level": 165
+                  },
+                  {
+                    "species": "m50",
+                    "level": 166
+                  }
+                ],
+                "factor": 0.8
+              },
+              {
+                "id": "r3d",
+                "name": "Mila",
+                "epithet": "Rätin",
+                "cap": 168,
+                "gold": 19000,
+                "team": [
+                  {
+                    "species": "m27",
+                    "level": 165
+                  },
+                  {
+                    "species": "m39",
+                    "level": 166
+                  },
+                  {
+                    "species": "m50",
+                    "level": 167
+                  }
+                ],
+                "factor": 0.8
+              },
+              {
+                "id": "r3e",
+                "name": "Pyr",
+                "epithet": "Großwächter",
+                "cap": 168,
+                "gold": 20000,
+                "team": [
+                  {
+                    "species": "m27",
+                    "level": 166
+                  },
+                  {
+                    "species": "m39",
+                    "level": 167
+                  },
+                  {
+                    "species": "m50",
+                    "level": 168
+                  }
+                ],
+                "factor": 0.8
               }
             ]
           }
@@ -2228,9 +2986,9 @@
           "name": "Dämmerpfad",
           "scene": "bach",
           "tint": "schatten",
-          "levelMin": 146,
-          "levelMax": 150,
-          "cap": 156,
+          "levelMin": 164,
+          "levelMax": 168,
+          "cap": 174,
           "weather": [
             {
               "weather": "klar",
@@ -2251,17 +3009,18 @@
             "team": [
               {
                 "species": "m33",
-                "level": 153
+                "level": 169
               },
               {
                 "species": "m60",
-                "level": 154
+                "level": 170
               },
               {
                 "species": "m79",
-                "level": 156
+                "level": 172
               }
-            ]
+            ],
+            "factor": 1.4
           },
           "day": [
             {
@@ -2301,9 +3060,9 @@
           "name": "Sumpfnacht",
           "scene": "wiese",
           "tint": "schatten",
-          "levelMin": 152,
-          "levelMax": 156,
-          "cap": 162,
+          "levelMin": 170,
+          "levelMax": 174,
+          "cap": 180,
           "weather": [
             {
               "weather": "regen",
@@ -2324,17 +3083,18 @@
             "team": [
               {
                 "species": "m55",
-                "level": 159
+                "level": 175
               },
               {
                 "species": "m74",
-                "level": 160
+                "level": 176
               },
               {
                 "species": "m89",
-                "level": 162
+                "level": 178
               }
-            ]
+            ],
+            "factor": 1.2
           },
           "day": [
             {
@@ -2374,9 +3134,9 @@
           "name": "Schattenried",
           "scene": "wald",
           "tint": "schatten",
-          "levelMin": 158,
-          "levelMax": 162,
-          "cap": 168,
+          "levelMin": 176,
+          "levelMax": 180,
+          "cap": 186,
           "weather": [
             {
               "weather": "gewitter",
@@ -2397,17 +3157,18 @@
             "team": [
               {
                 "species": "m75",
-                "level": 165
+                "level": 181
               },
               {
                 "species": "m95",
-                "level": 166
+                "level": 182
               },
               {
                 "species": "m99",
-                "level": 168
+                "level": 184
               }
-            ]
+            ],
+            "factor": 1.4
           },
           "day": [
             {
@@ -2447,9 +3208,9 @@
           "name": "Nachtmoor",
           "scene": "bach",
           "tint": "schatten",
-          "levelMin": 164,
-          "levelMax": 168,
-          "cap": 174,
+          "levelMin": 182,
+          "levelMax": 186,
+          "cap": 192,
           "weather": [
             {
               "weather": "schnee",
@@ -2470,17 +3231,18 @@
             "team": [
               {
                 "species": "m90",
-                "level": 171
+                "level": 187
               },
               {
                 "species": "m27",
-                "level": 172
+                "level": 188
               },
               {
                 "species": "m10",
-                "level": 174
+                "level": 190
               }
-            ]
+            ],
+            "factor": 0.95
           },
           "day": [
             {
@@ -2520,9 +3282,9 @@
           "name": "Schleiergrund",
           "scene": "wiese",
           "tint": "schatten",
-          "levelMin": 170,
-          "levelMax": 174,
-          "cap": 180,
+          "levelMin": 188,
+          "levelMax": 192,
+          "cap": 198,
           "weather": [
             {
               "weather": "nebel",
@@ -2538,17 +3300,18 @@
             "team": [
               {
                 "species": "m39",
-                "level": 177
+                "level": 193
               },
               {
                 "species": "m23",
-                "level": 178
+                "level": 194
               },
               {
                 "species": "m31",
-                "level": 180
+                "level": 196
               }
-            ]
+            ],
+            "factor": 1.35
           },
           "day": [
             {
@@ -2580,9 +3343,9 @@
           "name": "Tiefenwald",
           "scene": "wald",
           "tint": "schatten",
-          "levelMin": 176,
-          "levelMax": 180,
-          "cap": 186,
+          "levelMin": 194,
+          "levelMax": 198,
+          "cap": 204,
           "weather": [
             {
               "weather": "wind",
@@ -2598,17 +3361,18 @@
             "team": [
               {
                 "species": "m50",
-                "level": 183
+                "level": 199
               },
               {
                 "species": "m29",
-                "level": 184
+                "level": 200
               },
               {
                 "species": "m49",
-                "level": 186
+                "level": 202
               }
-            ]
+            ],
+            "factor": 1.05
           },
           "day": [
             {
@@ -2640,9 +3404,9 @@
           "name": "Morastwehr",
           "scene": "bach",
           "tint": "schatten",
-          "levelMin": 182,
-          "levelMax": 186,
-          "cap": 192,
+          "levelMin": 200,
+          "levelMax": 204,
+          "cap": 210,
           "weather": [
             {
               "weather": "klar",
@@ -2658,17 +3422,18 @@
             "team": [
               {
                 "species": "m65",
-                "level": 189
+                "level": 205
               },
               {
                 "species": "m37",
-                "level": 190
+                "level": 206
               },
               {
                 "species": "m54",
-                "level": 192
+                "level": 208
               }
-            ]
+            ],
+            "factor": 1.15
           },
           "day": [
             {
@@ -2700,9 +3465,9 @@
           "name": "Finsterkessel",
           "scene": "wiese",
           "tint": "schatten",
-          "levelMin": 188,
-          "levelMax": 192,
-          "cap": 198,
+          "levelMin": 206,
+          "levelMax": 210,
+          "cap": 216,
           "weather": [
             {
               "weather": "regen",
@@ -2718,17 +3483,18 @@
             "team": [
               {
                 "species": "m85",
-                "level": 195
+                "level": 211
               },
               {
                 "species": "m45",
-                "level": 196
+                "level": 212
               },
               {
                 "species": "m64",
-                "level": 198
+                "level": 214
               }
-            ]
+            ],
+            "factor": 1.25
           },
           "day": [
             {
@@ -2757,12 +3523,81 @@
         },
         {
           "id": 9,
+          "name": "Vorhof des Rates",
+          "scene": "wiese",
+          "tint": "schatten",
+          "foyer": true,
+          "levelMin": 214,
+          "levelMax": 219,
+          "cap": 222,
+          "weather": [
+            {
+              "weather": "regen",
+              "species": "m64",
+              "pct": 6
+            }
+          ],
+          "guardian": {
+            "name": "Ratstor",
+            "epithet": "Eingang",
+            "badge": "",
+            "gold": 0,
+            "factor": 1,
+            "team": []
+          },
+          "day": [
+            {
+              "species": "m64",
+              "weight": 28
+            },
+            {
+              "species": "m45",
+              "weight": 22
+            },
+            {
+              "species": "m54",
+              "weight": 28
+            },
+            {
+              "species": "m37",
+              "weight": 22
+            }
+          ],
+          "night": [
+            {
+              "species": "m64",
+              "weight": 21
+            },
+            {
+              "species": "m45",
+              "weight": 17
+            },
+            {
+              "species": "m85",
+              "weight": 13
+            },
+            {
+              "species": "m54",
+              "weight": 21
+            },
+            {
+              "species": "m37",
+              "weight": 16
+            },
+            {
+              "species": "m65",
+              "weight": 12
+            }
+          ]
+        },
+        {
+          "id": 10,
           "name": "Hoher Rat",
           "scene": "wald",
           "tint": "schatten",
-          "levelMin": 199,
-          "levelMax": 212,
-          "cap": 212,
+          "levelMin": 218,
+          "levelMax": 222,
+          "cap": 222,
           "guardian": {
             "name": "Noct",
             "epithet": "Großwächter",
@@ -2771,17 +3606,18 @@
             "team": [
               {
                 "species": "m33",
-                "level": 210
+                "level": 220
               },
               {
                 "species": "m55",
-                "level": 211
+                "level": 221
               },
               {
                 "species": "m75",
-                "level": 212
+                "level": 222
               }
-            ]
+            ],
+            "factor": 1.25
           },
           "day": [],
           "night": [],
@@ -2793,106 +3629,111 @@
                 "id": "r4a",
                 "name": "Kelv",
                 "epithet": "Rat",
-                "cap": 199,
+                "cap": 222,
                 "gold": 22000,
                 "team": [
                   {
                     "species": "m33",
-                    "level": 197
+                    "level": 216
                   },
                   {
                     "species": "m55",
-                    "level": 198
+                    "level": 217
                   },
                   {
                     "species": "m75",
-                    "level": 199
+                    "level": 218
                   }
-                ]
+                ],
+                "factor": 1.25
               },
               {
                 "id": "r4b",
                 "name": "Duma",
                 "epithet": "Rätin",
-                "cap": 202,
+                "cap": 222,
                 "gold": 23000,
                 "team": [
                   {
                     "species": "m33",
-                    "level": 200
+                    "level": 217
                   },
                   {
                     "species": "m55",
-                    "level": 201
+                    "level": 218
                   },
                   {
                     "species": "m75",
-                    "level": 202
+                    "level": 219
                   }
-                ]
+                ],
+                "factor": 1.25
               },
               {
                 "id": "r4c",
                 "name": "Soren",
                 "epithet": "Rat",
-                "cap": 205,
+                "cap": 222,
                 "gold": 24000,
                 "team": [
                   {
                     "species": "m33",
-                    "level": 203
+                    "level": 218
                   },
                   {
                     "species": "m55",
-                    "level": 204
+                    "level": 219
                   },
                   {
                     "species": "m75",
-                    "level": 205
+                    "level": 220
                   }
-                ]
+                ],
+                "factor": 1.25
               },
               {
                 "id": "r4d",
                 "name": "Pira",
                 "epithet": "Rätin",
-                "cap": 208,
+                "cap": 222,
                 "gold": 25000,
                 "team": [
                   {
                     "species": "m33",
-                    "level": 206
+                    "level": 219
                   },
                   {
                     "species": "m55",
-                    "level": 207
+                    "level": 220
                   },
                   {
                     "species": "m75",
-                    "level": 208
+                    "level": 221
                   }
-                ]
+                ],
+                "factor": 1.25
               },
               {
                 "id": "r4e",
                 "name": "Noct",
                 "epithet": "Großwächter",
-                "cap": 212,
+                "cap": 222,
                 "gold": 26000,
                 "team": [
                   {
                     "species": "m33",
-                    "level": 210
+                    "level": 220
                   },
                   {
                     "species": "m55",
-                    "level": 211
+                    "level": 221
                   },
                   {
                     "species": "m75",
-                    "level": 212
+                    "level": 222
                   }
-                ]
+                ],
+                "factor": 1.25
               }
             ]
           }
@@ -2908,9 +3749,9 @@
           "name": "Wolkenstieg",
           "scene": "bach",
           "tint": "himmel",
-          "levelMin": 194,
-          "levelMax": 198,
-          "cap": 204,
+          "levelMin": 218,
+          "levelMax": 222,
+          "cap": 228,
           "weather": [
             {
               "weather": "klar",
@@ -2926,17 +3767,18 @@
             "team": [
               {
                 "species": "m90",
-                "level": 201
+                "level": 223
               },
               {
                 "species": "m27",
-                "level": 202
+                "level": 224
               },
               {
                 "species": "m10",
-                "level": 204
+                "level": 226
               }
-            ]
+            ],
+            "factor": 1.1
           },
           "day": [
             {
@@ -2968,9 +3810,9 @@
           "name": "Höhenwind",
           "scene": "wiese",
           "tint": "himmel",
-          "levelMin": 200,
-          "levelMax": 204,
-          "cap": 210,
+          "levelMin": 224,
+          "levelMax": 228,
+          "cap": 234,
           "weather": [
             {
               "weather": "regen",
@@ -2986,17 +3828,18 @@
             "team": [
               {
                 "species": "m39",
-                "level": 207
+                "level": 229
               },
               {
                 "species": "m23",
-                "level": 208
+                "level": 230
               },
               {
                 "species": "m39",
-                "level": 210
+                "level": 232
               }
-            ]
+            ],
+            "factor": 1.4
           },
           "day": [
             {
@@ -3020,9 +3863,9 @@
           "name": "Sternenfeld",
           "scene": "wald",
           "tint": "himmel",
-          "levelMin": 206,
-          "levelMax": 210,
-          "cap": 216,
+          "levelMin": 230,
+          "levelMax": 234,
+          "cap": 240,
           "weather": [
             {
               "weather": "gewitter",
@@ -3038,17 +3881,18 @@
             "team": [
               {
                 "species": "m50",
-                "level": 213
+                "level": 235
               },
               {
                 "species": "m29",
-                "level": 214
+                "level": 236
               },
               {
                 "species": "m50",
-                "level": 216
+                "level": 238
               }
-            ]
+            ],
+            "factor": 1.05
           },
           "day": [
             {
@@ -3072,9 +3916,9 @@
           "name": "Ätherstieg",
           "scene": "bach",
           "tint": "himmel",
-          "levelMin": 212,
-          "levelMax": 216,
-          "cap": 222,
+          "levelMin": 236,
+          "levelMax": 240,
+          "cap": 246,
           "weather": [
             {
               "weather": "schnee",
@@ -3090,17 +3934,18 @@
             "team": [
               {
                 "species": "m65",
-                "level": 219
+                "level": 241
               },
               {
                 "species": "m37",
-                "level": 220
+                "level": 242
               },
               {
                 "species": "m65",
-                "level": 222
+                "level": 244
               }
-            ]
+            ],
+            "factor": 1.25
           },
           "day": [
             {
@@ -3124,9 +3969,9 @@
           "name": "Thronnähe",
           "scene": "wiese",
           "tint": "himmel",
-          "levelMin": 218,
-          "levelMax": 222,
-          "cap": 228,
+          "levelMin": 242,
+          "levelMax": 246,
+          "cap": 252,
           "weather": [
             {
               "weather": "nebel",
@@ -3142,17 +3987,18 @@
             "team": [
               {
                 "species": "m85",
-                "level": 225
+                "level": 247
               },
               {
                 "species": "m45",
-                "level": 226
+                "level": 248
               },
               {
                 "species": "m85",
-                "level": 228
+                "level": 250
               }
-            ]
+            ],
+            "factor": 1.3
           },
           "day": [
             {
@@ -3176,9 +4022,9 @@
           "name": "Himmelsrand",
           "scene": "wald",
           "tint": "himmel",
-          "levelMin": 224,
-          "levelMax": 228,
-          "cap": 234,
+          "levelMin": 248,
+          "levelMax": 252,
+          "cap": 258,
           "weather": [
             {
               "weather": "wind",
@@ -3194,17 +4040,18 @@
             "team": [
               {
                 "species": "m33",
-                "level": 231
+                "level": 253
               },
               {
                 "species": "m60",
-                "level": 232
+                "level": 254
               },
               {
                 "species": "m33",
-                "level": 234
+                "level": 256
               }
-            ]
+            ],
+            "factor": 1.5
           },
           "day": [
             {
@@ -3228,9 +4075,9 @@
           "name": "Kronenlicht",
           "scene": "bach",
           "tint": "himmel",
-          "levelMin": 230,
-          "levelMax": 234,
-          "cap": 240,
+          "levelMin": 254,
+          "levelMax": 258,
+          "cap": 264,
           "weather": [
             {
               "weather": "klar",
@@ -3246,17 +4093,18 @@
             "team": [
               {
                 "species": "m55",
-                "level": 237
+                "level": 259
               },
               {
                 "species": "m74",
-                "level": 238
+                "level": 260
               },
               {
                 "species": "m55",
-                "level": 240
+                "level": 262
               }
-            ]
+            ],
+            "factor": 1.1
           },
           "day": [
             {
@@ -3280,9 +4128,9 @@
           "name": "Thronhalle",
           "scene": "wiese",
           "tint": "himmel",
-          "levelMin": 236,
-          "levelMax": 240,
-          "cap": 246,
+          "levelMin": 260,
+          "levelMax": 264,
+          "cap": 270,
           "weather": [
             {
               "weather": "regen",
@@ -3298,17 +4146,18 @@
             "team": [
               {
                 "species": "m75",
-                "level": 243
+                "level": 265
               },
               {
                 "species": "m95",
-                "level": 244
+                "level": 266
               },
               {
                 "species": "m75",
-                "level": 246
+                "level": 268
               }
-            ]
+            ],
+            "factor": 1.45
           },
           "day": [
             {
@@ -3329,12 +4178,65 @@
         },
         {
           "id": 9,
+          "name": "Vorhof des Rates",
+          "scene": "wiese",
+          "tint": "himmel",
+          "foyer": true,
+          "levelMin": 268,
+          "levelMax": 273,
+          "cap": 276,
+          "weather": [
+            {
+              "weather": "regen",
+              "species": "m95",
+              "pct": 6
+            }
+          ],
+          "guardian": {
+            "name": "Ratstor",
+            "epithet": "Eingang",
+            "badge": "",
+            "gold": 0,
+            "factor": 1,
+            "team": []
+          },
+          "day": [
+            {
+              "species": "m95",
+              "weight": 50
+            },
+            {
+              "species": "m74",
+              "weight": 50
+            }
+          ],
+          "night": [
+            {
+              "species": "m95",
+              "weight": 34
+            },
+            {
+              "species": "m75",
+              "weight": 17
+            },
+            {
+              "species": "m74",
+              "weight": 33
+            },
+            {
+              "species": "m55",
+              "weight": 16
+            }
+          ]
+        },
+        {
+          "id": 10,
           "name": "Hoher Rat",
           "scene": "wald",
           "tint": "himmel",
-          "levelMin": 247,
-          "levelMax": 260,
-          "cap": 260,
+          "levelMin": 272,
+          "levelMax": 276,
+          "cap": 276,
           "guardian": {
             "name": "Ith",
             "epithet": "Großwächter",
@@ -3343,17 +4245,18 @@
             "team": [
               {
                 "species": "m33",
-                "level": 258
+                "level": 274
               },
               {
                 "species": "m55",
-                "level": 259
+                "level": 275
               },
               {
                 "species": "m75",
-                "level": 260
+                "level": 276
               }
-            ]
+            ],
+            "factor": 1.25
           },
           "day": [],
           "night": [],
@@ -3365,119 +4268,124 @@
                 "id": "r5a",
                 "name": "Oris",
                 "epithet": "Rat",
-                "cap": 247,
+                "cap": 276,
                 "gold": 28000,
                 "team": [
                   {
                     "species": "m33",
-                    "level": 245
+                    "level": 270
                   },
                   {
                     "species": "m55",
-                    "level": 246
+                    "level": 271
                   },
                   {
                     "species": "m75",
-                    "level": 247
+                    "level": 272
                   }
-                ]
+                ],
+                "factor": 1.25
               },
               {
                 "id": "r5b",
                 "name": "Cael",
                 "epithet": "Rätin",
-                "cap": 250,
+                "cap": 276,
                 "gold": 29000,
                 "team": [
                   {
                     "species": "m33",
-                    "level": 248
+                    "level": 271
                   },
                   {
                     "species": "m55",
-                    "level": 249
+                    "level": 272
                   },
                   {
                     "species": "m75",
-                    "level": 250
+                    "level": 273
                   }
-                ]
+                ],
+                "factor": 1.25
               },
               {
                 "id": "r5c",
                 "name": "Vion",
                 "epithet": "Rat",
-                "cap": 253,
+                "cap": 276,
                 "gold": 30000,
                 "team": [
                   {
                     "species": "m33",
-                    "level": 251
+                    "level": 272
                   },
                   {
                     "species": "m55",
-                    "level": 252
+                    "level": 273
                   },
                   {
                     "species": "m75",
-                    "level": 253
+                    "level": 274
                   }
-                ]
+                ],
+                "factor": 1.25
               },
               {
                 "id": "r5d",
                 "name": "Nima",
                 "epithet": "Rätin",
-                "cap": 256,
+                "cap": 276,
                 "gold": 31000,
                 "team": [
                   {
                     "species": "m33",
-                    "level": 254
+                    "level": 273
                   },
                   {
                     "species": "m55",
-                    "level": 255
+                    "level": 274
                   },
                   {
                     "species": "m75",
-                    "level": 256
+                    "level": 275
                   }
-                ]
+                ],
+                "factor": 1.25
               },
               {
                 "id": "r5e",
                 "name": "Ith",
                 "epithet": "Großwächter",
-                "cap": 260,
+                "cap": 276,
                 "gold": 32000,
                 "team": [
                   {
                     "species": "m33",
-                    "level": 258
+                    "level": 274
                   },
                   {
                     "species": "m55",
-                    "level": 259
+                    "level": 275
                   },
                   {
                     "species": "m75",
-                    "level": 260
+                    "level": 276
                   }
-                ]
+                ],
+                "factor": 1.25
               }
             ]
           }
         },
         {
-          "id": 10,
+          "id": 11,
           "name": "Urgrund",
           "scene": "wald",
           "tint": "horst",
           "special": true,
-          "levelMin": 256,
-          "levelMax": 260,
-          "cap": 260,
+          "levelMin": 276,
+          "levelMax": 280,
+          "cap": 280,
           "guardian": {
             "name": "Ith",
             "epithet": "Großwächter",
@@ -3486,17 +4394,18 @@
             "team": [
               {
                 "species": "m40",
-                "level": 258
+                "level": 278
               },
               {
                 "species": "m80",
-                "level": 259
+                "level": 279
               },
               {
                 "species": "m100",
-                "level": 260
+                "level": 280
               }
-            ]
+            ],
+            "factor": 1
           },
           "day": [
             {

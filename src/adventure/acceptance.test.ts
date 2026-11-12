@@ -279,11 +279,12 @@ describe('acceptance loop', () => {
     save.loop = false
     save.step = 20
     resolveEncounter(save, 1_000, { offline: false, trace: false })
-    expect(save.hold).toBe(true)
-    expect(save.step).toBe(20)
+    expect(save.hold).toBe(false)
+    expect(save.chapter).toBe(3)
+    expect(save.step).toBe(1)
   })
 
-  it('waits five loops after a guardian loss unless challenged', () => {
+  it('retries the warden after a level, not on a timer', () => {
     const save = beginAdventure('Ada', 'A', 'm03', 1_000)
     save.mons[save.team[0]].lvl = 1
     save.mons[save.team[0]].hp = 1
@@ -291,18 +292,15 @@ describe('acceptance loop', () => {
     const loss = resolveEncounter(save, 1_000, { offline: false, trace: false })
     expect(loss.win).toBe(false)
     expect(save.badges).toHaveLength(0)
-    expect(save.loopsUntilRetry).toBe(5)
-    for (let lap = 0; lap < 4; lap++) {
-      save.step = 20
-      save.mons[save.team[0]].hp = null
-      save.mons[save.team[0]].lvl = 12
-      const skipped = resolveEncounter(save, 1_000, { offline: false, trace: false })
-      expect(skipped.badge).toBeNull()
-      expect(save.step).toBe(1)
-    }
+    expect(save.guardMark).toBe(1)
+    expect(save.hold).toBe(false)
     save.step = 20
     save.mons[save.team[0]].hp = null
-    save.mons[save.team[0]].lvl = 12
+    const skipped = resolveEncounter(save, 1_000, { offline: false, trace: false })
+    expect(skipped.traces).toHaveLength(0)
+    expect(save.step).toBe(1)
+    save.mons[save.team[0]].lvl = 2
+    save.step = 20
     const retry = resolveEncounter(save, 1_000, { offline: false, trace: false })
     expect(retry.kind).toBe('guardian')
     expect(retry.traces.length).toBeGreaterThan(0)

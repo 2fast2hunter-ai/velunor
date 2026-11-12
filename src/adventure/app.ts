@@ -255,7 +255,8 @@ function watchdog(): void {
 
 function kick(): void {
   window.clearTimeout(timer)
-  if (!save?.started || animating || overlay || save.hold) return
+  if (!save?.started || animating || overlay) return
+  if (save.hold && !save.challengeNow) return
   timer = window.setTimeout(loop, 30)
 }
 
@@ -271,7 +272,7 @@ function loop(): void {
       animating = false
     }
     let steps = 0
-    while (now - lastTick >= dur && steps < 200 && !save.hold) {
+    while (now - lastTick >= dur && steps < 200 && (!save.hold || save.challengeNow)) {
       try {
         resolveEncounter(save, Date.now(), { offline: false, trace: false })
       } catch (err) {
@@ -333,7 +334,7 @@ function finishPresent(outcome: EncounterOutcome): void {
     return
   }
   if (showAwaken()) return
-  if (save.hold) render()
+  if (save.hold && !save.challengeNow) render()
   else kick()
 }
 

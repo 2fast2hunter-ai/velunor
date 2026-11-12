@@ -13,11 +13,15 @@ import {
   OFFLINE_CAP_MS,
   OFFLINE_EXP_FACTOR,
   OFFLINE_LEVEL_CAP,
+  RETRY_WINS,
   TEAM_MAX
 } from './const'
 import {
   chapterById,
+  councilOf,
   findChapter,
+  foyerOf,
+  gateBadge,
   regionById,
   findGold,
   pickWeighted,
@@ -103,13 +107,60 @@ export function chapterUnlocked(save: SaveV2, chapterId: number): boolean {
   const chapter = findChapter(save.region, chapterId)
   if (!chapter) return false
   if (chapter.special) {
-    const council = findChapter(save.region, 9)
+    const council = councilOf(save.region)
     const sealed = council ? hasBadge(save, council.guardian.badge) : false
     return sealed || roadComplete(save, save.region)
   }
+  if (chapter.council) return hasBadge(save, chapter.guardian.badge)
   if (chapterId <= 1) return true
   const previous = chapterById(save.region, chapterId - 1)
   return hasBadge(save, previous.guardian.badge)
+}
+
+export function strongestLevel(save: SaveV2): number {
+  return save.team.reduce((max, uid) => Math.max(max, save.mons[uid]?.lvl ?? 0), 0)
+}
+
+/** Open on the first try, after one level on the strongest mon, or after 10 wins. */
+export function guardReady(save: SaveV2): boolean {
+  if (save.challengeNow) return true
+  if ((save.guardMark ?? 0) <= 0) return true
+  if ((save.guardWins ?? 0) >= RETRY_WINS) return true
+  return strongestLevel(save) >= save.guardMark + 1
+}
+
+function clearGuard(save: SaveV2): void {
+  save.guardMark = 0
+  save.guardWins = 0
+  save.loopsUntilRetry = 0
+}
+
+function noteGuardLoss(save: SaveV2): void {
+  save.guardMark = strongestLevel(save)
+  save.guardWins = 0
+  save.loopsUntilRetry = 0
+  save.challengeNow = false
+  save.hold = false
+}
+
+function noteFarmWin(save: SaveV2): void {
+  if ((save.guardMark ?? 0) > 0) save.guardWins = (save.guardWins ?? 0) + 1
+}
+
+function continuePast(save: SaveV2, chapter: ChapterDef): void {
+  save.hold = false
+  save.challengeNow = false
+  clearGuard(save)
+  if (!save.loop) {
+    const next = findChapter(save.region, chapter.id + 1)
+    if (next && !next.council && !next.special && chapterUnlocked(save, next.id)) {
+      save.chapter = next.id
+      save.step = 1
+      save.lastHealStep = 1
+      return
+    }
+  }
+  save.step = 1
 }
 
 function roadComplete(save: SaveV2, regionId: number): boolean {
@@ -251,17 +302,20 @@ function sideFrom(mon: OwnedMon, cap: number): FightSide {
   }
 }
 
-function foeSide(speciesId: string, level: number, shiny = false): FightSide {
+function foeSide(speciesId: string, level: number, shiny = false, factor = 1, hpFraction = 1): FightSide {
   const sp = species(speciesId)
   const stats = monStats({ species: speciesId, lvl: level, exp: 0, hp: null, shiny, caughtAt: 0, caughtWhere: '', keepDupes: false })
+  const scale = factor > 0 ? factor : 1
+  const maxHp = Math.max(1, Math.round(stats.hp * scale))
+  const fraction = Math.max(0, Math.min(1, hpFraction))
   return {
     speciesId: sp.id,
     name: sp.name,
     type: sp.type,
-    maxHp: stats.hp,
-    hp: stats.hp,
-    atk: stats.atk,
-    def: stats.def,
+    maxHp,
+    hp: Math.max(1, Math.round(maxHp * (fraction > 0 ? fraction : 1))),
+    atk: Math.max(1, Math.round(stats.atk * scale)),
+    def: Math.max(1, Math.round(stats.def * scale)),
     spd: stats.spd,
     skill: sp.skill,
     passive: sp.passive ?? null
@@ -291,10 +345,17 @@ export function pickFighter(save: SaveV2, foeType: TypeId): string | null {
 function wipe(save: SaveV2, now: number, quiet: boolean): void {
   healTeam(save)
   const chapter = chapterById(save.region, save.chapter)
-  save.step = chapter.council ? 1 : (save.lastHealStep || 1)
   save.hold = false
-  const text = chapter.council ? line(save, 'say.wipeCouncil') : line(save, 'say.wipeRoad')
-  log(save, now, text, quiet)
+  if (chapter.council || chapter.foyer) {
+    const foyer = foyerOf(save.region)
+    if (foyer) save.chapter = foyer.id
+    save.step = 1
+    noteGuardLoss(save)
+    log(save, now, line(save, 'say.wipeCouncil'), quiet)
+    return
+  }
+  save.step = save.lastHealStep || 1
+  log(save, now, line(save, 'say.wipeRoad'), quiet)
 }
 
 function finish(save: SaveV2, chapter: ChapterDef, outcome: EncounterOutcome): EncounterOutcome {
@@ -331,13 +392,18 @@ function advance(save: SaveV2, chapter: ChapterDef): void {
     save.step += 1
     return
   }
-  if (hasBadge(save, chapter.guardian.badge) && !save.loop) {
-    save.hold = true
-    save.step = 20
-    return
+  save.hold = false
+  const badge = chapter.guardian.badge
+  if (badge && hasBadge(save, badge) && !save.loop) {
+    const next = findChapter(save.region, chapter.id + 1)
+    if (next && !next.council && !next.special && chapterUnlocked(save, next.id)) {
+      save.chapter = next.id
+      save.step = 1
+      save.lastHealStep = 1
+      return
+    }
   }
   save.step = 1
-  save.hold = false
 }
 
 function ownedSpecies(save: SaveV2, speciesId: string): string[] {
@@ -491,6 +557,7 @@ function doWild(save: SaveV2, chapter: ChapterDef, now: number, opts: ResolveOpt
     return finish(save, chapter, outcome)
   }
   outcome.gold = bouts.gold
+  noteFarmWin(save)
   say(save, outcome, now, line(save, 'say.winGold', { gold: outcome.gold }), quiet)
   if (trace.foeKo && bouts.lastFighter) {
     const fighter = save.mons[bouts.lastFighter]
@@ -552,38 +619,92 @@ function doTrainer(save: SaveV2, chapter: ChapterDef, now: number, opts: Resolve
     return finish(save, chapter, outcome)
   }
   outcome.gold = 25 * foes.reduce((sum, foe) => sum + foe.level, 0)
+  noteFarmWin(save)
   say(save, outcome, now, line(save, 'say.trainerWin', { name, gold: outcome.gold }), quiet)
   advance(save, chapter)
   return finish(save, chapter, outcome)
+}
+
+function runGauntlet(
+  save: SaveV2,
+  chapter: ChapterDef,
+  foes: { species: string; level: number; shiny?: boolean }[],
+  factor: number,
+  opts: ResolveOpts,
+  now: number
+): { traces: FightTrace[]; wins: number; lastFighter: string | null; wiped: boolean } {
+  const traces: FightTrace[] = []
+  let index = 0
+  let foeFraction = 1
+  let wins = 0
+  let lastFighter: string | null = null
+  const seen = new Set<number>()
+  let guard = 0
+  while (index < foes.length && guard < 24) {
+    guard += 1
+    if (!livingTeam(save).length) return { traces, wins, lastFighter, wiped: true }
+    const foe = foes[index]
+    if (!seen.has(index)) {
+      seen.add(index)
+      const dex = save.dex[foe.species] ?? { seen: 0, caught: 0 }
+      dex.seen += 1
+      save.dex[foe.species] = dex
+    }
+    const fighter = pickFighter(save, species(foe.species).type)
+    if (!fighter) return { traces, wins, lastFighter, wiped: true }
+    save.active = fighter
+    const allyMon = save.mons[fighter]
+    const cap = chapterCapNow(save, chapter)
+    const trace = fight1v1(sideFrom(allyMon, cap), foeSide(foe.species, foe.level, foe.shiny ?? false, factor, foeFraction), rngOf(save), opts.trace)
+    traces.push(trace)
+    lastFighter = fighter
+    if (opts.summary) opts.summary.fights += 1
+    if (trace.win) {
+      storeHp(allyMon, trace.allyHp, trace.allyMax)
+      save.stats.wins += 1
+      awardCombatExp(save, cap, foe.level, species(foe.species).baseRarity, fighter, opts, now)
+      index += 1
+      foeFraction = 1
+      wins += 1
+    } else {
+      storeHp(allyMon, 0, trace.allyMax)
+      foeFraction = trace.foeMax > 0 ? Math.max(0.01, trace.foeHp / trace.foeMax) : 1
+    }
+  }
+  return { traces, wins, lastFighter, wiped: wins < foes.length && !livingTeam(save).length }
 }
 
 function doGuardian(save: SaveV2, chapter: ChapterDef, now: number, opts: ResolveOpts, forced: boolean): EncounterOutcome {
   const quiet = opts.offline
   const outcome = baseOutcome('guardian', save.step, chapter)
   const badge = chapter.guardian.badge
-  if (hasBadge(save, badge) && !forced) {
-    say(save, outcome, now, line(save, save.loop ? 'say.loop' : 'say.hold'), quiet)
-    advance(save, chapter)
+  if (badge && hasBadge(save, badge) && !forced) {
+    const before = save.chapter
+    continuePast(save, chapter)
+    const moved = findChapter(save.region, save.chapter)
+    say(save, outcome, now, moved && save.chapter !== before ? line(save, 'say.open', { name: moved.name }) : line(save, 'say.loop'), quiet)
     return finish(save, chapter, outcome)
   }
-  if (!forced && save.loopsUntilRetry > 0) {
-    save.loopsUntilRetry -= 1
-    if (save.loopsUntilRetry > 0) {
-      say(save, outcome, now, line(save, 'say.wait', { n: save.loopsUntilRetry }), quiet)
-      save.step = 1
-      save.hold = false
-      return finish(save, chapter, outcome)
-    }
+  if (!forced && !guardReady(save)) {
+    say(save, outcome, now, line(save, 'say.guardWait'), quiet)
+    save.step = 1
+    save.hold = false
+    return finish(save, chapter, outcome)
   }
+  save.challengeNow = false
   const guard = chapter.guardian
+  if (!guard.team.length) {
+    continuePast(save, chapter)
+    return finish(save, chapter, outcome)
+  }
   say(save, outcome, now, line(save, 'say.guard', { epithet: guard.epithet, name: guard.name, type: typeName(species(guard.team[0].species).type) }), quiet)
   const foes = guard.team.map((mon) => ({ species: mon.species, level: mon.level }))
-  const bouts = runBouts(save, chapter, foes, opts, now, () => 0)
+  const bouts = runGauntlet(save, chapter, foes, guard.factor ?? 1, opts, now)
   outcome.traces = bouts.traces
-  if (bouts.wiped || bouts.wins < foes.length) {
+  if (bouts.wins < foes.length) {
     outcome.win = false
     outcome.wiped = bouts.wiped
-    save.loopsUntilRetry = 5
+    noteGuardLoss(save)
     say(save, outcome, now, bouts.wiped ? line(save, 'say.loss') : line(save, 'say.guardStay', { name: guard.name }), quiet)
     if (bouts.wiped) wipe(save, now, quiet)
     else {
@@ -592,29 +713,49 @@ function doGuardian(save: SaveV2, chapter: ChapterDef, now: number, opts: Resolv
     }
     return finish(save, chapter, outcome)
   }
-  save.badges.push(badge)
+  if (badge && !hasBadge(save, badge)) save.badges.push(badge)
   const paidGuard = grantGold(save, guard.gold, now)
-  save.loopsUntilRetry = 0
   healTeam(save)
+  clearGuard(save)
   outcome.win = true
   outcome.gold = paidGuard
-  outcome.badge = badge
+  outcome.badge = badge || null
   if (opts.summary) {
     opts.summary.gold += paidGuard
-    opts.summary.badges.push(badge)
+    if (badge) opts.summary.badges.push(badge)
   }
   say(save, outcome, now, line(save, 'say.badge', { badge, gold: paidGuard }), quiet)
-  const next = findChapter(save.region, chapter.id + 1)
-  if (next) say(save, outcome, now, line(save, 'say.open', { name: next.name }), quiet)
-  else say(save, outcome, now, line(save, 'say.laterChapters'), quiet)
-  if (save.loop) {
+  const before = save.chapter
+  continuePast(save, chapter)
+  const moved = findChapter(save.region, save.chapter)
+  if (moved && save.chapter !== before) say(save, outcome, now, line(save, 'say.open', { name: moved.name }), quiet)
+  return finish(save, chapter, outcome)
+}
+
+function enterCouncil(save: SaveV2, chapter: ChapterDef, now: number, opts: ResolveOpts): EncounterOutcome {
+  const quiet = opts.offline
+  const outcome = baseOutcome('guardian', save.step, chapter)
+  const councilChapter = councilOf(save.region)
+  const council = councilChapter?.council
+  if (!councilChapter || !council) return finish(save, chapter, outcome)
+  if (hasBadge(save, councilChapter.guardian.badge)) {
+    say(save, outcome, now, line(save, 'say.councilWait'), quiet)
     save.step = 1
     save.hold = false
-  } else {
-    save.step = 20
-    save.hold = true
+    return finish(save, chapter, outcome)
   }
-  return finish(save, chapter, outcome)
+  if (!guardReady(save)) {
+    say(save, outcome, now, line(save, 'say.guardWait'), quiet)
+    save.step = 1
+    save.hold = false
+    return finish(save, chapter, outcome)
+  }
+  const next = council.members.findIndex((member) => !save.councilBeaten.includes(member.id))
+  save.chapter = councilChapter.id
+  save.step = (next >= 0 ? next : 0) + 1
+  save.hold = false
+  save.challengeNow = false
+  return doCouncil(save, councilChapter, now, opts)
 }
 
 /** Gold for one council member. Repeat wins pay half until that region's seal exists. */
@@ -635,6 +776,10 @@ export function recordCouncilWin(save: SaveV2, now: number, quiet: boolean): Enc
   const paid = grantGold(save, pay, now)
   outcome.gold = paid
   say(save, outcome, now, line(save, 'say.councilWin', { epithet: member.epithet, name: member.name, gold: paid }), quiet)
+  healTeam(save)
+  clearGuard(save)
+  outcome.win = true
+  save.hold = false
   if (index < council.members.length - 1) {
     save.step = index + 2
     say(save, outcome, now, line(save, 'say.councilNext', { epithet: council.members[index + 1].epithet, name: council.members[index + 1].name }), quiet)
@@ -650,15 +795,7 @@ export function recordCouncilWin(save: SaveV2, now: number, quiet: boolean): Enc
     const opened = council.unlocksRegion > 0 ? ` ${regionById(council.unlocksRegion).name} ist offen.` : ''
     say(save, outcome, now, line(save, 'say.sealWin', { badge: chapter.guardian.badge, gold: bonus, opened }), quiet)
   }
-  healTeam(save)
-  outcome.win = true
-  if (save.loop) {
-    save.step = 1
-    save.hold = false
-  } else {
-    save.step = council.members.length
-    save.hold = true
-  }
+  save.step = 1
   return finish(save, chapter, outcome)
 }
 
@@ -667,22 +804,34 @@ function doCouncil(save: SaveV2, chapter: ChapterDef, now: number, opts: Resolve
   const council = chapter.council
   if (!council) return doGuardian(save, chapter, now, opts, false)
   const outcome = baseOutcome('guardian', save.step, chapter)
-  if (hasBadge(save, chapter.guardian.badge) && !save.loop && save.hold) {
+  if (hasBadge(save, chapter.guardian.badge)) {
+    const foyer = foyerOf(save.region)
     say(save, outcome, now, line(save, 'say.councilWait'), quiet)
+    if (foyer) save.chapter = foyer.id
+    save.step = 1
+    save.hold = false
     return finish(save, chapter, outcome)
   }
-  const index = Math.min(council.members.length - 1, Math.max(0, save.step - 1))
+  const index = council.members.findIndex((member) => !save.councilBeaten.includes(member.id))
+  if (index < 0) {
+    save.step = 1
+    save.hold = false
+    return finish(save, chapter, outcome)
+  }
   const member = council.members[index]
-  say(save, outcome, now, line(save, 'say.councilEnter', { epithet: member.epithet, name: member.name, cap: member.cap }), quiet)
+  save.step = index + 1
+  say(save, outcome, now, line(save, 'say.councilEnter', { epithet: member.epithet, name: member.name, cap: chapter.cap }), quiet)
   const foes = member.team.map((mon) => ({ species: mon.species, level: mon.level }))
-  const bouts = runBouts(save, chapter, foes, opts, now, () => 0)
+  const bouts = runGauntlet(save, chapter, foes, member.factor ?? 1, opts, now)
   outcome.traces = bouts.traces
-  if (bouts.wiped || bouts.wins < foes.length) {
+  if (bouts.wins < foes.length) {
     outcome.win = false
     outcome.wiped = bouts.wiped
-    save.loopsUntilRetry = 0
     if (bouts.wiped) wipe(save, now, quiet)
     else {
+      noteGuardLoss(save)
+      const foyer = foyerOf(save.region)
+      if (foyer) save.chapter = foyer.id
       save.step = 1
       save.hold = false
       say(save, outcome, now, line(save, 'say.councilLoss'), quiet)
@@ -694,6 +843,14 @@ function doCouncil(save: SaveV2, chapter: ChapterDef, now: number, opts: Resolve
   if (opts.summary) {
     opts.summary.gold += won.gold
     if (won.badge) opts.summary.badges.push(won.badge)
+  }
+  if (hasBadge(save, chapter.guardian.badge)) {
+    const foyer = foyerOf(save.region)
+    if (foyer) {
+      save.chapter = foyer.id
+      save.step = 1
+      save.hold = false
+    }
   }
   return won
 }
@@ -709,12 +866,17 @@ export function resolveEncounter(save: SaveV2, now: number, opts: ResolveOpts): 
     wipe(save, now, quiet)
     return finish(save, chapter, outcome)
   }
-  if (chapter.council) return doCouncil(save, chapter, now, opts)
-  if (save.challengeNow && !hasBadge(save, chapter.guardian.badge)) {
+  if (save.challengeNow) {
+    const badge = gateBadge(save.region, chapter)
+    if (!badge || !hasBadge(save, badge)) {
+      save.challengeNow = false
+      clearGuard(save)
+      if (chapter.foyer || chapter.council) return enterCouncil(save, chapter.foyer ? chapter : (foyerOf(save.region) ?? chapter), now, opts)
+      return doGuardian(save, chapter, now, opts, true)
+    }
     save.challengeNow = false
-    save.loopsUntilRetry = 0
-    return doGuardian(save, chapter, now, opts, true)
   }
+  if (chapter.council) return doCouncil(save, chapter, now, opts)
   const kind = chapter.special ? 'wild' : (routeOf(chapter.id)[save.step] ?? 'wild')
   if (kind === 'spring') {
     const outcome = baseOutcome('spring', save.step, chapter)
@@ -739,6 +901,7 @@ export function resolveEncounter(save: SaveV2, now: number, opts: ResolveOpts): 
     return finish(save, chapter, outcome)
   }
   if (kind === 'trainer') return doTrainer(save, chapter, now, opts)
+  if (kind === 'guardian' && chapter.foyer) return enterCouncil(save, chapter, now, opts)
   if (kind === 'guardian') return doGuardian(save, chapter, now, opts, false)
   return doWild(save, chapter, now, opts)
 }
@@ -842,9 +1005,10 @@ export function sendOut(save: SaveV2, uid: string): string | null {
 
 export function challengeGuardian(save: SaveV2): string | null {
   const chapter = chapterById(save.region, save.chapter)
-  if (hasBadge(save, chapter.guardian.badge)) return line(save, 'err.badge')
+  const badge = gateBadge(save.region, chapter)
+  if (badge && hasBadge(save, badge)) return line(save, 'err.badge')
+  clearGuard(save)
   save.challengeNow = true
-  save.loopsUntilRetry = 0
   save.hold = false
   return null
 }

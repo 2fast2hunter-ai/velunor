@@ -28,7 +28,7 @@ describe('chapters 4 to 8', () => {
       expect(chapter.levelMax).toBe(formula.levelMax)
       expect(chapter.cap).toBe(formula.cap)
       expect(chapter.guardian.gold).toBe(formula.gold)
-      expect(chapter.guardian.team.map((mon) => mon.level)).toEqual([6 * n + 3, 6 * n + 4, 6 * n + 6])
+      expect(chapter.guardian.team.map((mon) => mon.level)).toEqual([6 * n + 1, 6 * n + 2, 6 * n + 4])
       expect(['wiese', 'bach', 'wald']).toContain(chapter.scene)
       expect(chapter.tint).toBe(tints[n - 4])
       const spawns = [...chapter.day, ...chapter.night]
@@ -73,33 +73,36 @@ describe('chapters 4 to 8', () => {
 describe('Hoher Rat', () => {
   it('lines up five fights with the published caps', () => {
     const council = councilChapter().council
-    expect(council?.members.map((member) => member.cap)).toEqual([55, 58, 61, 64, 68])
+    expect(council?.members.map((member) => member.cap)).toEqual([60, 60, 60, 60, 60])
     expect(council?.rewardGold).toBe(25000)
     expect(council?.members[4].epithet).toBe('Großwächter')
     expect(chapterCapNow(beginAdventure('Ada', 'A', 'm01', 1), chapterById(1, 4))).toBe(30)
     const save = beginAdventure('Ada', 'A', 'm01', 1)
-    save.chapter = 9
+    save.chapter = councilChapter().id
     save.step = 1
-    expect(chapterCapNow(save, councilChapter())).toBe(55)
+    expect(chapterCapNow(save, councilChapter())).toBe(60)
     save.step = 5
-    expect(chapterCapNow(save, councilChapter())).toBe(68)
+    expect(chapterCapNow(save, councilChapter())).toBe(60)
   })
 
-  it('sends a loss back to Rat 1', () => {
+  it('returns a council loss to the court and keeps beaten members', () => {
     const save = beginAdventure('Ada', 'A', 'm01', 1)
-    save.chapter = 9
+    save.chapter = councilChapter().id
     save.step = 4
+    save.councilBeaten = ['rat1', 'rat2', 'rat3']
     save.mons[save.team[0]].lvl = 1
     save.mons[save.team[0]].hp = 1
     const outcome = resolveEncounter(save, 1_000, { offline: false, trace: false })
     expect(outcome.win).toBe(false)
+    expect(save.chapter).toBe(9)
     expect(save.step).toBe(1)
+    expect(save.councilBeaten).toEqual(['rat1', 'rat2', 'rat3'])
     expect(save.badges).not.toContain('Ratsiegel')
   })
 
   it('pays half gold on a repeat and 25000 G once the seal is new', () => {
     const save = beginAdventure('Ada', 'A', 'm01', 1)
-    save.chapter = 9
+    save.chapter = councilChapter().id
     save.step = 1
     save.gold = 0
     expect(recordCouncilWin(save, 1, true).gold).toBe(4000)

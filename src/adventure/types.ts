@@ -79,6 +79,12 @@ export interface SaveV2 {
   /** Arrivals at step 20 still required before the guardian is fought again. */
   loopsUntilRetry: number
   challengeNow: boolean
+  /** Strongest team level at the last warden or council loss. 0 means the gate is open. */
+  guardMark: number
+  /** Wild and trainer wins since that loss. */
+  guardWins: number
+  /** 1 once the Vorhof layout has been applied to this save. */
+  layout: number
   /** Cleared chapter with looping switched off. The path waits. */
   hold: boolean
   log: LogLine[]

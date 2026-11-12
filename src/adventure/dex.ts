@@ -1,5 +1,6 @@
 import { monsters, species } from '../data'
-import { chapterById, regionById, regions, type ChapterDef } from './route'
+import { MAX_LEVEL } from './const'
+import { councilOf, regionById, regions, type ChapterDef } from './route'
 import type { SaveV2 } from './types'
 import { weatherName } from './weather'
 
@@ -113,14 +114,23 @@ export function listCodex(save: SaveV2, filter: DexFilter): typeof monsters {
 }
 
 export function chapterCapNow(save: SaveV2, chapter: ChapterDef): number {
-  if (!chapter.council) return chapter.cap
-  const index = Math.min(chapter.council.members.length - 1, Math.max(0, save.step - 1))
-  return chapter.council.members[index].cap
+  let cap = chapter.cap
+  if (!chapter.special) {
+    for (const region of regions) {
+      const home = region.chapters.find((item) => item.id === chapter.id && item.name === chapter.name)
+      if (!home) continue
+      const eighth = region.chapters.find((item) => item.id === 8)
+      const raised = chapter.foyer || chapter.council || chapter.id >= 8
+      if (eighth && raised && save.badges.includes(eighth.guardian.badge)) cap = Math.max(cap, eighth.cap + 6)
+      break
+    }
+  }
+  return Math.min(cap, MAX_LEVEL)
 }
 
-export function councilChapter(): ChapterDef {
-  const found = chapterById(1, 9)
-  if (!found.council) throw new Error('Hoher Rat fehlt')
+export function councilChapter(regionId = 1): ChapterDef {
+  const found = councilOf(regionId)
+  if (!found?.council) throw new Error('Hoher Rat fehlt')
   return found
 }
 

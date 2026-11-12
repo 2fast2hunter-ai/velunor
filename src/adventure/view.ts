@@ -14,7 +14,7 @@ import { baseLine, dexPlaces, dexStatus, dexStatusLabel, listCodex, regionProgre
 import { goalName, goalTitle, rarityLabel, t, typeLabel, weatherLabel, whenLabel, type Lang } from './i18n'
 import { exportCode } from './save'
 import { fightsHere } from './origin'
-import { chapterById, placeLabel, regionById, regions, routeOf, type NodeKind } from './route'
+import { chapterById, gateBadge, placeLabel, regionById, regions, routeOf, type NodeKind } from './route'
 import { chapterUnlocked, dexCaughtCount, hereSightings, rarityName } from './sim'
 import { equippedFrame, equippedTitle, GOALS } from './achievements'
 import { HORT_PRICES, hortOffer } from './hort'
@@ -192,7 +192,7 @@ function battle(save: SaveV2, now: number): string {
       <div class="speed">
         ${([1, 2, 3] as const).map((speed) => `<button data-act="speed" data-speed="${speed}" class="${save.settings.speed === speed ? 'on' : ''}">×${speed}</button>`).join('')}
       </div>
-      ${save.badges.includes(chapter.guardian.badge) ? '' : `<button class="primary" data-act="challenge">${tr(save, chapter.council ? 'battle.resume' : 'battle.challenge')}</button>`}
+      ${gateBadge(save.region, chapter) && save.badges.includes(gateBadge(save.region, chapter)) ? '' : `<button class="primary" data-act="challenge">${tr(save, chapter.council || chapter.foyer ? 'battle.resume' : 'battle.challenge')}</button>`}
     </div>
   </div>`
 }

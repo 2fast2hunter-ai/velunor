@@ -1,4 +1,5 @@
 import { species } from '../data'
+import { MAX_LEVEL } from './const'
 import type { TypeId } from '../types'
 import type { OwnedMon } from './types'
 
@@ -83,7 +84,8 @@ export function addExp(
   cap: number,
   levelBudget: number | null
 ): { gained: number; levels: number } {
-  if (mon.lvl >= cap) {
+  const limit = Math.min(cap, MAX_LEVEL)
+  if (mon.lvl >= limit) {
     mon.exp = 0
     return { gained: 0, levels: 0 }
   }
@@ -92,7 +94,7 @@ export function addExp(
   const start = left
   let levels = 0
   const maxLevels = levelBudget === null ? Number.POSITIVE_INFINITY : levelBudget
-  while (left > 0 && mon.lvl < cap && levels < maxLevels) {
+  while (left > 0 && mon.lvl < limit && levels < maxLevels) {
     const need = expToNext(mon.lvl) - mon.exp
     if (left >= need) {
       left -= need
@@ -107,7 +109,7 @@ export function addExp(
       left = 0
     }
   }
-  if (mon.lvl >= cap) mon.exp = 0
+  if (mon.lvl >= limit) mon.exp = 0
   return { gained: start - left, levels }
 }
 
