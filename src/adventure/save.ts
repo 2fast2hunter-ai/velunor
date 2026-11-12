@@ -54,7 +54,11 @@ export function blankSave(now: number): SaveV2 {
     councilBeaten: [],
     regionsOpen: [1],
     bag: emptyBag(),
-    activeFruits: []
+    activeFruits: [],
+    hortSlots: 1,
+    hort: [],
+    eggs: [],
+    lastBreedAt: now
   }
 }
 
@@ -239,6 +243,17 @@ export function normalize(save: SaveV2, now: number): SaveV2 {
   const fruits = Array.isArray(save.activeFruits) ? save.activeFruits : []
   save.activeFruits = fruits.filter((fruit) => fruit && bag.fruits[fruit.id] != null && Number(fruit.until) > 0)
     .map((fruit) => ({ id: fruit.id, until: Math.floor(Number(fruit.until)) }))
+  const slots = Math.floor(Number(save.hortSlots))
+  save.hortSlots = slots >= 1 && slots <= 4 ? slots : 1
+  save.hort = (Array.isArray(save.hort) ? save.hort : []).filter((uid) => save.mons[uid] && !save.team.includes(uid))
+  save.pc = save.pc.filter((uid) => !save.hort.includes(uid))
+  if (save.hort.length > save.hortSlots) {
+    save.pc.unshift(...save.hort.slice(save.hortSlots))
+    save.hort = save.hort.slice(0, save.hortSlots)
+  }
+  save.eggs = (Array.isArray(save.eggs) ? save.eggs : []).filter((egg) => egg && typeof egg.species === 'string' && Number(egg.readyAt) > 0)
+    .map((egg) => ({ species: egg.species, shiny: Boolean(egg.shiny), readyAt: Math.floor(Number(egg.readyAt)) }))
+  if (!Number.isFinite(save.lastBreedAt) || save.lastBreedAt <= 0) save.lastBreedAt = save.lastSeenAt || now
   return save
 }
 

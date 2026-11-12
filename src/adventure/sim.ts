@@ -32,6 +32,7 @@ import {
 } from './route'
 import { chapterCapNow } from './dex'
 import { rollShiny, shinyChance, teamBlocksShiny } from './shiny'
+import { advanceHort, HORT_EP_RATE } from './hort'
 import { applyFruitWeights, catchMods, combatExpFactor, fruitActive, fruitDef, grantGold, rollFindFruit } from './shop'
 import { makeMon, takeId } from './save'
 import { addExp, battleLevel, isAlive, monStats, realHp, speciesExp } from './stats'
@@ -166,6 +167,15 @@ export function awardCombatExp(
     spendBudget(opts, uid, gained.levels)
     noteLevel(opts.summary, uid, mon, before)
     if (!opts.offline && gained.levels > 0) log(save, now, `${species(mon.species).name} erreicht Level ${mon.lvl}.`, false)
+  }
+  const hortShare = base * HORT_EP_RATE * combatExpFactor(save, now) * (opts.offline ? OFFLINE_EXP_FACTOR : 1)
+  for (const uid of save.hort ?? []) {
+    const mon = save.mons[uid]
+    if (!mon) continue
+    const before = mon.lvl
+    const gained = addExp(mon, hortShare, cap, budget(opts, uid))
+    spendBudget(opts, uid, gained.levels)
+    noteLevel(opts.summary, uid, mon, before)
   }
 }
 
@@ -651,6 +661,7 @@ export function resolveEncounter(save: SaveV2, now: number, opts: ResolveOpts): 
   if (opts.summary) opts.summary.encounters += 1
   const chapter = chapterById(save.region, save.chapter)
   const quiet = opts.offline
+  advanceHort(save, now, rngOf(save))
   if (!livingTeam(save).length && Object.keys(save.mons).length) {
     const outcome = baseOutcome('spring', save.step, chapter)
     outcome.wiped = true

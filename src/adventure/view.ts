@@ -13,6 +13,7 @@ import {
 import { baseLine, dexPlaces, dexStatus, dexStatusLabel, listCodex, regionProgress, speciesNumber, type DexFilter } from './dex'
 import { chapterById, placeLabel, regionById, routeOf, type NodeKind } from './route'
 import { dexCaughtCount, hereSightings, rarityName } from './sim'
+import { HORT_PRICES, hortOffer } from './hort'
 import { CRYSTALS, FRUITS, crystalUnlocked, fruitDef, fruitMinutes, sellValue, wappenCount } from './shop'
 import { weatherForecast, weatherName, type WeatherId } from './weather'
 import { expToNext, isAlive, monStats, realHp } from './stats'
@@ -399,6 +400,41 @@ function shop(save: SaveV2, now: number): string {
   </div>`
 }
 
+function hortView(save: SaveV2, now: number, selected: string | null): string {
+  const offer = hortOffer(save)
+  const residents = save.hort.map((uid) => {
+    const mon = save.mons[uid]
+    const sp = species(mon.species)
+    return `<button class="mon-card ${selected === uid ? 'on' : ''}" data-act="select" data-uid="${uid}">
+      <img src="${monsterArt(sp.id)}" alt=""/>
+      <div>${esc(sp.name)}${mon.shiny ? ' · Schimmer' : ''}</div>
+      <div class="muted">Lv ${mon.lvl} · ${esc(typeName(sp.type))}</div>
+    </button>`
+  }).join('')
+  const eggs = save.eggs.map((egg) => {
+    const left = Math.max(0, egg.readyAt - now)
+    const hours = Math.floor(left / 3600000)
+    const mins = Math.ceil((left % 3600000) / 60000)
+    return `<div class="fruit-row"><b>${esc(species(egg.species).name)}</b><span>${left <= 0 ? 'schlüpft' : `${hours} h ${mins} min`}</span></div>`
+  }).join('')
+  const buy = offer
+    ? `<button class="primary" data-act="buy-hort" ${offer.locked ? 'disabled' : ''}>Platz ${offer.slot} · ${offer.price.toLocaleString('de-DE')} G${offer.locked ? ` · ${esc(offer.locked)}` : ''}</button>`
+    : '<p class="muted">Alle vier Plätze sind offen.</p>'
+  return `<div class="card panel">
+    <h2>Hort</h2>
+    <p class="muted">Platz 1 ist frei. Weitere Plätze kosten ${HORT_PRICES[1].toLocaleString('de-DE')} G, ${HORT_PRICES[2].toLocaleString('de-DE')} G nach dem Hohen Rat 1 und ${HORT_PRICES[3].toLocaleString('de-DE')} G nach dem Hohen Rat 2. Monster im Hort sammeln Art-EP. Zwei vom selben Typ können alle 2 Stunden ein Ei legen. Das Glücksrad folgt später.</p>
+    <p>Offene Plätze: ${save.hortSlots} · Eier ${save.eggs.length}/${save.hortSlots}</p>
+    ${buy}
+    <div class="row-actions">
+      <button data-act="to-hort">In den Hort</button>
+      <button data-act="from-hort">In den PC</button>
+    </div>
+    <div class="grid">${residents || '<div class="muted">Der Hort ist leer.</div>'}</div>
+    <h2>Eier</h2>
+    ${eggs || '<p class="muted">Kein Ei.</p>'}
+  </div>`
+}
+
 function placeholder(title: string, text: string): string {
   return `<div class="card panel"><h2>${esc(title)}</h2><p>${esc(text)}</p></div>`
 }
@@ -427,6 +463,7 @@ function guide(): string {
     <p>Der Kodex zeigt alle 100 Arten: besessen, nicht mehr besessen, gesichtet oder fehlend, mit Fundort und Bedingung.</p>
     <p>Das Wetter wechselt jede Stunde und ist für alle gleich. Manche Arten zeigen sich nur dann, mit einem kleinen Anteil. Ein Schimmer ist selten und stärker. Pro Art steht höchstens einer im Team.</p>
     <p>Im Laden gibt es EP-Kristalle und Früchte. Kristalle gelten ab einer Zahl von Wappen. Früchte halten eine Stunde, auch wenn du weg bist. Auf einem Fund liegt manchmal eine Frucht.</p>
+    <p>Im Hort sammeln Monster Art-EP. Zwei vom selben Typ können ein Ei legen. Das Junge kommt auf Level 1 in den PC.</p>
     <p>Bis zu 8 Stunden Abwesenheit werden nachgerechnet. Der Begleiter bekommt mehr Kampf-EP.</p>
   </div>`
 }
@@ -436,7 +473,7 @@ function center(save: SaveV2, screen: Screen, now: number, pc: PcQuery, dex: Cod
   if (screen === 'progress') return progress(save)
   if (screen === 'team') return team(save, pc, selected)
   if (screen === 'codex') return codex(save, dex)
-  if (screen === 'activities') return placeholder('Aktivitäten', 'Hort und Glücksrad folgen in einem späteren Schritt.')
+  if (screen === 'activities') return hortView(save, now, selected)
   if (screen === 'shop') return shop(save, now)
   if (screen === 'achievements') return placeholder('Erfolge', 'Die Erfolgsliste folgt in einem späteren Schritt.')
   if (screen === 'options') return options(save, debug)
