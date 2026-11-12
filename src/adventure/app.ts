@@ -17,6 +17,7 @@ import {
   type Speed
 } from './const'
 import { beginAdventure, loadAdventure, writeSave } from './save'
+import { buyHortSlot, moveFromHort, moveToHort } from './hort'
 import { buyCrystal, buyFruit, sellCrystal, sellFruit, useCrystal, useFruit } from './shop'
 import { chapterCapNow } from './dex'
 import { chapterById } from './route'
@@ -448,6 +449,28 @@ function onClick(event: Event): void {
       reason = useCrystal(save, id as 's', uid, chapterCapNow(save, chapterById(save.region, save.chapter)))
     }
     save.log.push({ t: Date.now(), text: reason ?? 'Erledigt.' })
+    if (save.log.length > 50) save.log.splice(0, save.log.length - 50)
+    try { writeSave(localStorage, save) } catch { /* ignore */ }
+    render()
+    return
+  }
+  if (act === 'to-hort' && selected) {
+    const reason = moveToHort(save, selected)
+    save.log.push({ t: Date.now(), text: reason ?? 'Im Hort.' })
+    if (save.log.length > 50) save.log.splice(0, save.log.length - 50)
+    render()
+    return
+  }
+  if (act === 'from-hort' && selected) {
+    const reason = moveFromHort(save, selected)
+    save.log.push({ t: Date.now(), text: reason ?? 'Im PC.' })
+    if (save.log.length > 50) save.log.splice(0, save.log.length - 50)
+    render()
+    return
+  }
+  if (act === 'buy-hort') {
+    const reason = buyHortSlot(save)
+    save.log.push({ t: Date.now(), text: reason ?? 'Ein Hortplatz ist offen.' })
     if (save.log.length > 50) save.log.splice(0, save.log.length - 50)
     try { writeSave(localStorage, save) } catch { /* ignore */ }
     render()

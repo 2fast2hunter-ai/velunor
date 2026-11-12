@@ -75,6 +75,18 @@ export interface SaveV2 {
   regionsOpen: number[]
   bag: BagState
   activeFruits: ActiveFruit[]
+  /** Unlocked hort places, 1 to 4. The same number of eggs can incubate. */
+  hortSlots: number
+  hort: string[]
+  eggs: HortEgg[]
+  /** Last time a two-hour breeding check was applied. */
+  lastBreedAt: number
+}
+
+export interface HortEgg {
+  species: string
+  shiny: boolean
+  readyAt: number
 }
 
 export type CrystalId = 's' | 'm' | 'l' | 'xl'

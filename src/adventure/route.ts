@@ -195,7 +195,11 @@ export function findGold(chapterId: number): number {
 
 export function placeLabel(where: string): string {
   const match = /^r(\d+)c(\d+)$/.exec(where)
-  if (!match) return where === 'alt' ? 'Früherer Speicher' : 'Grünmark'
+  if (!match) {
+    if (where === 'alt') return 'Früherer Speicher'
+    if (where === 'hort') return 'Hort'
+    return 'Grünmark'
+  }
   const region = regionById(Number(match[1]))
   const chapter = chapterById(Number(match[1]), Number(match[2]))
   return `${region.name} · ${chapter.name}`
