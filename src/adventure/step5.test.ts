@@ -31,7 +31,7 @@ describe('hort places', () => {
     save.gold = 20_000
     expect(buyHortSlot(save)).toBeNull()
     expect(save.hortSlots).toBe(2)
-    expect(save.gold).toBe(0)
+    expect(save.gold).toBe(1500)
     save.gold = 120_000
     expect(buyHortSlot(save)).toMatch(/Hohen Rat 1/)
     save.badges.push('Ratsiegel')

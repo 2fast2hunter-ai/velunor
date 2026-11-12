@@ -1,3 +1,4 @@
+import { syncAchievements } from './achievements'
 import { species } from '../data'
 import { makeMon, takeId } from './save'
 import { rollShiny, SHINY_HORT_RATE } from './shiny'
@@ -28,6 +29,7 @@ export function buyHortSlot(save: SaveV2): string | null {
   if (save.gold < offer.price) return 'Zu wenig Gold.'
   save.gold -= offer.price
   save.hortSlots += 1
+  syncAchievements(save)
   return null
 }
 
@@ -44,6 +46,7 @@ export function moveToHort(save: SaveV2, uid: string): string | null {
     if (save.active === uid) save.active = save.team[0] ?? null
   } else save.pc = save.pc.filter((id) => id !== uid)
   save.hort.push(uid)
+  syncAchievements(save)
   return null
 }
 
@@ -82,6 +85,8 @@ function hatch(save: SaveV2, now: number): void {
     dex.seen += 1
     dex.caught += 1
     save.dex[egg.species] = dex
+    save.stats.eggs += 1
+    if (egg.shiny) save.stats.shinies += 1
     save.log.push({ t: now, text: `${species(egg.species).name} schlüpft${egg.shiny ? ' als Schimmer' : ''}.` })
   }
   if (save.log.length > 50) save.log.splice(0, save.log.length - 50)

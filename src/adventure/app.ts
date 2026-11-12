@@ -17,6 +17,7 @@ import {
   type Speed
 } from './const'
 import { beginAdventure, loadAdventure, writeSave } from './save'
+import { equipFrame, equipTitle } from './achievements'
 import { buyHortSlot, moveFromHort, moveToHort } from './hort'
 import { buyCrystal, buyFruit, sellCrystal, sellFruit, useCrystal, useFruit } from './shop'
 import { chapterCapNow } from './dex'
@@ -465,6 +466,16 @@ function onClick(event: Event): void {
     const reason = moveFromHort(save, selected)
     save.log.push({ t: Date.now(), text: reason ?? 'Im PC.' })
     if (save.log.length > 50) save.log.splice(0, save.log.length - 50)
+    render()
+    return
+  }
+  if (act === 'equip-title') {
+    equipTitle(save, node.getAttribute('data-id') ?? '')
+    render()
+    return
+  }
+  if (act === 'equip-frame') {
+    equipFrame(save, node.getAttribute('data-id') ?? '')
     render()
     return
   }
