@@ -1,4 +1,5 @@
 import { syncAchievements } from './achievements'
+import { t } from './i18n'
 import { species } from '../data'
 import { makeMon, takeId } from './save'
 import { rollShiny, SHINY_HORT_RATE } from './shiny'
@@ -17,16 +18,20 @@ export function hortOffer(save: SaveV2): { slot: number; price: number; locked: 
   if (save.hortSlots >= 4) return null
   const slot = save.hortSlots + 1
   const price = HORT_PRICES[slot - 1]
-  if (slot === 3 && !save.badges.includes('Ratsiegel')) return { slot, price, locked: 'nach dem Hohen Rat 1' }
-  if (slot === 4 && !save.badges.includes(RAT_2_BADGE)) return { slot, price, locked: 'nach dem Hohen Rat 2' }
+  if (slot === 3 && !save.badges.includes('Ratsiegel')) return { slot, price, locked: 'err.hort1' }
+  if (slot === 4 && !save.badges.includes(RAT_2_BADGE)) return { slot, price, locked: 'err.hort2' }
   return { slot, price, locked: null }
+}
+
+function say(save: SaveV2, key: string, vars?: Record<string, string | number>): string {
+  return t(save.settings?.lang, key, vars)
 }
 
 export function buyHortSlot(save: SaveV2): string | null {
   const offer = hortOffer(save)
-  if (!offer) return 'Alle Hortplätze sind offen.'
-  if (offer.locked) return `Platz ${offer.slot} öffnet ${offer.locked}.`
-  if (save.gold < offer.price) return 'Zu wenig Gold.'
+  if (!offer) return say(save, 'err.hortAll')
+  if (offer.locked) return say(save, 'err.hortLock', { slot: offer.slot, reason: say(save, offer.locked) })
+  if (save.gold < offer.price) return say(save, 'err.gold')
   save.gold -= offer.price
   save.hortSlots += 1
   syncAchievements(save)
@@ -34,12 +39,12 @@ export function buyHortSlot(save: SaveV2): string | null {
 }
 
 export function moveToHort(save: SaveV2, uid: string): string | null {
-  if (!save.mons[uid]) return 'Dieses Monster gibt es nicht.'
-  if (save.hort.includes(uid)) return 'Liegt schon im Hort.'
-  if (save.hort.length >= save.hortSlots) return 'Der Hort ist voll.'
+  if (!save.mons[uid]) return say(save, 'err.noMon')
+  if (save.hort.includes(uid)) return say(save, 'err.hortAlready')
+  if (save.hort.length >= save.hortSlots) return say(save, 'err.hortFull')
   const inTeam = save.team.includes(uid)
-  if (!inTeam && !save.pc.includes(uid)) return 'Das Monster ist nicht greifbar.'
-  if (inTeam && save.team.length <= 1) return 'Mindestens ein Monster bleibt im Team.'
+  if (!inTeam && !save.pc.includes(uid)) return say(save, 'err.hortReach')
+  if (inTeam && save.team.length <= 1) return say(save, 'err.keepOne')
   if (inTeam) {
     save.team = save.team.filter((id) => id !== uid)
     if (save.buddy === uid) save.buddy = null
@@ -51,7 +56,7 @@ export function moveToHort(save: SaveV2, uid: string): string | null {
 }
 
 export function moveFromHort(save: SaveV2, uid: string): string | null {
-  if (!save.hort.includes(uid)) return 'Nicht im Hort.'
+  if (!save.hort.includes(uid)) return say(save, 'err.notHort')
   save.hort = save.hort.filter((id) => id !== uid)
   save.pc.unshift(uid)
   return null
@@ -87,7 +92,7 @@ function hatch(save: SaveV2, now: number): void {
     save.dex[egg.species] = dex
     save.stats.eggs += 1
     if (egg.shiny) save.stats.shinies += 1
-    save.log.push({ t: now, text: `${species(egg.species).name} schlüpft${egg.shiny ? ' als Schimmer' : ''}.` })
+    save.log.push({ t: now, text: t(save.settings?.lang, 'say.hatch', { name: species(egg.species).name, shiny: egg.shiny ? t(save.settings?.lang, 'say.hatchShiny') : '' }) })
   }
   if (save.log.length > 50) save.log.splice(0, save.log.length - 50)
 }

@@ -41,7 +41,7 @@ export function blankSave(now: number): SaveV2 {
     buddy: null,
     mons: {},
     dex: {},
-    settings: { speed: 1, autoSwitch: true, catchCard: true },
+    settings: { speed: 1, autoSwitch: true, catchCard: true, shake: true, flashes: true, reduceMotion: false, powerSave: 0, lang: 'de' },
     stats: { wins: 0, catches: 0, dupes: 0, eggs: 0, shinies: 0, fruitsUsed: 0, crystalsUsed: 0 },
     rng: freshSeed(),
     nextId: 1,
@@ -62,7 +62,8 @@ export function blankSave(now: number): SaveV2 {
     lastBreedAt: now,
     claimed: [],
     equippedTitle: null,
-    equippedFrame: null
+    equippedFrame: null,
+    pendingAwaken: []
   }
 }
 
@@ -207,10 +208,16 @@ export function normalize(save: SaveV2, now: number): SaveV2 {
   if (save.buddy && !save.team.includes(save.buddy)) save.buddy = null
   save.dex = save.dex ?? {}
   const speed = save.settings?.speed
+  const power = save.settings?.powerSave
   save.settings = {
     speed: speed === 2 || speed === 3 ? speed : 1,
     autoSwitch: save.settings?.autoSwitch !== false,
-    catchCard: save.settings?.catchCard !== false
+    catchCard: save.settings?.catchCard !== false,
+    shake: save.settings?.shake !== false,
+    flashes: save.settings?.flashes !== false,
+    reduceMotion: save.settings?.reduceMotion === true,
+    powerSave: power === 2 || power === 5 ? power : 0,
+    lang: save.settings?.lang === 'en' ? 'en' : 'de'
   }
   const shinyHeld = Object.values(save.mons).filter((mon) => mon.shiny).length
   save.stats = {
@@ -281,6 +288,43 @@ export function normalize(save: SaveV2, now: number): SaveV2 {
   save.claimed = Array.isArray(save.claimed) ? save.claimed.filter((id) => typeof id === 'string') : []
   save.equippedTitle = typeof save.equippedTitle === 'string' && save.claimed.includes(save.equippedTitle) ? save.equippedTitle : null
   save.equippedFrame = typeof save.equippedFrame === 'string' && save.claimed.includes(save.equippedFrame) ? save.equippedFrame : null
+  save.pendingAwaken = Array.isArray(save.pendingAwaken)
+    ? save.pendingAwaken.filter((row) => row && save.mons[row.uid] && (row.level === 25 || row.level === 50))
+    : []
+  return save
+}
+
+const CODE_PREFIX = 'VELUNOR1.'
+
+export function exportCode(save: SaveV2): string {
+  const bytes = new TextEncoder().encode(JSON.stringify(save))
+  let binary = ''
+  for (const byte of bytes) binary += String.fromCharCode(byte)
+  return CODE_PREFIX + btoa(binary)
+}
+
+export function importCode(code: string, now: number): SaveV2 | null {
+  const trimmed = code.trim().replace(/\s+/g, '')
+  if (!trimmed.startsWith(CODE_PREFIX)) return null
+  let json = ''
+  try {
+    const binary = atob(trimmed.slice(CODE_PREFIX.length))
+    const bytes = Uint8Array.from(binary, (char) => char.charCodeAt(0))
+    json = new TextDecoder().decode(bytes)
+  } catch {
+    return null
+  }
+  let data: unknown
+  try {
+    data = JSON.parse(json)
+  } catch {
+    return null
+  }
+  if (!data || typeof data !== 'object') return null
+  const record = data as Partial<SaveV2>
+  if (record.v !== 2 || !record.mons || typeof record.mons !== 'object') return null
+  const save = normalize(record as SaveV2, now)
+  if (!save.started || !Object.keys(save.mons).length) return null
   return save
 }
 

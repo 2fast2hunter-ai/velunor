@@ -1,7 +1,8 @@
 import { syncAchievements } from './achievements'
+import { t } from './i18n'
+import { addExp, crossedAwaken } from './stats'
 import { species } from '../data'
 import type { Spawn } from './route'
-import { addExp } from './stats'
 import type { CrystalId, FruitId, SaveV2 } from './types'
 
 export type { CrystalId, FruitId }
@@ -133,10 +134,14 @@ export function rollFindFruit(rng: () => number): FruitId | null {
   return FRUIT_IDS[Math.floor(rng() * FRUIT_IDS.length)]
 }
 
+function say(save: SaveV2, key: string, vars?: Record<string, string | number>): string {
+  return t(save.settings?.lang, key, vars)
+}
+
 export function buyCrystal(save: SaveV2, id: CrystalId): string | null {
   const item = crystalDef(id)
-  if (!crystalUnlocked(save, id)) return `Noch nicht frei. ${item.name} braucht ${item.wappen} Wappen.`
-  if (save.gold < item.price) return 'Zu wenig Gold.'
+  if (!crystalUnlocked(save, id)) return say(save, 'err.crystalLock', { name: item.name, n: item.wappen })
+  if (save.gold < item.price) return say(save, 'err.gold')
   save.gold -= item.price
   save.bag.crystals[id] += 1
   return null
@@ -144,21 +149,21 @@ export function buyCrystal(save: SaveV2, id: CrystalId): string | null {
 
 export function buyFruit(save: SaveV2, id: FruitId): string | null {
   const item = fruitDef(id)
-  if (save.gold < item.price) return 'Zu wenig Gold.'
+  if (save.gold < item.price) return say(save, 'err.gold')
   save.gold -= item.price
   save.bag.fruits[id] += 1
   return null
 }
 
 export function sellCrystal(save: SaveV2, id: CrystalId): string | null {
-  if (save.bag.crystals[id] <= 0) return 'Nichts zu verkaufen.'
+  if (save.bag.crystals[id] <= 0) return say(save, 'err.nothing')
   save.bag.crystals[id] -= 1
   save.gold += sellValue(crystalDef(id).price)
   return null
 }
 
 export function sellFruit(save: SaveV2, id: FruitId): string | null {
-  if (save.bag.fruits[id] <= 0) return 'Nichts zu verkaufen.'
+  if (save.bag.fruits[id] <= 0) return say(save, 'err.nothing')
   save.bag.fruits[id] -= 1
   save.gold += sellValue(fruitDef(id).price)
   return null
@@ -166,21 +171,24 @@ export function sellFruit(save: SaveV2, id: FruitId): string | null {
 
 export function useCrystal(save: SaveV2, id: CrystalId, uid: string, cap: number): string | null {
   const mon = save.mons[uid]
-  if (!mon) return 'Wähle ein Monster.'
-  if (save.bag.crystals[id] <= 0) return 'Kein Kristall in der Tasche.'
+  if (!mon) return say(save, 'err.pick')
+  if (save.bag.crystals[id] <= 0) return say(save, 'err.noCrystal')
   save.bag.crystals[id] -= 1
+  const before = mon.lvl
   const gained = addExp(mon, crystalDef(id).exp, cap, null)
   if (gained.gained <= 0) {
     save.bag.crystals[id] += 1
-    return 'Das Level-Cap lässt keine EP mehr zu.'
+    return say(save, 'err.cap')
   }
+  if (!save.pendingAwaken) save.pendingAwaken = []
+  for (const level of crossedAwaken(before, mon.lvl)) save.pendingAwaken.push({ uid, level })
   save.stats.crystalsUsed += 1
   syncAchievements(save)
   return null
 }
 
 export function useFruit(save: SaveV2, id: FruitId, now: number): string | null {
-  if (save.bag.fruits[id] <= 0) return 'Keine Frucht in der Tasche.'
+  if (save.bag.fruits[id] <= 0) return say(save, 'err.noFruit')
   save.bag.fruits[id] -= 1
   save.stats.fruitsUsed += 1
   const until = now + FRUIT_MS

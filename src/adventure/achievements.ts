@@ -1,4 +1,5 @@
 import { monsters, typeName, typesCfg } from '../data'
+import { t } from './i18n'
 import { regionRoster } from './dex'
 import type { SaveV2 } from './types'
 import type { TypeId } from '../types'
@@ -125,7 +126,7 @@ export function syncAchievements(save: SaveV2): string[] {
     save.claimed.push(goal.id)
     save.gold += goal.gold
     fresh.push(goal.id)
-    save.log.push({ t: Date.now(), text: `Erfolg: ${goal.name}. +${goal.gold.toLocaleString('de-DE')} G. Titel „${goal.title}“.` })
+    save.log.push({ t: Date.now(), text: t(save.settings?.lang, 'say.achieve', { name: goal.name, gold: goal.gold.toLocaleString(save.settings?.lang === 'en' ? 'en' : 'de-DE'), title: goal.title }) })
   }
   if (save.log.length > 50) save.log.splice(0, save.log.length - 50)
   return fresh

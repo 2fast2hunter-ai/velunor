@@ -1,4 +1,7 @@
 import type { Speed } from './const'
+import type { Lang } from './i18n'
+
+export type PowerSave = 0 | 2 | 5
 
 export interface OwnedMon {
   species: string
@@ -26,6 +29,11 @@ export interface AdventureSettings {
   speed: Speed
   autoSwitch: boolean
   catchCard: boolean
+  shake: boolean
+  flashes: boolean
+  reduceMotion: boolean
+  powerSave: PowerSave
+  lang: Lang
 }
 
 export interface AdventureStats {
@@ -90,6 +98,8 @@ export interface SaveV2 {
   claimed: string[]
   equippedTitle: string | null
   equippedFrame: string | null
+  /** Awakening sequences still waiting to be shown. */
+  pendingAwaken: { uid: string; level: 25 | 50 }[]
 }
 
 export interface HortEgg {
