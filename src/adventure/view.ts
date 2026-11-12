@@ -13,6 +13,7 @@ import {
 import { baseLine, dexPlaces, dexStatus, dexStatusLabel, listCodex, regionProgress, speciesNumber, type DexFilter } from './dex'
 import { chapterById, placeLabel, regionById, routeOf, type NodeKind } from './route'
 import { dexCaughtCount, hereSightings, rarityName } from './sim'
+import { CRYSTALS, FRUITS, crystalUnlocked, fruitDef, fruitMinutes, sellValue, wappenCount } from './shop'
 import { weatherForecast, weatherName, type WeatherId } from './weather'
 import { expToNext, isAlive, monStats, realHp } from './stats'
 import type { OfflineSummary } from './sim'
@@ -210,7 +211,17 @@ function sightings(save: SaveV2, now: number, open: boolean): string {
         <div class="forecast" aria-label="24 Stunden">${preview}</div>
         <div class="sight">${body || '<div class="muted">Hier gibt es keine Wildnis.</div>'}</div>` : `<div class="clock"><span class="wx">${weatherIcon(current.weather)}</span></div>`}
     </div>
+    ${fruitCard(save, now, open)}
   </aside>`
+}
+
+function fruitCard(save: SaveV2, now: number, open: boolean): string {
+  const active = save.activeFruits.filter((fruit) => fruit.until > now)
+  const rows = active.map((fruit) => `<div class="fruit-row"><b>${esc(fruitDef(fruit.id).name)}</b><span>${fruitMinutes(fruit.until, now)} min</span></div>`).join('')
+  return `<div class="card side-card">
+    <h2>Aktive Früchte</h2>
+    ${open ? (rows || '<p class="muted">Keine Frucht aktiv.</p>') : `<p class="muted">${active.length}</p>`}
+  </div>`
 }
 
 function progress(save: SaveV2): string {
@@ -353,6 +364,41 @@ function codex(save: SaveV2, filter: CodexQuery): string {
   </div>`
 }
 
+function shop(save: SaveV2, now: number): string {
+  const crests = wappenCount(save)
+  const mons = [...save.team, ...save.pc].map((uid) => {
+    const mon = save.mons[uid]
+    return `<option value="${uid}">${esc(species(mon.species).name)} Lv ${mon.lvl}</option>`
+  }).join('')
+  const crystals = CRYSTALS.map((item) => {
+    const open = crystalUnlocked(save, item.id)
+    return `<div class="shop-row">
+      <div><b>${esc(item.name)}</b><div class="muted">+${item.exp.toLocaleString('de-DE')} EP · ${item.price.toLocaleString('de-DE')} G${item.wappen ? ` · ab ${item.wappen} Wappen` : ''}</div></div>
+      <span>×${save.bag.crystals[item.id]}</span>
+      <button data-act="buy-crystal" data-id="${item.id}" ${open ? '' : 'disabled'}>Kaufen</button>
+      <button data-act="sell-crystal" data-id="${item.id}">Verkauf ${sellValue(item.price)} G</button>
+      <button data-act="use-crystal" data-id="${item.id}">Geben</button>
+    </div>`
+  }).join('')
+  const fruits = FRUITS.map((item) => `<div class="shop-row">
+      <div><b>${esc(item.name)}</b><div class="muted">${esc(item.effect)} · ${item.price.toLocaleString('de-DE')} G · 1 h</div></div>
+      <span>×${save.bag.fruits[item.id]}</span>
+      <button data-act="buy-fruit" data-id="${item.id}">Kaufen</button>
+      <button data-act="sell-fruit" data-id="${item.id}">Verkauf ${sellValue(item.price)} G</button>
+      <button data-act="use-fruit" data-id="${item.id}">Essen</button>
+    </div>`).join('')
+  return `<div class="card panel">
+    <h2>Laden und Tasche</h2>
+    <p class="muted">Wappen: ${crests}. Verkauf bringt 25 %. Eine gleiche Frucht setzt die Stunde zurück, sie verlängert sie nicht.</p>
+    <label>Kristall an <select id="crystal-target">${mons}</select></label>
+    <h2>EP-Kristalle</h2>
+    ${crystals}
+    <h2>Früchte</h2>
+    ${fruits}
+    <p class="muted">Stand ${new Date(now).toLocaleTimeString('de-DE', { hour: '2-digit', minute: '2-digit' })}</p>
+  </div>`
+}
+
 function placeholder(title: string, text: string): string {
   return `<div class="card panel"><h2>${esc(title)}</h2><p>${esc(text)}</p></div>`
 }
@@ -380,6 +426,7 @@ function guide(): string {
     <p>Der Wächter am Schritt 20 bringt ein Wappen. Mit „Kapitel wiederholen“ farmst du ein geschafftes Kapitel weiter. Nach Kapitel 8 wartet der Hohe Rat: vier Räte und der Großwächter direkt hintereinander. Das Ratsiegel öffnet Region 2, die später folgt.</p>
     <p>Der Kodex zeigt alle 100 Arten: besessen, nicht mehr besessen, gesichtet oder fehlend, mit Fundort und Bedingung.</p>
     <p>Das Wetter wechselt jede Stunde und ist für alle gleich. Manche Arten zeigen sich nur dann, mit einem kleinen Anteil. Ein Schimmer ist selten und stärker. Pro Art steht höchstens einer im Team.</p>
+    <p>Im Laden gibt es EP-Kristalle und Früchte. Kristalle gelten ab einer Zahl von Wappen. Früchte halten eine Stunde, auch wenn du weg bist. Auf einem Fund liegt manchmal eine Frucht.</p>
     <p>Bis zu 8 Stunden Abwesenheit werden nachgerechnet. Der Begleiter bekommt mehr Kampf-EP.</p>
   </div>`
 }
@@ -390,7 +437,7 @@ function center(save: SaveV2, screen: Screen, now: number, pc: PcQuery, dex: Cod
   if (screen === 'team') return team(save, pc, selected)
   if (screen === 'codex') return codex(save, dex)
   if (screen === 'activities') return placeholder('Aktivitäten', 'Hort und Glücksrad folgen in einem späteren Schritt.')
-  if (screen === 'shop') return placeholder('Laden', 'EP-Kristalle und Früchte folgen in einem späteren Schritt.')
+  if (screen === 'shop') return shop(save, now)
   if (screen === 'achievements') return placeholder('Erfolge', 'Die Erfolgsliste folgt in einem späteren Schritt.')
   if (screen === 'options') return options(save, debug)
   return guide()

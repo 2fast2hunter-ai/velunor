@@ -73,6 +73,21 @@ export interface SaveV2 {
   councilBeaten: string[]
   /** Region ids the player may see. Region 2 stays a placeholder. */
   regionsOpen: number[]
+  bag: BagState
+  activeFruits: ActiveFruit[]
+}
+
+export type CrystalId = 's' | 'm' | 'l' | 'xl'
+export type FruitId = 'fang' | 'goldfang' | 'spuer' | 'neugier' | 'glanz' | 'lern' | 'muenz'
+
+export interface BagState {
+  crystals: Record<CrystalId, number>
+  fruits: Record<FruitId, number>
+}
+
+export interface ActiveFruit {
+  id: FruitId
+  until: number
 }
 
 export interface StorageLike {
