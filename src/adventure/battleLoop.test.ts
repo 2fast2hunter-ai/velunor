@@ -1,5 +1,6 @@
 import { describe, expect, it } from 'vitest'
 import type { FightTrace } from './battle'
+import { attackDuration } from '../battle/typeFx'
 import { watchdogLimit } from './const'
 import { shotAt, shouldRecover } from './present'
 import { beginAdventure } from './save'
@@ -28,6 +29,7 @@ function trace(frames: { allyHp: number; foeHp: number; text: string }[]): Fight
 describe('battle loop guards', () => {
   it('scales the stall limit with tempo', () => {
     expect(watchdogLimit(1)).toBe(10_000)
+    expect(watchdogLimit(1)).toBeGreaterThan(attackDuration(380, 1) * 4)
     expect(watchdogLimit(2)).toBe(5_000)
     expect(watchdogLimit(3)).toBeCloseTo(10_000 * 930 / 2800, 5)
   })

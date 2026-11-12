@@ -85,6 +85,8 @@ export interface SaveV2 {
   guardWins: number
   /** 1 once the Vorhof layout has been applied to this save. */
   layout: number
+  /** 1 once the default screen shake has been turned off for this save. */
+  fxShake: number
   /** Failed-seal progress per species, in percentage points, at most 10. */
   sealPity: Record<string, number>
   /** Cleared chapter with looping switched off. The path waits. */

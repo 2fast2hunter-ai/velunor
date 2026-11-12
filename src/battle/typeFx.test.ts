@@ -2,8 +2,8 @@ import { describe, expect, it } from 'vitest'
 import typesJson from '../../data/types.json'
 import type { TypeId } from '../types'
 import { FxPool } from './fxPool'
-import { arcHeight, lungeOffset } from './stage'
-import { attackDuration, particleBudget, TYPE_FX, typeBase, typeFx } from './typeFx'
+import { arcHeight, koPose, lungeOffset } from './stage'
+import { attackDuration, LUNGE_BACK_MS, LUNGE_HOLD_MS, LUNGE_OUT_MS, LUNGE_PX, moveLabel, particleBudget, TYPE_FX, typeBase, typeFx } from './typeFx'
 
 const ACCENTS: Record<TypeId, string> = {
   fire: '#ffca28', water: '#e3f2fd', plant: '#c5e1a5', earth: '#d7ccc8', wind: '#ffffff',
@@ -36,41 +36,49 @@ describe('type effect table', () => {
     expect(typeFx('lightning').draw).toBe('bolt')
   })
 
-  it('keeps an attack inside 700 ms and at least 150 ms after the tempo split', () => {
-    expect(attackDuration(300, 1)).toBeLessThanOrEqual(700)
-    expect(attackDuration(300, 1)).toBeGreaterThanOrEqual(150)
-    expect(attackDuration(380, 3)).toBeGreaterThanOrEqual(150)
-    expect(attackDuration(0, 3)).toBe(150)
+  it('keeps an attack between 1000 and 1200 ms at ×1 and at least 300 ms after the tempo split', () => {
+    expect(attackDuration(300, 1)).toBeGreaterThanOrEqual(1000)
+    expect(attackDuration(300, 1)).toBeLessThanOrEqual(1200)
+    expect(attackDuration(120, 1)).toBeGreaterThanOrEqual(1000)
+    expect(attackDuration(380, 1)).toBeLessThanOrEqual(1200)
+    expect(attackDuration(380, 3)).toBeGreaterThanOrEqual(300)
+    expect(attackDuration(0, 3)).toBeGreaterThanOrEqual(300)
     expect(attackDuration(300, 2)).toBeLessThan(attackDuration(300, 1))
+    expect(moveLabel('fire')).toBe('Feuerstoß')
   })
 
   it('caps particles, halves them at tempo 3, and cuts them to 30 % when reduced', () => {
     const fire = typeFx('fire')
-    expect(particleBudget(fire, { crit: false, tempo: 1, reduced: false })).toBe(12)
-    expect(particleBudget(fire, { crit: true, tempo: 1, reduced: false })).toBe(16)
-    expect(particleBudget(fire, { crit: true, tempo: 3, reduced: false })).toBe(8)
-    expect(particleBudget(fire, { crit: false, tempo: 1, reduced: true })).toBe(4)
+    expect(particleBudget(fire, { crit: false, tempo: 1, reduced: false })).toBe(21)
+    expect(particleBudget(fire, { crit: true, tempo: 1, reduced: false })).toBe(28)
+    expect(particleBudget(fire, { crit: true, tempo: 3, reduced: false })).toBe(14)
+    expect(particleBudget(fire, { crit: false, tempo: 1, reduced: true })).toBe(6)
+    expect(particleBudget(fire, { crit: true, tempo: 1, reduced: false })).toBeLessThanOrEqual(96)
   })
 
-  it('returns the lunge and keeps the projectile arc flat', () => {
+  it('lunges out, holds, and returns, and a knockout tips over', () => {
     expect(lungeOffset(0)).toBe(0)
-    expect(lungeOffset(80)).toBe(12)
-    expect(lungeOffset(200)).toBe(0)
+    expect(lungeOffset(LUNGE_OUT_MS)).toBe(LUNGE_PX)
+    expect(lungeOffset(LUNGE_OUT_MS + LUNGE_HOLD_MS)).toBe(LUNGE_PX)
+    expect(lungeOffset(LUNGE_OUT_MS + LUNGE_HOLD_MS + LUNGE_BACK_MS)).toBe(0)
     expect(arcHeight(0)).toBe(0)
     expect(arcHeight(0.5)).toBeCloseTo(20)
     expect(arcHeight(1)).toBeCloseTo(0)
+    expect(koPose(1).opacity).toBe(0)
+    expect(koPose(1).rotate).toBeGreaterThanOrEqual(90)
+    expect(LUNGE_OUT_MS + LUNGE_HOLD_MS + LUNGE_BACK_MS).toBeGreaterThanOrEqual(1000)
   })
 
   it('reuses one pool across 500 fights', () => {
-    const pool = new FxPool(60)
+    const pool = new FxPool()
     for (let fight = 0; fight < 500; fight++) {
       pool.releaseAll()
-      expect(pool.acquire(fight % 2 === 0 ? 40 : 60)).toBeLessThanOrEqual(60)
+      expect(pool.acquire(fight % 2 === 0 ? 72 : 96)).toBeLessThanOrEqual(96)
       pool.step()
     }
     pool.releaseAll()
     expect(pool.live).toBe(0)
-    expect(pool.allocated).toBe(60)
-    expect(pool.highWater).toBeLessThanOrEqual(60)
+    expect(pool.allocated).toBe(96)
+    expect(pool.highWater).toBeLessThanOrEqual(96)
   })
 })
