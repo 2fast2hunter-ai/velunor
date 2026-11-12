@@ -11,10 +11,12 @@ export function regionDexComplete(save: SaveV2, regionId: number): boolean {
 }
 
 /** A finished regional codex doubles only wild shimmer, not the hort rate. */
-export function shinyChance(save: SaveV2, regionId: number, source: 'adventure' | 'hort' = 'adventure'): number {
+export function shinyChance(save: SaveV2, regionId: number, source: 'adventure' | 'hort' = 'adventure', glanz = false): number {
   if (source === 'hort') return SHINY_HORT_RATE
-  const base = SHINY_ADVENTURE_RATE
-  return regionDexComplete(save, regionId) ? base * 2 : base
+  let chance = SHINY_ADVENTURE_RATE
+  if (regionDexComplete(save, regionId)) chance *= 2
+  if (glanz) chance *= 2
+  return chance
 }
 
 export function rollShiny(rng: () => number, chance: number): boolean {

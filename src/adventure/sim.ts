@@ -32,6 +32,7 @@ import {
 } from './route'
 import { chapterCapNow } from './dex'
 import { rollShiny, shinyChance, teamBlocksShiny } from './shiny'
+import { applyFruitWeights, catchMods, combatExpFactor, fruitActive, fruitDef, grantGold, rollFindFruit } from './shop'
 import { makeMon, takeId } from './save'
 import { addExp, battleLevel, isAlive, monStats, realHp, speciesExp } from './stats'
 import type { OwnedMon, SaveV2 } from './types'
@@ -82,10 +83,10 @@ export function emptySummary(): OfflineSummary {
   return { encounters: 0, fights: 0, gold: 0, dupes: 0, catches: [], levels: [], badges: [] }
 }
 
-export function catchChance(rarity: number, foeLevel: number, fighterLevel: number): number {
+export function catchChance(rarity: number, foeLevel: number, fighterLevel: number, mult = 1, cap = CATCH_CAP): number {
   const base = CATCH_BASE[Math.max(0, Math.min(9, rarity))] ?? CATCH_BASE[0]
   const levelFactor = foeLevel <= fighterLevel ? 1 : 0.8
-  return Math.min(CATCH_CAP, base * levelFactor)
+  return Math.min(cap, base * levelFactor * mult)
 }
 
 export function hasBadge(save: SaveV2, badge: string): boolean {
@@ -158,6 +159,7 @@ export function awardCombatExp(
     if (!mon) continue
     let share = base * (uid === fighter ? 1 : BENCH_EXP)
     if (save.buddy === uid) share *= 1 + BUDDY_BONUS
+    share *= combatExpFactor(save, now)
     if (opts.offline) share *= OFFLINE_EXP_FACTOR
     const before = mon.lvl
     const gained = addExp(mon, share, cap, budget(opts, uid))
@@ -378,7 +380,7 @@ function runBouts(
   opts: ResolveOpts,
   now: number,
   goldFor: (wins: number) => number
-): { traces: FightTrace[]; wins: number; lastFighter: string | null; wiped: boolean } {
+): { traces: FightTrace[]; wins: number; lastFighter: string | null; wiped: boolean; gold: number } {
   const traces: FightTrace[] = []
   let wins = 0
   let lastFighter: string | null = null
@@ -386,37 +388,39 @@ function runBouts(
     const dex = save.dex[foe.species] ?? { seen: 0, caught: 0 }
     dex.seen += 1
     save.dex[foe.species] = dex
-    if (!livingTeam(save).length) return { traces, wins, lastFighter, wiped: true }
+    if (!livingTeam(save).length) return { traces, wins, lastFighter, wiped: true, gold: 0 }
     const fought = fightOne(save, chapter, foe.species, foe.level, opts, now, foe.shiny ?? false)
-    if (!fought) return { traces, wins, lastFighter, wiped: true }
+    if (!fought) return { traces, wins, lastFighter, wiped: true, gold: 0 }
     traces.push(fought.trace)
     lastFighter = fought.fighter
     if (!fought.trace.win) {
       const wiped = !livingTeam(save).length
-      return { traces, wins, lastFighter, wiped }
+      return { traces, wins, lastFighter, wiped, gold: 0 }
     }
     wins += 1
     if (fought.trace.allyKo) {
       const wiped = !livingTeam(save).length
-      if (wiped) return { traces, wins, lastFighter, wiped }
+      if (wiped) return { traces, wins, lastFighter, wiped, gold: 0 }
     }
   }
   const gold = goldFor(wins)
+  let paid = 0
   if (gold > 0 && wins === foes.length) {
-    save.gold += gold
-    if (opts.summary) opts.summary.gold += gold
+    paid = grantGold(save, gold, now)
+    if (opts.summary) opts.summary.gold += paid
   }
-  return { traces, wins, lastFighter, wiped: false }
+  return { traces, wins, lastFighter, wiped: false, gold: paid }
 }
 
 function doWild(save: SaveV2, chapter: ChapterDef, now: number, opts: ResolveOpts): EncounterOutcome {
   const quiet = opts.offline
   const outcome = baseOutcome('wild', save.step, chapter)
   const rng = rngOf(save)
-  const table = encounterTable(chapter, now)
+  const table = applyFruitWeights(encounterTable(chapter, now), save, now)
   const speciesId = pickWeighted(rng, table)
   const level = rollInt(rng, chapter.levelMin, chapter.levelMax)
-  const shiny = rollShiny(rng, shinyChance(save, save.region))
+  const glanz = fruitActive(save, 'glanz', now)
+  const shiny = rollShiny(rng, shinyChance(save, save.region, 'adventure', glanz))
   outcome.shiny = shiny
   const name = species(speciesId).name
   say(save, outcome, now, shiny ? `Ein Schimmer kreuzt den Weg: ${name} (Lv ${level}).` : `${name} (Lv ${level}) kreuzt den Weg.`, quiet)
@@ -436,12 +440,13 @@ function doWild(save: SaveV2, chapter: ChapterDef, now: number, opts: ResolveOpt
     advance(save, chapter)
     return finish(save, chapter, outcome)
   }
-  outcome.gold = 4 * level
+  outcome.gold = bouts.gold
   say(save, outcome, now, `Sieg. +${outcome.gold} G.`, quiet)
   if (trace.foeKo && bouts.lastFighter) {
     const fighter = save.mons[bouts.lastFighter]
     const rarity = species(speciesId).baseRarity
-    const chance = catchChance(rarity, level, fighter.lvl)
+    const mods = catchMods(save, now)
+    const chance = catchChance(rarity, level, fighter.lvl, mods.mult, mods.cap)
     const roll = rngOf(save)()
     const success = roll < chance
     const percent = Math.round(chance * 100)
@@ -468,7 +473,7 @@ function doTrainer(save: SaveV2, chapter: ChapterDef, now: number, opts: Resolve
   const count = trainerCount(chapter.id, save.step)
   const name = trainerName(chapter.id, save.step)
   const rng = rngOf(save)
-  const table = encounterTable(chapter, now)
+  const table = applyFruitWeights(encounterTable(chapter, now), save, now)
   const foes: { species: string; level: number }[] = []
   const used = new Set<string>()
   for (let i = 0; i < count; i++) {
@@ -538,17 +543,17 @@ function doGuardian(save: SaveV2, chapter: ChapterDef, now: number, opts: Resolv
     return finish(save, chapter, outcome)
   }
   save.badges.push(badge)
-  save.gold += guard.gold
+  const paidGuard = grantGold(save, guard.gold, now)
   save.loopsUntilRetry = 0
   healTeam(save)
   outcome.win = true
-  outcome.gold = guard.gold
+  outcome.gold = paidGuard
   outcome.badge = badge
   if (opts.summary) {
-    opts.summary.gold += guard.gold
+    opts.summary.gold += paidGuard
     opts.summary.badges.push(badge)
   }
-  say(save, outcome, now, `${badge} errungen. +${guard.gold} G. Das Team ist geheilt.`, quiet)
+  say(save, outcome, now, `${badge} errungen. +${paidGuard} G. Das Team ist geheilt.`, quiet)
   const next = findChapter(save.region, chapter.id + 1)
   if (next) say(save, outcome, now, `${next.name} ist offen.`, quiet)
   else say(save, outcome, now, 'Weitere Kapitel folgen später.', quiet)
@@ -577,9 +582,9 @@ export function recordCouncilWin(save: SaveV2, now: number, quiet: boolean): Enc
   const member = council.members[index]
   const pay = councilPurse(save, member.id, member.gold)
   if (!save.councilBeaten.includes(member.id)) save.councilBeaten.push(member.id)
-  save.gold += pay
-  outcome.gold = pay
-  say(save, outcome, now, `${member.epithet} ${member.name} weicht. +${pay} G.`, quiet)
+  const paid = grantGold(save, pay, now)
+  outcome.gold = paid
+  say(save, outcome, now, `${member.epithet} ${member.name} weicht. +${paid} G.`, quiet)
   if (index < council.members.length - 1) {
     save.step = index + 2
     say(save, outcome, now, `Als Nächstes: ${council.members[index + 1].epithet} ${council.members[index + 1].name}.`, quiet)
@@ -587,12 +592,12 @@ export function recordCouncilWin(save: SaveV2, now: number, quiet: boolean): Enc
   }
   const firstSeal = !hasBadge(save, chapter.guardian.badge)
   if (firstSeal) {
-    save.gold += council.rewardGold
-    outcome.gold += council.rewardGold
+    const bonus = grantGold(save, council.rewardGold, now)
+    outcome.gold += bonus
     save.badges.push(chapter.guardian.badge)
     outcome.badge = chapter.guardian.badge
     if (!save.regionsOpen.includes(council.unlocksRegion)) save.regionsOpen.push(council.unlocksRegion)
-    say(save, outcome, now, `Ratsiegel errungen. +${council.rewardGold} G. Region 2 ist sichtbar und folgt später.`, quiet)
+    say(save, outcome, now, `Ratsiegel errungen. +${bonus} G. Region 2 ist sichtbar und folgt später.`, quiet)
   }
   healTeam(save)
   outcome.win = true
@@ -669,11 +674,15 @@ export function resolveEncounter(save: SaveV2, now: number, opts: ResolveOpts): 
   }
   if (kind === 'find') {
     const outcome = baseOutcome('find', save.step, chapter)
-    const gold = findGold(chapter.id)
-    save.gold += gold
+    const gold = grantGold(save, findGold(chapter.id), now)
     outcome.gold = gold
     if (opts.summary) opts.summary.gold += gold
-    say(save, outcome, now, `Fund am Weg. +${gold} G.`, quiet)
+    const found = rollFindFruit(rngOf(save))
+    if (found) {
+      save.bag.fruits[found] += 1
+      const label = fruitDef(found).name
+      say(save, outcome, now, `Fund am Weg. +${gold} G und eine ${label}.`, quiet)
+    } else say(save, outcome, now, `Fund am Weg. +${gold} G.`, quiet)
     advance(save, chapter)
     return finish(save, chapter, outcome)
   }
@@ -787,7 +796,7 @@ export function dexCaughtCount(save: SaveV2): number {
 
 export function hereSightings(save: SaveV2, now: number): { species: string; name: string; pct: number; caught: boolean; type: string }[] {
   const chapter = chapterById(save.region, save.chapter)
-  return sightingShares(encounterTable(chapter, now)).map((row) => ({
+  return sightingShares(applyFruitWeights(encounterTable(chapter, now), save, now)).map((row) => ({
     species: row.species,
     name: species(row.species).name,
     pct: row.pct,

@@ -17,6 +17,9 @@ import {
   type Speed
 } from './const'
 import { beginAdventure, loadAdventure, writeSave } from './save'
+import { buyCrystal, buyFruit, sellCrystal, sellFruit, useCrystal, useFruit } from './shop'
+import { chapterCapNow } from './dex'
+import { chapterById } from './route'
 import {
   challengeGuardian,
   emptySummary,
@@ -429,6 +432,25 @@ function onClick(event: Event): void {
     if (!Number.isFinite(hours) || hours <= 0 || !debug) return
     save.lastSeenAt = Date.now() - hours * 3600e3
     void runOffline(hours * 3600e3)
+    return
+  }
+  if (act === 'buy-crystal' || act === 'buy-fruit' || act === 'sell-crystal' || act === 'sell-fruit' || act === 'use-fruit' || act === 'use-crystal') {
+    const id = node.getAttribute('data-id') ?? ''
+    let reason: string | null = 'Unbekannt.'
+    if (act === 'buy-crystal') reason = buyCrystal(save, id as 's')
+    if (act === 'buy-fruit') reason = buyFruit(save, id as 'fang')
+    if (act === 'sell-crystal') reason = sellCrystal(save, id as 's')
+    if (act === 'sell-fruit') reason = sellFruit(save, id as 'fang')
+    if (act === 'use-fruit') reason = useFruit(save, id as 'fang', Date.now())
+    if (act === 'use-crystal') {
+      const target = document.getElementById('crystal-target')
+      const uid = target instanceof HTMLSelectElement ? target.value : ''
+      reason = useCrystal(save, id as 's', uid, chapterCapNow(save, chapterById(save.region, save.chapter)))
+    }
+    save.log.push({ t: Date.now(), text: reason ?? 'Erledigt.' })
+    if (save.log.length > 50) save.log.splice(0, save.log.length - 50)
+    try { writeSave(localStorage, save) } catch { /* ignore */ }
+    render()
     return
   }
   if (act === 'reset') {

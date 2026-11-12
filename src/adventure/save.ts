@@ -1,4 +1,5 @@
 import { freshSeed, nextFloat } from '../rng'
+import { emptyBag } from './shop'
 import { SAVE_KEY_V1, SAVE_KEY_V2, START_GOLD, STARTER_LEVEL } from './const'
 import { speciesKnown } from './route'
 import { expToNext } from './stats'
@@ -51,7 +52,9 @@ export function blankSave(now: number): SaveV2 {
     log: [],
     migratedFrom: null,
     councilBeaten: [],
-    regionsOpen: [1]
+    regionsOpen: [1],
+    bag: emptyBag(),
+    activeFruits: []
   }
 }
 
@@ -220,6 +223,22 @@ export function normalize(save: SaveV2, now: number): SaveV2 {
   if (!open.includes(1)) open.unshift(1)
   if (save.badges.includes('Ratsiegel') && !open.includes(2)) open.push(2)
   save.regionsOpen = [...new Set(open)]
+  const bag = emptyBag()
+  const rawBag = save.bag
+  if (rawBag?.crystals) {
+    for (const id of Object.keys(bag.crystals) as (keyof typeof bag.crystals)[]) {
+      bag.crystals[id] = Math.max(0, Math.floor(Number(rawBag.crystals[id])) || 0)
+    }
+  }
+  if (rawBag?.fruits) {
+    for (const id of Object.keys(bag.fruits) as (keyof typeof bag.fruits)[]) {
+      bag.fruits[id] = Math.max(0, Math.floor(Number(rawBag.fruits[id])) || 0)
+    }
+  }
+  save.bag = bag
+  const fruits = Array.isArray(save.activeFruits) ? save.activeFruits : []
+  save.activeFruits = fruits.filter((fruit) => fruit && bag.fruits[fruit.id] != null && Number(fruit.until) > 0)
+    .map((fruit) => ({ id: fruit.id, until: Math.floor(Number(fruit.until)) }))
   return save
 }
 
