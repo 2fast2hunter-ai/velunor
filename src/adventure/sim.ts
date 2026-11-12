@@ -24,13 +24,14 @@ import {
   rollInt,
   routeOf,
   sightingShares,
-  tableFor,
+  encounterTable,
   trainerCount,
   trainerName,
   type ChapterDef,
   type NodeKind
 } from './route'
 import { chapterCapNow } from './dex'
+import { rollShiny, shinyChance, teamBlocksShiny } from './shiny'
 import { makeMon, takeId } from './save'
 import { addExp, battleLevel, isAlive, monStats, realHp, speciesExp } from './stats'
 import type { OwnedMon, SaveV2 } from './types'
@@ -57,6 +58,7 @@ export interface EncounterOutcome {
   wiped: boolean
   hold: boolean
   scene: ChapterDef['scene']
+  shiny: boolean
 }
 
 export interface OfflineSummary {
@@ -200,9 +202,9 @@ function sideFrom(mon: OwnedMon, cap: number): FightSide {
   }
 }
 
-function foeSide(speciesId: string, level: number): FightSide {
+function foeSide(speciesId: string, level: number, shiny = false): FightSide {
   const sp = species(speciesId)
-  const stats = monStats({ species: speciesId, lvl: level, exp: 0, hp: null, shiny: false, caughtAt: 0, caughtWhere: '', keepDupes: false })
+  const stats = monStats({ species: speciesId, lvl: level, exp: 0, hp: null, shiny, caughtAt: 0, caughtWhere: '', keepDupes: false })
   return {
     speciesId: sp.id,
     name: sp.name,
@@ -266,7 +268,8 @@ function baseOutcome(kind: NodeKind, step: number, chapter: ChapterDef): Encount
     badge: null,
     wiped: false,
     hold: false,
-    scene: chapter.scene
+    scene: chapter.scene,
+    shiny: false
   }
 }
 
@@ -348,8 +351,8 @@ export function applyCatch(save: SaveV2, speciesId: string, level: number, shiny
   return { species: speciesId, name, chance: 0, success: true, place: 'exp', shiny, level }
 }
 
-function fightOne(save: SaveV2, chapter: ChapterDef, speciesId: string, level: number, opts: ResolveOpts, now: number): { trace: FightTrace; fighter: string } | null {
-  const foe = foeSide(speciesId, level)
+function fightOne(save: SaveV2, chapter: ChapterDef, speciesId: string, level: number, opts: ResolveOpts, now: number, shiny = false): { trace: FightTrace; fighter: string } | null {
+  const foe = foeSide(speciesId, level, shiny)
   const fighter = pickFighter(save, foe.type)
   if (!fighter) return null
   save.active = fighter
@@ -371,7 +374,7 @@ function fightOne(save: SaveV2, chapter: ChapterDef, speciesId: string, level: n
 function runBouts(
   save: SaveV2,
   chapter: ChapterDef,
-  foes: { species: string; level: number }[],
+  foes: { species: string; level: number; shiny?: boolean }[],
   opts: ResolveOpts,
   now: number,
   goldFor: (wins: number) => number
@@ -384,7 +387,7 @@ function runBouts(
     dex.seen += 1
     save.dex[foe.species] = dex
     if (!livingTeam(save).length) return { traces, wins, lastFighter, wiped: true }
-    const fought = fightOne(save, chapter, foe.species, foe.level, opts, now)
+    const fought = fightOne(save, chapter, foe.species, foe.level, opts, now, foe.shiny ?? false)
     if (!fought) return { traces, wins, lastFighter, wiped: true }
     traces.push(fought.trace)
     lastFighter = fought.fighter
@@ -410,12 +413,14 @@ function doWild(save: SaveV2, chapter: ChapterDef, now: number, opts: ResolveOpt
   const quiet = opts.offline
   const outcome = baseOutcome('wild', save.step, chapter)
   const rng = rngOf(save)
-  const table = tableFor(chapter, now)
+  const table = encounterTable(chapter, now)
   const speciesId = pickWeighted(rng, table)
   const level = rollInt(rng, chapter.levelMin, chapter.levelMax)
+  const shiny = rollShiny(rng, shinyChance(save, save.region))
+  outcome.shiny = shiny
   const name = species(speciesId).name
-  say(save, outcome, now, `${name} (Lv ${level}) kreuzt den Weg.`, quiet)
-  const bouts = runBouts(save, chapter, [{ species: speciesId, level }], opts, now, (wins) => (wins === 1 ? 4 * level : 0))
+  say(save, outcome, now, shiny ? `Ein Schimmer kreuzt den Weg: ${name} (Lv ${level}).` : `${name} (Lv ${level}) kreuzt den Weg.`, quiet)
+  const bouts = runBouts(save, chapter, [{ species: speciesId, level, shiny }], opts, now, (wins) => (wins === 1 ? 4 * level : 0))
   outcome.traces = bouts.traces
   const trace = bouts.traces[0]
   if (bouts.wiped) {
@@ -442,14 +447,14 @@ function doWild(save: SaveV2, chapter: ChapterDef, now: number, opts: ResolveOpt
     const percent = Math.round(chance * 100)
     say(save, outcome, now, `Bannsiegel … (${percent} %)`, quiet)
     if (success) {
-      const caught = applyCatch(save, speciesId, level, false, now, `r${save.region}c${chapter.id}`, chapter, opts)
+      const caught = applyCatch(save, speciesId, level, shiny, now, `r${save.region}c${chapter.id}`, chapter, opts)
       caught.chance = chance
       outcome.catch = caught
       if (caught.place === 'exp') say(save, outcome, now, `Duplikat wird zu Art-EP für ${caught.name}.`, quiet)
       else if (caught.place === 'kept') say(save, outcome, now, `${caught.name} bleibt als Duplikat im PC.`, quiet)
       else say(save, outcome, now, `gefangen! ${caught.name} ist ${caught.place === 'team' ? 'im Team' : 'im PC'}.`, quiet)
     } else {
-      outcome.catch = { species: speciesId, name, chance, success: false, place: null, shiny: false, level }
+      outcome.catch = { species: speciesId, name, chance, success: false, place: null, shiny, level }
       say(save, outcome, now, 'entkommen.', quiet)
     }
   }
@@ -463,7 +468,7 @@ function doTrainer(save: SaveV2, chapter: ChapterDef, now: number, opts: Resolve
   const count = trainerCount(chapter.id, save.step)
   const name = trainerName(chapter.id, save.step)
   const rng = rngOf(save)
-  const table = tableFor(chapter, now)
+  const table = encounterTable(chapter, now)
   const foes: { species: string; level: number }[] = []
   const used = new Set<string>()
   for (let i = 0; i < count; i++) {
@@ -732,6 +737,8 @@ export function moveToPc(save: SaveV2, uid: string): string | null {
 
 export function moveToTeam(save: SaveV2, uid: string, swapWith: string | null): string | null {
   if (!save.pc.includes(uid)) return 'Das Monster liegt nicht im PC.'
+  const mon = save.mons[uid]
+  if (mon && teamBlocksShiny(save, mon.species, mon.shiny, swapWith)) return 'Nur ein Schimmer dieser Art darf im Team stehen.'
   if (save.team.length < TEAM_MAX) {
     save.pc = save.pc.filter((id) => id !== uid)
     save.team.push(uid)
@@ -780,7 +787,7 @@ export function dexCaughtCount(save: SaveV2): number {
 
 export function hereSightings(save: SaveV2, now: number): { species: string; name: string; pct: number; caught: boolean; type: string }[] {
   const chapter = chapterById(save.region, save.chapter)
-  return sightingShares(tableFor(chapter, now)).map((row) => ({
+  return sightingShares(encounterTable(chapter, now)).map((row) => ({
     species: row.species,
     name: species(row.species).name,
     pct: row.pct,
