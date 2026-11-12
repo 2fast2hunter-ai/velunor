@@ -43,7 +43,7 @@ export interface CouncilDef {
   members: CouncilMember[]
 }
 
-export type SceneTint = 'moor' | 'fels' | 'sturm' | 'frost' | 'schmiede' | 'rat'
+export type SceneTint = 'moor' | 'fels' | 'sturm' | 'frost' | 'schmiede' | 'rat' | 'kueste' | 'glut' | 'schatten' | 'himmel' | 'horst'
 
 export interface ChapterDef {
   id: number
@@ -59,6 +59,8 @@ export interface ChapterDef {
   night: Spawn[]
   weather?: WeatherSpawn[]
   council?: CouncilDef
+  /** Wild-only area. Rarity 8–9 live here, not on the road. */
+  special?: boolean
 }
 
 export interface RegionDef {
@@ -109,10 +111,30 @@ export function chapterFormula(n: number): { levelMin: number; levelMax: number;
   return { levelMin: 6 * n - 4, levelMax: 6 * n, cap: 6 * n + 6, gold: 1000 + 750 * n }
 }
 
+/** Road chapters keep counting across regions. Region 2 chapter 1 is index 9. */
+export function continuedIndex(regionId: number, chapterId: number): number {
+  return (regionId - 1) * 8 + chapterId
+}
+
+/** Council caps and gold continue from the eighth chapter the same way Grünmark does. */
+export function councilFormula(regionId: number): { caps: number[]; gold: number[]; reward: number } {
+  const last = chapterFormula(continuedIndex(regionId, 8))
+  return {
+    caps: [1, 4, 7, 10, 14].map((add) => last.cap + add),
+    gold: [-3000, -2000, -1000, 0, 1000].map((add) => last.gold + add),
+    reward: 25000 * regionId
+  }
+}
+
 /** Fixed layout. Seed is the chapter id. Springs sit on 7 and 14, the guardian on 20. */
 export function routeOf(chapterId: number): NodeKind[] {
   const cached = routeCache.get(chapterId)
   if (cached) return cached
+  if (chapterId === 10) {
+    const wild = Array.from({ length: PATH_LENGTH + 1 }, () => 'wild' as NodeKind)
+    routeCache.set(chapterId, wild)
+    return wild
+  }
   const nodes: NodeKind[] = Array.from({ length: PATH_LENGTH + 1 }, () => 'wild')
   for (const step of HEAL_STEPS) nodes[step] = 'spring'
   nodes[GUARDIAN_STEP] = 'guardian'

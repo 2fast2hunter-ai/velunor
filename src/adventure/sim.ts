@@ -18,6 +18,7 @@ import {
 import {
   chapterById,
   findChapter,
+  regionById,
   findGold,
   pickWeighted,
   placeLabel,
@@ -30,11 +31,12 @@ import {
   type ChapterDef,
   type NodeKind
 } from './route'
-import { chapterCapNow } from './dex'
+import { chapterCapNow, regionRoster } from './dex'
 import { rollShiny, shinyChance, teamBlocksShiny } from './shiny'
 import { syncAchievements } from './achievements'
 import { advanceHort, HORT_EP_RATE } from './hort'
 import { applyFruitWeights, catchMods, combatExpFactor, fruitActive, fruitDef, grantGold, rollFindFruit } from './shop'
+import { battleRoster, fightsHere, ownsRegional, seatRegional } from './origin'
 import { makeMon, takeId } from './save'
 import { addExp, battleLevel, isAlive, monStats, realHp, speciesExp } from './stats'
 import type { OwnedMon, SaveV2 } from './types'
@@ -96,9 +98,21 @@ export function hasBadge(save: SaveV2, badge: string): boolean {
 }
 
 export function chapterUnlocked(save: SaveV2, chapterId: number): boolean {
+  const chapter = findChapter(save.region, chapterId)
+  if (!chapter) return false
+  if (chapter.special) {
+    const council = findChapter(save.region, 9)
+    const sealed = council ? hasBadge(save, council.guardian.badge) : false
+    return sealed || roadComplete(save, save.region)
+  }
   if (chapterId <= 1) return true
   const previous = chapterById(save.region, chapterId - 1)
   return hasBadge(save, previous.guardian.badge)
+}
+
+function roadComplete(save: SaveV2, regionId: number): boolean {
+  const roster = regionRoster(regionId)
+  return roster.length > 0 && roster.every((id) => (save.dex[id]?.caught ?? 0) > 0)
 }
 
 export function healTeam(save: SaveV2): void {
@@ -233,7 +247,7 @@ function foeSide(speciesId: string, level: number, shiny = false): FightSide {
 }
 
 export function pickFighter(save: SaveV2, foeType: TypeId): string | null {
-  const living = livingTeam(save)
+  const living = battleRoster(save)
   if (!living.length) return null
   if (save.active && living.includes(save.active)) return save.active
   if (!save.settings.autoSwitch) return living[0]
@@ -348,6 +362,8 @@ export function applyCatch(save: SaveV2, speciesId: string, level: number, shiny
       if (!existing.length) opts.summary.catches.push(speciesId)
       else opts.summary.dupes += 1
     }
+    seatRegional(save, uid)
+    if (!existing.length && save.team.includes(uid)) place = 'team'
     return { species: speciesId, name, chance: 0, success: true, place: existing.length ? 'kept' : place, shiny, level }
   }
   const target = highestOf(save, speciesId)
@@ -580,9 +596,9 @@ function doGuardian(save: SaveV2, chapter: ChapterDef, now: number, opts: Resolv
   return finish(save, chapter, outcome)
 }
 
-/** Gold for one council member. Repeat wins pay half until the Ratsiegel exists. */
-export function councilPurse(save: SaveV2, memberId: string, baseGold: number): number {
-  const repeat = save.councilBeaten.includes(memberId) && !hasBadge(save, 'Ratsiegel')
+/** Gold for one council member. Repeat wins pay half until that region's seal exists. */
+export function councilPurse(save: SaveV2, memberId: string, baseGold: number, seal: string): number {
+  const repeat = save.councilBeaten.includes(memberId) && !hasBadge(save, seal)
   return repeat ? Math.floor(baseGold / 2) : baseGold
 }
 
@@ -593,7 +609,7 @@ export function recordCouncilWin(save: SaveV2, now: number, quiet: boolean): Enc
   const outcome = baseOutcome('guardian', save.step, chapter)
   const index = Math.min(council.members.length - 1, Math.max(0, save.step - 1))
   const member = council.members[index]
-  const pay = councilPurse(save, member.id, member.gold)
+  const pay = councilPurse(save, member.id, member.gold, chapter.guardian.badge)
   if (!save.councilBeaten.includes(member.id)) save.councilBeaten.push(member.id)
   const paid = grantGold(save, pay, now)
   outcome.gold = paid
@@ -609,8 +625,9 @@ export function recordCouncilWin(save: SaveV2, now: number, quiet: boolean): Enc
     outcome.gold += bonus
     save.badges.push(chapter.guardian.badge)
     outcome.badge = chapter.guardian.badge
-    if (!save.regionsOpen.includes(council.unlocksRegion)) save.regionsOpen.push(council.unlocksRegion)
-    say(save, outcome, now, `Ratsiegel errungen. +${bonus} G. Region 2 ist sichtbar und folgt später.`, quiet)
+    if (council.unlocksRegion > 0 && !save.regionsOpen.includes(council.unlocksRegion)) save.regionsOpen.push(council.unlocksRegion)
+    const opened = council.unlocksRegion > 0 ? ` ${regionById(council.unlocksRegion).name} ist offen.` : ''
+    say(save, outcome, now, `${chapter.guardian.badge} errungen. +${bonus} G.${opened}`, quiet)
   }
   healTeam(save)
   outcome.win = true
@@ -665,7 +682,7 @@ export function resolveEncounter(save: SaveV2, now: number, opts: ResolveOpts): 
   const chapter = chapterById(save.region, save.chapter)
   const quiet = opts.offline
   advanceHort(save, now, rngOf(save))
-  if (!livingTeam(save).length && Object.keys(save.mons).length) {
+  if (!battleRoster(save).length && Object.keys(save.mons).length) {
     const outcome = baseOutcome('spring', save.step, chapter)
     outcome.wiped = true
     wipe(save, now, quiet)
@@ -677,7 +694,7 @@ export function resolveEncounter(save: SaveV2, now: number, opts: ResolveOpts): 
     save.loopsUntilRetry = 0
     return doGuardian(save, chapter, now, opts, true)
   }
-  const kind = routeOf(chapter.id)[save.step] ?? 'wild'
+  const kind = chapter.special ? 'wild' : (routeOf(chapter.id)[save.step] ?? 'wild')
   if (kind === 'spring') {
     const outcome = baseOutcome('spring', save.step, chapter)
     healTeam(save)
@@ -720,10 +737,19 @@ export function simulateOffline(save: SaveV2, rawMs: number, now: number): { sum
   return { summary, countedMs }
 }
 
-export function travelTo(save: SaveV2, chapterId: number): string | null {
-  if (!chapterUnlocked(save, chapterId)) return 'Dieses Kapitel ist noch zu.'
-  const chapter = chapterById(save.region, chapterId)
-  if (chapter.id !== chapterId) return 'Dieses Kapitel gibt es noch nicht.'
+export function travelTo(save: SaveV2, regionId: number, chapterId: number): string | null {
+  if (!save.regionsOpen.includes(regionId)) return 'Diese Region ist noch zu.'
+  const previous = save.region
+  save.region = regionId
+  if (!chapterUnlocked(save, chapterId)) {
+    save.region = previous
+    return 'Dieses Kapitel ist noch zu.'
+  }
+  const chapter = findChapter(regionId, chapterId)
+  if (!chapter) {
+    save.region = previous
+    return 'Dieses Kapitel gibt es noch nicht.'
+  }
   save.chapter = chapterId
   save.step = 1
   save.lastHealStep = 1
@@ -731,6 +757,8 @@ export function travelTo(save: SaveV2, chapterId: number): string | null {
   save.challengeNow = false
   save.loopsUntilRetry = 0
   healTeam(save)
+  const local = [...save.pc].filter((uid) => fightsHere(save, save.mons[uid])).sort((a, b) => save.mons[b].lvl - save.mons[a].lvl)
+  if (local[0]) seatRegional(save, local[0])
   return null
 }
 
@@ -786,6 +814,7 @@ export function reorderTeam(save: SaveV2, from: number, to: number): void {
 export function sendOut(save: SaveV2, uid: string): string | null {
   if (!save.team.includes(uid)) return 'Nur Teammitglieder können in den Kampf.'
   if (!isAlive(save.mons[uid])) return 'Dieses Monster braucht die Heilquelle.'
+  if (ownsRegional(save) && !fightsHere(save, save.mons[uid])) return 'In dieser Region kämpfen nur hier gefangene Monster.'
   save.active = uid
   return null
 }

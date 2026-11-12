@@ -81,7 +81,7 @@ export function regionRoster(regionId: number): string[] {
   if (!region) return []
   const ids = new Set<string>()
   for (const chapter of region.chapters) {
-    if (chapter.council) continue
+    if (chapter.council || chapter.special) continue
     for (const row of [...chapter.day, ...chapter.night, ...(chapter.weather ?? [])]) ids.add(row.species)
   }
   return [...ids]

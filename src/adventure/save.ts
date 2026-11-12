@@ -1,7 +1,7 @@
 import { freshSeed, nextFloat } from '../rng'
 import { emptyBag } from './shop'
 import { SAVE_KEY_V1, SAVE_KEY_V2, START_GOLD, STARTER_LEVEL } from './const'
-import { speciesKnown } from './route'
+import { chapterById, findChapter, speciesKnown } from './route'
 import { expToNext } from './stats'
 import type { OwnedMon, SaveV2, StorageLike } from './types'
 
@@ -179,10 +179,11 @@ export function normalize(save: SaveV2, now: number): SaveV2 {
   save.gold = Math.max(0, Math.floor(save.gold) || 0)
   save.marks = Math.max(0, Math.floor(save.marks) || 0)
   save.lastSeenAt = save.lastSeenAt || now
-  save.region = 1
-  const chapter = Math.floor(Number(save.chapter))
-  save.chapter = chapter >= 1 && chapter <= 9 ? chapter : 1
-  const stepMax = save.chapter === 9 ? 5 : 20
+  const askedRegion = Math.floor(Number(save.region)) || 1
+  save.region = askedRegion
+  const askedChapter = Math.floor(Number(save.chapter))
+  save.chapter = askedChapter >= 1 ? askedChapter : 1
+  const stepMax = chapterById(save.region, save.chapter).council ? 5 : 20
   save.step = Math.min(stepMax, Math.max(1, Math.floor(save.step) || 1))
   save.loop = save.loop !== false
   save.lastHealStep = save.lastHealStep || 1
@@ -235,8 +236,21 @@ export function normalize(save: SaveV2, now: number): SaveV2 {
   save.councilBeaten = Array.isArray(save.councilBeaten) ? save.councilBeaten.filter((id) => typeof id === 'string') : []
   const open = Array.isArray(save.regionsOpen) ? save.regionsOpen.map((id) => Math.floor(Number(id))).filter((id) => id > 0) : []
   if (!open.includes(1)) open.unshift(1)
-  if (save.badges.includes('Ratsiegel') && !open.includes(2)) open.push(2)
+  const seals: [string, number][] = [
+    ['Ratsiegel', 2],
+    ['Zweites Ratsiegel', 3],
+    ['Drittes Ratsiegel', 4],
+    ['Viertes Ratsiegel', 5]
+  ]
+  for (const [badge, id] of seals) {
+    if (save.badges.includes(badge) && !open.includes(id)) open.push(id)
+  }
   save.regionsOpen = [...new Set(open)]
+  if (!save.regionsOpen.includes(save.region)) save.region = 1
+  const here = findChapter(save.region, save.chapter)
+  save.chapter = here ? here.id : 1
+  const stepNow = chapterById(save.region, save.chapter).council ? 5 : 20
+  save.step = Math.min(stepNow, Math.max(1, save.step))
   const bag = emptyBag()
   const rawBag = save.bag
   if (rawBag?.crystals) {

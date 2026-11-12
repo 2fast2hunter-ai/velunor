@@ -11,8 +11,9 @@ import {
   assetPath
 } from './const'
 import { baseLine, dexPlaces, dexStatus, dexStatusLabel, listCodex, regionProgress, speciesNumber, type DexFilter } from './dex'
-import { chapterById, placeLabel, regionById, routeOf, type NodeKind } from './route'
-import { dexCaughtCount, hereSightings, rarityName } from './sim'
+import { fightsHere } from './origin'
+import { chapterById, placeLabel, regionById, regions, routeOf, type NodeKind } from './route'
+import { chapterUnlocked, dexCaughtCount, hereSightings, rarityName } from './sim'
 import { equippedFrame, equippedTitle, GOALS } from './achievements'
 import { HORT_PRICES, hortOffer } from './hort'
 import { CRYSTALS, FRUITS, crystalUnlocked, fruitDef, fruitMinutes, sellValue, wappenCount } from './shop'
@@ -237,20 +238,31 @@ function fruitCard(save: SaveV2, now: number, open: boolean): string {
 }
 
 function progress(save: SaveV2): string {
-  const region = regionById(1)
+  const region = regionById(save.region)
+  const switches = regions.map((entry) => {
+    const open = save.regionsOpen.includes(entry.id)
+    const here = save.region === entry.id
+    return `<button data-act="region" data-region="${entry.id}" class="${here ? 'primary' : ''}" ${open ? '' : 'disabled'}>${esc(entry.name)}</button>`
+  }).join('')
   const buttons = region.chapters.map((chapter) => {
-    const open = chapter.id === 1 || save.badges.includes(region.chapters[chapter.id - 2].guardian.badge)
+    const open = chapterUnlocked(save, chapter.id)
     const here = save.chapter === chapter.id
-    const range = chapter.council ? `Vier Räte und der Großwächter, Cap ${chapter.council.members.map((member) => member.cap).join('/')}` : `Lv ${chapter.levelMin}–${chapter.levelMax}, Cap ${chapter.cap}`
-    return `<button class="text-btn" data-act="travel" data-chapter="${chapter.id}" ${open ? '' : 'disabled'}>
+    const range = chapter.special
+      ? `Sonderzone, Lv ${chapter.levelMin}–${chapter.levelMax}`
+      : chapter.council
+        ? `Vier Räte und der Großwächter, Cap ${chapter.council.members.map((member) => member.cap).join('/')}`
+        : `Lv ${chapter.levelMin}–${chapter.levelMax}, Cap ${chapter.cap}`
+    const mark = chapter.special ? 'Urgrund' : (save.badges.includes(chapter.guardian.badge) ? chapter.guardian.badge : 'Wappen fehlt')
+    return `<button class="text-btn" data-act="travel" data-region="${region.id}" data-chapter="${chapter.id}" ${open ? '' : 'disabled'}>
       <b>${esc(chapter.name)}</b> ${here ? '· hier' : ''}
-      <div class="muted">${range}, ${save.badges.includes(chapter.guardian.badge) ? esc(chapter.guardian.badge) : 'Wappen fehlt'}</div>
+      <div class="muted">${range}, ${esc(mark)}</div>
     </button>`
   }).join('')
-  const coast = save.regionsOpen.includes(2)
-    ? `<p>Region 2 ${esc(regionById(2).name)} ist frei und folgt später.</p>`
-    : '<p class="muted">Region 2 bleibt zu, bis das Ratsiegel errungen ist.</p>'
-  return `<div class="card panel"><h2>Fortschritt · ${esc(region.name)}</h2><div class="chapters">${buttons}</div>${coast}</div>`
+  return `<div class="card panel"><h2>Fortschritt · ${esc(region.name)}</h2>
+    <div class="row-actions">${switches}</div>
+    <p class="muted">In einer neuen Region kämpfen nur dort gefangene Monster. Ältere Regionen bleiben offen.</p>
+    <div class="chapters">${buttons}</div>
+  </div>`
 }
 
 function team(save: SaveV2, pc: PcQuery, selected: string | null): string {
@@ -296,12 +308,12 @@ function team(save: SaveV2, pc: PcQuery, selected: string | null): string {
     return `<button class="mon-card ${selected === uid ? 'on' : ''}" data-act="select" data-uid="${uid}" data-index="${index}" draggable="true" data-drag="team">
       <img src="${monsterArt(mon.species)}" alt=""/>
       <div>${index + 1}. ${esc(species(mon.species).name)}</div>
-      <div class="muted">Lv ${mon.lvl}${save.buddy === uid ? ' · Begleiter' : ''}</div>
+      <div class="muted">Lv ${mon.lvl}${save.buddy === uid ? ' · Begleiter' : ''}${fightsHere(save, mon) ? '' : ' · andere Region'}</div>
     </button>`
   }).join('')
   return `<div class="card panel">
     <h2>Team</h2>
-    <p class="muted">Vorne kämpft zuerst. Ziehen tauscht die Reihenfolge, ein langer Druck startet das Ziehen. Mindestens ein Monster bleibt im Team.</p>
+    <p class="muted">Vorne kämpft zuerst. Ziehen tauscht die Reihenfolge, ein langer Druck startet das Ziehen. Mindestens ein Monster bleibt im Team. In dieser Region kämpfen nur hier gefangene Monster, bis auf den Hort.</p>
     <div class="grid" id="team-grid">${roster}</div>
     <div class="row-actions">
       <button data-act="nudge" data-dir="-1">Nach vorn</button>
@@ -340,12 +352,10 @@ function rarityOptions(current: string): string {
 
 function codex(save: SaveV2, filter: CodexQuery): string {
   const types = [...new Set(monsters.map((mon) => mon.type))]
-  const bars = [1, 2].map((id) => {
+  const bars = regions.map((entry) => entry.id).map((id) => {
     const row = regionProgress(save, id)
     const pct = row.total ? Math.round((row.caught / row.total) * 100) : 0
-    const label = row.placeholder
-      ? (row.open ? `${esc(row.name)} folgt später` : `${esc(row.name)} gesperrt`)
-      : `${esc(row.name)} ${row.caught}/${row.total}`
+    const label = row.open ? `${esc(row.name)} ${row.caught}/${row.total}` : `${esc(row.name)} gesperrt`
     return `<div><div class="muted">${label}</div><div class="progress-track"><span style="width:${row.placeholder ? 0 : pct}%"></span></div></div>`
   }).join('')
   const rows = listCodex(save, filter)
@@ -538,7 +548,8 @@ function guide(): string {
     <p>Du wanderst einen Weg mit 20 Schritten. Kämpfe laufen von selbst, Tempo ×1, ×2 oder ×3.</p>
     <p>Nach dem K.O. eines wilden Monsters versucht das Bannsiegel den Fang. Eine neue Art kommt ins Team oder in den PC. Ein Duplikat wird zu Art-EP, außer du behältst es.</p>
     <p>Heilquellen heilen das Team. Fällt das ganze Team, kehrt ihr zur letzten Heilquelle zurück, ohne etwas zu verlieren.</p>
-    <p>Der Wächter am Schritt 20 bringt ein Wappen. Mit „Kapitel wiederholen“ farmst du ein geschafftes Kapitel weiter. Nach Kapitel 8 wartet der Hohe Rat: vier Räte und der Großwächter direkt hintereinander. Das Ratsiegel öffnet Region 2, die später folgt.</p>
+    <p>Der Wächter am Schritt 20 bringt ein Wappen. Mit „Kapitel wiederholen“ farmst du ein geschafftes Kapitel weiter. Nach Kapitel 8 wartet der Hohe Rat: vier Räte und der Großwächter direkt hintereinander. Jedes Ratsiegel öffnet die nächste Region. Dort kämpfen nur Monster, die du dort gefangen hast. Ältere Regionen bleiben spielbar.</p>
+    <p>Seltenheit 8 und 9, Prismadrache, Finsterfürst und Urdrache Velunor, leben nur im Urgrund. Der öffnet nach dem Hohen Rat des Himmelsthrons oder mit vollständigem Regionalkodex ohne diese drei.</p>
     <p>Der Kodex zeigt alle 100 Arten: besessen, nicht mehr besessen, gesichtet oder fehlend, mit Fundort und Bedingung.</p>
     <p>Das Wetter wechselt jede Stunde und ist für alle gleich. Manche Arten zeigen sich nur dann, mit einem kleinen Anteil. Ein Schimmer ist selten und stärker. Pro Art steht höchstens einer im Team.</p>
     <p>Im Laden gibt es EP-Kristalle und Früchte. Kristalle gelten ab einer Zahl von Wappen. Früchte halten eine Stunde, auch wenn du weg bist. Auf einem Fund liegt manchmal eine Frucht.</p>
