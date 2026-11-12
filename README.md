@@ -4,7 +4,7 @@ Browser idle adventure. TypeScript and Vite. The step-1 loop is a landscape Fang
 
 The new save key is `velunor_v2`. An existing `velunor.save.v1` profile is read once: every specimen is kept (level 1–4 rise to 5) and the old key stays in place. City, gacha, the 5-monster lineup, arena, and ads are not mounted; their code is still in the repo.
 
-Region 1 data is `data/regions.json`: chapters 1–8 and the Hoher Rat. Region 2 (Frostküste) unlocks as a placeholder after the Ratsiegel. A dev build opened with `?debug=1` can jump the clock for the offline check.
+Region 1 data is `data/regions.json`: chapters 1–8 and the Hoher Rat. Weather changes every UTC hour and is the same for everyone. Wild shimmer is 1 in 4,000, doubled when that region's codex is complete. Region 2 (Frostküste) unlocks as a placeholder after the Ratsiegel. A dev build opened with `?debug=1` can jump the clock for the offline check.
 
 Design notes live in [`docs/konzept.md`](docs/konzept.md) and [`docs/gdd-prototyp.md`](docs/gdd-prototyp.md). Balance numbers live in [`data/`](data/).
 

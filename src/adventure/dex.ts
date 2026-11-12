@@ -1,6 +1,7 @@
 import { monsters, species } from '../data'
 import { chapterById, regionById, regions, type ChapterDef } from './route'
 import type { SaveV2 } from './types'
+import { weatherName } from './weather'
 
 export type DexStatus = 'owned' | 'released' | 'seen' | 'missing'
 
@@ -65,6 +66,11 @@ export function dexPlaces(speciesId: string): DexPlace[] {
           places.push({ region: region.name, chapter: `${chapter.name} · ${member.epithet} ${member.name}`, when: 'direkt hintereinander' })
         }
       }
+      for (const row of chapter.weather ?? []) {
+        if (row.species === speciesId) {
+          places.push({ region: region.name, chapter: chapter.name, when: `bei ${weatherName(row.weather)}` })
+        }
+      }
     }
   }
   return places
@@ -76,7 +82,7 @@ export function regionRoster(regionId: number): string[] {
   const ids = new Set<string>()
   for (const chapter of region.chapters) {
     if (chapter.council) continue
-    for (const row of [...chapter.day, ...chapter.night]) ids.add(row.species)
+    for (const row of [...chapter.day, ...chapter.night, ...(chapter.weather ?? [])]) ids.add(row.species)
   }
   return [...ids]
 }

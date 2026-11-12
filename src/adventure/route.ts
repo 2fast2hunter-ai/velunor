@@ -2,10 +2,17 @@ import regionsJson from '../../data/regions.json'
 import { species } from '../data'
 import { hashSeed, mulberry32 } from '../rng'
 import { GUARDIAN_STEP, HEAL_STEPS, PATH_LENGTH } from './const'
+import { weatherAt, type WeatherId } from './weather'
 
 export interface Spawn {
   species: string
   weight: number
+}
+
+export interface WeatherSpawn {
+  weather: WeatherId
+  species: string
+  pct: number
 }
 
 export interface GuardianMon {
@@ -50,6 +57,7 @@ export interface ChapterDef {
   guardian: GuardianDef
   day: Spawn[]
   night: Spawn[]
+  weather?: WeatherSpawn[]
   council?: CouncilDef
 }
 
@@ -134,6 +142,22 @@ export function dayPart(ts: number): 'day' | 'night' {
 
 export function tableFor(chapter: ChapterDef, ts: number): Spawn[] {
   return dayPart(ts) === 'day' ? chapter.day : chapter.night
+}
+
+/** Day or night table, with that hour's weather species taking their 5–8 % share. */
+export function encounterTable(chapter: ChapterDef, ts: number): Spawn[] {
+  const base = tableFor(chapter, ts)
+  const extras = (chapter.weather ?? []).filter((row) => row.weather === weatherAt(ts))
+  if (!extras.length || !base.length) return base
+  const extraIds = new Set(extras.map((row) => row.species))
+  const kept = base.filter((row) => !extraIds.has(row.species))
+  const keptWeight = kept.reduce((sum, row) => sum + row.weight, 0)
+  const extraPct = extras.reduce((sum, row) => sum + row.pct, 0)
+  const room = Math.max(0, 100 - extraPct)
+  const scaled = keptWeight > 0
+    ? kept.map((row) => ({ species: row.species, weight: (row.weight / keptWeight) * room }))
+    : []
+  return [...scaled, ...extras.map((row) => ({ species: row.species, weight: row.pct }))]
 }
 
 export function sightingShares(spawns: Spawn[]): { species: string; pct: number }[] {

@@ -11,6 +11,10 @@
           "levelMin": 2,
           "levelMax": 6,
           "cap": 12,
+          "weather": [
+            { "weather": "klar", "species": "m72", "pct": 6 },
+            { "weather": "wind", "species": "m43", "pct": 6 }
+          ],
           "guardian": {
             "name": "Mira",
             "epithet": "Wächterin",
@@ -42,6 +46,10 @@
           "levelMin": 8,
           "levelMax": 12,
           "cap": 18,
+          "weather": [
+            { "weather": "regen", "species": "m24", "pct": 6 },
+            { "weather": "nebel", "species": "m78", "pct": 6 }
+          ],
           "guardian": {
             "name": "Joran",
             "epithet": "Wächter",
@@ -76,6 +84,10 @@
           "levelMin": 14,
           "levelMax": 18,
           "cap": 24,
+          "weather": [
+            { "weather": "gewitter", "species": "m54", "pct": 7 },
+            { "weather": "wind", "species": "m45", "pct": 5 }
+          ],
           "guardian": {
             "name": "Vela",
             "epithet": "Wächterin",
@@ -111,6 +123,10 @@
           "levelMin": 20,
           "levelMax": 24,
           "cap": 30,
+          "weather": [
+            { "weather": "nebel", "species": "m83", "pct": 6 },
+            { "weather": "regen", "species": "m16", "pct": 6 }
+          ],
           "guardian": {
             "name": "Morva",
             "epithet": "Wächterin",
@@ -145,6 +161,10 @@
           "levelMin": 26,
           "levelMax": 30,
           "cap": 36,
+          "weather": [
+            { "weather": "wind", "species": "m43", "pct": 6 },
+            { "weather": "schnee", "species": "m49", "pct": 6 }
+          ],
           "guardian": {
             "name": "Brom",
             "epithet": "Wächter",
@@ -178,6 +198,10 @@
           "levelMin": 32,
           "levelMax": 36,
           "cap": 42,
+          "weather": [
+            { "weather": "wind", "species": "m45", "pct": 8 },
+            { "weather": "gewitter", "species": "m53", "pct": 6 }
+          ],
           "guardian": {
             "name": "Veya",
             "epithet": "Wächterin",
@@ -207,6 +231,10 @@
           "levelMin": 38,
           "levelMax": 42,
           "cap": 48,
+          "weather": [
+            { "weather": "schnee", "species": "m47", "pct": 7 },
+            { "weather": "nebel", "species": "m48", "pct": 6 }
+          ],
           "guardian": {
             "name": "Isko",
             "epithet": "Wächter",
@@ -236,6 +264,10 @@
           "levelMin": 44,
           "levelMax": 48,
           "cap": 54,
+          "weather": [
+            { "weather": "gewitter", "species": "m54", "pct": 6 },
+            { "weather": "wind", "species": "m45", "pct": 5 }
+          ],
           "guardian": {
             "name": "Runa",
             "epithet": "Wächterin",

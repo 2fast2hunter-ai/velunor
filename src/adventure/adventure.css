@@ -236,7 +236,12 @@ button, input, select { font: inherit; color: inherit; }
 .sight-row img { width: 42px; height: 42px; object-fit: contain; }
 img.sil { filter: brightness(0); opacity: 0.8; }
 .pct { margin-left: auto; font-weight: 800; }
-.clock { font-size: 18px; }
+.clock { font-size: 18px; display: flex; align-items: center; gap: 8px; }
+.wx { width: 22px; height: 22px; display: inline-flex; }
+.wx svg { width: 22px; height: 22px; }
+.forecast { display: flex; flex-wrap: wrap; gap: 4px; margin: 8px 0; }
+.forecast .now { outline: 1px solid #f0c14a; border-radius: 6px; }
+img.is-shiny { filter: drop-shadow(0 0 10px #f0c14a); }
 
 .panel { overflow: auto; }
 .grid {

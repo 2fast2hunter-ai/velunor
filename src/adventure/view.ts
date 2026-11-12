@@ -13,6 +13,7 @@ import {
 import { baseLine, dexPlaces, dexStatus, dexStatusLabel, listCodex, regionProgress, speciesNumber, type DexFilter } from './dex'
 import { chapterById, placeLabel, regionById, routeOf, type NodeKind } from './route'
 import { dexCaughtCount, hereSightings, rarityName } from './sim'
+import { weatherForecast, weatherName, type WeatherId } from './weather'
 import { expToNext, isAlive, monStats, realHp } from './stats'
 import type { OfflineSummary } from './sim'
 import type { SaveV2 } from './types'
@@ -151,7 +152,7 @@ function battle(save: SaveV2, now: number): string {
     <div class="combatant ally" style="left:${ALLY_X}%;top:${FEET_Y}%">
       <b id="ally-name">${mon ? esc(species(mon.species).name) : ''}</b>
       <div class="hp"><span id="ally-hp" style="width:${(hp.hp / hp.max) * 100}%"></span></div>
-      ${mon ? `<img class="sprite" id="ally-sprite" src="${monsterArt(mon.species, true)}" alt=""/>` : ''}
+      ${mon ? `<img class="sprite ${mon.shiny ? 'is-shiny' : ''}" id="ally-sprite" src="${monsterArt(mon.species, true)}" alt=""/>` : ''}
     </div>
     <div class="combatant foe" style="left:${FOE_X}%;top:${FEET_Y}%">
       <b id="foe-name"></b>
@@ -160,7 +161,7 @@ function battle(save: SaveV2, now: number): string {
     </div>
     <img class="seal" id="seal" alt="" src="${art(SEAL_ADD)}" data-fb="${art(SEAL_FALLBACK)}"/>
     <div class="battle-text">
-      <p id="battle-text">${part} auf dem ${esc(chapter.name)}. ${save.hold ? 'Das Kapitel wartet.' : 'Der Weg läuft.'}</p>
+      <p id="battle-text">${part}, ${weatherName(weatherForecast(now)[0].weather)} auf dem ${esc(chapter.name)}. ${save.hold ? 'Das Kapitel wartet.' : 'Der Weg läuft.'}</p>
       <div class="speed">
         ${([1, 2, 3] as const).map((speed) => `<button data-act="speed" data-speed="${speed}" class="${save.settings.speed === speed ? 'on' : ''}">×${speed}</button>`).join('')}
       </div>
@@ -174,22 +175,40 @@ function logBox(save: SaveV2): string {
   return `<div class="card log" id="log">${lines || '<div class="muted">Noch keine Ereignisse.</div>'}</div>`
 }
 
+function weatherIcon(id: WeatherId): string {
+  const common = 'fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"'
+  if (id === 'klar') return `<svg viewBox="0 0 24 24" ${common}><circle cx="12" cy="12" r="4"/><path d="M12 2v3M12 19v3M2 12h3M19 12h3M4.9 4.9l2 2M17.1 17.1l2 2M19.1 4.9l-2 2M6.9 17.1l-2 2"/></svg>`
+  if (id === 'regen') return `<svg viewBox="0 0 24 24" ${common}><path d="M7 15c-2 0-3-1.4-3-3 0-2 2-3 3.2-2.2C8 7 10 6 12 6c2.4 0 4 1.6 4.4 3.6 1.8.2 3.6 1.6 3.6 3.6 0 1.8-1.4 2.8-3 2.8"/><path d="M8 18v3M12 18v3M16 18v3"/></svg>`
+  if (id === 'gewitter') return `<svg viewBox="0 0 24 24" ${common}><path d="M7 14c-2 0-3-1.4-3-3 0-2 2-3 3.2-2.2C8 6 10 5 12 5c2.4 0 4 1.6 4.4 3.6 1.8.2 3.6 1.6 3.6 3.6 0 1.6-1.2 2.6-2.6 2.8"/><path d="M13 14l-3 5h3l-1 4 5-6h-3l2-3z"/></svg>`
+  if (id === 'schnee') return `<svg viewBox="0 0 24 24" ${common}><path d="M12 3v18M5 7l14 10M19 7L5 17"/><path d="M12 7l-1.5-1M12 7l1.5-1M12 17l-1.5 1M12 17l1.5 1"/></svg>`
+  if (id === 'nebel') return `<svg viewBox="0 0 24 24" ${common}><path d="M4 9h16M3 13h18M5 17h14"/></svg>`
+  return `<svg viewBox="0 0 24 24" ${common}><path d="M3 8c3 0 3 3 6 3s3-3 6-3 3 3 6 3M3 14c3 0 3 3 6 3s3-3 6-3 3 3 6 3"/></svg>`
+}
+
 function sightings(save: SaveV2, now: number, open: boolean): string {
   const rows = hereSightings(save, now)
   const hour = new Date(now).getHours()
   const night = hour < 8 || hour > 19
+  const forecast = weatherForecast(now)
+  const current = forecast[0]
   const body = rows.map((row) => `<div class="sight-row">
       <img class="${row.caught ? '' : 'sil'}" src="${monsterArt(row.species)}" alt=""/>
       <div><b>${row.caught ? esc(row.name) : '???'}</b><div class="muted">${esc(row.type)}</div></div>
       <span class="pct">${Math.round(row.pct)} %</span>
     </div>`).join('')
+  const preview = forecast.map((slot, index) => {
+    const label = new Date(slot.at).getUTCHours().toString().padStart(2, '0')
+    return `<span class="wx ${index === 0 ? 'now' : ''}" title="${label} UTC · ${weatherName(slot.weather)}">${weatherIcon(slot.weather)}</span>`
+  }).join('')
   return `<aside class="side">
     <div class="card side-card">
       <div style="display:flex;justify-content:space-between;align-items:center">
         <h2>Hier gesichtet</h2>
         <button class="ghost" data-act="side">${open ? 'Zu' : 'Auf'}</button>
       </div>
-      ${open ? `<div class="clock">${night ? 'Nacht' : 'Tag'}</div><div class="sight">${body || '<div class="muted">Hier gibt es keine Wildnis.</div>'}</div>` : ''}
+      ${open ? `<div class="clock"><span class="wx">${weatherIcon(current.weather)}</span> ${night ? 'Nacht' : 'Tag'} · ${weatherName(current.weather)}</div>
+        <div class="forecast" aria-label="24 Stunden">${preview}</div>
+        <div class="sight">${body || '<div class="muted">Hier gibt es keine Wildnis.</div>'}</div>` : `<div class="clock"><span class="wx">${weatherIcon(current.weather)}</span></div>`}
     </div>
   </aside>`
 }
@@ -360,6 +379,7 @@ function guide(): string {
     <p>Heilquellen heilen das Team. Fällt das ganze Team, kehrt ihr zur letzten Heilquelle zurück, ohne etwas zu verlieren.</p>
     <p>Der Wächter am Schritt 20 bringt ein Wappen. Mit „Kapitel wiederholen“ farmst du ein geschafftes Kapitel weiter. Nach Kapitel 8 wartet der Hohe Rat: vier Räte und der Großwächter direkt hintereinander. Das Ratsiegel öffnet Region 2, die später folgt.</p>
     <p>Der Kodex zeigt alle 100 Arten: besessen, nicht mehr besessen, gesichtet oder fehlend, mit Fundort und Bedingung.</p>
+    <p>Das Wetter wechselt jede Stunde und ist für alle gleich. Manche Arten zeigen sich nur dann, mit einem kleinen Anteil. Ein Schimmer ist selten und stärker. Pro Art steht höchstens einer im Team.</p>
     <p>Bis zu 8 Stunden Abwesenheit werden nachgerechnet. Der Begleiter bekommt mehr Kampf-EP.</p>
   </div>`
 }

@@ -232,10 +232,11 @@ function play(outcome: EncounterOutcome, speed: Speed, done: () => void): void {
       }
       if (text && shot && elapsed < battleEnd) text.textContent = shot.text
       if (allyName) allyName.textContent = trace.allyName
-      if (foeName) foeName.textContent = trace.foeName
+      if (foeName) foeName.textContent = outcome.shiny ? `${trace.foeName} · Schimmer` : trace.foeName
       if (allyImg) allyImg.src = monsterArt(trace.allySpecies, true)
       if (foeImg) {
         foeImg.hidden = false
+        foeImg.classList.toggle('is-shiny', outcome.shiny)
         foeImg.src = monsterArt(trace.foeSpecies, true)
       }
     } else if (text && outcome.lines[0]) text.textContent = outcome.lines[0]
