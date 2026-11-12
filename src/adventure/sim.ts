@@ -32,6 +32,7 @@ import {
 } from './route'
 import { chapterCapNow } from './dex'
 import { rollShiny, shinyChance, teamBlocksShiny } from './shiny'
+import { syncAchievements } from './achievements'
 import { advanceHort, HORT_EP_RATE } from './hort'
 import { applyFruitWeights, catchMods, combatExpFactor, fruitActive, fruitDef, grantGold, rollFindFruit } from './shop'
 import { makeMon, takeId } from './save'
@@ -265,6 +266,7 @@ function wipe(save: SaveV2, now: number, quiet: boolean): void {
 function finish(save: SaveV2, chapter: ChapterDef, outcome: EncounterOutcome): EncounterOutcome {
   outcome.hold = save.hold
   outcome.scene = chapter.scene
+  syncAchievements(save)
   return outcome
 }
 
@@ -340,6 +342,7 @@ export function applyCatch(save: SaveV2, speciesId: string, level: number, shiny
     dex.caught += 1
     save.dex[speciesId] = dex
     save.stats.catches += 1
+    if (shiny) save.stats.shinies += 1
     if (existing.length) save.stats.dupes += 1
     if (opts.summary) {
       if (!existing.length) opts.summary.catches.push(speciesId)

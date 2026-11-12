@@ -1,3 +1,4 @@
+import { syncAchievements } from './achievements'
 import { species } from '../data'
 import type { Spawn } from './route'
 import { addExp } from './stats'
@@ -173,16 +174,20 @@ export function useCrystal(save: SaveV2, id: CrystalId, uid: string, cap: number
     save.bag.crystals[id] += 1
     return 'Das Level-Cap lässt keine EP mehr zu.'
   }
+  save.stats.crystalsUsed += 1
+  syncAchievements(save)
   return null
 }
 
 export function useFruit(save: SaveV2, id: FruitId, now: number): string | null {
   if (save.bag.fruits[id] <= 0) return 'Keine Frucht in der Tasche.'
   save.bag.fruits[id] -= 1
+  save.stats.fruitsUsed += 1
   const until = now + FRUIT_MS
   const current = save.activeFruits.find((fruit) => fruit.id === id)
   if (current) current.until = until
   else save.activeFruits.push({ id, until })
+  syncAchievements(save)
   return null
 }
 

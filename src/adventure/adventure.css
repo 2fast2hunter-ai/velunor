@@ -69,6 +69,20 @@ button, input, select { font: inherit; color: inherit; }
   border: 2px solid #f0c14a;
 }
 .avatar.b { border-color: #7ee0c8; background: #1c3d4a; }
+.title { color: #f0c14a; font-size: 13px; font-weight: 800; }
+.avatar.frame-gold { box-shadow: 0 0 0 3px #f0c14a; }
+.avatar.frame-night { box-shadow: 0 0 0 3px #8eb4ff; }
+.avatar.frame-leaf { box-shadow: 0 0 0 3px #7dcea0; }
+.avatar.frame-ember { box-shadow: 0 0 0 3px #ff8a65; }
+.avatar.frame-tide { box-shadow: 0 0 0 3px #4fc3f7; }
+.avatar.frame-stone { box-shadow: 0 0 0 3px #bcaaa4; }
+.avatar.frame-spark { box-shadow: 0 0 0 3px #fff176; }
+.avatar.frame-frost { box-shadow: 0 0 0 3px #b3e5fc; }
+.avatar.frame-veil { box-shadow: 0 0 0 3px #ce93d8; }
+.avatar.frame-plain { box-shadow: 0 0 0 3px #cfd8dc; }
+.achieve { display: flex; gap: 8px; align-items: center; justify-content: space-between; padding: 8px 0; border-bottom: 1px solid rgba(168, 190, 240, 0.12); }
+.achieve.done b { color: #f0c14a; }
+.achieve button { border: 0; border-radius: 10px; padding: 6px 8px; background: #24365f; cursor: pointer; }
 .who { font-size: 22px; font-weight: 800; }
 .muted { color: #9aabc8; font-size: 14px; }
 .gold { color: #f0c14a; font-weight: 800; font-size: 20px; }

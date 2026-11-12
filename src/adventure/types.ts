@@ -32,6 +32,10 @@ export interface AdventureStats {
   wins: number
   catches: number
   dupes: number
+  eggs: number
+  shinies: number
+  fruitsUsed: number
+  crystalsUsed: number
 }
 
 /**
@@ -81,6 +85,9 @@ export interface SaveV2 {
   eggs: HortEgg[]
   /** Last time a two-hour breeding check was applied. */
   lastBreedAt: number
+  claimed: string[]
+  equippedTitle: string | null
+  equippedFrame: string | null
 }
 
 export interface HortEgg {

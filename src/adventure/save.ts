@@ -41,7 +41,7 @@ export function blankSave(now: number): SaveV2 {
     mons: {},
     dex: {},
     settings: { speed: 1, autoSwitch: true, catchCard: true },
-    stats: { wins: 0, catches: 0, dupes: 0 },
+    stats: { wins: 0, catches: 0, dupes: 0, eggs: 0, shinies: 0, fruitsUsed: 0, crystalsUsed: 0 },
     rng: freshSeed(),
     nextId: 1,
     started: false,
@@ -58,7 +58,10 @@ export function blankSave(now: number): SaveV2 {
     hortSlots: 1,
     hort: [],
     eggs: [],
-    lastBreedAt: now
+    lastBreedAt: now,
+    claimed: [],
+    equippedTitle: null,
+    equippedFrame: null
   }
 }
 
@@ -206,10 +209,15 @@ export function normalize(save: SaveV2, now: number): SaveV2 {
     autoSwitch: save.settings?.autoSwitch !== false,
     catchCard: save.settings?.catchCard !== false
   }
+  const shinyHeld = Object.values(save.mons).filter((mon) => mon.shiny).length
   save.stats = {
     wins: save.stats?.wins ?? 0,
     catches: save.stats?.catches ?? 0,
-    dupes: save.stats?.dupes ?? 0
+    dupes: save.stats?.dupes ?? 0,
+    eggs: save.stats?.eggs ?? 0,
+    shinies: save.stats?.shinies ?? shinyHeld,
+    fruitsUsed: save.stats?.fruitsUsed ?? 0,
+    crystalsUsed: save.stats?.crystalsUsed ?? 0
   }
   if (!save.rng) save.rng = freshSeed()
   if (!save.nextId) {
@@ -254,6 +262,9 @@ export function normalize(save: SaveV2, now: number): SaveV2 {
   save.eggs = (Array.isArray(save.eggs) ? save.eggs : []).filter((egg) => egg && typeof egg.species === 'string' && Number(egg.readyAt) > 0)
     .map((egg) => ({ species: egg.species, shiny: Boolean(egg.shiny), readyAt: Math.floor(Number(egg.readyAt)) }))
   if (!Number.isFinite(save.lastBreedAt) || save.lastBreedAt <= 0) save.lastBreedAt = save.lastSeenAt || now
+  save.claimed = Array.isArray(save.claimed) ? save.claimed.filter((id) => typeof id === 'string') : []
+  save.equippedTitle = typeof save.equippedTitle === 'string' && save.claimed.includes(save.equippedTitle) ? save.equippedTitle : null
+  save.equippedFrame = typeof save.equippedFrame === 'string' && save.claimed.includes(save.equippedFrame) ? save.equippedFrame : null
   return save
 }
 

@@ -13,6 +13,7 @@ import {
 import { baseLine, dexPlaces, dexStatus, dexStatusLabel, listCodex, regionProgress, speciesNumber, type DexFilter } from './dex'
 import { chapterById, placeLabel, regionById, routeOf, type NodeKind } from './route'
 import { dexCaughtCount, hereSightings, rarityName } from './sim'
+import { equippedFrame, equippedTitle, GOALS } from './achievements'
 import { HORT_PRICES, hortOffer } from './hort'
 import { CRYSTALS, FRUITS, crystalUnlocked, fruitDef, fruitMinutes, sellValue, wappenCount } from './shop'
 import { weatherForecast, weatherName, type WeatherId } from './weather'
@@ -83,9 +84,10 @@ function nav(save: SaveV2, screen: Screen, step: number): string {
   ]
   return `<aside class="nav">
     <div class="card player">
-      <div class="avatar ${save.avatar === 'B' ? 'b' : ''}">${save.avatar}</div>
+      <div class="avatar ${save.avatar === 'B' ? 'b' : ''} ${equippedFrame(save) ? `frame-${equippedFrame(save)}` : ''}">${save.avatar}</div>
       <div>
         <div class="who">${esc(save.name)}</div>
+        ${equippedTitle(save) ? `<div class="title">${esc(equippedTitle(save))}</div>` : ''}
         <div class="muted">Kodex ${caught}/100</div>
         <div class="gold" id="gold">${gold(save.gold)}</div>
       </div>
@@ -435,8 +437,20 @@ function hortView(save: SaveV2, now: number, selected: string | null): string {
   </div>`
 }
 
-function placeholder(title: string, text: string): string {
-  return `<div class="card panel"><h2>${esc(title)}</h2><p>${esc(text)}</p></div>`
+function achievementsView(save: SaveV2): string {
+  const done = save.claimed.length
+  const rows = GOALS.map((goal) => {
+    const have = save.claimed.includes(goal.id)
+    return `<div class="achieve ${have ? 'done' : ''}">
+      <div><b>${esc(goal.name)}</b><div class="muted">${have ? `Titel „${esc(goal.title)}“ · Rahmen ${esc(goal.frame)}` : 'Noch offen'} · ${goal.gold.toLocaleString('de-DE')} G</div></div>
+      ${have ? `<button data-act="equip-title" data-id="${goal.id}">Titel</button><button data-act="equip-frame" data-id="${goal.id}">Rahmen</button>` : ''}
+    </div>`
+  }).join('')
+  return `<div class="card panel">
+    <h2>Erfolge ${done}/${GOALS.length}</h2>
+    <p class="muted">Titel und Rahmen schmücken die Spielerkarte. Gold gibt es einmal. Manche Ziele warten auf spätere Regionen.</p>
+    ${rows}
+  </div>`
 }
 
 function options(save: SaveV2, debug: boolean): string {
@@ -464,6 +478,7 @@ function guide(): string {
     <p>Das Wetter wechselt jede Stunde und ist für alle gleich. Manche Arten zeigen sich nur dann, mit einem kleinen Anteil. Ein Schimmer ist selten und stärker. Pro Art steht höchstens einer im Team.</p>
     <p>Im Laden gibt es EP-Kristalle und Früchte. Kristalle gelten ab einer Zahl von Wappen. Früchte halten eine Stunde, auch wenn du weg bist. Auf einem Fund liegt manchmal eine Frucht.</p>
     <p>Im Hort sammeln Monster Art-EP. Zwei vom selben Typ können ein Ei legen. Das Junge kommt auf Level 1 in den PC.</p>
+    <p>Erfolge bringen Gold, einen Titel und einen Rahmen für die Spielerkarte.</p>
     <p>Bis zu 8 Stunden Abwesenheit werden nachgerechnet. Der Begleiter bekommt mehr Kampf-EP.</p>
   </div>`
 }
@@ -475,7 +490,7 @@ function center(save: SaveV2, screen: Screen, now: number, pc: PcQuery, dex: Cod
   if (screen === 'codex') return codex(save, dex)
   if (screen === 'activities') return hortView(save, now, selected)
   if (screen === 'shop') return shop(save, now)
-  if (screen === 'achievements') return placeholder('Erfolge', 'Die Erfolgsliste folgt in einem späteren Schritt.')
+  if (screen === 'achievements') return achievementsView(save)
   if (screen === 'options') return options(save, debug)
   return guide()
 }

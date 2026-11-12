@@ -265,7 +265,8 @@ describe('acceptance loop', () => {
     const outcome = resolveEncounter(save, 1_000, { offline: false, trace: false })
     expect(outcome.badge).toBe('Kieselwappen')
     expect(save.badges).toContain('Kieselwappen')
-    expect(save.gold).toBe(START_GOLD + 1750)
+    // Guardian gold plus the achievements for a full level-12 team and the first crest.
+    expect(save.gold).toBe(START_GOLD + 1750 + 1000 + 400 + 2000)
     expect(chapterUnlocked(save, 2)).toBe(true)
     expect(save.step).toBe(1)
     expect(travelTo(save, 2)).toBeNull()
