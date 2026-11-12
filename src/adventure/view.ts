@@ -17,11 +17,19 @@ import { equippedFrame, equippedTitle, GOALS } from './achievements'
 import { HORT_PRICES, hortOffer } from './hort'
 import { CRYSTALS, FRUITS, crystalUnlocked, fruitDef, fruitMinutes, sellValue, wappenCount } from './shop'
 import { weatherForecast, weatherName, type WeatherId } from './weather'
+import { FACES, MULTIPLIERS, PRIZES, SPIN_COST, faceById, wheelOpen, type Multiplier, type SymbolId } from './wheel'
 import { expToNext, isAlive, monStats, realHp } from './stats'
 import type { OfflineSummary } from './sim'
 import type { SaveV2 } from './types'
 
 export type Screen = 'adventure' | 'progress' | 'team' | 'codex' | 'activities' | 'shop' | 'achievements' | 'options' | 'guide'
+
+export interface WheelPanel {
+  tab: 'hort' | 'wheel'
+  mult: Multiplier
+  symbols: [SymbolId, SymbolId, SymbolId] | null
+  note: string
+}
 
 export interface PcQuery {
   q: string
@@ -90,6 +98,7 @@ function nav(save: SaveV2, screen: Screen, step: number): string {
         ${equippedTitle(save) ? `<div class="title">${esc(equippedTitle(save))}</div>` : ''}
         <div class="muted">Kodex ${caught}/100</div>
         <div class="gold" id="gold">${gold(save.gold)}</div>
+        ${wheelOpen(save) || save.marks > 0 ? `<div class="muted">Marken ${save.marks.toLocaleString('de-DE')}</div>` : ''}
       </div>
     </div>
     <div class="card chapter">
@@ -402,6 +411,62 @@ function shop(save: SaveV2, now: number): string {
   </div>`
 }
 
+function glyph(id: SymbolId): string {
+  const box = 'viewBox="0 0 64 64" width="72" height="72" aria-hidden="true"'
+  if (id === 'stern') return `<svg ${box}><polygon points="32,6 38,24 58,24 42,36 48,56 32,44 16,56 22,36 6,24 26,24" fill="#f0c14a"/></svg>`
+  if (id === 'mond') return `<svg ${box}><path d="M42 8a22 22 0 1 0 0 48 16 16 0 1 1 0-48z" fill="#d6e4ff"/></svg>`
+  if (id === 'krone') return `<svg ${box}><path d="M8 48 L14 22 L26 34 L32 12 L38 34 L50 22 L56 48 Z" fill="#f0c14a"/></svg>`
+  if (id === 'blatt') return `<svg ${box}><ellipse cx="32" cy="36" rx="14" ry="22" transform="rotate(-28 32 36)" fill="#7dcea0"/></svg>`
+  if (id === 'tropfen') return `<svg ${box}><path d="M32 8 C32 8 14 30 14 42 a18 18 0 0 0 36 0 C50 30 32 8 32 8Z" fill="#4fc3f7"/></svg>`
+  return `<svg ${box}><polygon points="32,4 38,26 60,32 38,38 32,60 26,38 4,32 26,26" fill="#fff176"/></svg>`
+}
+
+function activitiesView(save: SaveV2, now: number, selected: string | null, wheel: WheelPanel): string {
+  const tabs = `<div class="row-actions">
+    <button data-act="activity" data-id="hort" class="${wheel.tab === 'hort' ? 'primary' : ''}">Hort</button>
+    <button data-act="activity" data-id="wheel" class="${wheel.tab === 'wheel' ? 'primary' : ''}">Glücksrad</button>
+  </div>`
+  return tabs + (wheel.tab === 'wheel' ? wheelView(save, wheel) : hortView(save, now, selected))
+}
+
+function wheelView(save: SaveV2, wheel: WheelPanel): string {
+  if (!wheelOpen(save)) {
+    return `<div class="card panel"><h2>Glücksrad</h2><p>Das Rad öffnet nach dem dritten Wappen. Ein Dreh kostet Spielgold und zahlt Glücksmarken. Kein Echtgeld.</p></div>`
+  }
+  const shown = wheel.symbols ?? (['funke', 'blatt', 'tropfen'] as [SymbolId, SymbolId, SymbolId])
+  const reels = shown.map((id) => `<div class="reel">${glyph(id)}<span>${esc(faceById(id).name)}</span></div>`).join('')
+  const bets = MULTIPLIERS.map((mult) => `<button data-act="wheel-mult" data-mult="${mult}" class="${wheel.mult === mult ? 'primary' : ''}">×${mult}</button>`).join('')
+  const pay = FACES.map((face) => `<div class="shop-row"><div>3 ${esc(face.name)}</div><span>${face.triple.toLocaleString('de-DE')}</span></div>`).join('')
+  const regions = [...new Set(PRIZES.map((prize) => prize.region))]
+  const shop = regions.map((region) => {
+    const rows = PRIZES.filter((prize) => prize.region === region).map((prize) => {
+      const sp = species(prize.species)
+      const open = save.regionsOpen.includes(prize.region)
+      const owned = Object.values(save.mons).some((mon) => mon.species === prize.species)
+      const label = !open ? 'Später' : owned ? 'Besessen' : `${prize.marks.toLocaleString('de-DE')} Marken`
+      return `<div class="shop-row">
+        <img src="${monsterArt(sp.id, true)}" alt=""/>
+        <div><b>${esc(sp.name)}</b><div class="muted">${esc(prize.regionName)} · Lv 5</div></div>
+        <button data-act="buy-prize" data-id="${prize.species}" ${open && !owned ? '' : 'disabled'}>${label}</button>
+      </div>`
+    }).join('')
+    const name = PRIZES.find((prize) => prize.region === region)?.regionName ?? ''
+    return `<h2>${esc(name)}</h2>${rows}`
+  }).join('')
+  return `<div class="card panel">
+    <h2>Glücksrad</h2>
+    <p class="muted">Ein Dreh kostet ${(SPIN_COST * wheel.mult).toLocaleString('de-DE')} G. Die Marken gelten im Preisladen. Nur Spielgold, kein Echtgeld. Marken: ${save.marks.toLocaleString('de-DE')}</p>
+    <div class="reels">${reels}</div>
+    <div class="row-actions">${bets}<button class="primary" data-act="spin">Drehen</button></div>
+    ${wheel.note ? `<p>${esc(wheel.note)}</p>` : ''}
+    <h2>Marken</h2>
+    ${pay}
+    <p class="muted">Zwei gleiche Formen: 2. Drei verschiedene mit einem Stern: 1. Sonst 0. Der Einsatz ×5 oder ×10 vervielfacht Kosten und Marken.</p>
+    <h2>Preisladen</h2>
+    ${shop}
+  </div>`
+}
+
 function hortView(save: SaveV2, now: number, selected: string | null): string {
   const offer = hortOffer(save)
   const residents = save.hort.map((uid) => {
@@ -424,7 +489,7 @@ function hortView(save: SaveV2, now: number, selected: string | null): string {
     : '<p class="muted">Alle vier Plätze sind offen.</p>'
   return `<div class="card panel">
     <h2>Hort</h2>
-    <p class="muted">Platz 1 ist frei. Weitere Plätze kosten ${HORT_PRICES[1].toLocaleString('de-DE')} G, ${HORT_PRICES[2].toLocaleString('de-DE')} G nach dem Hohen Rat 1 und ${HORT_PRICES[3].toLocaleString('de-DE')} G nach dem Hohen Rat 2. Monster im Hort sammeln Art-EP. Zwei vom selben Typ können alle 2 Stunden ein Ei legen. Das Glücksrad folgt später.</p>
+    <p class="muted">Platz 1 ist frei. Weitere Plätze kosten ${HORT_PRICES[1].toLocaleString('de-DE')} G, ${HORT_PRICES[2].toLocaleString('de-DE')} G nach dem Hohen Rat 1 und ${HORT_PRICES[3].toLocaleString('de-DE')} G nach dem Hohen Rat 2. Monster im Hort sammeln Art-EP. Zwei vom selben Typ können alle 2 Stunden ein Ei legen.</p>
     <p>Offene Plätze: ${save.hortSlots} · Eier ${save.eggs.length}/${save.hortSlots}</p>
     ${buy}
     <div class="row-actions">
@@ -479,26 +544,27 @@ function guide(): string {
     <p>Im Laden gibt es EP-Kristalle und Früchte. Kristalle gelten ab einer Zahl von Wappen. Früchte halten eine Stunde, auch wenn du weg bist. Auf einem Fund liegt manchmal eine Frucht.</p>
     <p>Im Hort sammeln Monster Art-EP. Zwei vom selben Typ können ein Ei legen. Das Junge kommt auf Level 1 in den PC.</p>
     <p>Erfolge bringen Gold, einen Titel und einen Rahmen für die Spielerkarte.</p>
+    <p>Nach dem dritten Wappen öffnet das Glücksrad. Ein Dreh kostet Spielgold und zahlt Glücksmarken für den Preisladen. Kein Echtgeld.</p>
     <p>Bis zu 8 Stunden Abwesenheit werden nachgerechnet. Der Begleiter bekommt mehr Kampf-EP.</p>
   </div>`
 }
 
-function center(save: SaveV2, screen: Screen, now: number, pc: PcQuery, dex: CodexQuery, selected: string | null, debug: boolean, step: number): string {
+function center(save: SaveV2, screen: Screen, now: number, pc: PcQuery, dex: CodexQuery, selected: string | null, debug: boolean, step: number, wheel: WheelPanel): string {
   if (screen === 'adventure') return `${path(save, step)}${battle(save, now)}${logBox(save)}`
   if (screen === 'progress') return progress(save)
   if (screen === 'team') return team(save, pc, selected)
   if (screen === 'codex') return codex(save, dex)
-  if (screen === 'activities') return hortView(save, now, selected)
+  if (screen === 'activities') return activitiesView(save, now, selected, wheel)
   if (screen === 'shop') return shop(save, now)
   if (screen === 'achievements') return achievementsView(save)
   if (screen === 'options') return options(save, debug)
   return guide()
 }
 
-export function gameHtml(save: SaveV2, screen: Screen, now: number, pc: PcQuery, dex: CodexQuery, selected: string | null, sideOpen: boolean, debug: boolean, overlay: Overlay | null, step = save.step): string {
+export function gameHtml(save: SaveV2, screen: Screen, now: number, pc: PcQuery, dex: CodexQuery, selected: string | null, sideOpen: boolean, debug: boolean, overlay: Overlay | null, step = save.step, wheel: WheelPanel = { tab: 'hort', mult: 1, symbols: null, note: '' }): string {
   return `<div id="stage" class="${sideOpen ? '' : 'side-shut'}">
     ${nav(save, screen, step)}
-    <main class="center">${center(save, screen, now, pc, dex, selected, debug, step)}</main>
+    <main class="center">${center(save, screen, now, pc, dex, selected, debug, step, wheel)}</main>
     ${sightings(save, now, sideOpen)}
     ${overlay ? `<div class="overlay">${overlayHtml(save, overlay)}</div>` : ''}
   </div>`

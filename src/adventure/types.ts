@@ -48,6 +48,8 @@ export interface SaveV2 {
   name: string
   avatar: 'A' | 'B'
   gold: number
+  /** Glücksmarken from the wheel. Older saves load as 0. */
+  marks: number
   lastSeenAt: number
   region: number
   chapter: number

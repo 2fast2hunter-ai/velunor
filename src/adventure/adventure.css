@@ -150,6 +150,9 @@ button, input, select { font: inherit; color: inherit; }
 .council-path { grid-template-columns: repeat(5, 1fr); }
 .region-bars { display: grid; gap: 8px; margin: 8px 0 12px; }
 .shop-row, .fruit-row { display: flex; gap: 8px; align-items: center; justify-content: space-between; padding: 8px 0; border-bottom: 1px solid rgba(168, 190, 240, 0.15); }
+.shop-row img { width: 48px; height: 48px; object-fit: contain; }
+.reels { display: flex; gap: 12px; margin: 12px 0; }
+.reel { width: 120px; min-height: 120px; border-radius: 16px; background: #16223f; display: flex; flex-direction: column; align-items: center; justify-content: center; gap: 4px; }
 .shop-row button { border: 0; border-radius: 10px; padding: 8px 10px; background: #24365f; cursor: pointer; }
 .shop-row button:disabled { opacity: 0.4; cursor: default; }
 .fruit-row span { color: #f0c14a; font-weight: 800; }

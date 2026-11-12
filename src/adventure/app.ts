@@ -20,6 +20,7 @@ import { beginAdventure, loadAdventure, writeSave } from './save'
 import { equipFrame, equipTitle } from './achievements'
 import { buyHortSlot, moveFromHort, moveToHort } from './hort'
 import { buyCrystal, buyFruit, sellCrystal, sellFruit, useCrystal, useFruit } from './shop'
+import { buyPrize, spinWheel, type Multiplier, type SymbolId } from './wheel'
 import { chapterCapNow } from './dex'
 import { chapterById } from './route'
 import {
@@ -45,7 +46,8 @@ import {
   type CodexQuery,
   type Overlay,
   type PcQuery,
-  type Screen
+  type Screen,
+  type WheelPanel
 } from './view'
 
 const RESET_FLAG = 'velunor_v2_reset'
@@ -63,6 +65,10 @@ let draftPick = ''
 let timer = 0
 let animating = false
 let lastTick = 0
+let activity: WheelPanel['tab'] = 'hort'
+let wheelMult: Multiplier = 1
+let wheelSymbols: [SymbolId, SymbolId, SymbolId] | null = null
+let wheelNote = ''
 let dragUid = ''
 let dragKind = ''
 let pressTimer = 0
@@ -126,7 +132,12 @@ async function start(next: SaveV2): Promise<void> {
 
 function render(step = save?.step): void {
   if (!save) return
-  paint(gameHtml(save, screen, Date.now(), pc, dex, selected, sideOpen, debug, overlay, step ?? save.step))
+  paint(gameHtml(save, screen, Date.now(), pc, dex, selected, sideOpen, debug, overlay, step ?? save.step, {
+    tab: activity,
+    mult: wheelMult,
+    symbols: wheelSymbols,
+    note: wheelNote
+  }))
   const seal = document.getElementById('seal') as HTMLImageElement | null
   if (seal) {
     seal.style.mixBlendMode = SEAL_BLEND
@@ -476,6 +487,36 @@ function onClick(event: Event): void {
   }
   if (act === 'equip-frame') {
     equipFrame(save, node.getAttribute('data-id') ?? '')
+    render()
+    return
+  }
+  if (act === 'activity') {
+    activity = node.getAttribute('data-id') === 'wheel' ? 'wheel' : 'hort'
+    screen = 'activities'
+    render()
+    return
+  }
+  if (act === 'wheel-mult') {
+    const mult = Number(node.getAttribute('data-mult'))
+    if (mult === 1 || mult === 5 || mult === 10) wheelMult = mult
+    render()
+    return
+  }
+  if (act === 'spin') {
+    const spun = spinWheel(save, wheelMult)
+    if (typeof spun === 'string') wheelNote = spun
+    else {
+      wheelSymbols = spun.symbols
+      wheelNote = `${spun.marks.toLocaleString('de-DE')} Glücksmarken.`
+    }
+    try { writeSave(localStorage, save) } catch { /* ignore */ }
+    render()
+    return
+  }
+  if (act === 'buy-prize') {
+    const reason = buyPrize(save, node.getAttribute('data-id') ?? '', Date.now())
+    wheelNote = reason ?? 'Im PC.'
+    try { writeSave(localStorage, save) } catch { /* ignore */ }
     render()
     return
   }
