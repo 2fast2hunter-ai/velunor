@@ -152,7 +152,9 @@ button, input, select { font: inherit; color: inherit; }
 .plate.tint-schatten { filter: hue-rotate(236deg) saturate(0.4) brightness(0.52); }
 .plate.tint-himmel { filter: hue-rotate(205deg) saturate(0.35) brightness(1.22); }
 .plate.tint-horst { filter: hue-rotate(18deg) saturate(1.15) brightness(0.62) contrast(1.1); }
-.battle.shake { animation: screen-shake 180ms linear; }
+.battle-world.shake { animation: screen-shake 120ms linear; }
+.battle-world.shake-crit { animation: screen-shake-crit 120ms linear; }
+@keyframes screen-shake-crit { 25% { transform: translate(4px, 2px); } 75% { transform: translate(-4px, -2px); } }
 @keyframes screen-shake { 25% { transform: translateX(-8px); } 75% { transform: translateX(8px); } }
 .flash { position: absolute; inset: 0; background: #fff8e1; opacity: 0; pointer-events: none; }
 .flash.on { opacity: 0.55; }
@@ -206,8 +208,19 @@ textarea { width: 100%; box-sizing: border-box; background: #121a30; color: inhe
   z-index: 2;
   pointer-events: none;
 }
-.combatant.ally { left: 28%; }
-.combatant.foe { left: 72%; }
+.battle-world { position: absolute; inset: 0; overflow: hidden; }
+.parallax { position: absolute; inset: -8%; pointer-events: none; }
+.parallax.far { background: linear-gradient(180deg, rgba(255,255,255,0.18), transparent 42%); }
+.parallax.mid { background: radial-gradient(60% 30% at 50% 40%, rgba(255,255,255,0.14), transparent 70%); }
+.parallax.near { background: linear-gradient(0deg, rgba(0,0,0,0.28), transparent 28%); }
+#battle-fx { position: absolute; inset: 0; pointer-events: none; z-index: 4; }
+#battle-fx canvas { width: 100% !important; height: 100% !important; }
+#floats { position: absolute; inset: 0; pointer-events: none; z-index: 4; }
+.float-num { position: absolute; font-weight: 800; text-shadow: 0 2px 6px #000; }
+.crit-flash { position: absolute; inset: 0; background: #fff; opacity: 0; pointer-events: none; z-index: 5; }
+.ground-shadow { position: absolute; left: 50%; bottom: -8px; width: 46%; height: 16px; transform: translateX(-50%); background: rgba(0,0,0,0.25); border-radius: 50%; }
+.combatant.ally { left: 28%; z-index: 3; }
+.combatant.foe { left: 72%; z-index: 2; }
 .combatant img.sprite { height: 250px; width: auto; filter: drop-shadow(0 12px 10px rgba(0, 0, 0, 0.35)); }
 .combatant.ally img.sprite { transform: scaleX(-1); }
 .hp {

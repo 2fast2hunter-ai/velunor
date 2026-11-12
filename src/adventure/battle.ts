@@ -2,6 +2,7 @@ import { combat, typeMult } from '../data'
 import { nextFloat } from '../rng'
 import type { SkillDef, SkillEffect, SpeciesPassive, StatusId, TypeId } from '../types'
 import { ACTION_LIMIT } from './const'
+import { awakenCount } from './stats'
 
 export interface FightSide {
   speciesId: string
@@ -14,12 +15,27 @@ export interface FightSide {
   spd: number
   skill: SkillDef
   passive: SpeciesPassive | null
+  /** Presentation only. Damage already includes the awaken bonus. */
+  level?: number
+}
+
+export interface FightHit {
+  from: 'ally' | 'foe'
+  amount: number
+  crit: boolean
+  type: TypeId
+  band: 'strong' | 'weak' | 'neutral'
+  ko: boolean
+  kind: 'hit' | 'heal' | 'status'
+  /** Lv 25/50 glow. Does not change the damage. */
+  awaken?: boolean
 }
 
 export interface FightFrame {
   allyHp: number
   foeHp: number
   text: string
+  hits?: FightHit[]
 }
 
 export interface FightTrace {
@@ -210,9 +226,12 @@ export function fight1v1(allySide: FightSide, foeSide: FightSide, rng: () => num
   const ally = makeActor(allySide)
   const foe = makeActor(foeSide)
   const frames: FightFrame[] = []
+  const pending: FightHit[] = []
   const push = (text: string) => {
-    if (trace) frames.push({ allyHp: Math.max(0, ally.hp), foeHp: Math.max(0, foe.hp), text })
+    if (!trace) return
+    frames.push({ allyHp: Math.max(0, ally.hp), foeHp: Math.max(0, foe.hp), text, hits: pending.splice(0) })
   }
+  const bandOf = (mult: number): FightHit['band'] => (mult > 1 ? 'strong' : mult < 1 ? 'weak' : 'neutral')
   push(`${ally.side.name} gegen ${foe.side.name}`)
 
   const hurt = (target: Actor, amount: number, ignoreShield: boolean): number => {
@@ -246,6 +265,18 @@ export function fight1v1(allySide: FightSide, foeSide: FightSide, rng: () => num
     const variance = combat.varianceMin + (combat.varianceMax - combat.varianceMin) * rng()
     const dmg = rawDamage(atkOf(attacker), defOf(target, pierce), skillMult, tMult, crit, variance)
     const past = hurt(target, dmg, false)
+    if (trace && past > 0) {
+      pending.push({
+        from: attacker === ally ? 'ally' : 'foe',
+        amount: past,
+        crit,
+        type: attacker.side.type,
+        band: bandOf(tMult),
+        ko: target.hp <= 0,
+        kind: 'hit',
+        awaken: awakenCount(attacker.side.level ?? 0) > 0
+      })
+    }
     const thorns = target.statuses.find((status) => status.id === 'thorns')
     if (past > 0 && thorns && attacker.hp > 0) {
       const reflected = Math.floor(past * thorns.value)
@@ -270,6 +301,7 @@ export function fight1v1(allySide: FightSide, foeSide: FightSide, rng: () => num
       } else if (effect.kind === 'heal') {
         const gain = Math.floor(atkOf(unit) * effect.atkMult)
         unit.hp = Math.min(unit.side.maxHp, unit.hp + gain)
+        if (trace && gain > 0) pending.push({ from: unit === ally ? 'ally' : 'foe', amount: gain, crit: false, type: unit.side.type, band: 'neutral', ko: false, kind: 'heal' })
       } else if (effect.kind === 'shield') {
         giveShield(unit, unit.side.maxHp * effect.maxHpPctOfCaster, effect.duration)
       } else if (effect.kind === 'cleanse') {
@@ -281,6 +313,7 @@ export function fight1v1(allySide: FightSide, foeSide: FightSide, rng: () => num
         if (victim.hp <= 0) continue
         if (rng() >= effect.chance) continue
         applyStatus(victim, effect, unit)
+        if (trace) pending.push({ from: unit === ally ? 'ally' : 'foe', amount: 0, crit: false, type: unit.side.type, band: 'neutral', ko: false, kind: 'status' })
       }
     }
     unit.cd = skill.cooldown

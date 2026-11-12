@@ -1,4 +1,4 @@
-import type { FightTrace } from './battle'
+import type { FightHit, FightTrace } from './battle'
 import { watchdogLimit, type Speed } from './const'
 
 export interface StallInput {
@@ -27,6 +27,7 @@ export interface FrameShot {
   foeName: string
   allySpecies: string
   foeSpecies: string
+  hits: FightHit[]
 }
 
 /** The battle frame at `elapsed` ms. Missing traces never throw. */
@@ -51,6 +52,7 @@ export function shotAt(traces: FightTrace[], elapsed: number, dur: number): Fram
     allyName: trace.allyName,
     foeName: trace.foeName,
     allySpecies: trace.allySpecies,
-    foeSpecies: trace.foeSpecies
+    foeSpecies: trace.foeSpecies,
+    hits: shot.hits ?? trace.frames[at]?.hits ?? []
   }
 }
