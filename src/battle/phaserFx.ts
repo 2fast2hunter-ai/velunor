@@ -358,20 +358,26 @@ export function fxPoolSize(): number {
 }
 
 export function mountBattleFx(parent: HTMLElement): void {
+  const width = parent.clientWidth || 1080
+  const height = parent.clientHeight || 980
   if (game) {
     const canvas = game.canvas
     if (canvas.parentElement !== parent) parent.appendChild(canvas)
-    game.scale.resize(parent.clientWidth || 640, parent.clientHeight || 360)
+    game.scale.resize(width, height)
     return
   }
   game = new Phaser.Game({
     type: Phaser.CANVAS,
     parent,
-    width: parent.clientWidth || 640,
-    height: parent.clientHeight || 360,
     transparent: true,
     banner: false,
     audio: { noAudio: true },
+    scale: {
+      mode: Phaser.Scale.FIT,
+      autoCenter: Phaser.Scale.CENTER_BOTH,
+      width,
+      height
+    },
     scene: FxScene
   })
   game.events.once('ready', () => {

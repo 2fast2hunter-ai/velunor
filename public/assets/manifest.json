@@ -675,6 +675,26 @@
     "type_lightning": {
       "256": "icons/type_lightning.png",
       "128": "icons/type_lightning_128.png"
+    },
+    "tab_abenteuer": {
+      "256": "icons/tab_abenteuer.png",
+      "128": "icons/tab_abenteuer_128.png"
+    },
+    "tab_team": {
+      "256": "icons/tab_team.png",
+      "128": "icons/tab_team_128.png"
+    },
+    "tab_kodex": {
+      "256": "icons/tab_kodex.png",
+      "128": "icons/tab_kodex_128.png"
+    },
+    "tab_aktivitaeten": {
+      "256": "icons/tab_aktivitaeten.png",
+      "128": "icons/tab_aktivitaeten_128.png"
+    },
+    "tab_mehr": {
+      "256": "icons/tab_mehr.png",
+      "128": "icons/tab_mehr_128.png"
     }
   },
   "backgrounds": {
@@ -700,6 +720,38 @@
       "size": [
         1280,
         720
+      ]
+    },
+    "bg_gm_wiese_p": {
+      "jpg": "backgrounds/bg_gm_wiese_p.jpg",
+      "webp": "backgrounds/bg_gm_wiese_p.webp",
+      "size": [
+        1080,
+        980
+      ]
+    },
+    "bg_gm_bach_p": {
+      "jpg": "backgrounds/bg_gm_bach_p.jpg",
+      "webp": "backgrounds/bg_gm_bach_p.webp",
+      "size": [
+        1080,
+        980
+      ]
+    },
+    "bg_gm_wald_p": {
+      "jpg": "backgrounds/bg_gm_wald_p.jpg",
+      "webp": "backgrounds/bg_gm_wald_p.webp",
+      "size": [
+        1080,
+        980
+      ]
+    },
+    "bg_frame_desktop": {
+      "jpg": "backgrounds/bg_frame_desktop.jpg",
+      "webp": "backgrounds/bg_frame_desktop.webp",
+      "size": [
+        1920,
+        1080
       ]
     }
   }

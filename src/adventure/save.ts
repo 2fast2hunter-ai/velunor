@@ -1,6 +1,6 @@
 import { freshSeed, nextFloat } from '../rng'
 import { emptyBag } from './shop'
-import { SAVE_KEY_V1, SAVE_KEY_V2, START_GOLD, STARTER_LEVEL } from './const'
+import { SAVE_KEY_V1, SAVE_KEY_V2, SAVE_VERSION, START_GOLD, STARTER_LEVEL } from './const'
 import { chapterById, councilOf, findChapter, speciesKnown } from './route'
 import { expToNext } from './stats'
 import type { OwnedMon, SaveV2, StorageLike } from './types'
@@ -25,6 +25,7 @@ const TEAM_ORDER = ['F1', 'F2', 'H1', 'H2', 'H3']
 export function blankSave(now: number): SaveV2 {
   return {
     v: 2,
+    saveVersion: SAVE_VERSION,
     name: 'Abenteurer',
     avatar: 'A',
     gold: START_GOLD,
@@ -180,6 +181,8 @@ export function migrateFromV1(raw: unknown, now: number): SaveV2 | null {
 
 export function normalize(save: SaveV2, now: number): SaveV2 {
   save.v = 2
+  const seenVersion = Math.max(0, Math.floor(Number(save.saveVersion)) || 0)
+  if (seenVersion < SAVE_VERSION) save.saveVersion = SAVE_VERSION
   save.name = (save.name || 'Abenteurer').toString().slice(0, 24)
   save.avatar = save.avatar === 'B' ? 'B' : 'A'
   save.gold = Math.max(0, Math.floor(save.gold) || 0)

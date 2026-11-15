@@ -47,7 +47,17 @@ describe('art manifest', () => {
     }
     expect(manifest.icons.rank_sheet.frame).toEqual([48, 48])
     expect(Object.keys(manifest.icons).length).toBeGreaterThan(20)
-    expect(Object.keys(manifest.backgrounds)).toEqual(['bg_city', 'bg_arena', 'bg_portal'])
+    expect(Object.keys(manifest.backgrounds)).toEqual([
+      'bg_city', 'bg_arena', 'bg_portal',
+      'bg_gm_wiese_p', 'bg_gm_bach_p', 'bg_gm_wald_p', 'bg_frame_desktop'
+    ])
+    expect(manifest.backgrounds.bg_gm_wiese_p).toEqual({
+      jpg: 'backgrounds/bg_gm_wiese_p.jpg',
+      webp: 'backgrounds/bg_gm_wiese_p.webp',
+      size: [1080, 980]
+    })
+    expect(manifest.icons.tab_abenteuer).toEqual({ '256': 'icons/tab_abenteuer.png', '128': 'icons/tab_abenteuer_128.png' })
+    expect(manifest.icons.tab_mehr['128']).toBe('icons/tab_mehr_128.png')
   })
 
   it('preloads every manifest image on the pages base path', () => {
@@ -131,6 +141,10 @@ describe('art manifest', () => {
     expect(url[backgroundTextureKey('bg_city')]).toBe('/velunor/assets/backgrounds/bg_city.webp')
     expect(url[backgroundTextureKey('bg_arena')]).toBe('/velunor/assets/backgrounds/bg_arena.webp')
     expect(url[backgroundTextureKey('bg_portal')]).toBe('/velunor/assets/backgrounds/bg_portal.webp')
+    expect(url[backgroundTextureKey('bg_gm_bach_p')]).toBe('/velunor/assets/backgrounds/bg_gm_bach_p.webp')
+    expect(url[backgroundTextureKey('bg_frame_desktop')]).toBe('/velunor/assets/backgrounds/bg_frame_desktop.webp')
+    expect(url[iconTextureKey('tab_team')]).toBe('/velunor/assets/icons/tab_team_128.png')
+    expect(url[iconTextureKey('tab_team', true)]).toBe('/velunor/assets/icons/tab_team.png')
     expect(assetUrl('monsters/m05_256.png', '/')).toBe('/assets/monsters/m05_256.png')
   })
 })
