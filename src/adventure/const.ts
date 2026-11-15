@@ -34,16 +34,45 @@ export const SEAL_ADD = 'fx/fx_bannsiegel_add.jpg'
 export const SEAL_FALLBACK = 'fx/fx_bannsiegel.png'
 export const SEAL_BLEND = 'plus-lighter'
 
-/** Feet sit on the open ground in the lower middle of the battle plate. */
+/** Own monster stands bottom left. The foe stands top right on the portrait plate. */
 export const ALLY_X = 28
 export const FOE_X = 72
-export const FEET_Y = 68
+export const FEET_Y = 86
+export const FOE_Y = 44
+
+/** Logical portrait base. Phaser and the DOM shell both use Scale FIT against this. */
+export const SHELL_W = 1080
+export const SHELL_H = 2340
+/** Safe area in the middle. The bands above and below are background color. */
+export const SAFE_W = 1080
+export const SAFE_H = 1920
+export const SHELL_BAND = (SHELL_H - SAFE_H) / 2
+export const NAV_H = 180
+/** 980 / 2340 is about 42% of the logical screen. The plates are this size. */
+export const BATTLE_H = 980
+export const TOUCH_MIN = 132
+/**
+ * Bumped once per portrait step. Files written before this field load as 0
+ * and keep every stored value.
+ */
+export const SAVE_VERSION = 1
 
 export const SCENE_FILES = {
-  wiese: { webp: 'backgrounds/bg_gm_wiese.webp', jpg: 'backgrounds/bg_gm_wiese.jpg' },
-  bach: { webp: 'backgrounds/bg_gm_bach.webp', jpg: 'backgrounds/bg_gm_bach.jpg' },
-  wald: { webp: 'backgrounds/bg_gm_wald.webp', jpg: 'backgrounds/bg_gm_wald.jpg' }
+  wiese: { webp: 'backgrounds/bg_gm_wiese_p.webp', jpg: 'backgrounds/bg_gm_wiese_p.jpg' },
+  bach: { webp: 'backgrounds/bg_gm_bach_p.webp', jpg: 'backgrounds/bg_gm_bach_p.jpg' },
+  wald: { webp: 'backgrounds/bg_gm_wald_p.webp', jpg: 'backgrounds/bg_gm_wald_p.jpg' }
 } as const
+
+/** A handset held sideways. A desktop window stays in the portrait frame. */
+export function phoneLandscape(width: number, height: number): boolean {
+  return width > height && height <= 520
+}
+
+/** Same fit as Phaser Scale.FIT: the whole 1080×2340 base stays on screen. */
+export function fitScale(width: number, height: number): number {
+  if (!(width > 0) || !(height > 0)) return 1
+  return Math.min(width / SHELL_W, height / SHELL_H)
+}
 
 export const CATCH_BASE = [0.6, 0.5, 0.4, 0.3, 0.22, 0.15, 0.1, 0.05, 0.03, 0.015] as const
 /** Extra catch chance per failed seal of the same species, in percentage points. */

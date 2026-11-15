@@ -11,6 +11,7 @@ import {
   ENCOUNTER_MS,
   FEET_Y,
   FOE_X,
+  FOE_Y,
   ALLY_X,
   OFFLINE_CAP_MS,
   SAVE_KEY_V1,
@@ -397,7 +398,8 @@ describe('presentation', () => {
     expect(CAUGHT_SCALE).toBe(1.3)
     expect(ALLY_X).toBe(28)
     expect(FOE_X).toBe(72)
-    expect(FEET_Y).toBe(68)
+    expect(FEET_Y).toBe(86)
+    expect(FOE_Y).toBe(44)
     expect(SEAL_BLEND).toBe('plus-lighter')
     expect(SEAL_ADD).toBe('fx/fx_bannsiegel_add.jpg')
     expect(SEAL_FALLBACK).toBe('fx/fx_bannsiegel.png')

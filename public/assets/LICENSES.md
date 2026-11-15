@@ -16,3 +16,4 @@
 - monsters/m86–m95: KI-generiert mit dem Grok-Bot-Bildgenerator, selbst erstellt.
 - monsters/m96–m100: KI-generiert mit dem Grok-Bot-Bildgenerator, selbst erstellt.
 - backgrounds/bg_gm_{wiese,bach,wald}.jpg/.webp, fx/fx_bannsiegel*.png/jpg: KI-generiert (Grok-Bot-Bildgenerator), 11.11.2026, eigenes Asset, keine Fremdvorlage.
+- backgrounds/bg_gm_{wiese,bach,wald}_p.jpg/.webp (1080×980), backgrounds/bg_frame_desktop.jpg/.webp, icons/tab_{abenteuer,team,kodex,aktivitaeten,mehr}*.png: KI-generiert (Grok-Bot-Bildgenerator), 15.11.2026, eigenes Asset für das Hochformat.

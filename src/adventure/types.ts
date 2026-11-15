@@ -53,6 +53,8 @@ export interface AdventureStats {
  */
 export interface SaveV2 {
   v: 2
+  /** Portrait-step counter. Missing on older files; the loader fills it. */
+  saveVersion: number
   name: string
   avatar: 'A' | 'B'
   gold: number

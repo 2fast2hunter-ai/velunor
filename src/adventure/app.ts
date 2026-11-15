@@ -13,6 +13,8 @@ import {
   WELCOME_AFTER_MS,
   debugAllowed,
   encounterMs,
+  fitScale,
+  phoneLandscape,
   tempoScale,
   type Speed
 } from './const'
@@ -47,6 +49,7 @@ import {
 } from './sim'
 import type { SaveV2 } from './types'
 import {
+  art,
   gameHtml,
   monsterArt,
   onboardingHtml,
@@ -64,7 +67,9 @@ let screen: Screen = 'adventure'
 let pc: PcQuery = { q: '', type: '', rarity: '', shiny: '', sort: 'newest', dir: -1 }
 let dex: CodexQuery = { q: '', type: '', rarity: '', shiny: '' }
 let selected: string | null = null
-let sideOpen = true
+let sideOpen = false
+let mapOpen = false
+let moreOpen = false
 let overlay: Overlay | null = null
 let draftName = 'Abenteurer'
 let draftAvatar: 'A' | 'B' = 'A'
@@ -93,7 +98,7 @@ const debug = debugAllowed(import.meta.env.DEV, window.location.search)
 export function bootAdventure(): void {
   const root = document.getElementById('game')
   if (!root) return
-  root.innerHTML = '<div id="fit"></div>'
+  root.innerHTML = `<picture id="frame-bg"><source srcset="${art('backgrounds/bg_frame_desktop.webp')}" type="image/webp"/><img src="${art('backgrounds/bg_frame_desktop.jpg')}" alt=""/></picture><div id="fit"></div><div id="turn" hidden></div>`
   root.addEventListener('click', onClick)
   root.addEventListener('change', onChange)
   root.addEventListener('input', onInput)
@@ -141,7 +146,7 @@ export function bootAdventure(): void {
 }
 
 function showFxDemo(kind: 'fire' | 'hit' | 'ko'): void {
-  paint(`<div id="stage" class="side-shut"><div class="nav"></div><main class="center"><div class="battle" id="battle" data-fx="live" style="height:820px">
+  paint(`<div id="stage" class="fx-demo"><div class="anchor anchor-mid"><div class="battle" id="battle" data-fx="live" style="height:980px">
     <div class="battle-world" id="battle-world">
       <div class="parallax far" id="parallax-far"></div>
       <div class="parallax mid" id="parallax-mid"></div>
@@ -153,7 +158,7 @@ function showFxDemo(kind: 'fire' | 'hit' | 'ko'): void {
       <div class="move-banner" id="move-banner" hidden></div>
       <div class="crit-flash" id="crit-flash"></div>
     </div>
-  </div></main><div class="side"></div></div>`)
+  </div></div></div>`)
   const host = document.getElementById('battle-fx')
   if (host) mountBattleFx(host)
   window.setTimeout(() => {
@@ -215,7 +220,7 @@ function render(step = save?.step): void {
     mult: wheelMult,
     symbols: wheelSymbols,
     note: wheelNote
-  }))
+  }, { mapOpen, moreOpen }))
   const seal = document.getElementById('seal') as HTMLImageElement | null
   if (seal) {
     seal.style.mixBlendMode = SEAL_BLEND
@@ -233,10 +238,23 @@ function paint(html: string): void {
   fit()
 }
 
+function syncTurn(): void {
+  const turn = document.getElementById('turn')
+  if (!turn) return
+  const lang = save?.settings.lang ?? draftLang
+  turn.textContent = t(lang, 'turn.please')
+}
+
 function fit(): void {
   const host = document.getElementById('fit')
+  const landscape = phoneLandscape(window.innerWidth, window.innerHeight)
+  document.body.classList.toggle('is-landscape-phone', landscape)
+  syncTurn()
+  const turn = document.getElementById('turn')
+  if (turn) turn.hidden = !landscape
   if (!host) return
-  const scale = Math.min(window.innerWidth / 1920, window.innerHeight / 1080)
+  const scale = fitScale(window.innerWidth, window.innerHeight)
+  host.style.setProperty('--ui-scale', String(scale))
   host.style.transform = `translate(-50%, -50%) scale(${scale})`
 }
 
@@ -585,10 +603,10 @@ function showMove(name: string, actor: HTMLElement, k: number): void {
 }
 
 function reachDistance(from: HTMLElement, toward: HTMLElement, portion: number): number {
-  const fitScale = Math.min(window.innerWidth / 1920, window.innerHeight / 1080) || 1
+  const scale = fitScale(window.innerWidth, window.innerHeight) || 1
   const a = from.getBoundingClientRect()
   const b = toward.getBoundingClientRect()
-  const gap = Math.abs((b.left + b.width / 2) - (a.left + a.width / 2)) / fitScale
+  const gap = Math.abs((b.left + b.width / 2) - (a.left + a.width / 2)) / scale
   return Math.max(140, gap * portion)
 }
 
@@ -715,12 +733,35 @@ function onClick(event: Event): void {
   if (act === 'screen') {
     screen = (node.getAttribute('data-screen') as Screen) || 'adventure'
     overlay = null
+    moreOpen = false
+    mapOpen = false
     render()
     kick()
     return
   }
+  if (act === 'map') {
+    mapOpen = !mapOpen
+    if (mapOpen) moreOpen = false
+    render()
+    return
+  }
+  if (act === 'more') {
+    moreOpen = !moreOpen
+    if (moreOpen) {
+      sideOpen = false
+      mapOpen = false
+    }
+    render()
+    return
+  }
+  if (act === 'log') {
+    overlay = { kind: 'log' }
+    render()
+    return
+  }
   if (act === 'side') {
     sideOpen = !sideOpen
+    if (sideOpen) moreOpen = false
     render()
     return
   }

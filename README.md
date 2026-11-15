@@ -1,6 +1,6 @@
 # Velunor
 
-Browser idle adventure. TypeScript and Vite. The step-1 loop is a landscape Fang-Abenteuer: three starters, a 20-step road, 1-on-1 auto battles, and a Bannsiegel catch after every wild KO. Monsters, type art, Grünmark battle plates, and the seal effect live in `public/assets` (see `public/assets/LICENSES.md`).
+Browser idle adventure. TypeScript and Vite. The step-1 loop is a portrait Fang-Abenteuer: three starters, a 20-step road, 1-on-1 auto battles, and a Bannsiegel catch after every wild KO. Monsters, type art, Grünmark battle plates, and the seal effect live in `public/assets` (see `public/assets/LICENSES.md`).
 
 The new save key is `velunor_v2`. An existing `velunor.save.v1` profile is read once: every specimen is kept (level 1–4 rise to 5) and the old key stays in place. City, gacha, the 5-monster lineup, arena, and ads are not mounted; their code is still in the repo.
 

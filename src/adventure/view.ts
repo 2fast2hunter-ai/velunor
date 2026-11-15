@@ -4,6 +4,7 @@ import {
   ALLY_X,
   FEET_Y,
   FOE_X,
+  FOE_Y,
   SCENE_FILES,
   SEAL_ADD,
   SEAL_FALLBACK,
@@ -16,7 +17,7 @@ import { exportCode } from './save'
 import { fightsHere } from './origin'
 import { chapterById, gateBadge, placeLabel, regionById, regions, routeOf, type NodeKind } from './route'
 import { chapterUnlocked, dexCaughtCount, hereSightings, rarityName } from './sim'
-import { equippedFrame, equippedTitle, GOALS } from './achievements'
+import { GOALS } from './achievements'
 import { HORT_PRICES, hortOffer } from './hort'
 import { CRYSTALS, FRUITS, crystalExp, crystalPrice, crystalUnlocked, fruitDef, fruitMinutes, fruitPrice, sellValue, shopLevel, wappenCount } from './shop'
 import { weatherForecast, weatherName, type WeatherId } from './weather'
@@ -54,6 +55,12 @@ export type Overlay =
   | { kind: 'confirm-import' }
   | { kind: 'awaken'; uid: string; level: 25 | 50 }
   | { kind: 'offline'; done: number; total: number }
+  | { kind: 'log' }
+
+export interface ShellFlags {
+  mapOpen?: boolean
+  moreOpen?: boolean
+}
 
 const base = (): string => import.meta.env.BASE_URL || '/'
 
@@ -90,46 +97,81 @@ function icon(kind: NodeKind): string {
   return `<svg viewBox="0 0 24 24" ${common}><path d="M12 3l7 3v6c0 5-3.2 7.6-7 9-3.8-1.4-7-4-7-9V6z"/></svg>`
 }
 
-function nav(save: SaveV2, screen: Screen, step: number): string {
+function clockLabel(save: SaveV2, now: number): { time: string; part: string } {
+  const clock = new Date(now)
+  const day = clock.getHours() >= 8 && clock.getHours() <= 19
+  const locale = L(save) === 'en' ? 'en' : 'de-DE'
+  return {
+    time: new Intl.DateTimeFormat(locale, { hour: '2-digit', minute: '2-digit' }).format(clock),
+    part: tr(save, day ? 'battle.day' : 'battle.night')
+  }
+}
+
+function header(save: SaveV2, now: number): string {
+  const caught = dexCaughtCount(save)
+  const clock = clockLabel(save, now)
+  const weather = weatherForecast(now)[0]
+  return `<header class="hud anchor-top-bar">
+    <div class="hud-gold"><img src="${art('icons/gold_128.png')}" alt=""/><b id="gold">${gold(save.gold)}</b></div>
+    <div class="hud-dex">${tr(save, 'nav.codexCount', { n: caught })}</div>
+    <div class="hud-clock">${esc(clock.time)} · ${esc(clock.part)}</div>
+    <div class="hud-wx"><span class="wx">${weatherIcon(weather.weather)}</span> ${esc(weatherLabel(L(save), weather.weather))}</div>
+  </header>`
+}
+
+function chapterLine(save: SaveV2, step: number, mapOpen: boolean): string {
   const chapter = chapterById(save.region, save.chapter)
   const region = regionById(save.region)
-  const caught = dexCaughtCount(save)
-  const items: [Screen, string][] = [
-    ['adventure', 'nav.adventure'],
-    ['progress', 'nav.progress'],
-    ['team', 'nav.team'],
-    ['codex', 'nav.codex'],
-    ['activities', 'nav.activities'],
-    ['shop', 'nav.shop'],
-    ['achievements', 'nav.achievements']
+  const place = chapter.council
+    ? tr(save, 'nav.council', { step, total: chapter.council.members.length })
+    : tr(save, 'nav.step', { step })
+  return `<button type="button" class="chapter-line" data-act="map" aria-expanded="${mapOpen ? 'true' : 'false'}">
+    <span class="chapter-text">${esc(region.name)} · ${esc(chapter.name)} · ${esc(place)}</span>
+    <span class="chev" aria-hidden="true">${mapOpen ? '▴' : '▾'}</span>
+  </button>`
+}
+
+const TAB_ICONS: Record<string, string> = {
+  adventure: 'icons/tab_abenteuer_128.png',
+  team: 'icons/tab_team_128.png',
+  codex: 'icons/tab_kodex_128.png',
+  activities: 'icons/tab_aktivitaeten_128.png',
+  more: 'icons/tab_mehr_128.png'
+}
+
+function tabbar(save: SaveV2, screen: Screen, moreOpen: boolean): string {
+  const moreScreens: Screen[] = ['shop', 'achievements', 'options', 'guide']
+  const tabs: { id: string; label: string; active: boolean; act: string; screen?: Screen }[] = [
+    { id: 'adventure', label: 'nav.adventure', active: screen === 'adventure', act: 'screen', screen: 'adventure' },
+    { id: 'team', label: 'nav.team', active: screen === 'team', act: 'screen', screen: 'team' },
+    { id: 'codex', label: 'nav.codex', active: screen === 'codex', act: 'screen', screen: 'codex' },
+    { id: 'activities', label: 'nav.activities', active: screen === 'activities', act: 'screen', screen: 'activities' },
+    { id: 'more', label: 'nav.more', active: moreOpen || moreScreens.includes(screen), act: 'more' }
   ]
-  return `<aside class="nav">
-    <div class="card player">
-      <div class="avatar ${save.avatar === 'B' ? 'b' : ''} ${equippedFrame(save) ? `frame-${equippedFrame(save)}` : ''}">${save.avatar}</div>
-      <div>
-        <div class="who">${esc(save.name)}</div>
-        ${equippedTitle(save) ? `<div class="title">${esc(equippedTitle(save))}</div>` : ''}
-        <div class="muted">${tr(save, 'nav.codexCount', { n: caught })}</div>
-        <div class="gold" id="gold">${gold(save.gold)}</div>
-        ${wheelOpen(save) || save.marks > 0 ? `<div class="muted">${tr(save, 'nav.marks', { n: save.marks.toLocaleString(L(save) === 'en' ? 'en' : 'de-DE') })}</div>` : ''}
-      </div>
-    </div>
-    <div class="card chapter">
-      <div class="kicker">${esc(region.name)}</div>
-      <h2>${esc(chapter.name)}</h2>
-      <div>${tr(save, 'nav.crest', { name: save.badges.includes(chapter.guardian.badge) ? chapter.guardian.badge : '—' })}</div>
-      <div>${chapter.council ? tr(save, 'nav.council', { step, total: chapter.council.members.length }) : tr(save, 'nav.step', { step })}</div>
-      <div class="muted">${chapter.council ? tr(save, 'nav.councilCap', { cap: chapter.council.members[Math.max(0, step - 1)]?.cap ?? chapter.cap }) : tr(save, 'nav.cap', { min: chapter.levelMin, max: chapter.levelMax, cap: chapter.cap })}</div>
-      <label class="switch"><input type="checkbox" data-field="loop" ${save.loop ? 'checked' : ''}/> ${tr(save, 'nav.loop')}</label>
-    </div>
-    <div class="card menu">
-      ${items.map(([id, label]) => `<button data-act="screen" data-screen="${id}" class="${screen === id ? 'active' : ''}">${tr(save, label)}</button>`).join('')}
-    </div>
-    <div class="nav-foot">
-      <button class="text-btn" data-act="screen" data-screen="options">${tr(save, 'nav.options')}</button>
-      <button class="text-btn" data-act="screen" data-screen="guide">${tr(save, 'nav.guide')}</button>
-    </div>
-  </aside>`
+  return `<nav class="tabbar" aria-label="${esc(tr(save, 'nav.more'))}">
+    ${tabs.map((tab) => `<button type="button" class="tab ${tab.active ? 'active' : ''}" data-act="${tab.act}" ${tab.screen ? `data-screen="${tab.screen}"` : ''}>
+      <img src="${art(TAB_ICONS[tab.id])}" alt=""/>
+      <span>${tr(save, tab.label)}</span>
+    </button>`).join('')}
+  </nav>`
+}
+
+function moreSheet(save: SaveV2, open: boolean): string {
+  const items: [Screen, string][] = [
+    ['shop', 'nav.shop'],
+    ['achievements', 'nav.achievements'],
+    ['options', 'nav.options'],
+    ['guide', 'nav.guide']
+  ]
+  return `<div class="more-sheet card" ${open ? '' : 'hidden'}>
+    ${items.map(([id, label]) => `<button type="button" data-act="screen" data-screen="${id}">${tr(save, label)}</button>`).join('')}
+  </div>`
+}
+
+function pathNodes(cells: string[], council: boolean): string {
+  if (council) return `<div class="card path council-path" id="path"><div class="path-row">${cells.join('')}</div></div>`
+  const mid = Math.ceil(cells.length / 2)
+  return `<div class="card path" id="path"><div class="path-row">${cells.slice(0, mid).join('')}</div><div class="path-row">${cells.slice(mid).join('')}</div></div>`
 }
 
 function path(save: SaveV2, here: number): string {
@@ -140,7 +182,7 @@ function path(save: SaveV2, here: number): string {
       const cls = step === here ? 'is-here' : step < here ? 'is-done' : ''
       return `<div class="node ${cls}" title="${esc(member.name)}">${icon('guardian')}<small>${step}</small></div>`
     })
-    return `<div class="card path council-path" id="path">${cells.join('')}</div>`
+    return pathNodes(cells, true)
   }
   const route = routeOf(save.chapter)
   const cells = []
@@ -149,7 +191,7 @@ function path(save: SaveV2, here: number): string {
     const cls = step === here ? 'is-here' : step < here ? 'is-done' : ''
     cells.push(`<div class="node ${cls}" title="${kind}">${icon(kind)}<small>${step}</small></div>`)
   }
-  return `<div class="card path" id="path">${cells.join('')}</div>`
+  return pathNodes(cells, false)
 }
 
 function battle(save: SaveV2, now: number): string {
@@ -158,17 +200,8 @@ function battle(save: SaveV2, now: number): string {
   const active = save.active && save.mons[save.active] ? save.active : save.team[0]
   const mon = active ? save.mons[active] : null
   const hp = mon ? realHp(mon) : { hp: 1, max: 1 }
-  const minis = save.team.map((uid) => {
-    const row = save.mons[uid]
-    const bar = realHp(row)
-    const fainted = !isAlive(row)
-    return `<button class="mini ${uid === active ? 'is-active' : ''} ${fainted ? 'is-fainted' : ''}" data-act="send" data-uid="${uid}">
-      <img src="${monsterArt(row.species)}" alt=""/>
-      <span class="bar"><span style="width:${fainted ? 0 : (bar.hp / bar.max) * 100}%"></span></span>
-    </button>`
-  }).join('')
-  const clock = new Date(now)
-  const part = tr(save, clock.getHours() >= 8 && clock.getHours() <= 19 ? 'battle.day' : 'battle.night')
+  const clock = clockLabel(save, now)
+  const sealed = Boolean(gateBadge(save.region, chapter) && save.badges.includes(gateBadge(save.region, chapter)))
   return `<div class="battle" id="battle">
     <div class="battle-world" id="battle-world">
       <picture>
@@ -179,7 +212,7 @@ function battle(save: SaveV2, now: number): string {
       <div class="parallax mid" id="parallax-mid"></div>
       <div class="parallax near" id="parallax-near"></div>
       <div id="battle-fx"></div>
-      <div class="combatant foe" id="foe-actor" style="left:${FOE_X}%;top:56%">
+      <div class="combatant foe" id="foe-actor" style="left:${FOE_X}%;top:${FOE_Y}%">
         <b id="foe-name"></b>
         <div class="hp"><span id="foe-hp" style="width:100%"></span></div>
         <img class="sprite" id="foe-sprite" alt="" hidden/>
@@ -195,22 +228,40 @@ function battle(save: SaveV2, now: number): string {
       <div class="move-banner" id="move-banner" hidden></div>
       <div class="crit-flash" id="crit-flash"></div>
     </div>
-    <div class="team-rail">${minis}</div>
     <div class="flash" id="flash"></div>
-    <img class="seal" id="seal" alt="" src="${art(SEAL_ADD)}" data-fb="${art(SEAL_FALLBACK)}"/>
-    <div class="battle-text">
-      <p id="battle-text">${tr(save, 'battle.place', { part, weather: weatherLabel(L(save), weatherForecast(now)[0].weather), place: chapter.name, state: tr(save, save.hold ? 'battle.waiting' : 'battle.walking') })}</p>
-      <div class="speed">
-        ${([1, 2, 3] as const).map((speed) => `<button data-act="speed" data-speed="${speed}" class="${save.settings.speed === speed ? 'on' : ''}">×${speed}</button>`).join('')}
-      </div>
-      ${gateBadge(save.region, chapter) && save.badges.includes(gateBadge(save.region, chapter)) ? '' : `<button class="primary" data-act="challenge">${tr(save, chapter.council || chapter.foyer ? 'battle.resume' : 'battle.challenge')}</button>`}
-    </div>
+    <img class="seal" id="seal" alt="" src="${art(SEAL_ADD)}" data-fb="${art(SEAL_FALLBACK)}" style="left:${FOE_X}%;top:${FOE_Y}%"/>
+    <p id="battle-text" class="battle-status">${tr(save, 'battle.place', { part: clock.part, weather: weatherLabel(L(save), weatherForecast(now)[0].weather), place: chapter.name, state: tr(save, save.hold ? 'battle.waiting' : 'battle.walking') })}</p>
+    ${sealed ? '' : `<button type="button" class="primary challenge-fab" data-act="challenge">${tr(save, chapter.council || chapter.foyer ? 'battle.resume' : 'battle.challenge')}</button>`}
   </div>`
 }
 
+function teamDock(save: SaveV2): string {
+  const active = save.active && save.mons[save.active] ? save.active : save.team[0]
+  const slots = Array.from({ length: 6 }, (_, index) => save.team[index] ?? '')
+  const minis = slots.map((uid) => {
+    if (!uid || !save.mons[uid]) return `<span class="mini is-empty" aria-hidden="true"></span>`
+    const row = save.mons[uid]
+    const bar = realHp(row)
+    const fainted = !isAlive(row)
+    return `<button type="button" class="mini ${uid === active ? 'is-active' : ''} ${fainted ? 'is-fainted' : ''}" data-act="send" data-uid="${uid}">
+      <img src="${monsterArt(row.species)}" alt=""/>
+      <span class="bar"><span style="width:${fainted ? 0 : (bar.hp / bar.max) * 100}%"></span></span>
+    </button>`
+  }).join('')
+  const speeds = ([1, 2, 3] as const).map((speed) => `<button type="button" data-act="speed" data-speed="${speed}" class="${save.settings.speed === speed ? 'on' : ''}">×${speed}</button>`).join('')
+  return `<div class="dock">
+    <div class="team-rail">${minis}</div>
+    <div class="speed" aria-label="×1 ×2 ×3">${speeds}</div>
+  </div>`
+}
+
+function logLines(save: SaveV2, limit: number): string {
+  const lines = [...save.log].reverse().slice(0, limit).map((line) => `<div>${esc(line.text)}</div>`).join('')
+  return lines || `<div class="muted">${tr(save, 'log.empty')}</div>`
+}
+
 function logBox(save: SaveV2): string {
-  const lines = [...save.log].reverse().map((line) => `<div>${esc(line.text)}</div>`).join('')
-  return `<div class="card log" id="log">${lines || `<div class="muted">${tr(save, 'log.empty')}</div>`}</div>`
+  return `<button type="button" class="card log" id="log" data-act="log">${logLines(save, 3)}</button>`
 }
 
 function weatherIcon(id: WeatherId): string {
@@ -223,12 +274,11 @@ function weatherIcon(id: WeatherId): string {
   return `<svg viewBox="0 0 24 24" ${common}><path d="M3 8c3 0 3 3 6 3s3-3 6-3 3 3 6 3M3 14c3 0 3 3 6 3s3-3 6-3 3 3 6 3"/></svg>`
 }
 
-function sightings(save: SaveV2, now: number, open: boolean): string {
+function drawerSheet(save: SaveV2, now: number): string {
   const rows = hereSightings(save, now)
-  const hour = new Date(now).getHours()
-  const night = hour < 8 || hour > 19
   const forecast = weatherForecast(now)
   const current = forecast[0]
+  const clock = clockLabel(save, now)
   const body = rows.map((row) => `<div class="sight-row">
       <span class="seal-ring" style="--pity:${Math.max(0, Math.min(1, row.pity / 10))}" title="${row.pity ? `Bannsiegel +${row.pity.toLocaleString('de-DE')} Pp` : ''}">
         <img class="${row.caught ? '' : 'sil'}" src="${monsterArt(row.species)}" alt=""/>
@@ -240,18 +290,20 @@ function sightings(save: SaveV2, now: number, open: boolean): string {
     const label = new Date(slot.at).getUTCHours().toString().padStart(2, '0')
     return `<span class="wx ${index === 0 ? 'now' : ''}" title="${label} UTC · ${weatherName(slot.weather)}">${weatherIcon(slot.weather)}</span>`
   }).join('')
-  return `<aside class="side">
-    <div class="card side-card">
-      <div style="display:flex;justify-content:space-between;align-items:center">
-        <h2>${tr(save, 'side.seen')}</h2>
-        <button class="ghost" data-act="side">${tr(save, open ? 'side.close' : 'side.open')}</button>
-      </div>
-      ${open ? `<div class="clock"><span class="wx">${weatherIcon(current.weather)}</span> ${tr(save, night ? 'battle.night' : 'battle.day')} · ${weatherLabel(L(save), current.weather)}</div>
-        <div class="forecast" aria-label="${tr(save, 'side.forecast')}">${preview}</div>
-        <div class="sight">${body || `<div class="muted">${tr(save, 'side.empty')}</div>`}</div>` : `<div class="clock"><span class="wx">${weatherIcon(current.weather)}</span></div>`}
-    </div>
-    ${fruitCard(save, now, open)}
-  </aside>`
+  return `<div class="drawer card">
+    <h2>${tr(save, 'side.seen')}</h2>
+    <div class="clock"><span class="wx">${weatherIcon(current.weather)}</span> ${esc(clock.part)} · ${esc(weatherLabel(L(save), current.weather))}</div>
+    <div class="forecast" aria-label="${tr(save, 'side.forecast')}">${preview}</div>
+    <div class="sight">${body || `<div class="muted">${tr(save, 'side.empty')}</div>`}</div>
+    ${fruitCard(save, now, true)}
+  </div>`
+}
+
+function sightings(save: SaveV2, open: boolean): string {
+  return `<button type="button" class="grip" data-act="side" aria-expanded="${open ? 'true' : 'false'}">
+    <i class="grip-pill"></i>
+    <span>${tr(save, 'side.seen')}</span>
+  </button>`
 }
 
 function fruitCard(save: SaveV2, now: number, open: boolean): string {
@@ -601,8 +653,7 @@ function guide(save: SaveV2): string {
   </div>`
 }
 
-function center(save: SaveV2, screen: Screen, now: number, pc: PcQuery, dex: CodexQuery, selected: string | null, debug: boolean, step: number, wheel: WheelPanel): string {
-  if (screen === 'adventure') return `${path(save, step)}${battle(save, now)}${logBox(save)}`
+function center(save: SaveV2, screen: Screen, now: number, pc: PcQuery, dex: CodexQuery, selected: string | null, debug: boolean, wheel: WheelPanel): string {
   if (screen === 'progress') return progress(save)
   if (screen === 'team') return team(save, pc, selected)
   if (screen === 'codex') return codex(save, dex)
@@ -613,16 +664,44 @@ function center(save: SaveV2, screen: Screen, now: number, pc: PcQuery, dex: Cod
   return guide(save)
 }
 
-export function gameHtml(save: SaveV2, screen: Screen, now: number, pc: PcQuery, dex: CodexQuery, selected: string | null, sideOpen: boolean, debug: boolean, overlay: Overlay | null, step = save.step, wheel: WheelPanel = { tab: 'hort', mult: 1, symbols: null, note: '' }): string {
-  return `<div id="stage" class="${sideOpen ? '' : 'side-shut'} ${save.settings.reduceMotion ? 'reduce-motion' : ''}">
-    ${nav(save, screen, step)}
-    <main class="center">${center(save, screen, now, pc, dex, selected, debug, step, wheel)}</main>
-    ${sightings(save, now, sideOpen)}
-    ${overlay ? `<div class="overlay">${overlayHtml(save, overlay)}</div>` : ''}
+export function gameHtml(save: SaveV2, screen: Screen, now: number, pc: PcQuery, dex: CodexQuery, selected: string | null, sideOpen: boolean, debug: boolean, overlay: Overlay | null, step = save.step, wheel: WheelPanel = { tab: 'hort', mult: 1, symbols: null, note: '' }, shell: ShellFlags = {}): string {
+  const adventure = screen === 'adventure'
+  const mapOpen = Boolean(shell.mapOpen)
+  const moreOpen = Boolean(shell.moreOpen)
+  const chapter = chapterById(save.region, save.chapter)
+  const map = mapOpen ? `<div class="map-sheet card">
+      <label class="switch"><input type="checkbox" data-field="loop" ${save.loop ? 'checked' : ''}/> ${tr(save, 'nav.loop')}</label>
+      <p class="muted">${tr(save, 'nav.crest', { name: save.badges.includes(chapter.guardian.badge) ? chapter.guardian.badge : '—' })}</p>
+      ${progress(save)}
+    </div>` : ''
+  return `<div id="stage" class="${adventure ? 'is-adventure' : 'is-menu'} ${save.settings.reduceMotion ? 'reduce-motion' : ''}">
+    <div class="band band-top"></div>
+    <div class="safe">
+      <div class="anchor anchor-top">
+        ${header(save, now)}
+        ${adventure ? chapterLine(save, step, mapOpen) : ''}
+        ${adventure ? path(save, step) : ''}
+      </div>
+      <div class="anchor anchor-mid">${adventure ? battle(save, now) : `<div class="menu-scroll">${center(save, screen, now, pc, dex, selected, debug, wheel)}</div>`}</div>
+      <div class="anchor anchor-bot">
+        ${adventure ? teamDock(save) : ''}
+        ${adventure ? logBox(save) : ''}
+        ${adventure ? sightings(save, sideOpen) : ''}
+        ${tabbar(save, screen, moreOpen)}
+      </div>
+      ${map}
+      ${adventure && sideOpen ? drawerSheet(save, now) : ''}
+      ${moreSheet(save, moreOpen)}
+      ${overlay ? `<div class="overlay">${overlayHtml(save, overlay)}</div>` : ''}
+    </div>
+    <div class="band band-bot"></div>
   </div>`
 }
 
 function overlayHtml(save: SaveV2, overlay: Overlay): string {
+  if (overlay.kind === 'log') {
+    return `<div class="modal log-full"><h2>${tr(save, 'log.title')}</h2><div class="log-full-body">${logLines(save, 50)}</div><button type="button" class="primary" data-act="close">${tr(save, 'log.close')}</button></div>`
+  }
   if (overlay.kind === 'offline') {
     const pct = overlay.total ? Math.round((overlay.done / overlay.total) * 100) : 0
     return `<div class="modal"><h2>${tr(save, 'offline.title')}</h2><div class="progress-track"><span style="width:${pct}%"></span></div><p>${overlay.done.toLocaleString(L(save) === 'en' ? 'en' : 'de-DE')} / ${overlay.total.toLocaleString(L(save) === 'en' ? 'en' : 'de-DE')}</p></div>`
