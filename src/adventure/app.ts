@@ -48,11 +48,14 @@ import {
   type OfflineSummary
 } from './sim'
 import type { SaveV2 } from './types'
+import { PC_VIEW_FALLBACK, sheetShouldClose, virtualWindow } from './virtualList'
 import {
   art,
   gameHtml,
   monsterArt,
   onboardingHtml,
+  pcWindowHtml,
+  visiblePc,
   type CodexQuery,
   type Overlay,
   type PcQuery,
@@ -92,6 +95,13 @@ let dragUid = ''
 let dragKind = ''
 let pressTimer = 0
 let pressedUid = ''
+let pcScroll = 0
+let keepPcScroll = true
+let filtersOpen = false
+let dexOpen = false
+let pcIds: string[] = []
+let pcPainted = -1
+let sheetY: number | null = null
 
 const debug = debugAllowed(import.meta.env.DEV, window.location.search)
 
@@ -107,6 +117,7 @@ export function bootAdventure(): void {
   root.addEventListener('drop', onDrop)
   root.addEventListener('pointerdown', onPointerDown)
   root.addEventListener('pointerup', onPointerUp)
+  root.addEventListener('scroll', onPcScroll, true)
   window.addEventListener('resize', fit)
   window.addEventListener('pointerdown', wake)
   window.addEventListener('keydown', wake)
@@ -215,12 +226,23 @@ async function start(next: SaveV2): Promise<void> {
 
 function render(step = save?.step): void {
   if (!save) return
+  const prev = document.getElementById('pc-viewport')
+  if (prev && keepPcScroll) pcScroll = prev.scrollTop
+  keepPcScroll = true
   paint(gameHtml(save, screen, Date.now(), pc, dex, selected, sideOpen, debug, overlay, step ?? save.step, {
     tab: activity,
     mult: wheelMult,
     symbols: wheelSymbols,
     note: wheelNote
-  }, { mapOpen, moreOpen }))
+  }, { mapOpen, moreOpen, pcScroll, filtersOpen, dexOpen }))
+  if (screen === 'team') {
+    pcIds = visiblePc(save, pc)
+    const view = document.getElementById('pc-viewport')
+    if (view) {
+      pcPainted = virtualWindow(pcIds.length, pcScroll, view.clientHeight || PC_VIEW_FALLBACK).start
+      view.scrollTop = pcScroll
+    }
+  }
   const seal = document.getElementById('seal') as HTMLImageElement | null
   if (seal) {
     seal.style.mixBlendMode = SEAL_BLEND
@@ -406,6 +428,17 @@ function finishPresent(outcome: EncounterOutcome): void {
   const fresh = outcome.catch
   if (fresh?.success && (fresh.place === 'team' || fresh.place === 'pc') && save.settings.catchCard) {
     overlay = { kind: 'catch', species: fresh.species, level: fresh.level, place: fresh.place }
+    render()
+    return
+  }
+  if (outcome.kind === 'guardian') {
+    overlay = {
+      kind: 'guard',
+      win: outcome.win,
+      badge: outcome.badge,
+      gold: outcome.gold,
+      text: outcome.lines.filter(Boolean).slice(-2).join(' ')
+    }
     render()
     return
   }
@@ -730,6 +763,16 @@ function onClick(event: Event): void {
     return
   }
   if (!save) return
+  if (act === 'filters') {
+    filtersOpen = !filtersOpen
+    render()
+    return
+  }
+  if (act === 'dex-filters') {
+    dexOpen = !dexOpen
+    render()
+    return
+  }
   if (act === 'screen') {
     screen = (node.getAttribute('data-screen') as Screen) || 'adventure'
     overlay = null
@@ -845,6 +888,8 @@ function onClick(event: Event): void {
   }
   if (act === 'dir') {
     pc.dir = pc.dir < 0 ? 1 : -1
+    keepPcScroll = false
+    pcScroll = 0
     render()
     return
   }
@@ -1003,8 +1048,11 @@ function onInput(event: Event): void {
     return
   }
   if (target.dataset.field === 'q' || target.dataset.field === 'dex-q') {
-    if (target.dataset.field === 'q') pc.q = target.value
-    else dex.q = target.value
+    if (target.dataset.field === 'q') {
+      pc.q = target.value
+      keepPcScroll = false
+      pcScroll = 0
+    } else dex.q = target.value
     const caret = target.selectionStart
     const field = target.dataset.field
     render()
@@ -1029,6 +1077,8 @@ function syncField(target: EventTarget | null): void {
   if (field === 'keep' && target instanceof HTMLInputElement) setKeepDupes(save, target.dataset.uid ?? '', target.checked)
   if (field === 'type' || field === 'rarity' || field === 'shiny' || field === 'sort') {
     pc[field] = target.value
+    keepPcScroll = false
+    pcScroll = 0
   }
   if (field === 'dex-type') dex.type = target.value
   if (field === 'dex-rarity') dex.rarity = target.value
@@ -1059,7 +1109,22 @@ function onDrop(event: DragEvent): void {
   dragUid = ''
 }
 
+function onPcScroll(event: Event): void {
+  const viewport = event.target
+  if (!(viewport instanceof HTMLElement) || viewport.id !== 'pc-viewport' || !save) return
+  pcScroll = viewport.scrollTop
+  const win = virtualWindow(pcIds.length, pcScroll, viewport.clientHeight || PC_VIEW_FALLBACK)
+  if (win.start === pcPainted) return
+  pcPainted = win.start
+  const windowEl = viewport.querySelector('.vlist-window')
+  if (!(windowEl instanceof HTMLElement)) return
+  windowEl.style.transform = `translateY(${win.offset}px)`
+  windowEl.innerHTML = pcWindowHtml(save, pcIds.slice(win.start, win.end), selected)
+}
+
 function onPointerDown(event: PointerEvent): void {
+  const grab = event.target instanceof Element ? event.target.closest('.sheet-grab') : null
+  sheetY = grab ? event.clientY : null
   const node = event.target instanceof Element ? event.target.closest('[data-drag="team"]') : null
   if (!node) return
   pressedUid = node.getAttribute('data-uid') ?? ''
@@ -1072,6 +1137,17 @@ function onPointerDown(event: PointerEvent): void {
 
 function onPointerUp(event: PointerEvent): void {
   window.clearTimeout(pressTimer)
+  if (sheetY != null) {
+    const dy = event.clientY - sheetY
+    sheetY = null
+    if (overlay && sheetShouldClose(dy, fitScale(window.innerWidth, window.innerHeight))) {
+      overlay = null
+      if (showAwaken()) return
+      render()
+      kick()
+      return
+    }
+  }
   if (!save || dragKind !== 'team' || !dragUid) return
   const node = event.target instanceof Element ? document.elementFromPoint(event.clientX, event.clientY)?.closest('[data-drag="team"]') : null
   const uid = node?.getAttribute('data-uid') ?? ''

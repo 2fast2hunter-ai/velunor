@@ -52,10 +52,10 @@ export const NAV_H = 180
 export const BATTLE_H = 980
 export const TOUCH_MIN = 132
 /**
- * Bumped once per portrait step. Files written before this field load as 0
- * and keep every stored value.
+ * Bumped once per portrait step. 1 = shell, 2 = portrait menus.
+ * Files written before this field load as 0 and keep every stored value.
  */
-export const SAVE_VERSION = 1
+export const SAVE_VERSION = 2
 
 export const SCENE_FILES = {
   wiese: { webp: 'backgrounds/bg_gm_wiese_p.webp', jpg: 'backgrounds/bg_gm_wiese_p.jpg' },
