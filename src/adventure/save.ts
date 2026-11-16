@@ -181,6 +181,7 @@ export function migrateFromV1(raw: unknown, now: number): SaveV2 | null {
 
 export function normalize(save: SaveV2, now: number): SaveV2 {
   save.v = 2
+  // Version 2 is the portrait-menu step. Older files only gain this counter.
   const seenVersion = Math.max(0, Math.floor(Number(save.saveVersion)) || 0)
   if (seenVersion < SAVE_VERSION) save.saveVersion = SAVE_VERSION
   save.name = (save.name || 'Abenteurer').toString().slice(0, 24)
