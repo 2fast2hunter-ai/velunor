@@ -1,4 +1,5 @@
-import { ARC_APEX_PX, effectScale, HIT_FLASH_MS, HIT_SHAKE_PX, LUNGE_BACK_MS, LUNGE_HOLD_MS, LUNGE_OUT_MS, LUNGE_PX, LUNGE_SCALE } from './typeFx'
+import { hitGrade, hitLook } from './hitReadout'
+import { ARC_APEX_PX, HIT_FLASH_MS, HIT_SHAKE_PX, LUNGE_BACK_MS, LUNGE_HOLD_MS, LUNGE_OUT_MS, LUNGE_PX, LUNGE_SCALE } from './typeFx'
 
 export function lungeOffset(elapsed: number, distance = LUNGE_PX): number {
   const out = LUNGE_OUT_MS
@@ -49,12 +50,9 @@ export function actorTransform(side: 'ally' | 'foe', elapsed: number, hitAge: nu
   return `translate(-50%, -100%) translate(${x}px, ${y}px) rotate(${pose.rotate}deg) scale(${scale})`
 }
 
-export function numberStyle(band: 'strong' | 'weak' | 'neutral', crit: boolean, awaken: boolean, base = '#ffffff'): { scale: number; color: string; label: string } {
-  const scale = effectScale(band, crit, awaken)
-  if (crit) return { scale: 1.5 * (awaken ? 1.15 : 1), color: '#ffd54f', label: 'KRIT' }
-  if (band === 'strong') return { scale, color: base, label: 'Stark!' }
-  if (band === 'weak') return { scale, color: '#9aa4b8', label: 'Schwach…' }
-  return { scale, color: '#ffffff', label: '' }
+export function numberStyle(band: 'strong' | 'weak' | 'neutral', crit: boolean, _awaken = false, _base = '#ffffff'): { scale: number; color: string; label: string } {
+  const look = hitLook(hitGrade(band, crit))
+  return { scale: look.scale, color: look.color, label: look.label }
 }
 
 export function parallaxShift(attack: number, shake: number): { far: number; mid: number; near: number } {

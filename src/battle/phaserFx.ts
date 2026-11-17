@@ -1,6 +1,16 @@
 import Phaser from 'phaser'
 import { FxPool } from './fxPool'
 import { arcHeight } from './stage'
+import {
+  DIGIT_ATLAS_KEY,
+  DIGIT_STYLE,
+  digitAtlasReady,
+  digitStyle,
+  hitLook,
+  labelFrame,
+  layoutDigits,
+  type HitGrade
+} from './hitReadout'
 import { effectScale, flightMs, FX_SIZE, particleBudget, POOL_SIZE, typeFx, type TypeFxDef } from './typeFx'
 
 export interface FxBurst {
@@ -28,9 +38,26 @@ interface Slot {
   color: number
 }
 
+const NUMBER_POOL = 8
+const DIGIT_SLOTS = 6
+
+interface NumberSlot {
+  root: Phaser.GameObjects.Container
+  text: Phaser.GameObjects.Text
+  glyphs: Phaser.GameObjects.Image[]
+  label: Phaser.GameObjects.Image
+  active: boolean
+  born: number
+  hold: number
+  x: number
+  y: number
+  bounce: boolean
+}
+
 class FxScene extends Phaser.Scene {
   gfx!: Phaser.GameObjects.Graphics
   slots: Slot[] = []
+  numbers: NumberSlot[] = []
   burst: FxBurst | null = null
   started = 0
   hold = false
@@ -41,12 +68,110 @@ class FxScene extends Phaser.Scene {
     super('battle-fx')
   }
 
+  preload(): void {
+    const base = import.meta.env.BASE_URL || '/'
+    const prefix = base.endsWith('/') ? base : `${base}/`
+    this.load.atlas(
+      DIGIT_ATLAS_KEY,
+      `${prefix}assets/battle/dmg_digits.png`,
+      `${prefix}assets/battle/dmg_digits.json`
+    )
+  }
+
   create(): void {
     this.gfx = this.add.graphics()
     for (let i = 0; i < POOL_SIZE; i++) {
       const dot = this.add.circle(0, 0, 8, 0xffffff, 1)
       dot.setVisible(false)
       this.slots.push({ dot, alive: false, x: 0, y: 0, vx: 0, vy: 0, life: 0, max: 1, color: 0xffffff })
+    }
+    for (let i = 0; i < NUMBER_POOL; i++) this.numbers.push(this.makeNumber())
+  }
+
+  private blankKey(): string {
+    if (this.textures.exists('hit-blank')) return 'hit-blank'
+    const gfx = this.make.graphics({ x: 0, y: 0 }, false)
+    gfx.fillStyle(0xffffff, 0)
+    gfx.fillRect(0, 0, 2, 2)
+    gfx.generateTexture('hit-blank', 2, 2)
+    gfx.destroy()
+    return 'hit-blank'
+  }
+
+  private makeNumber(): NumberSlot {
+    const text = this.add.text(0, 0, '', {
+      fontFamily: 'Fredoka, Nunito, sans-serif',
+      fontSize: '48px',
+      fontStyle: 'bold',
+      color: '#ffffff',
+      stroke: '#1a1208',
+      strokeThickness: 6,
+      align: 'center'
+    }).setOrigin(0.5, 1)
+    const blank = this.blankKey()
+    const glyphs = Array.from({ length: DIGIT_SLOTS }, () => this.add.image(0, 0, blank).setVisible(false).setOrigin(0, 0))
+    const label = this.add.image(0, 0, blank).setVisible(false).setOrigin(0.5, 1)
+    const root = this.add.container(0, 0, [text, label, ...glyphs])
+    root.setVisible(false)
+    return { root, text, glyphs, label, active: false, born: 0, hold: 600, x: 0, y: 0, bounce: false }
+  }
+
+  spawnNumber(x: number, y: number, amount: number, grade: HitGrade, holdMs: number): void {
+    let slot = this.numbers.find((row) => !row.active)
+    if (!slot) slot = this.numbers.reduce((oldest, row) => row.born < oldest.born ? row : oldest)
+    slot.active = true
+    slot.born = this.time.now
+    slot.hold = holdMs
+    slot.x = x
+    slot.y = y
+    slot.bounce = hitLook(grade).bounce
+    slot.root.setVisible(true).setAlpha(1).setPosition(x, y)
+    const atlas = digitAtlasReady((key) => this.textures.exists(key)) && this.textures.get(DIGIT_ATLAS_KEY).has('n_0')
+    slot.glyphs.forEach((glyph) => glyph.setVisible(false))
+    slot.label.setVisible(false)
+    slot.text.setVisible(!atlas)
+    if (!atlas) {
+      const look = hitLook(grade)
+      const line = look.label ? `${look.label}\n${Math.floor(amount)}` : String(Math.floor(amount))
+      slot.text.setText(line)
+      slot.text.setColor(look.color)
+      slot.text.setFontSize(Math.round(48 * look.scale))
+      return
+    }
+    const styleId = digitStyle(grade)
+    const style = DIGIT_STYLE[styleId]
+    const widths: Record<string, number> = {}
+    const texture = this.textures.get(DIGIT_ATLAS_KEY)
+    const placed = layoutDigits(grade, amount, new Proxy(widths, {
+      get: (_target, frame: string) => texture.has(frame) ? texture.get(frame).width : 0
+    }))
+    const last = placed[placed.length - 1]
+    const total = last ? last.x + (texture.has(last.frame) ? texture.get(last.frame).width : 0) : 0
+    placed.forEach((item, index) => {
+      const glyph = slot.glyphs[index]
+      if (!glyph || !texture.has(item.frame)) return
+      glyph.setTexture(DIGIT_ATLAS_KEY, item.frame).setVisible(true).setPosition(-total / 2 + item.x, -style.baseline)
+    })
+    const word = labelFrame(grade)
+    if (word && texture.has(word)) {
+      slot.label.setTexture(DIGIT_ATLAS_KEY, word).setVisible(true).setPosition(0, -style.frameHeight - 4)
+    }
+  }
+
+  private tickNumbers(time: number): void {
+    for (const slot of this.numbers) {
+      if (!slot.active) continue
+      const age = time - slot.born
+      const t = slot.hold <= 0 ? 1 : age / slot.hold
+      if (t >= 1) {
+        slot.active = false
+        slot.root.setVisible(false)
+        continue
+      }
+      const rise = 90 * t
+      const bounce = slot.bounce ? Math.sin(age / 70) * 10 * (1 - t) : 0
+      slot.root.setPosition(slot.x, slot.y - rise + bounce)
+      slot.root.setAlpha(t > 0.72 ? Math.max(0, 1 - (t - 0.72) / 0.28) : 1)
     }
   }
 
@@ -121,6 +246,7 @@ class FxScene extends Phaser.Scene {
   }
 
   update(time: number): void {
+    this.tickNumbers(time)
     if (!this.burst || !this.gfx) return
     const spec = typeFx(this.burst.type)
     const dur = flightMs(spec.travelMs, this.burst.tempo)
@@ -400,6 +526,17 @@ export function playBattleFx(burst: FxBurst): void {
 
 export function holdBattleFx(at = 0.45): void {
   scene?.freeze(at)
+}
+
+export function showHitNumber(x: number, y: number, amount: number, grade: HitGrade, holdMs: number): boolean {
+  if (!scene) return false
+  scene.spawnNumber(x, y, amount, grade, holdMs)
+  return true
+}
+
+export function onBattleFxReady(done: () => void): void {
+  if (scene) done()
+  else game?.events.once('ready', () => done())
 }
 
 export function clearBattleFx(): void {
