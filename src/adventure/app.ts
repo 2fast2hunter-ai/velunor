@@ -20,13 +20,14 @@ import {
 } from './const'
 import { t, type Lang } from './i18n'
 import { shotAt, shouldRecover } from './present'
-import { species } from '../data'
+import { species, typeColor } from '../data'
+import { teamWeatherMarks, weatherArrow, weatherAt } from './weather'
 import { sfx } from '../ui'
 import { actorTransform, hitShake, koPose, lungeOffset, numberStyle, parallaxShift } from '../battle/stage'
 import { cameraShake, hitGrade, hitstopMs, numberHoldMs } from '../battle/hitReadout'
-import { clearBattleFx, holdBattleFx, mountBattleFx, onBattleFxReady, playBattleFx, preloadBattleStrips, setFxRunning, showHitNumber } from '../battle/phaserFx'
+import { beginBattleMood, clearBattleFx, holdBattleFx, mountBattleFx, onBattleFxReady, playBattleFx, preloadBattleStrips, setFxRunning, showBattleConfetti, showBattleDissolve, showHitNumber } from '../battle/phaserFx'
 import { effectTiming, battleStripTypes } from '../battle/strips'
-import { BANNER_MS, KO_MS, LUNGE_OUT_MS, moveLabel, RECOIL_MS, typeFx } from '../battle/typeFx'
+import { BANNER_MS, LUNGE_OUT_MS, moveLabel, RECOIL_MS, typeFx } from '../battle/typeFx'
 import type { TypeId } from '../types'
 import { takeChests } from './chests'
 import { bankRoad, buyChestForGold, buyChestForMarks, claimRoad, craftSpecies, debugStarChests, meltDuplicate, raiseStar } from './sources'
@@ -176,6 +177,10 @@ export function bootAdventure(): void {
 
   const params = new URLSearchParams(window.location.search)
   const fxDemo = params.get('fx')
+  if (debug && fxDemo === 'k3') {
+    showK3Demo(params.get('part'))
+    return
+  }
   if (debug && (fxDemo === 'fire' || fxDemo === 'hit' || fxDemo === 'ko' || fxDemo === 'strip')) {
     showFxDemo(fxDemo === 'strip' ? 'hit' : fxDemo, params.get('type'))
     return
@@ -253,6 +258,91 @@ function showFxDemo(kind: 'fire' | 'hit' | 'ko', requested: string | null = null
       document.getElementById('battle')?.setAttribute('data-fx', 'hold')
     }, 280)
   }, 40)))
+}
+
+const REGION_TINT = [0x7dcea0, 0x7dcea0, 0x9ad7ff, 0xff8a3d, 0x7e57c2, 0xf0c14a]
+
+function arrowTag(type: TypeId, weather: 'regen'): string {
+  const arrow = weatherArrow(weather, type)
+  if (!arrow) return ''
+  return `<img class="wx-arrow" src="${art(arrow === 'up' ? 'battle/stat_up.png' : 'battle/stat_down.png')}" alt=""/>`
+}
+
+function showK3Demo(part: string | null): void {
+  const kind = part === 'ko' || part === 'sieg' || part === 'intro' ? part : 'wetter'
+  const allyType = species('m01').type
+  const foeType = species('m66').type
+  const marks = teamWeatherMarks([allyType], 'regen')
+  paint(`<div id="stage" class="fx-demo"><div class="anchor anchor-mid"><div class="battle" id="battle" data-fx="live" style="height:980px">
+    <div class="battle-world" id="battle-world">
+      <div id="battle-fx"></div>
+      <div class="wx-stack">
+        <div class="wx-chip" id="wx-chip"><img src="${art('battle/weather_icon_regen.png')}" alt=""/> Regen · Wasser +15 % · Feuer −15 %</div>
+        <p class="wx-preview">Jetzt: Regen. Dein Team: ${marks.up} ▲, ${marks.down} ▼</p>
+      </div>
+      <div class="combatant foe" id="foe-actor" style="left:72%;top:58%"><b>Ziel ${arrowTag(foeType, 'regen')}</b><img class="sprite" src="${monsterArt('m66', true)}" alt=""/></div>
+      <div class="combatant ally" id="ally-actor" style="left:28%;top:72%"><b>Funkfuchs ${arrowTag(allyType, 'regen')}</b><img class="sprite" src="${monsterArt('m01', true)}" alt=""/></div>
+      <div class="name-banner" id="name-banner" hidden>Funkfuchs</div>
+      <div class="boss-intro" id="boss-intro" hidden></div>
+      <button type="button" class="victory" id="victory" hidden></button>
+      <img class="crest-fly" id="crest-fly" alt="" hidden/>
+    </div>
+  </div></div></div>`)
+  const host = document.getElementById('battle-fx')
+  if (host) mountBattleFx(host)
+  const mark = () => document.getElementById('battle')?.setAttribute('data-fx', 'hold')
+  if (kind === 'intro') {
+    const intro = document.getElementById('boss-intro')
+    if (intro) {
+      intro.hidden = false
+      intro.innerHTML = `<img src="${monsterArt('m66', true)}" alt=""/><b>Mira</b><span>Wächterin</span>`
+    }
+    mark()
+    return
+  }
+  if (kind === 'sieg') {
+    const world = document.getElementById('battle-world')
+    world?.classList.add('is-zoom')
+    const banner = document.getElementById('victory')
+    if (banner) {
+      banner.hidden = false
+      banner.textContent = 'Sieg · +48 G · +96 EP'
+    }
+    const crest = document.getElementById('crest-fly')
+    if (crest instanceof HTMLImageElement) {
+      crest.hidden = false
+      crest.src = art('ui/achieve.webp')
+    }
+    onBattleFxReady(() => {
+      beginBattleMood('regen', false, 1)
+      showBattleConfetti(REGION_TINT[1])
+      window.setTimeout(mark, 420)
+    })
+    return
+  }
+  if (kind === 'ko') {
+    const foe = document.getElementById('foe-actor')
+    if (foe) {
+      const pose = koPose(1)
+      foe.style.transform = `translate(-50%, -100%) translate(0px, ${pose.drop}px) rotate(${pose.rotate}deg) scale(0.72)`
+      const picture = foe.querySelector('img')
+      if (picture instanceof HTMLImageElement) picture.style.filter = 'brightness(2.4)'
+    }
+    onBattleFxReady(() => {
+      const fx = document.getElementById('battle-fx')
+      const foe = document.getElementById('foe-actor')
+      if (fx && foe) {
+        const at = stagePoint(foe, fx)
+        showBattleDissolve(at.x, at.y - 40, parseInt(typeColor('fire').slice(1), 16))
+      }
+      window.setTimeout(mark, 420)
+    })
+    return
+  }
+  onBattleFxReady(() => {
+    beginBattleMood('regen', false, 1)
+    window.setTimeout(mark, 280)
+  })
 }
 
 function showShopDemo(kind: 'shop' | 'shop-poor' | 'shop-ask'): void {
@@ -659,6 +749,15 @@ function play(outcome: EncounterOutcome, speed: Speed, done: () => void): void {
   const finishOnce = () => {
     window.clearTimeout(backstop)
     window.clearTimeout(impactTimer)
+    if (raf) cancelAnimationFrame(raf)
+    raf = 0
+    if (outcome.win && outcome.traces.length) {
+      showVictory(outcome, speed, reduced, regionTint(save?.region ?? 1), outcome.badge, () => {
+        clearBattleFx()
+        finish()
+      })
+      return
+    }
     clearBattleFx()
     finish()
   }
@@ -678,6 +777,7 @@ function play(outcome: EncounterOutcome, speed: Speed, done: () => void): void {
   const fxHost = document.getElementById('battle-fx')
   const floats = document.getElementById('floats')
   const critFlash = document.getElementById('crit-flash')
+  const weather = weatherAt(Date.now())
   if (fxHost) {
     mountBattleFx(fxHost)
     preloadBattleStrips(fightTypes(outcome))
@@ -685,6 +785,7 @@ function play(outcome: EncounterOutcome, speed: Speed, done: () => void): void {
   const battery = Boolean(save?.settings.battery)
   setFxRunning(true, battery ? BATTERY_FPS : 60)
   const reduced = Boolean(save?.settings.reduceMotion)
+  if (fxHost) onBattleFxReady(() => beginBattleMood(weather, reduced, speed))
   const allowFlash = Boolean(save?.settings.flashes) && !reduced
   let shakeStart = 0
   let shakeFor = 0
@@ -696,6 +797,9 @@ function play(outcome: EncounterOutcome, speed: Speed, done: () => void): void {
   let hitAt = -1
   let drawnAt = 0
   let impactTimer = 0
+  let allySeen = ''
+  let enterAt = -1
+  let dissolved = ''
   const frame = (now: number) => {
     if (gen !== playGen) return
     if (!paintDue(now, drawnAt, battery)) {
@@ -730,7 +834,7 @@ function play(outcome: EncounterOutcome, speed: Speed, done: () => void): void {
                 const grade = hitGrade(hit.band, hit.crit)
                 const hold = numberHoldMs(speed)
                 const above = numberPoint(struck, fxHost)
-                const shown = showHitNumber(above.x, above.y, hit.amount, grade, hold)
+                const shown = showHitNumber(above.x, above.y, hit.amount, grade, hold, hit.weather ?? 1)
                 if (!shown) spawnFloat(floats, hit, typeFx(hit.type).base, hit.from === 'ally' ? '70%' : '30%', hold)
                 struck.classList.remove('recoil')
                 void struck.offsetWidth
@@ -763,11 +867,31 @@ function play(outcome: EncounterOutcome, speed: Speed, done: () => void): void {
       const foeMove = hit?.from === 'foe' ? pose : -1
       const allyHit = hit?.from === 'foe' ? hitAge : -1
       const foeHit = hit?.from === 'ally' ? hitAge : -1
-      const allyKo = shot?.allyHp === 0 ? Math.min(1, Math.max(0, age) / (KO_MS * k)) : 0
-      const foeKo = shot?.foeHp === 0 ? Math.min(1, Math.max(0, age) / (KO_MS * k)) : 0
+      const allyKo = shot?.allyHp === 0 ? Math.min(1, Math.max(0, age) / 200) : 0
+      const foeKo = shot?.foeHp === 0 ? Math.min(1, Math.max(0, age) / 200) : 0
+      if (shot && shot.allySpecies !== allySeen) {
+        allySeen = shot.allySpecies
+        enterAt = elapsed
+        const banner = document.getElementById('name-banner')
+        if (banner) {
+          banner.hidden = false
+          banner.textContent = shot.allyName
+          window.setTimeout(() => { banner.hidden = true }, 800 / Math.max(1, speed))
+        }
+      }
+      const enter = enterAt < 0 ? 0 : Math.max(0, 1 - (elapsed - enterAt) / (300 / Math.max(1, speed)))
       if (allyActor) {
-        allyActor.style.transform = actorTransform('ally', allyMove, allyHit, allyKo, elapsed, reach)
+        allyActor.style.transform = `${actorTransform('ally', allyMove, allyHit, allyKo, elapsed, reach)} translate(${(-240 * enter).toFixed(1)}px, 0px)`
         allyActor.style.opacity = String(koPose(allyKo).opacity)
+      }
+      paintWeatherArrow('ally-arrow', shot ? species(shot.allySpecies).type : null, weather)
+      paintWeatherArrow('foe-arrow', shot ? species(shot.foeSpecies).type : null, weather)
+      if (foeKo >= 1 && shot && dissolved !== `foe-${shot.foeSpecies}` && fxHost && foeActor) {
+        dissolved = `foe-${shot.foeSpecies}`
+        const at = stagePoint(foeActor, fxHost)
+        showBattleDissolve(at.x, at.y - 40, parseInt(typeColor(species(shot.foeSpecies).type).slice(1), 16))
+        const picture = foeActor.querySelector('img')
+        if (picture instanceof HTMLImageElement) picture.style.filter = 'brightness(2.4)'
       }
       if (foeActor) {
         foeActor.style.transform = actorTransform('foe', foeMove, foeHit, foeKo, elapsed + 180, reach)
@@ -790,8 +914,8 @@ function play(outcome: EncounterOutcome, speed: Speed, done: () => void): void {
       if (mid) mid.style.transform = `translateX(${layers.mid}px)`
       if (near) near.style.transform = `translateX(${layers.near}px)`
       if (text && shot && elapsed < battleEnd) text.textContent = shot.text
-      if (allyName && shot) allyName.textContent = shot.allyName
-      if (foeName && shot) foeName.textContent = outcome.shiny ? `${shot.foeName} · ${t(save?.settings.lang, 'battle.shimmer')}` : shot.foeName
+      if (allyName && shot) setActorName(allyName, shot.allyName)
+      if (foeName && shot) setActorName(foeName, outcome.shiny ? `${shot.foeName} · ${t(save?.settings.lang, 'battle.shimmer')}` : shot.foeName)
       if (shot) {
         paintSprite(allyImg, shot.allySpecies, null)
         paintSprite(foeImg, shot.foeSpecies, outcome.shiny)
@@ -809,10 +933,82 @@ function play(outcome: EncounterOutcome, speed: Speed, done: () => void): void {
       finishOnce()
     }
   }
-  raf = requestAnimationFrame(frame)
+  const run = () => { raf = requestAnimationFrame(frame) }
+  if (outcome.boss?.species) showBossIntro(outcome.boss, run)
+  else run()
 }
 
 const floatPool: HTMLDivElement[] = []
+
+function regionTint(region: number): number {
+  return REGION_TINT[region] ?? REGION_TINT[1]
+}
+
+function setActorName(node: HTMLElement, name: string): void {
+  const arrow = node.querySelector('img')
+  node.textContent = name
+  if (arrow) node.appendChild(arrow)
+}
+
+function paintWeatherArrow(id: string, type: TypeId | null, weather: ReturnType<typeof weatherAt>): void {
+  const node = document.getElementById(id)
+  if (!(node instanceof HTMLImageElement) || !type) return
+  const arrow = weatherArrow(weather, type)
+  if (!arrow) {
+    node.hidden = true
+    return
+  }
+  node.hidden = false
+  node.src = art(arrow === 'up' ? 'battle/stat_up.png' : 'battle/stat_down.png')
+}
+
+function showBossIntro(boss: { name: string; title: string; species: string }, done: () => void): void {
+  const intro = document.getElementById('boss-intro')
+  if (!intro) {
+    done()
+    return
+  }
+  intro.hidden = false
+  intro.innerHTML = `<img src="${monsterArt(boss.species, true)}" alt=""/><b>${boss.name}</b><span>${boss.title}</span>`
+  let closed = false
+  const close = () => {
+    if (closed) return
+    closed = true
+    intro.hidden = true
+    intro.onclick = null
+    done()
+  }
+  intro.onclick = close
+  window.setTimeout(close, 1000)
+}
+
+function showVictory(outcome: EncounterOutcome, speed: Speed, reduced: boolean, tint: number, badge: string | null, done: () => void): void {
+  const world = document.getElementById('battle-world')
+  world?.classList.add('is-zoom')
+  const banner = document.getElementById('victory')
+  if (banner) {
+    banner.hidden = false
+    banner.textContent = `Sieg · +${outcome.gold} G · +${outcome.exp} EP`
+  }
+  if (!reduced && speed < 3) showBattleConfetti(tint)
+  const crest = document.getElementById('crest-fly')
+  if (badge && crest instanceof HTMLImageElement) {
+    crest.hidden = false
+    crest.src = art('ui/achieve.webp')
+    crest.animate([{ transform: 'translate(-50%, 0)' }, { transform: 'translate(-50%, -280px) scale(0.6)' }], { duration: 900, easing: 'ease-in' })
+  }
+  let closed = false
+  const close = () => {
+    if (closed) return
+    closed = true
+    world?.classList.remove('is-zoom')
+    if (banner) banner.hidden = true
+    if (crest) crest.hidden = true
+    done()
+  }
+  if (banner) banner.onclick = close
+  window.setTimeout(close, 1200 / Math.max(1, speed))
+}
 
 function fightTypes(outcome: EncounterOutcome): TypeId[] {
   const found = new Set<TypeId>()

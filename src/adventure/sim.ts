@@ -3,6 +3,7 @@ import { nextFloat } from '../rng'
 import type { TypeId } from '../types'
 import type { FightSide, FightTrace } from './battle'
 import { fight1v1 } from './battle'
+import { weatherAt } from './weather'
 import {
   BASE_ENCOUNTER_MS,
   BENCH_EXP,
@@ -71,6 +72,9 @@ export interface EncounterOutcome {
   catch: CatchResult | null
   gold: number
   badge: string | null
+  /** Fighter's own EP from this encounter, before the bench share. */
+  exp: number
+  boss: { name: string; title: string; species: string } | null
   wiped: boolean
   hold: boolean
   scene: ChapterDef['scene']
@@ -250,8 +254,9 @@ export function awardCombatExp(
   fighter: string,
   opts: ResolveOpts,
   now: number
-): void {
+): number {
   const base = 8 * foeLevel * (1 + RARITY_EXP * rarity)
+  let fighterExp = 0
   for (const uid of save.team) {
     const mon = save.mons[uid]
     if (!mon) continue
@@ -264,6 +269,7 @@ export function awardCombatExp(
     spendBudget(opts, uid, gained.levels)
     noteLevel(opts.summary, uid, mon, before)
     rememberAwaken(save, uid, before, mon.lvl)
+    if (uid === fighter) fighterExp = Math.floor(share)
     if (!opts.offline && gained.levels > 0) log(save, now, line(save, 'say.level', { name: species(mon.species).name, level: mon.lvl }), false)
   }
   const hortShare = base * HORT_EP_RATE * combatExpFactor(save, now) * (opts.offline ? OFFLINE_EXP_FACTOR : 1)
@@ -276,6 +282,7 @@ export function awardCombatExp(
     rememberAwaken(save, uid, before, mon.lvl)
     noteLevel(opts.summary, uid, mon, before)
   }
+  return fighterExp
 }
 
 function storeHp(mon: OwnedMon, battleHp: number, battleMax: number): void {
@@ -387,6 +394,8 @@ function baseOutcome(kind: NodeKind, step: number, chapter: ChapterDef): Encount
     catch: null,
     gold: 0,
     badge: null,
+    exp: 0,
+    boss: null,
     wiped: false,
     hold: false,
     scene: chapter.scene,
@@ -481,7 +490,7 @@ export function applyCatch(save: SaveV2, speciesId: string, level: number, shiny
   return { species: speciesId, name, chance: 0, success: true, place: 'exp', shiny, level }
 }
 
-function fightOne(save: SaveV2, chapter: ChapterDef, speciesId: string, level: number, opts: ResolveOpts, now: number, shiny = false): { trace: FightTrace; fighter: string } | null {
+function fightOne(save: SaveV2, chapter: ChapterDef, speciesId: string, level: number, opts: ResolveOpts, now: number, shiny = false): { trace: FightTrace; fighter: string; exp: number } | null {
   const foe = foeSide(speciesId, level, shiny)
   const fighter = pickFighter(save, foe.type)
   if (!fighter) return null
@@ -489,16 +498,16 @@ function fightOne(save: SaveV2, chapter: ChapterDef, speciesId: string, level: n
   const allyMon = save.mons[fighter]
   const cap = chapterCapNow(save, chapter)
   const ally = sideFrom(allyMon, cap)
-  const trace = fight1v1(ally, foe, rngOf(save), opts.trace)
+  const trace = fight1v1(ally, foe, rngOf(save), opts.trace, opts.offline ? null : weatherAt(now))
   storeHp(allyMon, trace.allyHp, trace.allyMax)
   if (trace.win) {
     save.stats.wins += 1
-    awardCombatExp(save, cap, level, species(speciesId).baseRarity, fighter, opts, now)
+    const exp = awardCombatExp(save, cap, level, species(speciesId).baseRarity, fighter, opts, now)
     if (opts.summary) opts.summary.fights += 1
-    return { trace, fighter }
+    return { trace, fighter, exp }
   }
   if (opts.summary) opts.summary.fights += 1
-  return { trace, fighter }
+  return { trace, fighter, exp: 0 }
 }
 
 function runBouts(
@@ -508,27 +517,29 @@ function runBouts(
   opts: ResolveOpts,
   now: number,
   goldFor: (wins: number) => number
-): { traces: FightTrace[]; wins: number; lastFighter: string | null; wiped: boolean; gold: number } {
+): { traces: FightTrace[]; wins: number; lastFighter: string | null; wiped: boolean; gold: number; exp: number } {
   const traces: FightTrace[] = []
   let wins = 0
+  let exp = 0
   let lastFighter: string | null = null
   for (const foe of foes) {
     const dex = save.dex[foe.species] ?? { seen: 0, caught: 0 }
     dex.seen += 1
     save.dex[foe.species] = dex
-    if (!livingTeam(save).length) return { traces, wins, lastFighter, wiped: true, gold: 0 }
+    if (!livingTeam(save).length) return { traces, wins, lastFighter, wiped: true, gold: 0, exp }
     const fought = fightOne(save, chapter, foe.species, foe.level, opts, now, foe.shiny ?? false)
-    if (!fought) return { traces, wins, lastFighter, wiped: true, gold: 0 }
+    if (!fought) return { traces, wins, lastFighter, wiped: true, gold: 0, exp }
     traces.push(fought.trace)
+    exp += fought.exp
     lastFighter = fought.fighter
     if (!fought.trace.win) {
       const wiped = !livingTeam(save).length
-      return { traces, wins, lastFighter, wiped, gold: 0 }
+      return { traces, wins, lastFighter, wiped, gold: 0, exp }
     }
     wins += 1
     if (fought.trace.allyKo) {
       const wiped = !livingTeam(save).length
-      if (wiped) return { traces, wins, lastFighter, wiped, gold: 0 }
+      if (wiped) return { traces, wins, lastFighter, wiped, gold: 0, exp }
     }
   }
   const gold = goldFor(wins)
@@ -537,7 +548,7 @@ function runBouts(
     paid = grantGold(save, gold, now)
     if (opts.summary) opts.summary.gold += paid
   }
-  return { traces, wins, lastFighter, wiped: false, gold: paid }
+  return { traces, wins, lastFighter, wiped: false, gold: paid, exp }
 }
 
 function doWild(save: SaveV2, chapter: ChapterDef, now: number, opts: ResolveOpts): EncounterOutcome {
@@ -569,6 +580,7 @@ function doWild(save: SaveV2, chapter: ChapterDef, now: number, opts: ResolveOpt
     return finish(save, chapter, outcome)
   }
   outcome.gold = bouts.gold
+  outcome.exp = bouts.exp
   noteFarmWin(save)
   say(save, outcome, now, line(save, 'say.winGold', { gold: outcome.gold }), quiet)
   if (trace.foeKo) {
@@ -615,6 +627,7 @@ function doTrainer(save: SaveV2, chapter: ChapterDef, now: number, opts: Resolve
     return finish(save, chapter, outcome)
   }
   outcome.gold = 25 * foes.reduce((sum, foe) => sum + foe.level, 0)
+  outcome.exp = bouts.exp
   if (grantTrainerChest(save, rngOf(save))) say(save, outcome, now, line(save, 'say.trainerChest'), quiet)
   noteFarmWin(save)
   say(save, outcome, now, line(save, 'say.trainerWin', { name, gold: outcome.gold }), quiet)
@@ -629,17 +642,18 @@ function runGauntlet(
   scale: BossScale,
   opts: ResolveOpts,
   now: number
-): { traces: FightTrace[]; wins: number; lastFighter: string | null; wiped: boolean } {
+): { traces: FightTrace[]; wins: number; lastFighter: string | null; wiped: boolean; exp: number } {
   const traces: FightTrace[] = []
   let index = 0
   let foeFraction = 1
   let wins = 0
+  let exp = 0
   let lastFighter: string | null = null
   const seen = new Set<number>()
   let guard = 0
   while (index < foes.length && guard < 24) {
     guard += 1
-    if (!livingTeam(save).length) return { traces, wins, lastFighter, wiped: true }
+    if (!livingTeam(save).length) return { traces, wins, lastFighter, wiped: true, exp }
     const foe = foes[index]
     if (!seen.has(index)) {
       seen.add(index)
@@ -648,18 +662,18 @@ function runGauntlet(
       save.dex[foe.species] = dex
     }
     const fighter = pickFighter(save, species(foe.species).type)
-    if (!fighter) return { traces, wins, lastFighter, wiped: true }
+    if (!fighter) return { traces, wins, lastFighter, wiped: true, exp }
     save.active = fighter
     const allyMon = save.mons[fighter]
     const cap = chapterCapNow(save, chapter)
-    const trace = fight1v1(sideFrom(allyMon, cap), foeSide(foe.species, foe.level, foe.shiny ?? false, scale, foeFraction), rngOf(save), opts.trace)
+    const trace = fight1v1(sideFrom(allyMon, cap), foeSide(foe.species, foe.level, foe.shiny ?? false, scale, foeFraction), rngOf(save), opts.trace, opts.offline ? null : weatherAt(now))
     traces.push(trace)
     lastFighter = fighter
     if (opts.summary) opts.summary.fights += 1
     if (trace.win) {
       storeHp(allyMon, trace.allyHp, trace.allyMax)
       save.stats.wins += 1
-      awardCombatExp(save, cap, foe.level, species(foe.species).baseRarity, fighter, opts, now)
+      exp += awardCombatExp(save, cap, foe.level, species(foe.species).baseRarity, fighter, opts, now)
       index += 1
       foeFraction = 1
       wins += 1
@@ -668,7 +682,7 @@ function runGauntlet(
       foeFraction = trace.foeMax > 0 ? Math.max(0.01, trace.foeHp / trace.foeMax) : 1
     }
   }
-  return { traces, wins, lastFighter, wiped: wins < foes.length && !livingTeam(save).length }
+  return { traces, wins, lastFighter, wiped: wins < foes.length && !livingTeam(save).length, exp }
 }
 
 function doGuardian(save: SaveV2, chapter: ChapterDef, now: number, opts: ResolveOpts, forced: boolean): EncounterOutcome {
@@ -694,6 +708,7 @@ function doGuardian(save: SaveV2, chapter: ChapterDef, now: number, opts: Resolv
     continuePast(save, chapter)
     return finish(save, chapter, outcome)
   }
+  outcome.boss = { name: guard.name, title: guard.epithet, species: guard.team[0].species }
   say(save, outcome, now, line(save, 'say.guard', { epithet: guard.epithet, name: guard.name, type: typeName(species(guard.team[0].species).type) }), quiet)
   const foes = guard.team.map((mon) => ({ species: mon.species, level: mon.level }))
   const bouts = runGauntlet(save, chapter, foes, bossScale(guard), opts, now)
@@ -719,6 +734,7 @@ function doGuardian(save: SaveV2, chapter: ChapterDef, now: number, opts: Resolv
   clearGuard(save)
   outcome.win = true
   outcome.gold = paidGuard
+  outcome.exp = bouts.exp
   outcome.badge = badge || null
   if (opts.summary) {
     opts.summary.gold += paidGuard
@@ -824,6 +840,7 @@ function doCouncil(save: SaveV2, chapter: ChapterDef, now: number, opts: Resolve
   }
   const member = council.members[index]
   save.step = index + 1
+  outcome.boss = { name: member.name, title: member.epithet, species: member.team[0]?.species ?? '' }
   say(save, outcome, now, line(save, 'say.councilEnter', { epithet: member.epithet, name: member.name, cap: chapter.cap }), quiet)
   const foes = member.team.map((mon) => ({ species: mon.species, level: mon.level }))
   const bouts = runGauntlet(save, chapter, foes, bossScale(member), opts, now)
@@ -844,6 +861,8 @@ function doCouncil(save: SaveV2, chapter: ChapterDef, now: number, opts: Resolve
   }
   const won = recordCouncilWin(save, now, quiet)
   won.traces = bouts.traces
+  won.exp = bouts.exp
+  won.boss = outcome.boss
   if (opts.summary) {
     opts.summary.gold += won.gold
     if (won.badge) opts.summary.badges.push(won.badge)
