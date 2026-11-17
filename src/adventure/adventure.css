@@ -290,6 +290,25 @@ textarea { width: 100%; box-sizing: border-box; background: #121a30; color: inhe
   box-sizing: border-box;
   z-index: 4;
 }
+.dock.has-combo { grid-template-columns: 96px minmax(0, 1fr) 148px; }
+.combo-slot { position: relative; align-self: center; }
+.combo-mark {
+  width: 80px; height: 80px; padding: 0; border: 0; border-radius: 18px;
+  background: rgba(8, 12, 24, 0.72); display: grid; place-items: center; cursor: pointer;
+}
+.combo-mark img { width: 72px; height: 72px; object-fit: contain; }
+.combo-tip {
+  position: absolute; z-index: 9; left: 0; bottom: calc(100% + 12px);
+  width: max-content; max-width: 420px; margin: 0; padding: 10px 14px; border-radius: 16px;
+  background: rgba(8, 12, 24, 0.94); color: #fff8e1; font-weight: 800; font-size: 36px; line-height: 1.2;
+}
+.combo-tip[hidden] { display: none; }
+.combatant .aura-flash {
+  position: absolute; z-index: 3; left: 50%; bottom: -36px; width: 420px; height: 420px;
+  margin-left: -210px; pointer-events: none;
+  background-repeat: no-repeat; background-size: 2100px 420px;
+}
+.combatant img.sprite { position: relative; z-index: 2; }
 .team-rail {
   display: grid;
   grid-template-columns: repeat(6, minmax(0, 1fr));

@@ -138,6 +138,11 @@ export function flightMs(travelMs: number, tempo: number): number {
   return Math.max(ATTACK_MIN_MS / 2, (LUNGE_OUT_MS + LUNGE_HOLD_MS + Math.round(travelMs * 0.4)) / pace)
 }
 
+/** Hits and weather share one cap. Neither pool may push the total over 40. */
+export function sharedParticleRoom(moodLive: number, dotsLive: number, cap = POOL_SIZE): number {
+  return Math.max(0, cap - Math.max(0, moodLive) - Math.max(0, dotsLive))
+}
+
 export function particleBudget(entry: TypeFxDef, opts: { crit: boolean; tempo: number; reduced: boolean }): number {
   if (opts.reduced || opts.tempo >= 3) return 0
   const count = Math.round((opts.crit ? entry.critParticles : entry.particles) * PARTICLE_BOOST)

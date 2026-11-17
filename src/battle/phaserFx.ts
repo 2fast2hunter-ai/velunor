@@ -12,7 +12,7 @@ import {
   numberAlpha,
   type HitGrade
 } from './hitReadout'
-import { particleBudget, POOL_SIZE, typeFx, type TypeFxDef } from './typeFx'
+import { particleBudget, POOL_SIZE, sharedParticleRoom, typeFx, type TypeFxDef } from './typeFx'
 import { effectTiming, hitBurstLook, hitStrip, projStrip, stripFrame, stripTexture } from './strips'
 import type { TypeId } from '../types'
 import type { WeatherId } from '../adventure/weather'
@@ -295,8 +295,7 @@ class FxScene extends Phaser.Scene {
     if (kind === 'hit' && age >= timing.travelMs && !this.spawned) {
       this.spawned = true
       const count = particleBudget(spec, { crit: this.burst.crit, tempo: this.burst.tempo, reduced: this.burst.reduced })
-      const room = Math.max(0, 40 - this.moodLive())
-      this.spawn(Math.min(count, room), to.x, to.y, this.hex(spec.accent), 28, 'out')
+      this.spawn(Math.min(count, this.particleRoom()), to.x, to.y, this.hex(spec.accent), 28, 'out')
     }
     for (const slot of this.slots) {
       if (!slot.alive) continue
@@ -316,7 +315,7 @@ class FxScene extends Phaser.Scene {
   private drawHeal(from: { x: number; y: number }, base: number, scale: number): void {
     if (!this.spawned) {
       this.spawned = true
-      this.spawn(8, from.x, from.y, base, 20 * scale, 'up')
+      this.spawn(Math.min(8, this.particleRoom()), from.x, from.y, base, 20 * scale, 'up')
     }
   }
 
@@ -327,6 +326,12 @@ class FxScene extends Phaser.Scene {
 
   moodLive(): number {
     return this.moodImages.filter((image) => image.visible).length
+  }
+
+  /** Weather sheets and hit dots together stay at or under the pool of 40. */
+  particleRoom(): number {
+    const dots = this.slots.filter((slot) => slot.alive).length
+    return sharedParticleRoom(this.moodLive(), dots)
   }
 
   beginMood(weather: WeatherId | null, reduced: boolean, tempo: number): void {
@@ -347,7 +352,10 @@ class FxScene extends Phaser.Scene {
 
   showConfetti(tint: number): void {
     if (this.moodReduced || this.moodTempo >= 3 || !this.textures.exists('fx-confetti')) return
+    let left = this.particleRoom()
     this.moodImages.forEach((image, index) => {
+      if (left <= 0) return
+      left -= 1
       const frame = index % 12
       image.setTexture('fx-confetti', frame).setVisible(true).setTint(tint).setAlpha(1)
       image.setPosition(140 + (index % 8) * 110, 80 + (index % 3) * 30)
@@ -387,6 +395,7 @@ class FxScene extends Phaser.Scene {
         return
       }
       if (!image.visible) {
+        if (this.particleRoom() <= 0) return
         if (this.moodLive() >= (weather === 'nebel' ? 8 : 16)) return
         image.setTexture(key, index % (weather === 'nebel' ? 3 : 4)).setVisible(true).clearTint()
         image.setPosition(Math.random() * 1080, weather === 'wind' ? 80 + Math.random() * 700 : -20)

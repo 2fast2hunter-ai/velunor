@@ -55,6 +55,14 @@ export function numberStyle(band: 'strong' | 'weak' | 'neutral', crit: boolean, 
   return { scale: look.scale, color: look.color, label: look.label }
 }
 
+/** Extra shift that keeps a sprite of `spriteWidth` inside the field. */
+export function clampShift(anchor: number, x: number, fieldWidth: number, spriteWidth: number, margin = 16): number {
+  const half = Math.max(0, spriteWidth) / 2
+  const min = margin + half
+  const max = Math.max(min, fieldWidth - margin - half)
+  return Math.max(min, Math.min(max, anchor + x)) - anchor
+}
+
 export function parallaxShift(attack: number, shake: number): { far: number; mid: number; near: number } {
   const nudge = attack * 0.15 + shake
   return { far: nudge * 0.25, mid: nudge * 0.5, near: nudge }

@@ -46,6 +46,7 @@ import { HORT_PRICES, hortOffer } from './hort'
 import { fruitDef, fruitMinutes } from './shop'
 import { teamWeatherMarks, weatherArrow, weatherForecast, weatherName, WEATHER_SHIFTS, type WeatherId } from './weather'
 import { typeArrow } from './order'
+import { activeCombos } from './combo'
 import { councilAssignment, guardianAssignment, mechIcon, mechName, mechTip, type MechId } from './mech'
 import { ultName, ultPattern } from './ult'
 import { FACES, MULTIPLIERS, PRIZES, faceById, spinCost, wheelOpen, type Multiplier, type SymbolId } from './wheel'
@@ -284,6 +285,7 @@ function battle(save: SaveV2, now: number, fighting = false): string {
         <b id="ally-name">${mon ? esc(species(mon.species).name) : ''}<img class="wx-arrow" id="ally-arrow" alt="" ${mon && weatherArrow(weatherForecast(now)[0].weather, species(mon.species).type) ? `src="${art(weatherArrow(weatherForecast(now)[0].weather, species(mon.species).type) === 'up' ? 'battle/stat_up.png' : 'battle/stat_down.png')}"` : 'hidden'}/></b>
         <div class="hp"><span id="ally-hp" style="width:${(hp.hp / hp.max) * 100}%"></span></div>
         <div class="ult ${mon && mon.lvl >= 25 ? '' : 'is-locked'}" id="ally-ult" data-n="0" title="${mon && mon.lvl >= 25 ? 'Ult' : 'ab Level 25'}"></div>
+        <div id="aura-flash" class="aura-flash" hidden></div>
         ${mon ? `<img class="sprite ${mon.shiny ? 'is-shiny' : ''}" id="ally-sprite" src="${monsterArt(mon.species, true)}" alt=""/>` : ''}
         <span class="ground-shadow"></span>
       </div>
@@ -319,11 +321,20 @@ function teamDock(save: SaveV2): string {
       <span class="bar"><span style="width:${fainted ? 0 : (bar.hp / bar.max) * 100}%"></span></span>
     </button>`
   }).join('')
+  const combos = activeCombos(save.team.flatMap((uid) => {
+    const mon = save.mons[uid]
+    return mon ? [species(mon.species).type] : []
+  }))
+  const comboName = combos.map((row) => row.name).join(', ')
+  const combo = combos.length
+    ? `<span class="combo-slot"><button type="button" class="combo-mark" data-act="combo" data-tip="${esc(comboName)}" aria-label="${esc(comboName)}"><img src="${art('battle/combo_synergy_64.png')}" alt=""/></button><p class="combo-tip" id="combo-tip" hidden></p></span>`
+    : ''
   const speeds = ([1, 2, 3] as const).map((speed) => {
     const iconId = speed === 1 ? 'speed1' : speed === 2 ? 'speed2' : 'speed3'
     return `<button type="button" data-act="speed" data-speed="${speed}" class="${save.settings.speed === speed ? 'on' : ''}">${ui(iconId)}×${speed}</button>`
   }).join('')
-  return `<div class="dock">
+  return `<div class="dock${combo ? ' has-combo' : ''}">
+    ${combo}
     <div class="team-rail">${minis}</div>
     <div class="speed" aria-label="×1 ×2 ×3">${speeds}</div>
   </div>`

@@ -3,7 +3,7 @@ import typesJson from '../../data/types.json'
 import type { TypeId } from '../types'
 import { FxPool } from './fxPool'
 import { arcHeight, koPose, lungeOffset } from './stage'
-import { attackDuration, LUNGE_BACK_MS, LUNGE_HOLD_MS, LUNGE_OUT_MS, LUNGE_PX, moveLabel, particleBudget, TYPE_FX, typeBase, typeFx } from './typeFx'
+import { attackDuration, LUNGE_BACK_MS, LUNGE_HOLD_MS, LUNGE_OUT_MS, LUNGE_PX, moveLabel, particleBudget, sharedParticleRoom, TYPE_FX, typeBase, typeFx } from './typeFx'
 
 const ACCENTS: Record<TypeId, string> = {
   fire: '#ffca28', water: '#e3f2fd', plant: '#c5e1a5', earth: '#d7ccc8', wind: '#ffffff',
@@ -54,6 +54,9 @@ describe('type effect table', () => {
     expect(particleBudget(fire, { crit: true, tempo: 3, reduced: false })).toBe(0)
     expect(particleBudget(fire, { crit: false, tempo: 1, reduced: true })).toBe(0)
     expect(particleBudget(typeFx('dragon'), { crit: true, tempo: 1, reduced: false })).toBe(40)
+    expect(sharedParticleRoom(16, 30)).toBe(0)
+    expect(sharedParticleRoom(16, 10)).toBe(14)
+    expect(sharedParticleRoom(0, 0)).toBe(40)
   })
 
   it('lunges out, holds, and returns, and a knockout tips over', () => {
