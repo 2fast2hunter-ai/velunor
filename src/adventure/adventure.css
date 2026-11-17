@@ -437,10 +437,11 @@ textarea { width: 100%; box-sizing: border-box; background: #121a30; color: inhe
 }
 .status-mark img { width: 40px; height: 40px; object-fit: contain; display: block; margin: 4px auto; }
 .status-tip {
-  position: absolute; z-index: 8; left: 50%; top: -8px; transform: translate(-50%, -100%);
-  width: max-content; max-width: 280px; margin: 0; padding: 8px 12px; border-radius: 14px;
-  background: rgba(8, 12, 24, 0.92); color: #fff8e1; font-weight: 700; font-size: 18px; text-align: center;
+  position: absolute; z-index: 9; top: 0; left: calc(100% + 16px);
+  width: max-content; max-width: 320px; margin: 0; padding: 10px 14px; border-radius: 16px;
+  background: rgba(8, 12, 24, 0.94); color: #fff8e1; font-weight: 700; font-size: 36px; line-height: 1.25; text-align: left;
 }
+.combatant.foe .status-tip { left: auto; right: calc(100% + 16px); }
 
 .seal {
   position: absolute;

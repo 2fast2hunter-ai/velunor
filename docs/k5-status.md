@@ -6,7 +6,7 @@ Werte aus `docs/kampf-upgrade-konzept.md`, Abschnitt B2. Ein Monster trägt höc
 |---|---|---|---|
 | Brand | 3 % Max-HP je Angriff des Trägers, mit Wetterfaktor des Verursachers | 3 Angriffe | Feuer-Ult und Feuer-Fertigkeit. Der schlichte Schlag setzt keine Brand. |
 | Nässe | DEF −15 % | 3 Angriffe | Wasser |
-| Frost | 30 % Chance, den eigenen Angriff auszusetzen | 2 Angriffe | Eis |
+| Frost | 30 % Chance, den eigenen Angriff auszusetzen. Das ist die Auslegung von „SPD −30 %, greift seltener“, weil die Zugreihenfolge am Kampfbeginn feststeht. | 2 Angriffe | Eis |
 | Giftnebel | 2 % Max-HP je Angriff und Stapel, mit Wetterfaktor | 4 Angriffe, bis 3 Stapel | Gift |
 | Schock | der nächste Angriff macht 50 % Schaden | 1 Angriff | Blitz |
 | Spreu | 20 % der Angriffe gehen daneben | 3 Angriffe | Wind und Insekt |

@@ -273,25 +273,38 @@ function showFxDemo(kind: 'fire' | 'hit' | 'ko', requested: string | null = null
 const REGION_TINT = [0x7dcea0, 0x7dcea0, 0x9ad7ff, 0xff8a3d, 0x7e57c2, 0xf0c14a]
 
 function showK5Demo(part: string | null): void {
-  const tip = part === 'tooltip'
-  const brand = AILMENTS.brand
-  const wet = AILMENTS.naesse
-  paint(`<div id="stage" class="fx-demo"><div class="anchor anchor-mid"><div class="battle" id="battle" data-fx="live" style="height:980px">
-    <div class="battle-world" id="battle-world">
-      <div class="combatant foe" id="foe-actor" style="left:72%;top:58%">
-        <button type="button" class="status-mark" data-act="status" data-who="foe" data-tip="${wet.tip}"><img src="${art(ailmentIcon('naesse'))}" alt="Nässe"/></button>
-        <p class="status-tip" id="foe-tip" hidden>${wet.tip}</p>
-        <b>Ziel</b><div class="hp"><span style="width:70%"></span></div>
-        <img class="sprite" src="${monsterArt('m02', true)}" alt=""/>
-      </div>
-      <div class="combatant ally" id="ally-actor" style="left:28%;top:72%">
-        <button type="button" class="status-mark" data-act="status" data-who="ally" data-tip="${brand.tip}"><img src="${art(ailmentIcon('brand'))}" alt="Brand"/></button>
-        <p class="status-tip" id="ally-tip" ${tip ? '' : 'hidden'}>${brand.tip}</p>
-        <b>Funkfuchs</b><div class="hp"><span style="width:64%"></span></div>
-        <img class="sprite" src="${monsterArt('m01', true)}" alt=""/>
-      </div>
-    </div>
-  </div></div></div>`)
+  const kind = part === 'tooltip' ? 'tooltip' : part === 'before' ? 'before' : 'status'
+  save = beginAdventure('Ada', 'A', 'm01', Date.now())
+  screen = 'adventure'
+  const uid = save.active
+  if (uid && save.mons[uid]) save.mons[uid].lvl = 25
+  save.settings.speed = 1
+  render()
+  const foeName = document.getElementById('foe-name')
+  if (foeName) setActorName(foeName, 'Tropfmolch')
+  const foeImg = document.getElementById('foe-sprite')
+  if (foeImg instanceof HTMLImageElement) {
+    foeImg.hidden = false
+    foeImg.src = monsterArt('m02', true)
+  }
+  const foeHp = document.getElementById('foe-hp')
+  if (foeHp) foeHp.style.width = '72%'
+  const allyHp = document.getElementById('ally-hp')
+  if (allyHp) allyHp.style.width = '64%'
+  paintUlt('ally-ult', 3, true)
+  paintUlt('foe-ult', 2, true)
+  if (kind !== 'before') {
+    paintMark('ally-status', 'naesse', 1)
+    paintMark('foe-status', 'brand', 1)
+  }
+  if (kind === 'tooltip') {
+    const tip = document.getElementById('ally-tip')
+    const button = document.getElementById('ally-status')
+    if (tip && button) {
+      tip.hidden = false
+      tip.textContent = button.dataset.tip ?? ''
+    }
+  }
   document.getElementById('battle')?.setAttribute('data-fx', 'hold')
 }
 

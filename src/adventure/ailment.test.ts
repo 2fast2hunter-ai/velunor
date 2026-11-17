@@ -33,6 +33,15 @@ describe('battle ailments', () => {
     expect(immune.frames.some((frame) => frame.foeMark === 'brand')).toBe(false)
   })
 
+  it('puts the mark on the monster that was hit, not on the attacker', () => {
+    const soaked = fight1v1(side('m02', 1, 4000, 20, 200), side('m10', 1, 4000, 20, 1), () => 0.99, true)
+    expect(soaked.frames.some((frame) => frame.foeMark === 'naesse')).toBe(true)
+    expect(soaked.frames.some((frame) => frame.allyMark === 'naesse')).toBe(false)
+    const branded = fight1v1(side('m01', 25, 6000, 30, 200), side('m10', 1, 6000, 20, 1), () => 0.99, true)
+    expect(branded.frames.some((frame) => frame.foeMark === 'brand')).toBe(true)
+    expect(branded.frames.some((frame) => frame.allyMark === 'brand')).toBe(false)
+  })
+
   it('stacks Giftnebel to 3 and keeps the encounter clock', () => {
     const trace = fight1v1(side('m14', 1, 8000, 15, 200), side('m10', 1, 8000, 10, 1), () => 0.99, true)
     const stacks = trace.frames.map((frame) => frame.foeStacks ?? 0)
