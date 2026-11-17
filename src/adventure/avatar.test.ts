@@ -1,6 +1,9 @@
+import { readFileSync } from 'node:fs'
 import { describe, expect, it } from 'vitest'
-import { clampLook, lookFromAvatar, readLook } from './avatar'
+import { chooseLook, clampLook, colorHex, lookFromAvatar, readLook } from './avatar'
 import { NAMES_DE, NAMES_EN, nameProblem, pickLook, pickName } from './home'
+import { beginAdventure } from './save'
+import { onboardingHtml } from './view'
 
 describe('avatar look', () => {
   it('maps the old letters and sends anything else to zero', () => {
@@ -18,6 +21,23 @@ describe('avatar look', () => {
     expect(readLook(undefined, 'A')).toEqual({ skin: 1, hair: 0, color: 0 })
     expect(readLook(null, 'B')).toEqual({ skin: 3, hair: 1, color: 3 })
     expect(clampLook({ skin: 4, hair: 2, color: 6 })).toEqual({ skin: 4, hair: 2, color: 6 })
+  })
+
+  it('stores a color tap on the new adventure', () => {
+    const html = onboardingHtml('Mira', { skin: 1, hair: 0, color: 0 }, '', 'de')
+    expect(html).toContain('>Farbe<')
+    for (let index = 0; index < 8; index += 1) {
+      expect(html).toContain(`data-part="color" data-index="${index}"`)
+      expect(html).toContain(colorHex(index))
+    }
+    expect(html).toContain('data-part="color" data-index="0" aria-pressed="true"')
+    const picked = chooseLook({ skin: 1, hair: 0, color: 0 }, 'color', 5)
+    const save = beginAdventure('Mira', picked, 'm01', 1_000)
+    expect(save.look.color).toBe(5)
+    expect(save.look).toEqual({ skin: 1, hair: 0, color: 5 })
+    const css = readFileSync(new URL('./adventure.css', import.meta.url), 'utf8')
+    expect(css).toMatch(/\.home-scroll[^{]*\{[^}]*padding:\s*24px 36px 177px/)
+    expect(css).toMatch(/\.home-bar \.primary[^{]*\{[^}]*height:\s*177px/)
   })
 })
 

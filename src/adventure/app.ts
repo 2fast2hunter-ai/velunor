@@ -37,7 +37,7 @@ import { takeChests } from './chests'
 import { bankRoad, buyChestForGold, buyChestForMarks, claimRoad, craftSpecies, debugStarChests, meltDuplicate, raiseStar } from './sources'
 import { chestAnimMs, type ChestTier } from './lootbox'
 import { needsConfirm, shopOffer } from './shopOffer'
-import { paintLooks } from './avatar'
+import { chooseLook, paintLooks } from './avatar'
 import { nameProblem, pickLook, pickName } from './home'
 import { beginAdventure, exportCode, importCode, loadAdventure, writeSave } from './save'
 import { equipFrame, equipTitle } from './achievements'
@@ -1560,7 +1560,7 @@ function onClick(event: Event): void {
     const part = node.getAttribute('data-part')
     const index = Number(node.getAttribute('data-index'))
     if (part === 'skin' || part === 'hair' || part === 'color') {
-      draftLook = { ...draftLook, [part]: index }
+      draftLook = chooseLook(draftLook, part, index)
       showOnboarding()
     }
     return

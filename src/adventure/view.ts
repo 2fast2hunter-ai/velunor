@@ -1282,7 +1282,7 @@ function nameStepHtml(name: string, look: AvatarLook, lang: Lang, error: string)
       <button type="button" class="dice look-dice" data-act="random-look">${esc(t(lang, 'start.randomLook'))}</button>
     </div>
     <p class="home-label">${t(lang, 'start.skin')}</p>
-    <div class="look-row">${skins}</div>
+    <div class="look-row is-skin">${skins}</div>
     <p class="home-label">${t(lang, 'start.hair')}</p>
     <div class="look-row">${hairs}</div>
     <p class="home-label">${t(lang, 'start.color')}</p>

@@ -37,6 +37,12 @@ export function lookFromAvatar(avatar: unknown): AvatarLook {
   return { skin: 0, hair: 0, color: 0 }
 }
 
+/** One builder tap. Only skin, hair and color change, and the index is clamped. */
+export function chooseLook(look: AvatarLook, part: string, index: number): AvatarLook {
+  if (part !== 'skin' && part !== 'hair' && part !== 'color') return clampLook(look)
+  return clampLook({ ...look, [part]: index })
+}
+
 /** A present `look` object wins. Missing `look` falls back to the old letter. */
 export function readLook(look: unknown, avatar: unknown): AvatarLook {
   if (look && typeof look === 'object') return clampLook(look as Partial<AvatarLook>)
