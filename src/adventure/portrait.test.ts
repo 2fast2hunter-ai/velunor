@@ -82,7 +82,7 @@ describe('portrait shell', () => {
     expect(html).toContain('Zeile 4')
     expect(html).toContain('Zeile 2')
     expect(html).not.toContain('Zeile 0')
-    expect(html).toContain('Hier gesichtet')
+    expect(html).toContain('Spuren hier')
     expect(html).toContain('data-act="speed"')
     expect(html.match(/class="mini /g)?.length).toBe(6)
   })

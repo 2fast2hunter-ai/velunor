@@ -84,6 +84,14 @@ export function blankSave(now: number): SaveV2 {
     regionsEntered: [1],
     chests: startChests(),
     pity: emptyPity(),
+    shards: {},
+    stars: {},
+    roadMs: 0,
+    roadReady: 0,
+    roadAt: now,
+    chestDay: '',
+    chestBought: { kiesel: 0, silber: 0 },
+    codexChestAt: 0,
     bag: emptyBag(),
     activeFruits: [],
     hortSlots: 1,
@@ -131,6 +139,16 @@ export function takeId(save: SaveV2): string {
   const id = `a${save.nextId}`
   save.nextId += 1
   return id
+}
+
+function recordOf(value: unknown): Record<string, number> {
+  const out: Record<string, number> = {}
+  if (!value || typeof value !== 'object') return out
+  for (const [id, amount] of Object.entries(value as Record<string, unknown>)) {
+    const n = Math.max(0, Math.floor(Number(amount)) || 0)
+    if (n > 0) out[id] = n
+  }
+  return out
 }
 
 function clampExp(level: number, exp: number): number {
@@ -327,6 +345,19 @@ export function normalize(save: SaveV2, now: number): SaveV2 {
     save.pity.gold = Math.max(0, Math.floor(Number(rawPity.gold)) || 0)
     save.pity.sternen = Math.max(0, Math.floor(Number(rawPity.sternen)) || 0)
   }
+  save.shards = recordOf(save.shards)
+  save.stars = recordOf(save.stars)
+  for (const id of Object.keys(save.stars)) save.stars[id] = Math.max(0, Math.min(5, Math.floor(save.stars[id]) || 0))
+  save.roadMs = Math.max(0, Math.floor(Number(save.roadMs)) || 0)
+  save.roadReady = Math.max(0, Math.min(4, Math.floor(Number(save.roadReady)) || 0))
+  save.roadAt = Math.max(0, Math.floor(Number(save.roadAt)) || now)
+  save.chestDay = typeof save.chestDay === 'string' ? save.chestDay : ''
+  const bought = save.chestBought
+  save.chestBought = {
+    kiesel: Math.max(0, Math.floor(Number(bought?.kiesel)) || 0),
+    silber: Math.max(0, Math.floor(Number(bought?.silber)) || 0)
+  }
+  save.codexChestAt = Math.max(0, Math.floor(Number(save.codexChestAt)) || 0)
   save.regionsEntered = enteredRegions({
     regionsOpen: save.regionsOpen,
     region: save.region,

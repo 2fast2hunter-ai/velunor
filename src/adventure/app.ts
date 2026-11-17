@@ -26,6 +26,7 @@ import { clearBattleFx, holdBattleFx, mountBattleFx, playBattleFx, setFxRunning 
 import { BANNER_MS, CRIT_HITSTOP_MS, KO_MS, LUNGE_HOLD_MS, LUNGE_OUT_MS, moveLabel, NUMBER_MS, RECOIL_MS, STONE_CRIT_HITSTOP_MS, typeFx } from '../battle/typeFx'
 import type { TypeId } from '../types'
 import { takeChests } from './chests'
+import { bankRoad, buyChestForGold, buyChestForMarks, claimRoad, debugStarChests, raiseStar } from './sources'
 import { chestAnimMs, type ChestTier } from './lootbox'
 import { beginAdventure, exportCode, importCode, loadAdventure, writeSave } from './save'
 import { equipFrame, equipTitle } from './achievements'
@@ -239,7 +240,7 @@ function showChestDemo(kind: 'lager' | 'raten' | 'seal'): void {
     overlay = {
       kind: 'chest-reveal',
       hold: 'card',
-      grant: { speciesId: 'm33', rarity: 7, isNew: true, gold: 400, name: 'Bergtitan', place: 'team' }
+      grant: { speciesId: 'm33', rarity: 7, isNew: true, gold: 400, name: 'Bergtitan', place: 'team', pity: 0 }
     }
   }
   render()
@@ -474,6 +475,8 @@ function loop(): void {
   if (!save?.started || animating || overlay || (save.hold && !save.challengeNow)) return
   const dur = encounterMs(save.settings.speed)
   const now = Date.now()
+  bankRoad(save, Math.max(0, now - (save.roadAt || now)))
+  save.roadAt = now
   if (save.settings.battery && (document.hidden || screenLocked)) {
     away = true
     return
@@ -856,6 +859,8 @@ async function runOffline(rawMs: number): Promise<void> {
       await new Promise((resolve) => window.setTimeout(resolve, 0))
     }
   }
+  bankRoad(save, counted)
+  save.roadAt = Date.now()
   save.lastSeenAt = stopped ? reached : Date.now()
   lastTick = Date.now()
   try { writeSave(localStorage, save) } catch { /* ignore */ }
@@ -1100,6 +1105,41 @@ function onClick(event: Event): void {
     const id = node.getAttribute('data-id')
     activity = id === 'wheel' || id === 'chests' ? id : 'hort'
     screen = 'activities'
+    render()
+    return
+  }
+  if (act === 'chest-claim') {
+    claimRoad(save)
+    try { writeSave(localStorage, save) } catch { /* ignore */ }
+    render()
+    return
+  }
+  if (act === 'chest-buy') {
+    const tier = node.getAttribute('data-tier') === 'silber' ? 'silber' : 'kiesel'
+    const reason = buyChestForGold(save, tier, Date.now())
+    if (reason) save.log.push({ t: Date.now(), text: reason })
+    try { writeSave(localStorage, save) } catch { /* ignore */ }
+    render()
+    return
+  }
+  if (act === 'chest-marks') {
+    const tier = node.getAttribute('data-tier') === 'sternen' ? 'sternen' : 'gold'
+    const reason = buyChestForMarks(save, tier)
+    if (reason) save.log.push({ t: Date.now(), text: reason })
+    try { writeSave(localStorage, save) } catch { /* ignore */ }
+    render()
+    return
+  }
+  if (act === 'star') {
+    const reason = raiseStar(save, node.getAttribute('data-id') ?? '')
+    if (reason) save.log.push({ t: Date.now(), text: reason })
+    try { writeSave(localStorage, save) } catch { /* ignore */ }
+    render()
+    return
+  }
+  if (act === 'debug-stars' && debug) {
+    debugStarChests(save)
+    try { writeSave(localStorage, save) } catch { /* ignore */ }
     render()
     return
   }

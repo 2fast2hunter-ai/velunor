@@ -24,6 +24,8 @@ export interface OpenChestState {
   ownedSpecies: readonly string[]
   /** Current region number. Gold is multiplied by it when the file says so. */
   region: number
+  /** Opens since the last pity success. Omitted means 0 and is not written back. */
+  pity?: number
 }
 
 export interface ChestRoll {
@@ -31,6 +33,8 @@ export interface ChestRoll {
   rarity: number
   isNew: boolean
   gold: number
+  /** Pity counter after this open. Kiesel stays at the incoming value. */
+  pity: number
 }
 
 export interface ChestGrant extends ChestRoll {
@@ -55,8 +59,8 @@ interface Prepared {
   lists: string[][]
 }
 
-/** Pity and the new-species guard stay in the file. L3 turns this on. */
-export const features = { pity: false }
+/** Pity, the new-species guard and shards are on from L3. */
+export const features = { pity: true, shards: true }
 
 export const CHEST_TIERS: readonly ChestTier[] = ['kiesel', 'silber', 'gold', 'sternen']
 export const TIER_LABEL: Record<ChestTier, string> = {
@@ -215,16 +219,19 @@ function prepare(tier: ChestTier, pool: readonly string[]): Prepared {
   return prepared
 }
 
-function pickRarity(prepared: Prepared, rng: () => number): number {
-  let cursor = rng() * prepared.total
-  for (let rarity = 0; rarity < prepared.weights.length; rarity++) {
-    cursor -= prepared.weights[rarity]
-    if (cursor < 0 && prepared.lists[rarity].length) return rarity
-  }
-  for (let rarity = prepared.lists.length - 1; rarity >= 0; rarity--) {
-    if (prepared.lists[rarity].length) return rarity
-  }
-  throw new Error('Die Truhe hat keinen Pool.')
+interface PityDef {
+  minRarity: number
+  hard?: number
+  softFrom?: number
+  softStepPp?: number
+}
+
+function pityDef(tier: ChestTier): PityDef | null {
+  return (file.tiers[tier].pity ?? null) as PityDef | null
+}
+
+function hasNewGuard(tier: ChestTier): boolean {
+  return Boolean((file.tiers[tier] as { newGuard?: boolean }).newGuard)
 }
 
 function rollGold(tier: ChestTier, region: number, rng: () => number): number {
@@ -236,19 +243,122 @@ function rollGold(tier: ChestTier, region: number, rng: () => number): number {
   return gold
 }
 
-/** Pure open. Pity stays off until L3, so the counters are not read. */
-export function openChest(tier: ChestTier, state: OpenChestState, rng: () => number): ChestRoll {
-  if (features.pity) {
-    // L3 reads state pity and may reroll a duplicate in gold and star chests.
+export function shardValue(rarity: number): number {
+  return file.shards[Math.max(0, Math.min(9, rarity))] ?? 0
+}
+
+export function dustValue(rarity: number): number {
+  return file.dust[Math.max(0, Math.min(9, rarity))] ?? 0
+}
+
+export function wildShardChance(rarity: number): number {
+  return (file.wildShardPct[Math.max(0, Math.min(9, rarity))] ?? 0) / 100
+}
+
+export function unlockShardCost(rarity: number): number {
+  return file.unlockDupes * shardValue(rarity)
+}
+
+export function starCost(rarity: number, nextStar: number): number {
+  const pct = file.starCostPct[nextStar - 1] ?? 0
+  return Math.round(shardValue(rarity) * (pct / 100) * 10)
+}
+
+export function starFactor(stars: number): number {
+  const steps = Math.max(0, Math.min(5, Math.floor(stars)))
+  return 1 + file.starStat * steps
+}
+
+export function pityLine(tier: ChestTier, count: number): string {
+  const pity = pityDef(tier)
+  if (!features.pity || !pity) return ''
+  if (pity.softFrom && pity.softStepPp && pity.hard) {
+    return `Pity ${count}. Ab ${pity.softFrom} +${pity.softStepPp} Pp, Garantie ${pity.hard}.`
   }
+  return `Pity ${count} / ${pity.hard ?? 0}. Garantie ab Seltenheit ${pity.minRarity}.`
+}
+
+export function pityAfter(tier: ChestTier, rarity: number, before: number): number {
+  const pity = pityDef(tier)
+  if (!features.pity || !pity) return before
+  if (rarity >= pity.minRarity) return 0
+  return before + 1
+}
+
+export function pityPush(tier: ChestTier, before: number): { force: boolean; bonusPp: number; minRarity: number } {
+  const pity = pityDef(tier)
+  if (!features.pity || !pity) return { force: false, bonusPp: 0, minRarity: 0 }
+  const nth = before + 1
+  if (pity.hard && nth >= pity.hard) return { force: true, bonusPp: 0, minRarity: pity.minRarity }
+  if (pity.softFrom && pity.softStepPp && nth >= pity.softFrom) {
+    return { force: false, bonusPp: (nth - pity.softFrom + 1) * pity.softStepPp, minRarity: pity.minRarity }
+  }
+  return { force: false, bonusPp: 0, minRarity: pity.minRarity }
+}
+
+function withSoftBonus(weights: number[], minRarity: number, bonusPp: number): number[] {
+  if (bonusPp <= 0) return weights
+  const next = weights.slice()
+  let high = 0
+  let low = 0
+  for (let i = 0; i < next.length; i++) {
+    if (i >= minRarity) high += next[i]
+    else low += next[i]
+  }
+  if (high <= 0 || low <= 0) return next
+  const take = Math.min(bonusPp, low)
+  for (let i = 0; i < next.length; i++) {
+    if (i >= minRarity) next[i] += take * (weights[i] / high)
+    else next[i] -= take * (weights[i] / low)
+  }
+  return next
+}
+
+function pickWeightedRarity(weights: number[], lists: string[][], rng: () => number, minRarity = 0): number {
+  let total = 0
+  for (let i = minRarity; i < weights.length; i++) if (lists[i].length) total += Math.max(0, weights[i])
+  if (total <= 0) {
+    for (let i = weights.length - 1; i >= minRarity; i--) if (lists[i].length) return i
+    for (let i = weights.length - 1; i >= 0; i--) if (lists[i].length) return i
+    throw new Error('Die Truhe hat keinen Pool.')
+  }
+  let cursor = rng() * total
+  for (let i = minRarity; i < weights.length; i++) {
+    if (!lists[i].length) continue
+    cursor -= Math.max(0, weights[i])
+    if (cursor < 0) return i
+  }
+  for (let i = weights.length - 1; i >= 0; i--) if (lists[i].length) return i
+  throw new Error('Die Truhe hat keinen Pool.')
+}
+
+/** Pure open. Pity reads `state.pity` and returns the counter to store. */
+export function openChest(tier: ChestTier, state: OpenChestState, rng: () => number): ChestRoll {
   const pool = poolFor(state.unlockedRegions)
   const prepared = prepare(tier, pool)
   if (prepared.total <= 0) throw new Error('Die Truhe hat keinen Pool.')
-  const rarity = pickRarity(prepared, rng)
+  const push = pityPush(tier, state.pity ?? 0)
+  const weights = withSoftBonus(prepared.weights, push.minRarity, push.bonusPp)
+  const rarity = push.force
+    ? pickWeightedRarity(prepared.weights, prepared.lists, rng, push.minRarity)
+    : pickWeightedRarity(weights, prepared.lists, rng, 0)
   const list = prepared.lists[rarity]
-  const speciesId = list[Math.min(list.length - 1, Math.floor(rng() * list.length))]
-  const isNew = !state.ownedSpecies.includes(speciesId)
-  return { speciesId, rarity, isNew, gold: rollGold(tier, state.region, rng) }
+  let speciesId = list[Math.min(list.length - 1, Math.floor(rng() * list.length))]
+  let isNew = !state.ownedSpecies.includes(speciesId)
+  if (features.pity && hasNewGuard(tier) && !isNew) {
+    const fresh = list.filter((id) => !state.ownedSpecies.includes(id))
+    if (fresh.length) {
+      speciesId = fresh[Math.min(fresh.length - 1, Math.floor(rng() * fresh.length))]
+      isNew = true
+    }
+  }
+  return {
+    speciesId,
+    rarity,
+    isNew,
+    gold: rollGold(tier, state.region, rng),
+    pity: pityAfter(tier, rarity, state.pity ?? 0)
+  }
 }
 
 export function duplicateExp(level: number): number {
