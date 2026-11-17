@@ -12,7 +12,9 @@ import {
   numberAlpha,
   type HitGrade
 } from './hitReadout'
-import { effectScale, flightMs, FX_SIZE, particleBudget, POOL_SIZE, typeFx, type TypeFxDef } from './typeFx'
+import { particleBudget, POOL_SIZE, typeFx, type TypeFxDef } from './typeFx'
+import { effectTiming, hitBurstLook, hitStrip, projStrip, stripFrame, stripTexture } from './strips'
+import type { TypeId } from '../types'
 
 export interface FxBurst {
   type: TypeFxDef['type']
@@ -59,6 +61,8 @@ class FxScene extends Phaser.Scene {
   gfx!: Phaser.GameObjects.Graphics
   slots: Slot[] = []
   numbers: NumberSlot[] = []
+  proj!: Phaser.GameObjects.Image
+  hitFx!: Phaser.GameObjects.Image
   burst: FxBurst | null = null
   started = 0
   hold = false
@@ -86,6 +90,9 @@ class FxScene extends Phaser.Scene {
       dot.setVisible(false)
       this.slots.push({ dot, alive: false, x: 0, y: 0, vx: 0, vy: 0, life: 0, max: 1, color: 0xffffff })
     }
+    const blank = this.blankKey()
+    this.proj = this.add.image(0, 0, blank).setVisible(false).setOrigin(0.5, 0.5)
+    this.hitFx = this.add.image(0, 0, blank).setVisible(false).setOrigin(0.5, 0.5)
     for (let i = 0; i < NUMBER_POOL; i++) this.numbers.push(this.makeNumber())
   }
 
@@ -195,6 +202,7 @@ class FxScene extends Phaser.Scene {
       slot.alive = false
       slot.dot.setVisible(false)
     }
+    this.hideStrips()
   }
 
   private spawn(n: number, x: number, y: number, color: number, spread: number, mode: 'out' | 'down' | 'up' | 'in'): void {
@@ -235,11 +243,6 @@ class FxScene extends Phaser.Scene {
     return Phaser.Display.Color.HexStringToColor(value).color
   }
 
-  private shadow(x: number, groundY: number, scale: number): void {
-    this.gfx.fillStyle(0x000000, 0.25)
-    this.gfx.fillEllipse(x, groundY, 28 * scale, 8)
-  }
-
   private diamond(x: number, y: number, r: number, color: number, alpha: number): void {
     this.gfx.fillStyle(color, alpha)
     this.gfx.fillTriangle(x, y - r, x + r * 0.7, y, x, y + r)
@@ -250,28 +253,24 @@ class FxScene extends Phaser.Scene {
     this.tickNumbers(time)
     if (!this.burst || !this.gfx) return
     const spec = typeFx(this.burst.type)
-    const dur = flightMs(spec.travelMs, this.burst.tempo)
-    const age = this.hold ? dur * this.holdAt : time - this.started
-    const t = Math.max(0, Math.min(1, age / dur))
-    const scale = effectScale(this.burst.band, this.burst.crit, this.burst.awaken) * FX_SIZE
-    const alpha = this.burst.band === 'weak' ? 0.5 : 0.95
-    const base = this.hex(spec.base)
-    const accent = this.hex(spec.accent)
+    const timing = effectTiming(this.burst.type, this.burst.tempo)
+    const age = this.hold ? timing.totalMs * this.holdAt : time - this.started
     const { from, to } = this.burst
-    const apex = (spec.draw === 'bubble' ? 72 : spec.projectile ? 20 : 0) * FX_SIZE
-    const x = from.x + (to.x - from.x) * t
-    const y = from.y + (to.y - from.y) * t - arcHeight(t, apex)
     const g = this.gfx
     g.clear()
     const kind = this.burst.kind ?? 'hit'
-    if (kind === 'heal') this.drawHeal(from, base, scale)
-    else if (kind === 'status') this.drawStatus(to, base, t)
-    else this.drawForm(spec, t, x, y, scale, alpha, base, accent)
-    if (kind === 'hit' && t > 0.82 && !this.spawned) {
+    const sparks = !this.burst.reduced && this.burst.tempo < 3
+    if (kind === 'heal') {
+      this.hideStrips()
+      if (sparks) this.drawHeal(from, this.hex(spec.base), 1.4)
+    } else if (kind === 'status') {
+      this.hideStrips()
+      this.drawStatus(to, this.hex(spec.base), Math.min(1, age / 200))
+    } else this.drawStrip(age, timing.travelMs, timing.hitMs)
+    if (kind === 'hit' && age >= timing.travelMs && !this.spawned) {
       this.spawned = true
       const count = particleBudget(spec, { crit: this.burst.crit, tempo: this.burst.tempo, reduced: this.burst.reduced })
-      const mode = spec.draw === 'orb' ? 'down' : spec.draw === 'void' ? 'in' : spec.draw === 'beam' || spec.draw === 'bubble' ? 'up' : 'out'
-      this.spawn(count, to.x, to.y, accent, 36 * scale, mode)
+      this.spawn(count, to.x, to.y, this.hex(spec.accent), 28, 'out')
     }
     for (const slot of this.slots) {
       if (!slot.alive) continue
@@ -279,9 +278,8 @@ class FxScene extends Phaser.Scene {
       slot.x += slot.vx * 0.16
       slot.y += slot.vy * 0.16
       slot.dot.setPosition(slot.x, slot.y)
-      slot.dot.setAlpha(Math.max(0, slot.life) * alpha)
-      const shrink = spec.draw === 'orb' ? Math.max(0.4, slot.life) : 1
-      slot.dot.setScale(shrink)
+      slot.dot.setAlpha(Math.max(0, slot.life))
+      slot.dot.setScale(Math.max(0.4, slot.life))
       if (slot.life <= 0) {
         slot.alive = false
         slot.dot.setVisible(false)
@@ -301,178 +299,76 @@ class FxScene extends Phaser.Scene {
     this.diamond(to.x, to.y - 36, 10, base, Math.min(1, t * 2) * 0.9)
   }
 
-  private drawForm(spec: TypeFxDef, t: number, x: number, y: number, scale: number, alpha: number, base: number, accent: number): void {
-    const burst = this.burst
-    if (!burst) return
-    const { from, to } = burst
-    const g = this.gfx
-    const draw = spec.draw
-    if (burst.awaken) {
-      g.lineStyle(3, accent, 0.4)
-      g.strokeCircle(x, y, 22 * scale)
-    }
-    if (draw === 'orb') {
-      for (let i = 6; i >= 1; i--) {
-        const p = Math.max(0, t - i * 0.05)
-        const tx = from.x + (to.x - from.x) * p
-        const ty = from.y + (to.y - from.y) * p - arcHeight(p, 20)
-        g.fillStyle(accent, alpha * (1 - i / 8))
-        g.fillCircle(tx, ty, Math.max(3, (14 - i * 1.5) * scale))
-      }
-      g.fillStyle(base, alpha)
-      g.fillCircle(x, y, 16 * scale)
-      this.shadow(x, to.y + 28, scale)
-    } else if (draw === 'beam') {
-      const width = (burst.crit ? 16 : 8) * scale
-      g.lineStyle(width, base, alpha)
-      g.beginPath()
-      g.moveTo(from.x, from.y)
-      for (let i = 1; i <= 10; i++) {
-        const p = i / 10
-        const wave = Math.sin(p * Math.PI * 5 + t * 6) * 7
-        g.lineTo(from.x + (to.x - from.x) * p, from.y + (to.y - from.y) * p + wave)
-      }
-      g.strokePath()
-    } else if (draw === 'swirl' || draw === 'swarm') {
-      const n = draw === 'swarm' ? (burst.crit ? 20 : 10) : 8
-      for (let i = 0; i < n; i++) {
-        const p = (t + i / n) % 1
-        const ang = p * Math.PI * 6 + i
-        const tx = from.x + (to.x - from.x) * t + Math.cos(ang) * 16 * scale
-        const ty = from.y + (to.y - from.y) * t + Math.sin(ang * 0.7) * 14 * scale
-        if (draw === 'swirl') this.diamond(tx, ty, 7 * scale, i % 3 === 0 && burst.crit ? 0xf8bbd0 : base, alpha)
-        else {
-          g.fillStyle(i % 4 === 0 && burst.shimmer ? 0xffffff : base, alpha)
-          g.fillCircle(tx, ty, 3 * scale)
-        }
-      }
-      this.shadow(x, to.y + 28, scale)
-    } else if (draw === 'ground') {
-      g.lineStyle(4, base, alpha)
-      g.beginPath()
-      const gy = to.y + 24
-      g.moveTo(from.x, gy)
-      const bends = 6
-      for (let i = 1; i <= bends; i++) {
-        if (i / bends > t + 0.01) break
-        g.lineTo(from.x + (to.x - from.x) * (i / bends), gy + (i % 2 === 0 ? 8 : -8))
-      }
-      g.strokePath()
-    } else if (draw === 'sickle' || draw === 'arcs') {
-      const n = burst.crit ? 5 : 3
-      g.lineStyle(4, base, alpha)
-      for (let i = 0; i < n; i++) {
-        const p = Math.max(0, t - i * 0.08)
-        const tx = from.x + (to.x - from.x) * p
-        const ty = from.y + (to.y - from.y) * p - arcHeight(p, 20)
-        g.beginPath()
-        g.arc(tx, ty, 12 * scale, -0.8, 0.8, false)
-        g.strokePath()
-      }
-      this.shadow(x, to.y + 28, scale)
-    } else if (draw === 'shard' || draw === 'prism' || draw === 'rock' || draw === 'blade') {
-      g.fillStyle(base, alpha)
-      g.fillTriangle(x + 14 * scale, y, x - 8 * scale, y - 8 * scale, x - 8 * scale, y + 8 * scale)
-      if (draw === 'prism') {
-        g.lineStyle(2, 0xffee58, 0.8)
-        g.strokeCircle(x, y, 8 * scale)
-        g.lineStyle(2, accent, 0.8)
-        g.strokeCircle(x, y, 12 * scale)
-      }
-      this.shadow(x, to.y + 28, scale)
-    } else if (draw === 'bolt') {
-      const bolts = burst.crit ? 3 : 2
-      g.lineStyle(4, base, alpha)
-      for (let b = 0; b < bolts; b++) {
-        g.beginPath()
-        g.moveTo(to.x + b * 10, 8)
-        const bends = 4
-        for (let i = 1; i <= bends; i++) {
-          g.lineTo(to.x + (i % 2 === 0 ? 14 : -14) + b * 8, 8 + (to.y - 8) * (i / bends))
-        }
-        g.strokePath()
-      }
-    } else if (draw === 'bubble') {
-      g.fillStyle(base, alpha * 0.85)
-      g.fillCircle(x, y, 14 * scale)
-      g.lineStyle(2, accent, alpha)
-      g.strokeCircle(x, y - 4, 5 * scale)
-      this.shadow(x, to.y + 28, scale)
-    } else if (draw === 'pillar') {
-      const width = (burst.crit ? 56 : 28) * scale
-      g.fillStyle(base, alpha * 0.55)
-      g.fillRect(to.x - width / 2, 0, width, to.y)
-      if (burst.crit) {
-        g.lineStyle(3, accent, 0.9)
-        g.strokeLineShape(new Phaser.Geom.Line(to.x - 18, to.y - 40, to.x + 18, to.y - 40))
-        g.strokeLineShape(new Phaser.Geom.Line(to.x, to.y - 58, to.x, to.y - 22))
-      }
-    } else if (draw === 'void' || draw === 'wisp') {
-      const blink = draw === 'wisp' && Math.floor(t * 8) % 2 === 0 ? 0.35 : 1
-      g.fillStyle(base, alpha * blink)
-      g.fillCircle(x, y, 15 * scale)
-      const ring = (1 - t) * 28 * scale + 8
-      g.lineStyle(3, accent, alpha)
-      g.strokeCircle(x, y, ring)
-      this.shadow(x, to.y + 28, scale)
-    } else if (draw === 'rings') {
-      g.lineStyle(3, base, alpha)
-      for (let i = 0; i < 3; i++) {
-        const p = Math.max(0.05, t - i * 0.12)
-        const cx = from.x + (to.x - from.x) * p
-        const cy = from.y + (to.y - from.y) * p
-        g.strokeCircle(cx, cy, (10 + i * 8) * scale)
-      }
-    } else if (draw === 'cone') {
-      g.fillStyle(base, alpha * 0.35)
-      g.fillTriangle(from.x, from.y - 10, to.x, to.y - 30 * scale, to.x, to.y + 30 * scale)
-      g.fillStyle(accent, alpha * 0.45)
-      g.fillTriangle(from.x, from.y, to.x, to.y - 16 * scale, to.x, to.y + 16 * scale)
-      if (burst.crit) {
-        g.lineStyle(3, accent, 0.9)
-        g.strokeCircle(to.x, to.y - 46, 16 * scale)
-        g.beginPath()
-        g.moveTo(to.x - 18, to.y - 40)
-        g.lineTo(to.x, to.y - 62)
-        g.lineTo(to.x + 18, to.y - 40)
-        g.strokePath()
-      }
-    } else if (draw === 'melee' || draw === 'claw') {
-      const lines = draw === 'claw' ? (burst.crit ? 6 : 3) : (burst.crit ? 3 : 1)
-      g.lineStyle(4, accent, alpha)
-      for (let i = 0; i < lines; i++) {
-        const ox = (i - 1) * 10
-        g.strokeLineShape(new Phaser.Geom.Line(to.x - 20 + ox, to.y - 16, to.x + 16 + ox, to.y + 16))
-      }
-    }
-    if (t > 0.82) this.drawImpact(spec, t, scale, alpha, base, accent)
+  private hideStrips(): void {
+    this.proj.setVisible(false)
+    this.hitFx.setVisible(false)
   }
 
-  private drawImpact(spec: TypeFxDef, t: number, scale: number, alpha: number, base: number, accent: number): void {
+  private drawStrip(age: number, travelMs: number, hitMs: number): void {
     const burst = this.burst
     if (!burst) return
-    const grow = (t - 0.82) / 0.18
-    const to = burst.to
-    const g = this.gfx
-    const radius = (spec.draw === 'orb' ? 48 : 28) * scale * Math.max(0.2, grow)
-    g.lineStyle(4, accent, alpha * (1 - grow * 0.6))
-    g.strokeCircle(to.x, to.y, radius)
-    if (burst.crit) g.strokeCircle(to.x, to.y, radius * 1.35)
-    if (spec.draw === 'orb' && burst.crit) {
-      g.lineStyle(2, base, 0.35)
-      g.strokeCircle(to.x, to.y, 20 + grow * 40)
-    }
-    if (spec.draw === 'beam') {
-      g.fillStyle(base, alpha * (1 - grow))
-      g.fillEllipse(to.x, to.y + 20, 36 * scale, 10)
-    }
-    if (spec.draw === 'melee') {
-      for (let i = 0; i < 8; i++) {
-        const ang = (i / 8) * Math.PI * 2
-        g.strokeLineShape(new Phaser.Geom.Line(to.x, to.y, to.x + Math.cos(ang) * 22 * scale, to.y + Math.sin(ang) * 22 * scale))
-      }
-    }
+    const flying = age < travelMs
+    this.proj.setVisible(flying)
+    this.hitFx.setVisible(!flying && age < travelMs + hitMs)
+    if (flying) this.placeProj(age, travelMs)
+    else if (age < travelMs + hitMs) this.placeHit(age - travelMs, hitMs)
   }
+
+  private placeProj(age: number, travelMs: number): void {
+    const burst = this.burst
+    if (!burst) return
+    const strip = projStrip(burst.type)
+    const key = stripTexture(burst.type, 'proj')
+    if (!this.textures.exists(key)) {
+      this.proj.setVisible(false)
+      return
+    }
+    const speed = strip.durationMs / Math.max(1, travelMs)
+    const frame = stripFrame(strip.frames, strip.fps, age, strip.loop, speed)
+    const t = travelMs <= 0 ? 1 : Math.max(0, Math.min(1, age / travelMs))
+    const { from, to } = burst
+    const dx = to.x - from.x
+    const dy = to.y - from.y
+    const dist = Math.hypot(dx, dy) || 1
+    const angle = Math.atan2(dy, dx)
+    const image = this.proj
+    image.setTexture(key, frame).clearTint().setAlpha(1).setRotation(0).setFlipX(false)
+    if (strip.kind === 'beam-tile' || (strip.kind === 'buildup' && burst.type === 'dragon')) {
+      image.setOrigin(0, 0.5).setPosition(from.x, from.y).setRotation(angle)
+      image.setScale(dist / strip.frameW, strip.kind === 'beam-tile' ? 1.35 : 1.6)
+      return
+    }
+    if (strip.kind === 'buildup' && burst.type === 'earth') {
+      const ground = Math.max(from.y, to.y) + 18
+      image.setOrigin(0, 98 / strip.frameH).setPosition(from.x, ground).setRotation(angle)
+      image.setScale(dist / strip.frameW, 1.25)
+      return
+    }
+    if (strip.kind === 'buildup' || strip.kind === 'melee-overlay') {
+      image.setOrigin(0.5, 0.72).setPosition(to.x, to.y).setScale(1.7)
+      return
+    }
+    const x = from.x + dx * t
+    const y = from.y + dy * t - arcHeight(t, 28)
+    image.setOrigin(0.5, 0.5).setPosition(x, y).setScale(1.7).setFlipX(dx < 0)
+  }
+
+  private placeHit(age: number, hitMs: number): void {
+    const burst = this.burst
+    if (!burst) return
+    const strip = hitStrip(burst.type)
+    const key = stripTexture(burst.type, 'hit')
+    if (!this.textures.exists(key)) {
+      this.hitFx.setVisible(false)
+      return
+    }
+    const speed = strip.durationMs / Math.max(1, hitMs)
+    const frame = stripFrame(strip.frames, strip.fps, age, false, speed)
+    const look = hitBurstLook(burst.band, burst.crit)
+    this.hitFx.setTexture(key, frame).clearTint().setOrigin(0.5, 0.5)
+    this.hitFx.setPosition(burst.to.x, burst.to.y).setScale(1.7 * look.scale).setAlpha(look.alpha).setRotation(0).setFlipX(false)
+  }
+
 
 }
 
@@ -510,6 +406,47 @@ export function mountBattleFx(parent: HTMLElement): void {
   game.events.once('ready', () => {
     scene = game?.scene.getScene('battle-fx') as FxScene
   })
+}
+
+const stripQueue = new Set<TypeId>()
+let stripLoading = false
+const stripWaiters: (() => void)[] = []
+
+function assetPrefix(): string {
+  const base = import.meta.env.BASE_URL || '/'
+  return base.endsWith('/') ? base : `${base}/`
+}
+
+function queueStrips(): void {
+  if (!scene || stripLoading) return
+  const pending = [...stripQueue].filter((type) => !scene?.textures.exists(stripTexture(type, 'proj')))
+  if (!pending.length) {
+    const waiters = stripWaiters.splice(0)
+    waiters.forEach((done) => done())
+    return
+  }
+  stripLoading = true
+  const prefix = assetPrefix()
+  for (const type of pending) {
+    const proj = projStrip(type)
+    const hit = hitStrip(type)
+    scene.load.spritesheet(stripTexture(type, 'proj'), `${prefix}assets/battle/${proj.file}`, { frameWidth: proj.frameW, frameHeight: proj.frameH })
+    scene.load.spritesheet(stripTexture(type, 'hit'), `${prefix}assets/battle/${hit.file}`, { frameWidth: hit.frameW, frameHeight: hit.frameH })
+  }
+  scene.load.once(Phaser.Loader.Events.COMPLETE, () => {
+    stripLoading = false
+    queueStrips()
+  })
+  scene.load.start()
+}
+
+/** Loads proj_/hit_ for the monsters in this fight. Weather and KO sheets stay on disk for later. */
+export function preloadBattleStrips(types: TypeId[], done?: () => void): void {
+  for (const type of types) stripQueue.add(type)
+  if (done) stripWaiters.push(done)
+  const run = () => queueStrips()
+  if (scene) run()
+  else game?.events.once('ready', run)
 }
 
 export function playBattleFx(burst: FxBurst): void {

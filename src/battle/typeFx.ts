@@ -1,5 +1,6 @@
 import typesJson from '../../data/types.json'
 import type { TypeId } from '../types'
+import { FX_POOL_MAX } from './strips'
 
 /** Base colours live in data/types.json. Accents are fixed by the effect spec. */
 const BASE = typesJson.colors as Record<TypeId, string>
@@ -21,7 +22,7 @@ export const NUMBER_MS = 900
 export const KO_MS = 700
 export const FX_SIZE = 2
 export const PARTICLE_BOOST = 1.75
-export const POOL_SIZE = 96
+export const POOL_SIZE = 40
 export const STRONG_SCALE = 1.3
 export const WEAK_SCALE = 0.7
 export const CRIT_SCALE = 1.4
@@ -138,11 +139,9 @@ export function flightMs(travelMs: number, tempo: number): number {
 }
 
 export function particleBudget(entry: TypeFxDef, opts: { crit: boolean; tempo: number; reduced: boolean }): number {
-  const cap = opts.crit ? CRIT_PARTICLE_CAP : PARTICLE_CAP
-  let count = Math.min(cap, Math.round((opts.crit ? entry.critParticles : entry.particles) * PARTICLE_BOOST))
-  if (opts.tempo >= 3) count = Math.round(count * TEMPO3_PARTICLE_SCALE)
-  if (opts.reduced) count = Math.round(count * REDUCED_PARTICLE_SCALE)
-  return Math.max(0, Math.min(cap, count))
+  if (opts.reduced || opts.tempo >= 3) return 0
+  const count = Math.round((opts.crit ? entry.critParticles : entry.particles) * PARTICLE_BOOST)
+  return Math.max(0, Math.min(FX_POOL_MAX, count))
 }
 
 export function effectScale(band: 'strong' | 'weak' | 'neutral', crit: boolean, awaken: boolean): number {

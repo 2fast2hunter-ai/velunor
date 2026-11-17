@@ -47,13 +47,13 @@ describe('type effect table', () => {
     expect(moveLabel('fire')).toBe('Feuerstoß')
   })
 
-  it('caps particles, halves them at tempo 3, and cuts them to 30 % when reduced', () => {
+  it('caps the shared pool at 40 and drops particles at ×3 or reduced effects', () => {
     const fire = typeFx('fire')
     expect(particleBudget(fire, { crit: false, tempo: 1, reduced: false })).toBe(21)
     expect(particleBudget(fire, { crit: true, tempo: 1, reduced: false })).toBe(28)
-    expect(particleBudget(fire, { crit: true, tempo: 3, reduced: false })).toBe(14)
-    expect(particleBudget(fire, { crit: false, tempo: 1, reduced: true })).toBe(6)
-    expect(particleBudget(fire, { crit: true, tempo: 1, reduced: false })).toBeLessThanOrEqual(96)
+    expect(particleBudget(fire, { crit: true, tempo: 3, reduced: false })).toBe(0)
+    expect(particleBudget(fire, { crit: false, tempo: 1, reduced: true })).toBe(0)
+    expect(particleBudget(typeFx('dragon'), { crit: true, tempo: 1, reduced: false })).toBe(40)
   })
 
   it('lunges out, holds, and returns, and a knockout tips over', () => {
@@ -73,12 +73,12 @@ describe('type effect table', () => {
     const pool = new FxPool()
     for (let fight = 0; fight < 500; fight++) {
       pool.releaseAll()
-      expect(pool.acquire(fight % 2 === 0 ? 72 : 96)).toBeLessThanOrEqual(96)
+      expect(pool.acquire(fight % 2 === 0 ? 40 : 80)).toBeLessThanOrEqual(40)
       pool.step()
     }
     pool.releaseAll()
     expect(pool.live).toBe(0)
-    expect(pool.allocated).toBe(96)
-    expect(pool.highWater).toBeLessThanOrEqual(96)
+    expect(pool.allocated).toBe(40)
+    expect(pool.highWater).toBeLessThanOrEqual(40)
   })
 })
