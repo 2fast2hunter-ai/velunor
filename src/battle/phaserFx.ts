@@ -15,6 +15,7 @@ import {
 import { particleBudget, POOL_SIZE, typeFx, type TypeFxDef } from './typeFx'
 import { effectTiming, hitBurstLook, hitStrip, projStrip, stripFrame, stripTexture } from './strips'
 import type { TypeId } from '../types'
+import type { WeatherId } from '../adventure/weather'
 
 export interface FxBurst {
   type: TypeFxDef['type']
@@ -49,6 +50,7 @@ interface NumberSlot {
   text: Phaser.GameObjects.Text
   glyphs: Phaser.GameObjects.Image[]
   label: Phaser.GameObjects.Image
+  ring: Phaser.GameObjects.Arc
   active: boolean
   born: number
   hold: number
@@ -63,6 +65,13 @@ class FxScene extends Phaser.Scene {
   numbers: NumberSlot[] = []
   proj!: Phaser.GameObjects.Image
   hitFx!: Phaser.GameObjects.Image
+  moodImages: Phaser.GameObjects.Image[] = []
+  dissolveFx!: Phaser.GameObjects.Image
+  moodWeather: WeatherId | null = null
+  moodReduced = false
+  moodTempo = 1
+  nextBolt = 0
+  boltUntil = 0
   burst: FxBurst | null = null
   started = 0
   hold = false
@@ -81,6 +90,16 @@ class FxScene extends Phaser.Scene {
       `${prefix}assets/battle/dmg_digits.png`,
       `${prefix}assets/battle/dmg_digits.json`
     )
+    const sheet = (key: string, file: string, w: number, h: number) => {
+      this.load.spritesheet(key, `${prefix}assets/battle/${file}`, { frameWidth: w, frameHeight: h })
+    }
+    sheet('wx-regen', 'weather_rain.png', 32, 32)
+    sheet('wx-schnee', 'weather_snow.png', 32, 32)
+    sheet('wx-nebel', 'weather_fog.png', 64, 64)
+    sheet('wx-wind', 'weather_wind.png', 32, 32)
+    sheet('wx-gewitter', 'weather_storm.png', 64, 64)
+    sheet('fx-dissolve', 'dissolve.png', 128, 128)
+    sheet('fx-confetti', 'confetti.png', 32, 32)
   }
 
   create(): void {
@@ -93,6 +112,8 @@ class FxScene extends Phaser.Scene {
     const blank = this.blankKey()
     this.proj = this.add.image(0, 0, blank).setVisible(false).setOrigin(0.5, 0.5)
     this.hitFx = this.add.image(0, 0, blank).setVisible(false).setOrigin(0.5, 0.5)
+    this.dissolveFx = this.add.image(0, 0, blank).setVisible(false).setOrigin(0.5, 0.55)
+    for (let i = 0; i < 24; i++) this.moodImages.push(this.add.image(0, 0, blank).setVisible(false))
     for (let i = 0; i < NUMBER_POOL; i++) this.numbers.push(this.makeNumber())
   }
 
@@ -119,12 +140,13 @@ class FxScene extends Phaser.Scene {
     const blank = this.blankKey()
     const glyphs = Array.from({ length: DIGIT_SLOTS }, () => this.add.image(0, 0, blank).setVisible(false).setOrigin(0, 0))
     const label = this.add.image(0, 0, blank).setVisible(false).setOrigin(0.5, 1)
-    const root = this.add.container(0, 0, [text, label, ...glyphs])
+    const ring = this.add.circle(0, -36, 54).setStrokeStyle(5, 0x78beff, 0.9).setFillStyle(0x78beff, 0.08).setVisible(false)
+    const root = this.add.container(0, 0, [ring, text, label, ...glyphs])
     root.setVisible(false)
-    return { root, text, glyphs, label, active: false, born: 0, hold: 600, x: 0, y: 0, bounce: false }
+    return { root, text, glyphs, label, ring, active: false, born: 0, hold: 600, x: 0, y: 0, bounce: false }
   }
 
-  spawnNumber(x: number, y: number, amount: number, grade: HitGrade, holdMs: number): void {
+  spawnNumber(x: number, y: number, amount: number, grade: HitGrade, holdMs: number, weather = 1): void {
     let slot = this.numbers.find((row) => !row.active)
     if (!slot) slot = this.numbers.reduce((oldest, row) => row.born < oldest.born ? row : oldest)
     slot.active = true
@@ -134,6 +156,7 @@ class FxScene extends Phaser.Scene {
     slot.y = y
     slot.bounce = hitLook(grade).bounce
     slot.root.setVisible(true).setAlpha(1).setPosition(x, y)
+    slot.ring.setVisible(weather !== 1)
     const atlas = digitAtlasReady((key) => this.textures.exists(key)) && this.textures.get(DIGIT_ATLAS_KEY).has('n_0')
     slot.glyphs.forEach((glyph) => glyph.setVisible(false))
     slot.label.setVisible(false)
@@ -251,6 +274,7 @@ class FxScene extends Phaser.Scene {
 
   update(time: number): void {
     this.tickNumbers(time)
+    this.tickMood(time)
     if (!this.burst || !this.gfx) return
     const spec = typeFx(this.burst.type)
     const timing = effectTiming(this.burst.type, this.burst.tempo)
@@ -270,7 +294,8 @@ class FxScene extends Phaser.Scene {
     if (kind === 'hit' && age >= timing.travelMs && !this.spawned) {
       this.spawned = true
       const count = particleBudget(spec, { crit: this.burst.crit, tempo: this.burst.tempo, reduced: this.burst.reduced })
-      this.spawn(count, to.x, to.y, this.hex(spec.accent), 28, 'out')
+      const room = Math.max(0, 40 - this.moodLive())
+      this.spawn(Math.min(count, room), to.x, to.y, this.hex(spec.accent), 28, 'out')
     }
     for (const slot of this.slots) {
       if (!slot.alive) continue
@@ -297,6 +322,94 @@ class FxScene extends Phaser.Scene {
   private drawStatus(to: { x: number; y: number }, base: number, t: number): void {
     this.gfx.fillStyle(base, Math.min(1, t * 2) * 0.9)
     this.diamond(to.x, to.y - 36, 10, base, Math.min(1, t * 2) * 0.9)
+  }
+
+  moodLive(): number {
+    return this.moodImages.filter((image) => image.visible).length
+  }
+
+  beginMood(weather: WeatherId | null, reduced: boolean, tempo: number): void {
+    this.moodWeather = weather
+    this.moodReduced = reduced
+    this.moodTempo = tempo
+    this.nextBolt = this.time.now + 4000 + Math.random() * 2000
+    if (reduced || tempo >= 3 || !weather || weather === 'klar') {
+      for (const image of this.moodImages) image.setVisible(false)
+    }
+  }
+
+  showDissolve(x: number, y: number, tint: number): void {
+    if (!this.textures.exists('fx-dissolve')) return
+    this.dissolveFx.setTexture('fx-dissolve', 0).setPosition(x, y).setScale(2.1).setVisible(true).setTint(tint).setAlpha(1)
+    this.dissolveFx.setData('born', this.time.now)
+  }
+
+  showConfetti(tint: number): void {
+    if (this.moodReduced || this.moodTempo >= 3 || !this.textures.exists('fx-confetti')) return
+    this.moodImages.forEach((image, index) => {
+      const frame = index % 12
+      image.setTexture('fx-confetti', frame).setVisible(true).setTint(tint).setAlpha(1)
+      image.setPosition(140 + (index % 8) * 110, 80 + (index % 3) * 30)
+      image.setData('vx', (index % 2 === 0 ? -1 : 1) * (20 + index % 5))
+      image.setData('vy', -40 - (index % 6) * 8)
+      image.setData('mode', 'confetti')
+    })
+  }
+
+  private tickMood(time: number): void {
+    const dissolveBorn = this.dissolveFx.getData('born') as number | undefined
+    if (this.dissolveFx.visible && dissolveBorn != null) {
+      const age = time - dissolveBorn
+      const frame = Math.min(7, Math.floor(age / (571 / 8)))
+      if (this.textures.exists('fx-dissolve')) this.dissolveFx.setFrame(frame)
+      if (age > 571) this.dissolveFx.setVisible(false)
+    }
+    const quiet = this.moodReduced || this.moodTempo >= 3 || !this.moodWeather || this.moodWeather === 'klar'
+    if (quiet) {
+      if (!this.moodImages.some((image) => image.getData('mode') === 'confetti' && image.visible)) return
+    }
+    const weather = this.moodWeather
+    const key = weather === 'regen' ? 'wx-regen' : weather === 'schnee' ? 'wx-schnee' : weather === 'nebel' ? 'wx-nebel' : weather === 'wind' ? 'wx-wind' : weather === 'gewitter' ? 'wx-gewitter' : ''
+    this.moodImages.forEach((image, index) => {
+      if (image.getData('mode') === 'confetti') {
+        const vx = Number(image.getData('vx') ?? 0)
+        const vy = Number(image.getData('vy') ?? 0) + 1.4
+        image.setData('vy', vy)
+        image.x += vx * 0.05
+        image.y += vy * 0.08
+        image.rotation += 0.04
+        if (image.y > 1100) image.setVisible(false).setData('mode', '')
+        return
+      }
+      if (quiet || !key || !this.textures.exists(key)) {
+        image.setVisible(false)
+        return
+      }
+      if (!image.visible) {
+        if (this.moodLive() >= (weather === 'nebel' ? 8 : 16)) return
+        image.setTexture(key, index % (weather === 'nebel' ? 3 : 4)).setVisible(true).clearTint()
+        image.setPosition(Math.random() * 1080, weather === 'wind' ? 80 + Math.random() * 700 : -20)
+        image.setData('vy', weather === 'schnee' ? 18 : weather === 'nebel' ? 6 : weather === 'wind' ? 0 : 70)
+        image.setData('vx', weather === 'wind' ? 90 : weather === 'regen' ? 28 : weather === 'nebel' ? 16 : 8)
+        image.setAlpha(weather === 'nebel' ? 0.4 : 0.9)
+        image.setScale(weather === 'nebel' ? 2.4 : weather === 'gewitter' ? 1.4 : 1)
+      }
+      image.x += Number(image.getData('vx') ?? 0) * 0.05
+      image.y += Number(image.getData('vy') ?? 0) * 0.05
+      if (weather === 'schnee' || weather === 'wind') image.rotation += 0.02
+      if (image.y > 1000 || image.x > 1200) image.setVisible(false)
+    })
+    if (weather === 'gewitter' && !quiet && time > this.nextBolt) {
+      this.nextBolt = time + 4000 + Math.random() * 2000
+      this.boltUntil = time + 100
+      const flash = document.getElementById('crit-flash')
+      if (flash) flash.style.opacity = '0.35'
+    }
+    if (this.boltUntil && time > this.boltUntil) {
+      this.boltUntil = 0
+      const flash = document.getElementById('crit-flash')
+      if (flash && flash.style.opacity === '0.35') flash.style.opacity = '0'
+    }
   }
 
   private hideStrips(): void {
@@ -466,9 +579,21 @@ export function holdBattleFx(at = 0.45): void {
   scene?.freeze(at)
 }
 
-export function showHitNumber(x: number, y: number, amount: number, grade: HitGrade, holdMs: number): boolean {
+export function beginBattleMood(weather: WeatherId | null, reduced: boolean, tempo: number): void {
+  scene?.beginMood(weather, reduced, tempo)
+}
+
+export function showBattleDissolve(x: number, y: number, tint: number): void {
+  scene?.showDissolve(x, y, tint)
+}
+
+export function showBattleConfetti(tint: number): void {
+  scene?.showConfetti(tint)
+}
+
+export function showHitNumber(x: number, y: number, amount: number, grade: HitGrade, holdMs: number, weather = 1): boolean {
   if (!scene) return false
-  scene.spawnNumber(x, y, amount, grade, holdMs)
+  scene.spawnNumber(x, y, amount, grade, holdMs, weather)
   return true
 }
 

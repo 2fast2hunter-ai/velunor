@@ -44,7 +44,7 @@ import { chapterUnlocked, dexCaughtCount, hereSightings, rarityName } from './si
 import { GOALS } from './achievements'
 import { HORT_PRICES, hortOffer } from './hort'
 import { fruitDef, fruitMinutes } from './shop'
-import { weatherForecast, weatherName, type WeatherId } from './weather'
+import { teamWeatherMarks, weatherArrow, weatherForecast, weatherName, WEATHER_SHIFTS, type WeatherId } from './weather'
 import { FACES, MULTIPLIERS, PRIZES, faceById, spinCost, wheelOpen, type Multiplier, type SymbolId } from './wheel'
 import { expToNext, isAlive, monStats, realHp } from './stats'
 import type { OfflineSummary } from './sim'
@@ -262,24 +262,30 @@ function battle(save: SaveV2, now: number): string {
       <div class="parallax near" id="parallax-near"></div>
       <div id="battle-fx"></div>
       <div class="combatant foe" id="foe-actor" style="left:${FOE_X}%;top:${FOE_Y}%">
-        <b id="foe-name"></b>
+        <b id="foe-name"><img class="wx-arrow" id="foe-arrow" alt="" hidden/></b>
         <div class="hp"><span id="foe-hp" style="width:100%"></span></div>
         <img class="sprite" id="foe-sprite" alt="" hidden/>
         <span class="ground-shadow"></span>
       </div>
       <div class="combatant ally" id="ally-actor" style="left:${ALLY_X}%;top:${FEET_Y}%">
-        <b id="ally-name">${mon ? esc(species(mon.species).name) : ''}</b>
+        <b id="ally-name">${mon ? esc(species(mon.species).name) : ''}<img class="wx-arrow" id="ally-arrow" alt="" ${mon && weatherArrow(weatherForecast(now)[0].weather, species(mon.species).type) ? `src="${art(weatherArrow(weatherForecast(now)[0].weather, species(mon.species).type) === 'up' ? 'battle/stat_up.png' : 'battle/stat_down.png')}"` : 'hidden'}/></b>
         <div class="hp"><span id="ally-hp" style="width:${(hp.hp / hp.max) * 100}%"></span></div>
         ${mon ? `<img class="sprite ${mon.shiny ? 'is-shiny' : ''}" id="ally-sprite" src="${monsterArt(mon.species, true)}" alt=""/>` : ''}
         <span class="ground-shadow"></span>
       </div>
+      <div class="wx-chip" id="wx-chip">${weatherChip(save, now)}</div>
       <div id="floats"></div>
       <div class="move-banner" id="move-banner" hidden></div>
+      <div class="name-banner" id="name-banner" hidden></div>
       <div class="crit-flash" id="crit-flash"></div>
+      <div class="boss-intro" id="boss-intro" hidden></div>
+      <button type="button" class="victory" id="victory" hidden></button>
+      <img class="crest-fly" id="crest-fly" alt="" hidden/>
     </div>
     <div class="flash" id="flash"></div>
     <img class="seal" id="seal" alt="" src="${art(SEAL_ADD)}" data-fb="${art(SEAL_FALLBACK)}" style="left:${FOE_X}%;top:${FOE_Y}%"/>
     <p id="battle-text" class="battle-status">${tr(save, 'battle.place', { part: clock.part, weather: weatherLabel(L(save), weatherForecast(now)[0].weather), place: chapter.name, state: tr(save, save.hold ? 'battle.waiting' : 'battle.walking') })}</p>
+    ${bossAhead(save) ? `<p class="wx-preview">${esc(weatherPreview(save, now))}</p>` : ''}
     ${sealed ? '' : `<button type="button" class="primary challenge-fab" data-act="challenge">${ui('challenge')}${tr(save, chapter.council || chapter.foyer ? 'battle.resume' : 'battle.challenge')}</button>`}
   </div>`
 }
@@ -314,6 +320,30 @@ function logLines(save: SaveV2, limit: number): string {
 
 function logBox(save: SaveV2): string {
   return `<button type="button" class="card log" id="log" data-act="log">${ui('log')}${logLines(save, 3)}</button>`
+}
+
+function weatherChip(save: SaveV2, now: number): string {
+  const weather = weatherForecast(now)[0].weather
+  const row = WEATHER_SHIFTS[weather]
+  const bit = (type: TypeId, pct: number, sign: string) => `${esc(typeLabel(L(save), type, typeName(type)))} ${sign}${pct} %`
+  const parts = [...row.up.map((shift) => bit(shift.type, shift.pct, '+')), ...row.down.map((shift) => bit(shift.type, shift.pct, '−'))]
+  return `<img src="${art(`battle/weather_icon_${weather}.png`)}" alt=""/> ${esc(weatherLabel(L(save), weather))} · ${parts.join(' · ')}`
+}
+
+function bossAhead(save: SaveV2): boolean {
+  const chapter = chapterById(save.region, save.chapter)
+  if (chapter.council || chapter.special || chapter.foyer) return true
+  return routeOf(chapter.id)[save.step] === 'guardian'
+}
+
+function weatherPreview(save: SaveV2, now: number): string {
+  const weather = weatherForecast(now)[0].weather
+  const types = save.team.flatMap((uid) => {
+    const mon = save.mons[uid]
+    return mon ? [species(mon.species).type] : []
+  })
+  const marks = teamWeatherMarks(types, weather)
+  return `Jetzt: ${weatherLabel(L(save), weather)}. Dein Team: ${marks.up} ▲, ${marks.down} ▼`
 }
 
 function weatherIcon(id: WeatherId): string {

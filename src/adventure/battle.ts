@@ -3,6 +3,7 @@ import { nextFloat } from '../rng'
 import type { SkillDef, SkillEffect, SpeciesPassive, StatusId, TypeId } from '../types'
 import { ACTION_LIMIT } from './const'
 import { awakenCount } from './stats'
+import { weatherFactor, type WeatherId } from './weather'
 
 export interface FightSide {
   speciesId: string
@@ -29,6 +30,8 @@ export interface FightHit {
   kind: 'hit' | 'heal' | 'status'
   /** Lv 25/50 glow. Does not change the damage. */
   awaken?: boolean
+  /** Weather factor on this hit. 1 means no shift. Absent on heals. */
+  weather?: number
 }
 
 export interface FightFrame {
@@ -61,6 +64,8 @@ interface StatusInst {
   stacks: number
   burnDmg: number
   fresh: boolean
+  /** Type of the monster that applied a burn or a poison. */
+  sourceType?: TypeId
 }
 
 interface Actor {
@@ -167,7 +172,8 @@ function applyStatus(target: Actor, effect: Extract<SkillEffect, { kind: 'status
       existing.duration = duration
       existing.burnDmg = burnDmg
       existing.fresh = true
-    } else target.statuses.push({ id: 'burn', duration, value, stacks: 1, burnDmg, fresh: true })
+      existing.sourceType = caster.side.type
+    } else target.statuses.push({ id: 'burn', duration, value, stacks: 1, burnDmg, fresh: true, sourceType: caster.side.type })
     return
   }
   if (effect.status === 'poison') {
@@ -177,7 +183,8 @@ function applyStatus(target: Actor, effect: Extract<SkillEffect, { kind: 'status
       existing.stacks = Math.min(3, existing.stacks + stacks)
       existing.duration = duration
       existing.fresh = true
-    } else target.statuses.push({ id: 'poison', duration, value, stacks: Math.min(3, stacks), burnDmg: 0, fresh: true })
+      existing.sourceType = caster.side.type
+    } else target.statuses.push({ id: 'poison', duration, value, stacks: Math.min(3, stacks), burnDmg: 0, fresh: true, sourceType: caster.side.type })
     return
   }
   const existing = target.statuses.find((row) => row.id === effect.status)
@@ -185,7 +192,7 @@ function applyStatus(target: Actor, effect: Extract<SkillEffect, { kind: 'status
     existing.duration = duration
     existing.value = value
     existing.fresh = true
-  } else target.statuses.push({ id: effect.status, duration, value, stacks: 1, burnDmg: 0, fresh: true })
+  } else target.statuses.push({ id: effect.status, duration, value, stacks: 1, burnDmg: 0, fresh: true, sourceType: caster.side.type })
 }
 
 function giveShield(target: Actor, amount: number, duration: number): void {
@@ -222,7 +229,7 @@ function tick(unit: Actor): void {
   }
 }
 
-export function fight1v1(allySide: FightSide, foeSide: FightSide, rng: () => number, trace: boolean): FightTrace {
+export function fight1v1(allySide: FightSide, foeSide: FightSide, rng: () => number, trace: boolean, weather: WeatherId | null = null): FightTrace {
   const ally = makeActor(allySide)
   const foe = makeActor(foeSide)
   const frames: FightFrame[] = []
@@ -261,9 +268,10 @@ export function fight1v1(allySide: FightSide, foeSide: FightSide, rng: () => num
 
   const strike = (attacker: Actor, target: Actor, skillMult: number, pierce: number): number => {
     const tMult = typeMult(attacker.side.type, target.side.type)
+    const wMult = weatherFactor(weather, attacker.side.type)
     const crit = rng() < combat.critChance
     const variance = combat.varianceMin + (combat.varianceMax - combat.varianceMin) * rng()
-    const dmg = rawDamage(atkOf(attacker), defOf(target, pierce), skillMult, tMult, crit, variance)
+    const dmg = rawDamage(atkOf(attacker), defOf(target, pierce), skillMult, tMult * wMult, crit, variance)
     const past = hurt(target, dmg, false)
     if (trace && past > 0) {
       pending.push({
@@ -274,7 +282,8 @@ export function fight1v1(allySide: FightSide, foeSide: FightSide, rng: () => num
         band: bandOf(tMult),
         ko: target.hp <= 0,
         kind: 'hit',
-        awaken: awakenCount(attacker.side.level ?? 0) > 0
+        awaken: awakenCount(attacker.side.level ?? 0) > 0,
+        weather: wMult
       })
     }
     const thorns = target.statuses.find((status) => status.id === 'thorns')
@@ -323,13 +332,13 @@ export function fight1v1(allySide: FightSide, foeSide: FightSide, rng: () => num
   const act = (unit: Actor, other: Actor) => {
     if (unit.hp <= 0 || other.hp <= 0) return
     const burn = unit.statuses.find((status) => status.id === 'burn')
-    if (burn) hurt(unit, burn.burnDmg, true)
+    if (burn) hurt(unit, Math.max(0, Math.floor(burn.burnDmg * weatherFactor(weather, burn.sourceType ?? unit.side.type))), true)
     if (unit.hp <= 0) {
       push(`${unit.side.name} geht k.o.`)
       return
     }
     const poison = unit.statuses.find((status) => status.id === 'poison')
-    if (poison) hurt(unit, Math.floor(unit.side.maxHp * 0.04 * poison.stacks), true)
+    if (poison) hurt(unit, Math.floor(unit.side.maxHp * 0.04 * poison.stacks * weatherFactor(weather, poison.sourceType ?? unit.side.type)), true)
     if (unit.hp <= 0) {
       push(`${unit.side.name} geht k.o.`)
       return
