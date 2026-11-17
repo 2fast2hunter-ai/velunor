@@ -468,7 +468,7 @@ function team(save: SaveV2, query: PcQuery, selected: string | null, shell: Shel
   const cards = pcWindowHtml(save, list.slice(win.start, win.end), selected)
   const roster = Array.from({ length: 6 }, (_, index) => {
     const uid = save.team[index]
-    if (!uid || !save.mons[uid]) return `<div class="mon-card slot" aria-hidden="true">${ui('slotEmpty')}<span>${index + 1}</span></div>`
+    if (!uid || !save.mons[uid]) return `<div class="mon-card slot" aria-hidden="true"><img class="slot-ghost" src="${art(UI_ART.slotEmpty)}" alt=""/><span class="slot-num">${index + 1}</span></div>`
     const mon = save.mons[uid]
     return `<button type="button" class="mon-card ${selected === uid ? 'on' : ''}" data-act="select" data-uid="${uid}" data-index="${index}" data-press="card" draggable="true" data-drag="team">
       ${portrait(mon.species)}
@@ -1066,7 +1066,7 @@ function dexEntry(save: SaveV2, id: string): string {
     <img class="hero ${hidden ? 'sil' : ''}" src="${monsterArt(id, true)}" alt=""/>
     <div class="kicker">Nr. ${speciesNumber(id)} · ${dexStatusLabel(status)}</div>
     <h2>${esc(sp.name)}</h2>
-    <p>${esc(typeName(sp.type))} · ${esc(rarityInfo(sp.baseRarity).name)} · Fangzahl ${(save.dex[id]?.caught ?? 0).toLocaleString('de-DE')}</p>
+    <p>${esc(typeName(sp.type))} · ${esc(rarityInfo(sp.baseRarity).name)} · ${tr(save, 'codex.catches', { n: (save.dex[id]?.caught ?? 0).toLocaleString('de-DE') })}</p>
     <div class="stats">
       <div class="stat">HP<br/>${base.hp}</div>
       <div class="stat">ATK<br/>${base.atk}</div>

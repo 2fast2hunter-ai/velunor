@@ -51,7 +51,7 @@ export const FRUITS: FruitDef[] = [
   { id: 'fang', name: 'Glücksfrucht', price: 4000, effect: 'Nächste Truhe: +1 Pp auf Seltenheit ab 5' },
   { id: 'goldfang', name: 'Goldfangfrucht', price: 15000, effect: 'Wird in Gold erstattet' },
   { id: 'spuer', name: 'Spurfrucht', price: 8000, effect: 'Spur-Chance +50 %' },
-  { id: 'neugier', name: 'Neugierfrucht', price: 10000, effect: 'Nie gefangene Arten ×3' },
+  { id: 'neugier', name: 'Neugierfrucht', price: 10000, effect: 'Noch nicht erhaltene Arten ×3' },
   { id: 'glanz', name: 'Glanzfrucht', price: 25000, effect: 'Schimmer-Chance ×2' },
   { id: 'lern', name: 'Lernfrucht', price: 6000, effect: 'Kampf-EP +25 %' },
   { id: 'muenz', name: 'Münzfrucht', price: 6000, effect: 'Gold +25 %' }
