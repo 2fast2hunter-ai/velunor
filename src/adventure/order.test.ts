@@ -4,7 +4,7 @@ import { fight1v1, type FightSide } from './battle'
 import { ENCOUNTER_MS } from './const'
 import { anchorIndex, orderMods, typeArrow } from './order'
 import { beginAdventure } from './save'
-import { pickFighter } from './sim'
+import { challengeGuardian, pickFighter, resolveEncounter } from './sim'
 
 function side(id: string, level: number, extra: Partial<FightSide> = {}): FightSide {
   const sp = species(id)
@@ -109,5 +109,27 @@ describe('order tactics', () => {
     save.mons[fire] = { species: 'm10', lvl: 40, exp: 0, hp: null, shiny: false, caughtAt: 1, caughtWhere: 'r1c1', keepDupes: false }
     save.team.push(fire)
     expect(pickFighter(save, 'plant')).toBe(water)
+  })
+
+  it('counters only after a knockout against the same guardian', () => {
+    const save = beginAdventure('Ada', 'A', 'm01', 1)
+    const lead = save.active
+    if (!lead) throw new Error('starter')
+    save.mons[lead].lvl = 5
+    save.mons[lead].hp = 1
+    const water = `a${save.nextId}`
+    save.nextId += 1
+    save.mons[water] = { species: 'm02', lvl: 25, exp: 0, hp: null, shiny: false, caughtAt: 1, caughtWhere: 'r1c1', keepDupes: false }
+    save.team.push(water)
+    challengeGuardian(save)
+    const outcome = resolveEncounter(save, 1, { offline: true, trace: true })
+    expect(outcome.kind).toBe('guardian')
+    expect(outcome.traces[0]?.allySpecies).toBe('m01')
+    expect(outcome.traces[0]?.counter).toBeFalsy()
+    const counter = outcome.traces.find((trace) => trace.counter)
+    expect(counter?.allySpecies).toBe('m02')
+    expect(counter?.foeSpecies).toBe('m17')
+    // Chapter 1 caps the bout at level 12, so the extra segments stay locked.
+    expect(counter?.frames[0]?.allyUlt).toBe(0)
   })
 })

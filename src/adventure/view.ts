@@ -362,9 +362,9 @@ function guardCard(save: SaveV2): string {
     if (!mon) return []
     const arrow = typeArrow(species(mon.species).type, foeType)
     const mark = arrow === 'up'
-      ? `<img src="${art('battle/stat_up.png')}" alt=""/>`
+      ? `<b class="up">▲</b>`
       : arrow === 'down'
-        ? `<img src="${art('battle/stat_down.png')}" alt=""/>`
+        ? `<b class="down">▼</b>`
         : ''
     return [`<span>${esc(species(mon.species).name)}${mark}</span>`]
   }).join('')

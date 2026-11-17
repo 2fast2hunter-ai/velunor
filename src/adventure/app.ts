@@ -109,6 +109,7 @@ let lastInput = Date.now()
 let timer = 0
 let animating = false
 let lastTick = 0
+let holdCounter = false
 let progressAt = Date.now()
 let raf = 0
 let playGen = 0
@@ -278,34 +279,23 @@ const REGION_TINT = [0x7dcea0, 0x7dcea0, 0x9ad7ff, 0xff8a3d, 0x7e57c2, 0xf0c14a]
 
 function showK6Demo(part: string | null): void {
   const kind = part === 'konter' ? 'konter' : part === 'karte' ? 'karte' : 'before'
+  holdCounter = kind === 'konter'
   save = beginAdventure('Ada', 'A', 'm01', Date.now())
-  screen = 'adventure'
   const lead = save.active
-  if (lead && save.mons[lead]) save.mons[lead].lvl = 25
-  if (kind === 'karte') {
+  if (lead && save.mons[lead]) {
+    save.mons[lead].lvl = kind === 'konter' ? 5 : 25
+    if (kind === 'konter') save.mons[lead].hp = 1
+  }
+  if (kind === 'karte' || kind === 'konter') {
     const water = `a${save.nextId}`
     save.nextId += 1
     save.mons[water] = { species: 'm02', lvl: 25, exp: 0, hp: null, shiny: false, caughtAt: 1, caughtWhere: 'r1c1', keepDupes: false }
     save.team.push(water)
+    save.dex.m02 = { seen: 1, caught: 1 }
   }
   save.settings.speed = 1
-  render()
-  const foeName = document.getElementById('foe-name')
-  if (foeName) setActorName(foeName, 'Tropfmolch')
-  const foeImg = document.getElementById('foe-sprite')
-  if (foeImg instanceof HTMLImageElement) {
-    foeImg.hidden = false
-    foeImg.src = monsterArt('m02', true)
-  }
-  const foeHp = document.getElementById('foe-hp')
-  if (foeHp) foeHp.style.width = '70%'
-  paintUlt('ally-ult', kind === 'konter' ? 2 : 0, true)
-  paintUlt('foe-ult', 0, false)
-  if (kind === 'konter') {
-    const label = document.getElementById('konter-label')
-    if (label) label.hidden = false
-  }
-  document.getElementById('battle')?.setAttribute('data-fx', 'hold')
+  if (kind === 'konter') challengeGuardian(save)
+  void start(save)
 }
 
 function showK5Demo(part: string | null): void {
@@ -884,6 +874,8 @@ function play(outcome: EncounterOutcome, speed: Speed, done: () => void): void {
   backstop = window.setTimeout(finishOnce, dur + 40)
   const k = tempoScale(speed)
   const started = performance.now()
+  let counterAt = -1
+  let frozen = -1
   const seal = document.getElementById('seal') as HTMLImageElement | null
   const allyHp = document.getElementById('ally-hp')
   const foeHp = document.getElementById('foe-hp')
@@ -920,7 +912,6 @@ function play(outcome: EncounterOutcome, speed: Speed, done: () => void): void {
   let allySeen = ''
   let enterAt = -1
   let dissolved = ''
-  let konterFor = ''
   const frame = (now: number) => {
     if (gen !== playGen) return
     if (!paintDue(now, drawnAt, battery)) {
@@ -929,8 +920,13 @@ function play(outcome: EncounterOutcome, speed: Speed, done: () => void): void {
     }
     drawnAt = now
     try {
-      const elapsed = now - started
+      let elapsed = now - started
+      if (frozen >= 0) elapsed = frozen
       const shot = shotAt(outcome.traces, Math.min(elapsed, battleEnd), battleEnd)
+      if (holdCounter && shot?.counter) {
+        if (counterAt < 0) counterAt = elapsed
+        if (frozen < 0 && elapsed - counterAt >= 320) frozen = elapsed
+      }
       if (shot && allyHp && foeHp) {
         allyHp.style.width = `${(shot.allyHp / shot.allyMax) * 100}%`
         foeHp.style.width = `${(shot.foeHp / shot.foeMax) * 100}%`
@@ -1012,10 +1008,8 @@ function play(outcome: EncounterOutcome, speed: Speed, done: () => void): void {
       paintMark('ally-status', shot?.allyMark ?? null, shot?.allyStacks ?? 0)
       paintMark('foe-status', shot?.foeMark ?? null, shot?.foeStacks ?? 0)
       const konter = document.getElementById('konter-label')
-      if (konter && shot?.counter && konterFor !== shot.allySpecies) {
-        konterFor = shot.allySpecies
-        konter.hidden = false
-        window.setTimeout(() => { konter.hidden = true }, 800)
+      if (konter) {
+        konter.hidden = !shot?.counter
       }
       if (foeKo >= 1 && shot && dissolved !== `foe-${shot.foeSpecies}` && fxHost && foeActor) {
         dissolved = `foe-${shot.foeSpecies}`
@@ -1065,7 +1059,7 @@ function play(outcome: EncounterOutcome, speed: Speed, done: () => void): void {
     }
   }
   const run = () => { raf = requestAnimationFrame(frame) }
-  if (outcome.boss?.species) showBossIntro(outcome.boss, run)
+  if (outcome.boss?.species && !holdCounter) showBossIntro(outcome.boss, run)
   else run()
 }
 
