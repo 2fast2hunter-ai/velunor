@@ -5,9 +5,9 @@ Werte aus `docs/kampf-upgrade-konzept.md`, Abschnitt B1. Die Leiste lebt nur im 
 | Muster | Wirkung |
 |---|---|
 | Durchschlag | 1 Ziel, Schaden ×1,6, ignoriert 30 % DEF, danach der Wetterfaktor |
-| Schildwall | Schaden −40 % auf das eigene Monster für den Rest des Kampfes. Ein Kampf dauert 2,8 s, die 3 s aus dem Konzept decken also jeden späteren Treffer. |
+| Schildwall | Schaden −40 % für 3 s auf das aktive eigene Monster. Eine Aktion der Kampfuhr ist 1 s bei ×1, also drei Aktionen. Danach ist der Wall weg. Bei ×2 sind es zwei Aktionen, bei ×3 eine, weil die gleiche Uhr mit dem Tempo läuft. K.o. oder ein Wechsel beendet ihn sofort. |
 | Impuls | ATK +25 % für die nächsten 4 eigenen Angriffe |
-| Fessel | Das Ziel setzt 1 Runde aus. Bei einem Boss greift sie mit 50 % |
+| Fessel | Das Ziel setzt 1 Runde aus. „Dauer −50 %“ beim Boss ist als 50-%-Chance ausgelegt, dass die Fessel greift. |
 | Heilleucht | Heilt 25 % der eigenen Max-HP, ohne Wetterfaktor |
 
 20 Arten je Muster, `m01` ist Durchschlag.

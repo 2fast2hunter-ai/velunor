@@ -298,8 +298,9 @@ function showK4Demo(part: string | null): void {
     }
     const from = stagePoint(ally, fx)
     const to = stagePoint(foe, fx)
+    const head = numberPoint(foe, fx)
     playBattleFx({ type: 'fire', crit: true, band: 'strong', awaken: true, shimmer: false, reduced: false, tempo: 1, from, to, ult: true })
-    showHitNumber(to.x, to.y - 160, 86, 'crit', numberHoldMs(1))
+    showHitNumber(head.x, head.y, 86, 'crit', numberHoldMs(1))
     window.setTimeout(mark, 160)
   }))
 }
@@ -1081,10 +1082,12 @@ function numberPoint(actor: HTMLElement, host: HTMLElement): { x: number; y: num
   if (!(img instanceof HTMLElement)) return { x: pt.x, y: pt.y - 220 }
   const box = img.getBoundingClientRect()
   const frame = host.getBoundingClientRect()
+  const width = host.clientWidth || frame.width || 1
   const height = host.clientHeight || frame.height || 1
   const top = ((box.top - frame.top) / (frame.height || 1)) * height
-  // Crit frames hang about 30px under the baseline and the label sits ~200px above it.
-  return { x: pt.x, y: Math.max(220, top - 48) }
+  // The label sits about 200px above this point. Keep it above the name and off the HP bar.
+  const side = pt.x > width / 2 ? 1 : -1
+  return { x: pt.x + side * 78, y: Math.max(170, top - 150) }
 }
 
 function stagePoint(actor: HTMLElement, host: HTMLElement): { x: number; y: number } {

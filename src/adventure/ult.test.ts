@@ -2,7 +2,7 @@ import { describe, expect, it } from 'vitest'
 import { species } from '../data'
 import { fight1v1, rawDamage, type FightSide } from './battle'
 import { ENCOUNTER_MS } from './const'
-import { ULT_DAMAGE, ULT_PATTERNS, ULT_PIERCE, ULT_SEGMENTS, ultPattern, ultReady, ultUnlocked } from './ult'
+import { ULT_DAMAGE, ULT_PATTERNS, ULT_PIERCE, ULT_SEGMENTS, ultPattern, ultReady, ultUnlocked, wallActions } from './ult'
 import { weatherFactor } from './weather'
 
 function side(id: string, level: number, hp: number, atk: number, spd = 100): FightSide {
@@ -66,6 +66,27 @@ describe('ultimates', () => {
     expect(heal(rain)?.amount).toBe(Math.floor(1000 * 0.25))
     expect(heal(rain)?.amount).toBe(heal(clear)?.amount)
     expect(ENCOUNTER_MS[1]).toBe(2800)
+  })
+
+  it('holds Schildwall for three actions at ×1, then the next hit is full', () => {
+    expect(wallActions(1)).toBe(3)
+    expect(wallActions(2)).toBe(2)
+    expect(wallActions(3)).toBe(1)
+    const trace = fight1v1(side('m02', 25, 9000, 8, 200), side('m10', 1, 9000, 36, 1), () => 0.99, true)
+    const hits: number[] = []
+    let armed = false
+    for (const frame of trace.frames) {
+      if (frame.hits?.some((hit) => hit.ult === 'schildwall')) armed = true
+      if (!armed) continue
+      for (const hit of frame.hits ?? []) {
+        if (hit.from === 'foe' && hit.kind === 'hit') hits.push(hit.amount)
+      }
+    }
+    expect(hits.length).toBeGreaterThanOrEqual(3)
+    const full = hits[2]
+    expect(hits[0]).toBe(Math.floor(full * 0.6))
+    expect(hits[1]).toBe(Math.floor(full * 0.6))
+    expect(full).toBeGreaterThan(hits[0])
   })
 
   it('keeps a short fight near the old length and reports the long one', () => {

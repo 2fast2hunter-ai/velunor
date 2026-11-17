@@ -4,7 +4,7 @@ import type { SkillDef, SkillEffect, SpeciesPassive, StatusId, TypeId } from '..
 import { ACTION_LIMIT } from './const'
 import { awakenCount } from './stats'
 import { weatherFactor, type WeatherId } from './weather'
-import { ULT_BOSS_FETTER, ULT_DAMAGE, ULT_HEAL, ULT_IMPULSE, ULT_IMPULSE_ATTACKS, ULT_PIERCE, ULT_WALL_CUT, gainUlt, ultName, ultPattern, ultReady, ultUnlocked, type UltPattern } from './ult'
+import { ULT_BOSS_FETTER, ULT_DAMAGE, ULT_HEAL, ULT_IMPULSE, ULT_IMPULSE_ATTACKS, ULT_PIERCE, ULT_WALL_CUT, gainUlt, ultName, ultPattern, ultReady, ultUnlocked, wallActions, type UltPattern } from './ult'
 
 export interface FightSide {
   speciesId: string
@@ -93,7 +93,9 @@ interface Actor {
   passiveDuration: number
   ultCharge: number
   impulseLeft: number
-  wall: boolean
+  /** Actions of Schildwall still left. 0 means none. */
+  wallLeft: number
+  wallFresh: boolean
   skip: boolean
 }
 
@@ -166,7 +168,8 @@ function makeActor(side: FightSide): Actor {
     passiveDuration,
     ultCharge: 0,
     impulseLeft: 0,
-    wall: false,
+    wallLeft: 0,
+    wallFresh: false,
     skip: false
   }
 }
@@ -269,7 +272,7 @@ export function fight1v1(allySide: FightSide, foeSide: FightSide, rng: () => num
   push(`${ally.side.name} gegen ${foe.side.name}`)
 
   const hurt = (target: Actor, amount: number, ignoreShield: boolean): number => {
-    let remaining = target.wall ? Math.floor(amount * (1 - ULT_WALL_CUT)) : amount
+    let remaining = target.wallLeft > 0 ? Math.floor(amount * (1 - ULT_WALL_CUT)) : amount
     if (!ignoreShield && target.shield > 0 && remaining > 0) {
       const absorbed = Math.min(target.shield, remaining)
       target.shield -= absorbed
@@ -282,6 +285,8 @@ export function fight1v1(allySide: FightSide, foeSide: FightSide, rng: () => num
     const past = remaining
     if (remaining > 0) target.hp -= remaining
     if (target.hp <= 0) {
+      target.wallLeft = 0
+      target.wallFresh = false
       if (target.rebirths > 0) {
         target.rebirths -= 1
         target.hp = Math.max(1, Math.floor(target.side.maxHp * target.rebirthPct))
@@ -366,7 +371,8 @@ export function fight1v1(allySide: FightSide, foeSide: FightSide, rng: () => num
     if (pattern === 'durchschlag') {
       if (other.hp > 0) strike(unit, other, ULT_DAMAGE, ULT_PIERCE, pattern)
     } else if (pattern === 'schildwall') {
-      unit.wall = true
+      unit.wallLeft = wallActions(1)
+      unit.wallFresh = true
       if (trace) pending.push({ from: unit === ally ? 'ally' : 'foe', amount: 0, crit: false, type: unit.side.type, band: 'neutral', ko: false, kind: 'status', ult: pattern })
     } else if (pattern === 'impuls') {
       unit.impulseLeft = ULT_IMPULSE_ATTACKS
@@ -424,6 +430,11 @@ export function fight1v1(allySide: FightSide, foeSide: FightSide, rng: () => num
     if (unit.hp > 0) tick(unit)
   }
 
+  const ageWall = (unit: Actor) => {
+    if (unit.wallFresh) unit.wallFresh = false
+    else if (unit.wallLeft > 0) unit.wallLeft -= 1
+  }
+
   const allyFirst = ally.side.spd >= foe.side.spd
   let actions = 0
   let timeout = false
@@ -431,6 +442,8 @@ export function fight1v1(allySide: FightSide, foeSide: FightSide, rng: () => num
     const turn = actions % 2 === 0 ? (allyFirst ? ally : foe) : (allyFirst ? foe : ally)
     const other = turn === ally ? foe : ally
     act(turn, other)
+    ageWall(ally)
+    ageWall(foe)
     actions += 1
   }
   if (ally.hp > 0 && foe.hp > 0) timeout = true
