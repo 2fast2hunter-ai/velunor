@@ -1243,7 +1243,7 @@ export function continueHtml(save: SaveV2, now: number, lang: Lang = 'de', askin
     : t(lang, ago.unit === 'min' ? 'start.playedMin' : ago.unit === 'hour' ? 'start.playedHour' : 'start.playedDay', { n: ago.n })
   return `<div id="stage" class="home is-door" lang="${lang}">
     <div class="home-scroll">
-      ${homeTop(lang, false)}
+      ${homeTop(lang, false, true, Boolean(save.settings.reduceMotion))}
       <article class="continue-card">
         <div class="continue-who">${lookFace(save.look)}<div><b>${esc(facts.name)}</b><p>${esc(played)}</p></div></div>
         <p>${esc(t(lang, 'start.place', { region: facts.region, chapter: facts.chapter, step: facts.step }))}</p>
@@ -1263,7 +1263,7 @@ export function continueHtml(save: SaveV2, now: number, lang: Lang = 'de', askin
 export function brokenHtml(lang: Lang = 'de', backup = false): string {
   return `<div id="stage" class="home is-door" lang="${lang}">
     <div class="home-scroll">
-      ${homeTop(lang, false)}
+      ${homeTop(lang, false, true, false)}
       <article class="continue-card">
         <h1>${esc(t(lang, 'start.broken'))}</h1>
         <p>${esc(t(lang, 'start.brokenBody'))}</p>
@@ -1276,10 +1276,37 @@ export function brokenHtml(lang: Lang = 'de', backup = false): string {
   </div>`
 }
 
-function homeTop(lang: Lang, open: boolean): string {
-  return `<div class="home-top">
-    <p class="home-kicker">${t(lang, 'start.kicker')}</p>
+function homeTop(lang: Lang, open: boolean, hero = false, reduced = false): string {
+  if (!hero) {
+    return `<div class="home-top">
+      <p class="home-kicker">${t(lang, 'start.kicker')}</p>
+      <button type="button" class="lang-chip" data-act="lang-sheet" aria-expanded="${open ? 'true' : 'false'}" aria-label="${esc(t(lang, 'start.lang'))}">${lang === 'en' ? 'EN' : 'DE'} ▾</button>
+    </div>`
+  }
+  return `<header class="home-hero">
+    <img class="home-lqip" src="${art('home/keyart_1080_lqip.jpg')}" alt=""/>
+    <img class="home-key" src="${art('home/keyart_1080.webp')}" alt="${esc(t(lang, 'start.lead'))}"/>
+    <img class="home-logo" src="${art('home/logo_velunor_light.png')}" alt="Velunor"/>
+    <p class="home-hero-lead">${esc(t(lang, 'start.lead'))}</p>
+    <div class="home-particles" data-reduced="${reduced ? '1' : '0'}"></div>
     <button type="button" class="lang-chip" data-act="lang-sheet" aria-expanded="${open ? 'true' : 'false'}" aria-label="${esc(t(lang, 'start.lang'))}">${lang === 'en' ? 'EN' : 'DE'} ▾</button>
+  </header>`
+}
+
+export function loadingHtml(fraction: number, hint: string, failed: boolean, lang: Lang = 'de'): string {
+  const pct = Math.round(Math.max(0, Math.min(1, fraction)) * 100)
+  const fail = failed
+    ? `<p class="boot-fail">${esc(t(lang, 'boot.fail'))}</p><button type="button" class="primary" data-act="reload">${esc(t(lang, 'boot.reload'))}</button>`
+    : `<div class="boot-silhouettes" aria-hidden="true">
+        <img src="${art('home/loading_silhouette_1.png')}" alt=""/>
+        <img src="${art('home/loading_silhouette_2.png')}" alt=""/>
+        <img src="${art('home/loading_silhouette_3.png')}" alt=""/>
+      </div>`
+  return `<div id="stage" class="home is-boot${failed ? ' is-boot-fail' : ''}" lang="${lang}">
+    <img class="boot-logo" src="${art('home/loading_logo.png')}" alt="Velunor"/>
+    <p id="boot-hint">${esc(hint)}</p>
+    <div class="boot-track" role="progressbar" aria-label="${esc(t(lang, 'boot.loading'))}" aria-valuemin="0" aria-valuemax="100" aria-valuenow="${pct}"><span id="boot-bar" style="width:${pct}%"></span></div>
+    ${fail}
   </div>`
 }
 
@@ -1305,9 +1332,9 @@ export function onboardingHtml(name: string, look: AvatarLook, picked: string, l
   const nextAct = nameStep ? 'next' : 'start'
   const nextOff = nameStep ? Boolean(problem) : !starterReady
   const thumb = !nameStep && picked ? `<img src="${art(`home/starter_${picked}.png`)}" alt=""/>` : ''
-  return `<div id="stage" class="home${nameStep ? '' : ' is-starter'}" lang="${lang}">
+  return `<div id="stage" class="home${nameStep ? ' is-name' : ' is-starter'}" lang="${lang}">
     <div class="home-scroll">
-      ${homeTop(lang, langOpen)}
+      ${homeTop(lang, langOpen, nameStep)}
       ${nameStep ? nameStepHtml(name, look, lang, problem ? t(lang, `start.err.${problem}`) : '') : starterStepHtml(name, look, picked, lang)}
     </div>
     <div class="home-bar">
@@ -1329,7 +1356,6 @@ function nameStepHtml(name: string, look: AvatarLook, lang: Lang, error: string)
     return `<button type="button" class="look-choice" data-act="look" data-part="color" data-index="${index}" aria-pressed="${look.color === index ? 'true' : 'false'}"><span class="swatch is-color" style="background:${colorHex(index)}"></span><span>${esc(t(lang, `start.${id}`))}</span></button>`
   }).join('')
   return `<h1>${t(lang, 'start.you')}</h1>
-    <p class="home-lead">${t(lang, 'start.lead')}</p>
     <label class="home-label" for="hero-name">${t(lang, 'start.name')}</label>
     <div class="name-row">
       <input id="hero-name" data-field="name" maxlength="16" autocomplete="nickname" placeholder="${esc(t(lang, 'start.placeholder'))}" value="${esc(name)}"/>

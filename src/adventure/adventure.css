@@ -678,6 +678,94 @@ img.is-shiny { filter: drop-shadow(0 0 10px #f0c14a); }
 }
 .home-scroll { flex: 1 1 auto; min-height: 0; overflow: auto; padding: 24px 36px 177px; }
 .home-top { display: flex; align-items: center; justify-content: space-between; gap: 16px; }
+.home-hero {
+  position: relative;
+  height: 280px;
+  border-radius: 28px;
+  overflow: hidden;
+  margin: 0 0 12px;
+  background: #16324a;
+}
+.home.is-door .home-hero { flex: 1 1 auto; height: auto; min-height: 640px; }
+.home-lqip, .home-key { position: absolute; inset: 0; width: 100%; height: 100%; object-fit: cover; object-position: center 28%; }
+.home-key { z-index: 1; }
+.home-logo {
+  position: absolute;
+  z-index: 2;
+  left: 50%;
+  top: 42%;
+  width: 78%;
+  transform: translate(-50%, -50%);
+  filter: drop-shadow(0 8px 12px rgba(6, 16, 32, 0.45));
+}
+.home.is-name .home-logo { top: 46%; width: 72%; }
+.home-hero-lead {
+  position: absolute;
+  z-index: 2;
+  left: 24px;
+  right: 24px;
+  bottom: 18px;
+  margin: 0;
+  text-align: center;
+  font-size: 40px;
+  font-weight: 800;
+  color: #fff8e1;
+  text-shadow: 0 2px 8px #102033;
+}
+.home-hero .lang-chip { position: absolute; z-index: 3; top: 16px; right: 16px; }
+.home-particles { position: absolute; inset: 0; z-index: 2; pointer-events: none; overflow: hidden; }
+.home-leaf, .home-light { position: absolute; pointer-events: none; }
+.home-leaf { top: -8%; width: 42px; height: 42px; animation: leaf-fall linear infinite; }
+.home-light { width: 18px; height: 18px; animation: light-rise linear infinite; opacity: 0.8; }
+@keyframes leaf-fall { to { transform: translateY(900px) rotate(50deg); } }
+@keyframes light-rise { to { transform: translateY(-520px); opacity: 0; } }
+@media (prefers-reduced-motion: reduce) {
+  .home-leaf, .home-light, .boot-logo, .boot-silhouettes img { animation: none; }
+}
+.home.is-boot {
+  height: 2340px;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  gap: 28px;
+  padding: 48px;
+  box-sizing: border-box;
+}
+.boot-logo { width: 420px; min-height: 220px; height: auto; animation: boot-pulse 1.4s ease-in-out infinite alternate; }
+@keyframes boot-pulse { to { transform: scale(1.05); opacity: 1; } }
+.boot-logo { opacity: 0.9; }
+#boot-hint, .boot-fail { margin: 0; font-size: 44px; font-weight: 800; text-align: center; }
+.boot-track { width: 100%; height: 28px; border-radius: 99px; background: #1b2744; overflow: hidden; }
+.boot-track span { display: block; height: 100%; background: #f0c14a; }
+.boot-silhouettes { display: flex; gap: 18px; }
+.boot-silhouettes img { width: 140px; height: 140px; object-fit: contain; animation: boot-shimmer 1.2s ease-in-out infinite alternate; }
+.boot-silhouettes img:nth-child(2) { animation-delay: 0.15s; }
+.boot-silhouettes img:nth-child(3) { animation-delay: 0.3s; }
+@keyframes boot-shimmer { to { opacity: 0.9; } }
+.boot-silhouettes img { opacity: 0.55; }
+.is-boot .primary { min-height: 133px; min-width: 320px; font-size: 44px; font-weight: 800; }
+.first-in {
+  position: absolute;
+  z-index: 12;
+  left: 8%;
+  top: 30%;
+  display: flex;
+  flex-direction: column;
+  align-items: flex-start;
+  gap: 8px;
+  border: 0;
+  background: transparent;
+  color: #fff8e1;
+  font-size: 44px;
+  font-weight: 800;
+  text-shadow: 0 3px 8px #102033;
+  animation: first-in 1.2s ease-out both;
+}
+.first-in img { width: 320px; height: 320px; object-fit: contain; display: block; }
+.first-in.is-still { animation: none; }
+@keyframes first-in { from { transform: translateX(-130%); opacity: 0; } to { transform: none; opacity: 1; } }
+#stage { position: relative; }
 .home-kicker { margin: 0; font-size: 48px; font-weight: 800; color: #f0c14a; }
 .home h1 { margin: 8px 0 4px; font-size: 72px; line-height: 1.05; }
 .home-lead, .home-label, .home-error, .home-reason, .look-choice span, .starter-card span span, .lang-chip, .home-back, .dice.look-dice {
@@ -762,7 +850,7 @@ img.is-shiny { filter: drop-shadow(0 0 10px #f0c14a); }
 .continue-gold { color: #f0c14a; font-size: 52px; }
 .door-new {
   width: 100%;
-  min-height: 120px;
+  min-height: 133px;
   margin-top: 12px;
   border: 0;
   border-radius: 24px;
@@ -885,8 +973,8 @@ img.is-shiny { filter: drop-shadow(0 0 10px #f0c14a); }
 .starter-card.is-on .starter-choose { background: var(--type, #f0c14a); color: #1a1208; }
 .starter-dots { display: flex; justify-content: center; gap: 8px; }
 .starter-dot {
-  min-width: 96px;
-  min-height: 48px;
+  min-width: 133px;
+  min-height: 133px;
   border: 0;
   background: transparent;
   display: grid;
