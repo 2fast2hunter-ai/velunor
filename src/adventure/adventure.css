@@ -2,6 +2,11 @@
   color: #e8eefc;
   background: #070b16;
   font-family: Nunito, "Segoe UI", sans-serif;
+  --radius-card: 24px;
+  --radius-control: 16px;
+  --radius-pill: 999px;
+  --radius-sheet: 36px;
+  --shadow-soft: 0 16px 40px rgba(6, 10, 24, 0.2);
 }
 
 html, body, #game {
@@ -93,11 +98,34 @@ body.is-landscape-phone #turn { display: grid; }
 .is-menu .anchor-bot { grid-template-rows: auto; }
 .menu-scroll { flex: 1 1 auto; min-height: 0; overflow: auto; }
 
+.card, .mon-card, .chest-tile, .more-sheet, .map-sheet, .filter-sheet, .log, .side-card {
+  border-radius: var(--radius-card);
+  box-shadow: var(--shadow-soft);
+}
 .card {
   background: rgba(18, 28, 54, 0.92);
   border: 1px solid rgba(168, 190, 240, 0.22);
+  border-radius: var(--radius-card);
+  box-shadow: var(--shadow-soft);
+}
+button, .primary, .ghost, .text-btn, .filter-bar, input, select, textarea {
+  border-radius: var(--radius-control);
+}
+.wallet, .speed button, .shop-tabs button, .challenge-fab, .shop-stock {
+  border-radius: var(--radius-pill);
+}
+.hud { border-radius: 0 0 28px 28px; }
+.tabbar { border-radius: 32px 32px 0 0; box-shadow: 0 -12px 28px rgba(6, 10, 24, 0.2); }
+.sheet { border-radius: var(--radius-sheet) var(--radius-sheet) 0 0; box-shadow: var(--shadow-soft); }
+.portrait, .hero, .pick img {
+  border-radius: 50%;
+  border: 5px solid var(--rarity, #e2c56a);
+  box-shadow: var(--shadow-soft);
+  background: radial-gradient(circle at 50% 40%, #2a3c62, #10182c 72%);
+  box-sizing: border-box;
+}
+.ui-icon, .shop-item, .coin, .tab img, .hud-gold img, .chest-art {
   border-radius: 22px;
-  box-shadow: 0 12px 30px rgba(0, 0, 0, 0.28);
 }
 
 .nav, .side, .center { min-height: 0; }
@@ -894,7 +922,9 @@ img.is-shiny { filter: drop-shadow(0 0 10px #f0c14a); }
   gap: 6px;
   border-style: solid;
   /* 35% of the 133/130/129/147 slice so the interior keeps about 81% of the card. */
-  border-width: 46px 45px 51px 47px;
+  border-width: 36px 36px 41px 37px;
+  clip-path: inset(0 round 40px);
+  filter: drop-shadow(0 16px 28px rgba(6, 10, 24, 0.24));
   border-image-slice: 130 129 147 133;
   border-image-width: 1;
   border-image-repeat: stretch;

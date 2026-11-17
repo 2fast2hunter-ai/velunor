@@ -48,7 +48,7 @@ export function monsterToken(
   if (speciesId === 'm33') {
     const matte = scene.add.graphics()
     matte.fillStyle(dim ? 0x3c3a4a : 0x140e22, 1)
-    matte.fillRoundedRect(-display / 2, -display / 2, display, display, display * 0.2)
+    matte.fillRoundedRect(-display / 2, -display / 2, display, display, display * 0.5)
     root.add(matte)
   }
   if (scene.textures.exists(key)) {

@@ -112,6 +112,11 @@ function ui(id: UiArtId): string {
   return `<img class="ui-icon" src="${art(UI_ART[id])}" alt=""/>`
 }
 
+function portrait(speciesId: string, large = false, extra = ''): string {
+  const color = rarityInfo(species(speciesId).baseRarity).color
+  return `<img class="portrait ${extra}" style="--rarity:${color}" src="${monsterArt(speciesId, large)}" alt=""/>`
+}
+
 export function monsterArt(id: string, large = false): string {
   return art(`monsters/${id}${large ? '' : '_256'}.png`)
 }
@@ -288,7 +293,7 @@ function teamDock(save: SaveV2): string {
     const bar = realHp(row)
     const fainted = !isAlive(row)
     return `<button type="button" class="mini ${uid === active ? 'is-active' : ''} ${fainted ? 'is-fainted' : ''}" data-act="send" data-uid="${uid}">
-      <img src="${monsterArt(row.species)}" alt=""/>
+      ${portrait(row.species)}
       <span class="bar"><span style="width:${fainted ? 0 : (bar.hp / bar.max) * 100}%"></span></span>
     </button>`
   }).join('')
@@ -328,7 +333,7 @@ function drawerSheet(save: SaveV2, now: number): string {
   const clock = clockLabel(save, now)
   const body = rows.map((row) => `<div class="sight-row">
       <span class="seal-ring" style="--pity:${Math.max(0, Math.min(1, row.pity / 10))}" title="${row.pity ? `Spur ${row.pity}` : ''}">
-        <img class="${row.caught ? '' : 'sil'}" src="${monsterArt(row.species)}" alt=""/>
+        ${portrait(row.species, false, row.caught ? '' : 'sil')}
       </span>
       <div><b>${row.caught ? esc(row.name) : '???'}</b><div class="muted">${esc(row.type)}</div></div>
       <span class="pct">${Math.round(row.pct)} %</span>
@@ -438,7 +443,7 @@ export function pcWindowHtml(save: SaveV2, uids: string[], selected: string | nu
     if (!mon) return ''
     const sp = species(mon.species)
     return `<button type="button" class="mon-card ${selected === uid ? 'on' : ''}" data-act="select" data-uid="${uid}" draggable="true" data-drag="pc">
-      <img src="${monsterArt(sp.id)}" alt=""/>
+      ${portrait(sp.id)}
       <div>${esc(sp.name)}</div>
       <div class="muted">Lv ${mon.lvl}${mon.shiny ? ' · Schimmer' : ''}</div>
     </button>`
@@ -466,7 +471,7 @@ function team(save: SaveV2, query: PcQuery, selected: string | null, shell: Shel
     if (!uid || !save.mons[uid]) return `<div class="mon-card slot" aria-hidden="true">${ui('slotEmpty')}<span>${index + 1}</span></div>`
     const mon = save.mons[uid]
     return `<button type="button" class="mon-card ${selected === uid ? 'on' : ''}" data-act="select" data-uid="${uid}" data-index="${index}" data-press="card" draggable="true" data-drag="team">
-      <img src="${monsterArt(mon.species)}" alt=""/>
+      ${portrait(mon.species)}
       <div>${index + 1}. ${esc(species(mon.species).name)}</div>
       <div class="muted">Lv ${mon.lvl}${save.buddy === uid ? ` · ${tr(save, 'team.buddy')}` : ''}${fightsHere(save, mon) ? '' : ` · ${tr(save, 'team.other')}`}</div>
     </button>`
@@ -524,7 +529,7 @@ function codex(save: SaveV2, filter: CodexQuery, shell: ShellFlags): string {
     const status = dexStatus(save, mon.id)
     const hidden = status === 'missing'
     return `<button type="button" class="mon-card" data-act="dex" data-species="${mon.id}">
-      <img class="${status === 'owned' || status === 'released' ? '' : 'sil'}" src="${monsterArt(mon.id)}" alt="" style="${hidden ? 'opacity:.25' : ''}"/>
+      ${portrait(mon.id, false, status === 'owned' || status === 'released' ? '' : 'sil').replace('style="', hidden ? 'style="opacity:.25;' : 'style="')}
       <div>${hidden ? tr(save, 'codex.no', { n: speciesNumber(mon.id) }) : esc(mon.name)}</div>
       <div class="muted">${dexStatusLabel(status)}</div>
     </button>`
@@ -674,7 +679,7 @@ function chestView(save: SaveV2, wheel: WheelPanel): string {
         <p>${ui('dust')}Velunorstaub ${save.dust}</p>
         ${poolFor(enteredRegions(save)).filter((id) => !Object.values(save.mons).some((mon) => mon.species === id)).slice(0, 6).map((id) => {
           const sp = species(id)
-          return `<button type="button" data-act="craft" data-id="${id}"><img class="ui-icon" src="${monsterArt(id)}" alt=""/>${esc(sp.name)} · ${workshopCost(sp.baseRarity)} Staub</button>`
+          return `<button type="button" data-act="craft" data-id="${id}">${portrait(id)}${esc(sp.name)} · ${workshopCost(sp.baseRarity)} Staub</button>`
         }).join('')}
       </div>
     </div>
@@ -713,7 +718,7 @@ function wheelView(save: SaveV2, wheel: WheelPanel): string {
       const owned = Object.values(save.mons).some((mon) => mon.species === prize.species)
       const label = !unlocked ? tr(save, 'wheel.later') : owned ? tr(save, 'wheel.owned') : tr(save, 'wheel.price', { n: prize.marks.toLocaleString(L(save) === 'en' ? 'en' : 'de-DE') })
       return `<article class="list-row">
-        <div class="prize-line"><img src="${monsterArt(sp.id, true)}" alt=""/><div><b>${esc(sp.name)}</b><div class="muted">${esc(prize.regionName)} · Lv 5</div></div></div>
+        <div class="prize-line">${portrait(sp.id, true)}<div><b>${esc(sp.name)}</b><div class="muted">${esc(prize.regionName)} · Lv 5</div></div></div>
         <div class="list-actions"><button type="button" class="primary" data-act="buy-prize" data-id="${prize.species}" ${unlocked && !owned ? '' : 'disabled'}>${label}</button></div>
       </article>`
     }).join('')
@@ -753,7 +758,7 @@ function hortView(save: SaveV2, now: number, selected: string | null, wheel: Whe
     if (!mon) return ''
     const sp = species(mon.species)
     return `<button type="button" class="mon-card ${selected === uid ? 'on' : ''}" data-act="select" data-uid="${uid}">
-      <img src="${monsterArt(sp.id)}" alt=""/>
+      ${portrait(sp.id)}
       <div>${esc(sp.name)}${mon.shiny ? ' · Schimmer' : ''}</div>
       <div class="muted">Lv ${mon.lvl} · ${esc(typeName(sp.type))}</div>
     </button>`

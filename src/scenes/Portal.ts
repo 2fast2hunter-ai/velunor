@@ -94,7 +94,7 @@ export class PortalScene extends Phaser.Scene {
       const sp = species(pull.speciesId)
       const plate = this.add.graphics()
       plate.fillStyle(0x1b2438, 1)
-      plate.fillRoundedRect(-80, -80, 160, 170, 14)
+      plate.fillRoundedRect(-80, -80, 160, 170, 24)
       plate.lineStyle(4, Phaser.Display.Color.HexStringToColor(rarityInfo(pull.rarity).color).color, 1)
       plate.strokeRoundedRect(-80, -80, 160, 170, 14)
       card.add(plate)

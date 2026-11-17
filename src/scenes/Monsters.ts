@@ -32,7 +32,7 @@ export class MonsterListScene extends Phaser.Scene {
       const sp = species(monster.speciesId)
       const box = this.add.graphics()
       box.fillStyle(0x1b2438, 1)
-      box.fillRoundedRect(x - 90, y - 70, 200, 150, 16)
+      box.fillRoundedRect(x - 90, y - 70, 200, 150, 24)
       box.lineStyle(3, Phaser.Display.Color.HexStringToColor(rarityInfo(monster.rarity).color).color, 1)
       box.strokeRoundedRect(x - 90, y - 70, 200, 150, 16)
       monsterToken(this, x - 40, y - 10, monster.speciesId, 56, monster.rarity, false, true)
