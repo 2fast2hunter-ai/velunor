@@ -3,7 +3,7 @@ export const MECHS = ['panzerung', 'wut', 'beistand', 'puls', 'spiegel'] as cons
 export type MechId = (typeof MECHS)[number]
 export type BossKind = 'guardian' | 'council' | 'beast'
 
-export const ARMOR_CUT = 0.3
+export const ARMOR_CUT = 0.2
 export const ARMOR_CRITS = 3
 export const RAGE_HP = 0.4
 export const RAGE_MULT = 1.5
@@ -24,7 +24,7 @@ const NAMES: Record<MechId, string> = {
 }
 
 const TIPS: Record<MechId, string> = {
-  panzerung: 'Schaden −30 %, bis 3 Krits',
+  panzerung: 'Schaden −20 %, bis 3 Krits',
   wut: 'unter 40 % HP Angriffe ×1,5',
   beistand: 'Helfer ab 60 % HP, alle 4 Angriffe',
   puls: 'alle 5 Angriffe ein Zusatztreffer',

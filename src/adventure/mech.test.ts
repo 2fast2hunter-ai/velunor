@@ -3,7 +3,7 @@ import { species } from '../data'
 import { mulberry32 } from '../rng'
 import { fight1v1, type FightHit, type FightSide, type FightTrace } from './battle'
 import { ENCOUNTER_MS } from './const'
-import { assignMechs, councilAssignment, guardianAssignment, MECHS } from './mech'
+import { ARMOR_CUT, assignMechs, councilAssignment, guardianAssignment, MECHS } from './mech'
 import { orderMods } from './order'
 import { regions } from './route'
 import { beginAdventure } from './save'
@@ -54,8 +54,8 @@ describe('boss mechanics', () => {
     const armed = fight1v1(side('m01', 10, { spd: 200 }), { ...foe, mechs: ['panzerung'], boss: true }, () => 0, true)
     const open = hitsFrom(bare, 'ally')
     const cut = hitsFrom(armed, 'ally')
-    expect(cut[0]).toBe(Math.max(1, Math.floor(open[0] * 0.7)))
-    expect(cut[2]).toBe(Math.max(1, Math.floor(open[2] * 0.7)))
+    expect(cut[0]).toBe(Math.max(1, Math.floor(open[0] * (1 - ARMOR_CUT))))
+    expect(cut[2]).toBe(Math.max(1, Math.floor(open[2] * (1 - ARMOR_CUT))))
     expect(cut[3]).toBe(open[3])
   })
 
@@ -220,13 +220,13 @@ describe('boss mechanic sample', () => {
       bench[id] = tallyBench([id], trials)
     }
     expect(one.none).toEqual({ win: 463, ko: 37, timeout: 0 })
-    expect(one.panzerung).toEqual({ win: 10, ko: 490, timeout: 0 })
+    expect(one.panzerung).toEqual({ win: 23, ko: 477, timeout: 0 })
     expect(one.wut).toEqual({ win: 187, ko: 313, timeout: 0 })
     expect(one.beistand).toEqual({ win: 454, ko: 46, timeout: 0 })
     expect(one.puls).toEqual({ win: 379, ko: 121, timeout: 0 })
     expect(one.spiegel).toEqual({ win: 24, ko: 476, timeout: 0 })
     expect(bench.none).toEqual({ sieg: 500, ko: 0, timeout: 0 })
-    expect(bench.panzerung).toEqual({ sieg: 401, ko: 99, timeout: 0 })
+    expect(bench.panzerung).toEqual({ sieg: 498, ko: 2, timeout: 0 })
     expect(bench.wut).toEqual({ sieg: 499, ko: 1, timeout: 0 })
     expect(bench.beistand).toEqual({ sieg: 500, ko: 0, timeout: 0 })
     expect(bench.puls).toEqual({ sieg: 500, ko: 0, timeout: 0 })

@@ -8,7 +8,7 @@ Die Mechanik hängt am Wächter, nicht am einzelnen Zug. Derselbe Wächter hat i
 
 Ein Angriff für Puls und Beistand ist ein Schlag, eine schadensbringende Fertigkeit oder die Ult Durchschlag. Ein Mehrfachtreffer zählt als ein Angriff. Ein Schild, eine Heilung oder ein Fehlschlag der Ult zählt nicht. Ein daneben gegangener Schlag zählt mit.
 
-- **Panzerung:** erlittener Schaden ×0,7, solange noch keine 3 Krits gelandet sind. Der dritte Krit ist noch gemindert, danach ist die Panzerung weg. Ein Fehlschlag zählt nicht als gelandeter Krit.
+- **Panzerung:** erlittener Schaden ×0,8, solange noch keine 3 Krits gelandet sind. Der dritte Krit ist noch gemindert, danach ist die Panzerung weg. Ein Fehlschlag zählt nicht als gelandeter Krit. Lucario hat ×0,7 auf ×0,8 gesetzt. Der Maßstab ist das volle Team auf der Kapitel-Obergrenze, nicht der Einzelkämpfer. Dass Spiegel und Wut den Einzelkämpfer hart bestrafen, ist gewollt. ×0,8 hebt das Team auf 498 von 500 Siegen (99,6 %, −0,4 Punkte). Das liegt über 88 %, deshalb bleibt es bei ×0,8 und nicht bei ×0,85.
 - **Wut:** solange die HP unter 40 % liegen, ist der Schaden der eigenen Angriffe ×1,5. Genau 40 % lösen sie nicht aus. Der Helfer bekommt die Wut nicht.
 - **Beistand:** solange die HP bei mindestens 60 % liegen, schlägt zum 4., 8., 12. Angriff ein Helfer zusätzlich zu. Seine ATK ist 40 % der Boss-ATK und geht in dieselbe Schadensformel. Er verschwindet, wenn der Boss k.o. geht. „Ab 60 %“ ist hier wie „ab Lv 25“ gelesen: die Schwelle gilt nach oben.
 - **Puls:** zum 5., 10., 15. Angriff ein Zusatztreffer mit 60 % des normalen Schlagfaktors. Spreu und andere Fehlschläge lassen ihn nicht aus. Schock mindert ihn noch.
@@ -16,7 +16,7 @@ Ein Angriff für Puls und Beistand ist ein Schlag, eine schadensbringende Fertig
 
 ## Messung
 
-Die empfohlene Stufe ist die Kapitel-Obergrenze. Für den Wiesenpfad ist das Stufe 12. Der Wächter steht mit seinen eigenen Stufen und der Skala 1,4 / 1,34 / 1,4 da. 500 Kämpfe, Samen 1 bis 500. Ein Sieg ist ein K.o. des Bosses. Eine Niederlage ist ein eigener K.o. Ein Timeout ist die Grenze von 30 Aktionen, auch wenn danach noch HP übrig sind. Die Werte aus B5 bleiben unverändert.
+Die empfohlene Stufe ist die Kapitel-Obergrenze. Für den Wiesenpfad ist das Stufe 12. Der Wächter steht mit seinen eigenen Stufen und der Skala 1,4 / 1,34 / 1,4 da. 500 Kämpfe, Samen 1 bis 500. Ein Sieg ist ein K.o. des Bosses. Eine Niederlage ist ein eigener K.o. Ein Timeout ist die Grenze von 30 Aktionen, auch wenn danach noch HP übrig sind. Wut, Beistand, Puls und Spiegel bleiben bei den B5-Werten. Panzerung ist nach Lucarios Entscheidung ×0,8.
 
 ### Ein Kämpfer
 
@@ -25,7 +25,7 @@ Raufkänguru, Stufe 12, Typ Kampf, stark gegen Stein. Gegner ist die Kieselkrabb
 | Mechanik | Sieg | K.o. | Timeout | Abstand |
 |---|---|---|---|---|
 | keine | 463 | 37 | 0 | |
-| Panzerung | 10 | 490 | 0 | −90,6 Punkte |
+| Panzerung | 23 | 477 | 0 | −88,0 Punkte |
 | Wut | 187 | 313 | 0 | −55,2 Punkte |
 | Beistand | 454 | 46 | 0 | −1,8 Punkte |
 | Puls | 379 | 121 | 0 | −16,8 Punkte |
@@ -38,10 +38,10 @@ Dieselben Wächter, drei Monster, der Boss behält nach einem K.o. seine HP. Das
 | Mechanik | Sieg | K.o. | Timeout | Abstand |
 |---|---|---|---|---|
 | keine | 500 | 0 | 0 | |
-| Panzerung | 401 | 99 | 0 | −19,8 Punkte |
+| Panzerung | 498 | 2 | 0 | −0,4 Punkte |
 | Wut | 499 | 1 | 0 | −0,2 Punkte |
 | Beistand | 500 | 0 | 0 | 0 |
 | Puls | 500 | 0 | 0 | 0 |
 | Spiegel | 500 | 0 | 0 | 0 |
 
-Panzerung, Wut, Puls und Spiegel drücken den einzelnen typstarken Kampf um mehr als 10 Punkte. Im vollen Team bleibt davon nur die Panzerung über 10 Punkten. Beistand ändert den einzelnen Kampf kaum und das Team gar nicht. Kein Lauf in dieser Messung endet an der Aktionsgrenze.
+Wut, Puls und Spiegel drücken den einzelnen typstarken Kampf um mehr als 10 Punkte. Das ist der gewollte Preis für einen einzelnen Kämpfer. Im vollen Team auf Kapitel-Cap bleibt die Panzerung bei 498 Siegen, also −0,4 Punkte, und damit über dem Ziel von 88 %. Beistand ändert den einzelnen Kampf kaum und das Team gar nicht. Kein Lauf in dieser Messung endet an der Aktionsgrenze.
