@@ -15,6 +15,7 @@ import { fontFactor } from './touch'
 import { baseLine, dexPlaces, dexStatus, dexStatusLabel, listCodex, regionProgress, speciesNumber, type DexFilter } from './dex'
 import { goalName, goalTitle, rarityLabel, t, typeLabel, weatherLabel, whenLabel, type Lang } from './i18n'
 import { colorHex, colorId, skinHex } from './avatar'
+import { agoParts, continueFacts } from './continue'
 import { STARTER_ART, starterBars, strongTypes, typeList, weakTypes } from './starter'
 import { nameProblem } from './home'
 import { exportCode } from './save'
@@ -1234,6 +1235,65 @@ export function lookFace(look: AvatarLook): string {
   return `<canvas class="look-face" data-look="${look.skin},${look.hair},${look.color}" width="512" height="512"></canvas>`
 }
 
+export function continueHtml(save: SaveV2, now: number, lang: Lang = 'de', asking = false): string {
+  const facts = continueFacts(save, now)
+  const ago = agoParts(facts.agoMs)
+  const played = ago.unit === 'now'
+    ? t(lang, 'start.playedNow')
+    : t(lang, ago.unit === 'min' ? 'start.playedMin' : ago.unit === 'hour' ? 'start.playedHour' : 'start.playedDay', { n: ago.n })
+  return `<div id="stage" class="home is-door" lang="${lang}">
+    <div class="home-scroll">
+      ${homeTop(lang, false)}
+      <article class="continue-card">
+        <div class="continue-who">${lookFace(save.look)}<div><b>${esc(facts.name)}</b><p>${esc(played)}</p></div></div>
+        <p>${esc(t(lang, 'start.place', { region: facts.region, chapter: facts.chapter, step: facts.step }))}</p>
+        <p>${esc(t(lang, 'start.teamLine', { name: facts.lead, level: facts.leadLevel, team: facts.team }))}</p>
+        <p>${esc(t(lang, 'start.best', { name: facts.strongest, level: facts.strongestLevel }))}</p>
+        <p class="continue-gold">${gold(facts.gold)}</p>
+      </article>
+    </div>
+    <div class="home-bar">
+      <button type="button" class="primary" data-act="continue">${esc(t(lang, 'start.resume'))}</button>
+      <button type="button" class="door-new" data-act="new-game">${esc(t(lang, 'start.new'))}</button>
+    </div>
+    ${asking ? overwriteHtml(lang) : ''}
+  </div>`
+}
+
+export function brokenHtml(lang: Lang = 'de', backup = false): string {
+  return `<div id="stage" class="home is-door" lang="${lang}">
+    <div class="home-scroll">
+      ${homeTop(lang, false)}
+      <article class="continue-card">
+        <h1>${esc(t(lang, 'start.broken'))}</h1>
+        <p>${esc(t(lang, 'start.brokenBody'))}</p>
+      </article>
+    </div>
+    <div class="home-bar">
+      ${backup ? `<button type="button" class="primary" data-act="restore">${esc(t(lang, 'start.restore'))}</button>` : ''}
+      <button type="button" class="door-new" data-act="new-game">${esc(t(lang, 'start.new'))}</button>
+    </div>
+  </div>`
+}
+
+function homeTop(lang: Lang, open: boolean): string {
+  return `<div class="home-top">
+    <p class="home-kicker">${t(lang, 'start.kicker')}</p>
+    <button type="button" class="lang-chip" data-act="lang-sheet" aria-expanded="${open ? 'true' : 'false'}" aria-label="${esc(t(lang, 'start.lang'))}">${lang === 'en' ? 'EN' : 'DE'} ▾</button>
+  </div>`
+}
+
+function overwriteHtml(lang: Lang): string {
+  return `<div class="overwrite" role="alertdialog" aria-modal="true" aria-labelledby="overwrite-title" aria-describedby="overwrite-body">
+    <div class="overwrite-card">
+      <h2 id="overwrite-title">${esc(t(lang, 'start.overwriteTitle'))}</h2>
+      <p id="overwrite-body">${esc(t(lang, 'start.overwriteBody'))}</p>
+      <button type="button" class="primary" id="overwrite-no" data-act="overwrite-no">${esc(t(lang, 'start.cancel'))}</button>
+      <button type="button" class="danger" data-act="overwrite-yes">${esc(t(lang, 'start.overwriteYes'))}</button>
+    </div>
+  </div>`
+}
+
 export function onboardingHtml(name: string, look: AvatarLook, picked: string, lang: Lang = 'de', step: 'name' | 'starter' = 'name', langOpen = false): string {
   const problem = nameProblem(name)
   const nameStep = step !== 'starter'
@@ -1247,10 +1307,7 @@ export function onboardingHtml(name: string, look: AvatarLook, picked: string, l
   const thumb = !nameStep && picked ? `<img src="${art(`home/starter_${picked}.png`)}" alt=""/>` : ''
   return `<div id="stage" class="home${nameStep ? '' : ' is-starter'}" lang="${lang}">
     <div class="home-scroll">
-      <div class="home-top">
-        <p class="home-kicker">${t(lang, 'start.kicker')}</p>
-        <button type="button" class="lang-chip" data-act="lang-sheet" aria-expanded="${langOpen ? 'true' : 'false'}" aria-label="${esc(t(lang, 'start.lang'))}">${lang === 'en' ? 'EN' : 'DE'} ▾</button>
-      </div>
+      ${homeTop(lang, langOpen)}
       ${nameStep ? nameStepHtml(name, look, lang, problem ? t(lang, `start.err.${problem}`) : '') : starterStepHtml(name, look, picked, lang)}
     </div>
     <div class="home-bar">

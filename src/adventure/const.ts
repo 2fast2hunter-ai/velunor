@@ -1,6 +1,8 @@
 /** Step-1 timings and catch table. Chapter 4 numbers are intentionally absent. */
 
 export const SAVE_KEY_V2 = 'velunor_v2'
+/** Previous readable save. Used only when the current file cannot be read. */
+export const SAVE_BACKUP = 'velunor_v2_backup'
 export const SAVE_KEY_V1 = 'velunor.save.v1'
 
 export const START_GOLD = 3000
