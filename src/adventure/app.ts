@@ -5,6 +5,7 @@ import {
   CAUGHT_SCALE,
   OFFLINE_BLOCK,
   OFFLINE_CAP_MS,
+  SAVE_BACKUP,
   SAVE_KEY_V2,
   SEAL_BLEND,
   SEAL_FLAT_Y,
@@ -40,7 +41,8 @@ import { chestAnimMs, type ChestTier } from './lootbox'
 import { needsConfirm, shopOffer } from './shopOffer'
 import { chooseLook, paintLooks } from './avatar'
 import { nameProblem, pickLook, pickName } from './home'
-import { beginAdventure, exportCode, importCode, loadAdventure, writeSave } from './save'
+import { inspectSave, nextDoor, resumeSave, type Door } from './continue'
+import { beginAdventure, exportCode, importCode, writeSave } from './save'
 import { equipFrame, equipTitle } from './achievements'
 import { buyHortSlot, moveFromHort, moveToHort } from './hort'
 import { buyCrystal, buyFruit, sellCrystal, sellFruit, useCrystal, useFruit } from './shop'
@@ -82,6 +84,8 @@ import {
 } from './touch'
 import {
   art,
+  brokenHtml,
+  continueHtml,
   gameHtml,
   monsterArt,
   onboardingHtml,
@@ -111,6 +115,9 @@ let draftPick = ''
 let draftStep: 'name' | 'starter' = 'name'
 let draftLangOpen = false
 let homeReady = false
+let door: Door = 'create'
+let keptSave: SaveV2 | null = null
+let doorBackup = false
 let draftLang: Lang = 'de'
 let pendingImport: SaveV2 | null = null
 let lastInput = Date.now()
@@ -164,6 +171,7 @@ export function bootAdventure(): void {
   window.addEventListener('pointerdown', wake)
   window.addEventListener('keydown', wake)
   window.addEventListener('keydown', onStarterKey)
+  window.addEventListener('keydown', onDoorKey)
   const storedLang = localStorage.getItem('velunor_lang')
   draftLang = storedLang === 'en' || storedLang === 'de' ? storedLang : (navigator.language.toLowerCase().startsWith('en') ? 'en' : 'de')
   document.documentElement.lang = draftLang
@@ -228,9 +236,14 @@ export function bootAdventure(): void {
     return
   }
   const skipLegacy = localStorage.getItem(RESET_FLAG) === '1' && !localStorage.getItem(SAVE_KEY_V2)
-  const loaded = skipLegacy ? null : loadAdventure(localStorage, Date.now())
-  if (!loaded?.started) showOnboarding()
-  else void start(loaded)
+  const gate = skipLegacy ? { kind: 'empty' as const, save: null, backup: false } : inspectSave(localStorage, Date.now())
+  if (gate.kind === 'ready' && gate.save) {
+    keptSave = gate.save
+    showDoor(nextDoor('create', 'open-ready'))
+  } else if (gate.kind === 'broken') {
+    doorBackup = gate.backup
+    showDoor(nextDoor('create', 'open-broken'))
+  } else showOnboarding()
 }
 
 function demoType(requested: string | null): TypeId {
@@ -588,7 +601,26 @@ function startChestAnim(speed: Speed, reduced: boolean): void {
   chestFrame = requestAnimationFrame(step)
 }
 
+function showDoor(next: Door): void {
+  door = next
+  if (next === 'create') {
+    showOnboarding()
+    return
+  }
+  if (next === 'play' && keptSave) {
+    void start(resumeSave(keptSave))
+    return
+  }
+  const lang = keptSave?.settings.lang === 'en' ? 'en' : draftLang
+  document.documentElement.lang = lang
+  if (next === 'broken') paint(brokenHtml(draftLang, doorBackup))
+  else if (keptSave) paint(continueHtml(keptSave, Date.now(), lang, next === 'ask'))
+  else paint(brokenHtml(draftLang, doorBackup))
+  if (next === 'ask') document.getElementById('overwrite-no')?.focus()
+}
+
 function showOnboarding(): void {
+  door = 'create'
   save = null
   if (!homeReady) {
     homeReady = true
@@ -644,6 +676,41 @@ function bindStarterScroller(): void {
       })
     }
   }, { passive: true })
+}
+
+function onDoorKey(event: KeyboardEvent): void {
+  if (door !== 'ask') return
+  if (event.key === 'Escape') {
+    event.preventDefault()
+    showDoor(nextDoor('ask', 'cancel'))
+    return
+  }
+  if (event.key !== 'Tab') return
+  const dialog = document.querySelector('.overwrite')
+  if (!(dialog instanceof HTMLElement)) return
+  const buttons = [...dialog.querySelectorAll('button')].filter((node): node is HTMLButtonElement => node instanceof HTMLButtonElement)
+  if (buttons.length < 2) return
+  const first = buttons[0]
+  const last = buttons[buttons.length - 1]
+  if (event.shiftKey && document.activeElement === first) {
+    event.preventDefault()
+    last.focus()
+  } else if (!event.shiftKey && document.activeElement === last) {
+    event.preventDefault()
+    first.focus()
+  }
+}
+
+function restoreBackup(): void {
+  const raw = localStorage.getItem(SAVE_BACKUP)
+  if (!raw) return
+  localStorage.setItem(SAVE_KEY_V2, raw)
+  const gate = inspectSave(localStorage, Date.now())
+  if (gate.kind === 'ready' && gate.save) {
+    keptSave = gate.save
+    doorBackup = gate.backup
+    showDoor('continue')
+  }
 }
 
 function onStarterKey(event: KeyboardEvent): void {
@@ -1657,6 +1724,12 @@ function onClick(event: Event): void {
     document.documentElement.lang = draftLang
     draftLangOpen = false
     if (!save) {
+      if (keptSave && (door === 'continue' || door === 'ask')) {
+        keptSave.settings.lang = draftLang
+        try { writeSave(localStorage, keptSave) } catch { /* keep the door */ }
+        showDoor(door)
+        return
+      }
       showOnboarding()
       return
     }
@@ -1699,6 +1772,26 @@ function onClick(event: Event): void {
     if (save) return
     draftStep = 'name'
     showOnboarding()
+    return
+  }
+  if (act === 'continue') {
+    if (keptSave && nextDoor(door, 'resume') === 'play') void start(resumeSave(keptSave))
+    return
+  }
+  if (act === 'new-game') {
+    showDoor(nextDoor(door, 'new'))
+    return
+  }
+  if (act === 'overwrite-no') {
+    showDoor(nextDoor(door, 'cancel'))
+    return
+  }
+  if (act === 'overwrite-yes') {
+    showDoor(nextDoor(door, 'confirm'))
+    return
+  }
+  if (act === 'restore') {
+    restoreBackup()
     return
   }
   if (act === 'preview') {

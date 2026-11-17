@@ -1,6 +1,6 @@
 import { freshSeed, nextFloat } from '../rng'
 import { emptyBag } from './shop'
-import { SAVE_KEY_V1, SAVE_KEY_V2, SAVE_VERSION, START_GOLD, STARTER_LEVEL } from './const'
+import { SAVE_BACKUP, SAVE_KEY_V1, SAVE_KEY_V2, SAVE_VERSION, START_GOLD, STARTER_LEVEL } from './const'
 import { chapterById, councilOf, findChapter, regions, speciesKnown } from './route'
 import { expToNext } from './stats'
 import { clampChestCount, emptyPity, enteredRegions, startChests, type ChestTier } from './lootbox'
@@ -487,7 +487,18 @@ function readJson(storage: StorageLike, key: string): unknown {
 }
 
 export function writeSave(storage: StorageLike, save: SaveV2): void {
+  const current = storage.getItem(SAVE_KEY_V2)
+  if (current && readableSave(current)) storage.setItem(SAVE_BACKUP, current)
   storage.setItem(SAVE_KEY_V2, JSON.stringify(save))
+}
+
+function readableSave(raw: string): boolean {
+  try {
+    const data = JSON.parse(raw) as { v?: number }
+    return Boolean(data && typeof data === 'object' && data.v === 2)
+  } catch {
+    return false
+  }
 }
 
 export function loadAdventure(storage: StorageLike, now: number): SaveV2 | null {
