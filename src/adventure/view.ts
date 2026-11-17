@@ -285,13 +285,13 @@ function battle(save: SaveV2, now: number, fighting = false): string {
         <b id="ally-name">${mon ? esc(species(mon.species).name) : ''}<img class="wx-arrow" id="ally-arrow" alt="" ${mon && weatherArrow(weatherForecast(now)[0].weather, species(mon.species).type) ? `src="${art(weatherArrow(weatherForecast(now)[0].weather, species(mon.species).type) === 'up' ? 'battle/stat_up.png' : 'battle/stat_down.png')}"` : 'hidden'}/></b>
         <div class="hp"><span id="ally-hp" style="width:${(hp.hp / hp.max) * 100}%"></span></div>
         <div class="ult ${mon && mon.lvl >= 25 ? '' : 'is-locked'}" id="ally-ult" data-n="0" title="${mon && mon.lvl >= 25 ? 'Ult' : 'ab Level 25'}"></div>
+        <div id="aura-flash" class="aura-flash" hidden></div>
         ${mon ? `<img class="sprite ${mon.shiny ? 'is-shiny' : ''}" id="ally-sprite" src="${monsterArt(mon.species, true)}" alt=""/>` : ''}
         <span class="ground-shadow"></span>
       </div>
       <div id="floats"></div>
       <div class="move-banner" id="move-banner" hidden></div>
       <div class="name-banner" id="name-banner" hidden></div>
-      <div id="aura-flash" class="aura-flash" hidden></div>
       <div class="crit-flash" id="crit-flash"></div>
       <div class="boss-intro" id="boss-intro" hidden></div>
       <button type="button" class="victory" id="victory" hidden></button>
@@ -325,8 +325,9 @@ function teamDock(save: SaveV2): string {
     const mon = save.mons[uid]
     return mon ? [species(mon.species).type] : []
   }))
+  const comboName = combos.map((row) => row.name).join(', ')
   const combo = combos.length
-    ? `<img class="combo-mark" src="${art('battle/combo_synergy_64.png')}" alt="${esc(combos.map((row) => row.name).join(', '))}" title="${esc(combos.map((row) => row.name).join(', '))}"/>`
+    ? `<span class="combo-slot"><button type="button" class="combo-mark" data-act="combo" data-tip="${esc(comboName)}" aria-label="${esc(comboName)}"><img src="${art('battle/combo_synergy_64.png')}" alt=""/></button><p class="combo-tip" id="combo-tip" hidden></p></span>`
     : ''
   const speeds = ([1, 2, 3] as const).map((speed) => {
     const iconId = speed === 1 ? 'speed1' : speed === 2 ? 'speed2' : 'speed3'

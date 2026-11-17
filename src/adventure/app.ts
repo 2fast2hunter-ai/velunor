@@ -27,7 +27,7 @@ import { activeCombos, AURA_FRAMES, AURA_MS } from './combo'
 import { mechIcon, type MechId } from './mech'
 import { AILMENTS, ailmentIcon, type AilmentId } from './ailment'
 import { sfx } from '../ui'
-import { actorTransform, hitShake, koPose, lungeOffset, numberStyle, parallaxShift } from '../battle/stage'
+import { actorTransform, clampShift, hitShake, koPose, lungeOffset, numberStyle, parallaxShift } from '../battle/stage'
 import { bossUltHitstop, bossUltShake, cameraShake, hitGrade, hitstopMs, numberHoldMs } from '../battle/hitReadout'
 import { beginBattleMood, clearBattleFx, holdBattleFx, mountBattleFx, onBattleFxReady, playBattleFx, preloadBattleStrips, setFxRunning, showBattleConfetti, showBattleDissolve, showHitNumber } from '../battle/phaserFx'
 import { effectTiming, battleStripTypes } from '../battle/strips'
@@ -930,9 +930,14 @@ function play(outcome: EncounterOutcome, speed: Speed, done: () => void): void {
     clearBattleFx()
     finish()
   }
-  backstop = window.setTimeout(finishOnce, dur + 40)
+  const enterMs = 300 / Math.max(1, speed)
+  const auraMs = teamHasCombo() ? AURA_MS / Math.max(1, speed) : 0
+  let auraArmed = false
+  // Hold the fight script until the monster has stepped in and the aura has finished.
+  let scriptAt = auraMs > 0 ? Number.POSITIVE_INFINITY : 0
+  backstop = window.setTimeout(finishOnce, dur + enterMs + auraMs + 400)
   const k = tempoScale(speed)
-  const started = performance.now()
+  let started = performance.now()
   let counterAt = -1
   let frozen = -1
   const seal = document.getElementById('seal') as HTMLImageElement | null
@@ -979,8 +984,9 @@ function play(outcome: EncounterOutcome, speed: Speed, done: () => void): void {
     }
     drawnAt = now
     try {
-      let elapsed = now - started
-      if (frozen >= 0) elapsed = frozen
+      let motion = now - started
+      if (frozen >= 0) motion = frozen
+      const elapsed = frozen >= 0 || !(scriptAt > 0) ? motion : Math.max(0, motion - scriptAt)
       const shot = shotAt(outcome.traces, Math.min(elapsed, battleEnd), battleEnd)
       if (holdCounter && shot?.counter) {
         if (counterAt < 0) counterAt = elapsed
@@ -1047,7 +1053,7 @@ function play(outcome: EncounterOutcome, speed: Speed, done: () => void): void {
       const foeKo = shot?.foeHp === 0 ? Math.min(1, Math.max(0, age) / 200) : 0
       if (shot && shot.allySpecies !== allySeen) {
         allySeen = shot.allySpecies
-        enterAt = elapsed
+        enterAt = motion
         const banner = document.getElementById('name-banner')
         if (banner) {
           banner.hidden = false
@@ -1055,10 +1061,18 @@ function play(outcome: EncounterOutcome, speed: Speed, done: () => void): void {
           window.setTimeout(() => { banner.hidden = true }, 800 / Math.max(1, speed))
         }
       }
-      const enter = enterAt < 0 ? 0 : Math.max(0, 1 - (elapsed - enterAt) / (300 / Math.max(1, speed)))
+      if (!auraArmed && auraMs > 0 && frozen < 0 && enterAt >= 0 && motion >= enterAt + enterMs) {
+        auraArmed = true
+        scriptAt = motion + auraMs + 40
+        showAura(speed)
+      }
+      const enter = enterAt < 0 ? 0 : Math.max(0, 1 - (motion - enterAt) / enterMs)
+      const field = document.getElementById('battle-world')
       if (allyActor) {
-        allyActor.style.transform = `${actorTransform('ally', allyMove, allyHit, allyKo, elapsed, reach)} translate(${(-240 * enter).toFixed(1)}px, 0px)`
+        const slide = clampActorSlide(allyActor, field, -240 * enter)
+        allyActor.style.transform = `${actorTransform('ally', allyMove, allyHit, allyKo, elapsed, reach)} translate(${slide.toFixed(1)}px, 0px)`
         allyActor.style.opacity = String(koPose(allyKo).opacity)
+        clampActorPose(allyActor, field)
       }
       paintWeatherArrow('ally-arrow', shot ? species(shot.allySpecies).type : null, weather)
       paintWeatherArrow('foe-arrow', shot ? species(shot.foeSpecies).type : null, weather)
@@ -1082,6 +1096,7 @@ function play(outcome: EncounterOutcome, speed: Speed, done: () => void): void {
       if (foeActor) {
         foeActor.style.transform = actorTransform('foe', foeMove, foeHit, foeKo, elapsed + 180, reach)
         foeActor.style.opacity = String(koPose(foeKo).opacity)
+        clampActorPose(foeActor, field)
       }
       const world = document.getElementById('battle-world')
       const shakeAge = elapsed - shakeStart
@@ -1120,7 +1135,7 @@ function play(outcome: EncounterOutcome, speed: Speed, done: () => void): void {
     }
   }
   const run = () => {
-    showAura(speed)
+    started = performance.now()
     raf = requestAnimationFrame(frame)
   }
   if (outcome.boss?.species && !holdCounter) showBossIntro(outcome.boss, run)
@@ -1159,13 +1174,20 @@ function paintMark(id: string, mark: string | null, stacks: number): void {
 
 let auraTimer = 0
 
-function showAura(speed: number): void {
-  if (!save) return
-  const types = save.team.flatMap((uid) => {
+function teamTypes(): TypeId[] {
+  if (!save) return []
+  return save.team.flatMap((uid) => {
     const mon = save!.mons[uid]
     return mon ? [species(mon.species).type] : []
   })
-  if (!activeCombos(types).length) return
+}
+
+function teamHasCombo(): boolean {
+  return activeCombos(teamTypes()).length > 0
+}
+
+function showAura(speed: number): void {
+  if (!teamHasCombo()) return
   const node = document.getElementById('aura-flash')
   if (!(node instanceof HTMLElement)) return
   window.clearInterval(auraTimer)
@@ -1181,8 +1203,32 @@ function showAura(speed: number): void {
       node.hidden = true
       return
     }
-    node.style.backgroundPosition = `${-frame * 256}px 0`
+    node.style.backgroundPosition = `${-frame * 420}px 0`
   }, step)
+}
+
+function clampActorSlide(actor: HTMLElement, field: HTMLElement | null, x: number): number {
+  const img = actor.querySelector('img.sprite')
+  const width = field?.clientWidth || 1080
+  const sprite = img instanceof HTMLImageElement ? Math.max(img.offsetWidth, 220) * 1.2 : 280
+  const anchor = (parseFloat(actor.style.left) / 100) * width
+  return clampShift(anchor, x, width, sprite)
+}
+
+function clampActorPose(actor: HTMLElement, field: HTMLElement | null): void {
+  if (!(field instanceof HTMLElement)) return
+  const img = actor.querySelector('img.sprite')
+  if (!(img instanceof HTMLElement)) return
+  const box = img.getBoundingClientRect()
+  if (box.width < 2) return
+  const frame = field.getBoundingClientRect()
+  const pad = 8
+  let dx = 0
+  if (box.left < frame.left + pad) dx = frame.left + pad - box.left
+  else if (box.right > frame.right - pad) dx = frame.right - pad - box.right
+  if (dx === 0) return
+  const scale = fitScale(window.innerWidth, window.innerHeight) || 1
+  actor.style.transform += ` translateX(${(dx / scale).toFixed(1)}px)`
 }
 
 function paintMechs(ids: MechId[]): void {
@@ -1458,6 +1504,14 @@ function onClick(event: Event): void {
   const node = target.closest('[data-act]')
   if (!node) return
   const act = node.getAttribute('data-act')
+  if (act === 'combo') {
+    if (save && save.settings.speed !== 1) return
+    const tip = document.getElementById('combo-tip')
+    if (!(tip instanceof HTMLElement)) return
+    tip.hidden = !tip.hidden
+    tip.textContent = node.getAttribute('data-tip') ?? ''
+    return
+  }
   if (act === 'status') {
     if (save && save.settings.speed !== 1) return
     const who = node.getAttribute('data-who') === 'foe' ? 'foe' : 'ally'
