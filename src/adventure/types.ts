@@ -62,12 +62,21 @@ export interface AdventureStats {
  * honest between sessions. They are not part of the printed example, and the
  * loader fills them when an older v2 file lacks them.
  */
+/** Built portrait. Indexes into data/avatar.json. */
+export interface AvatarLook {
+  skin: number
+  hair: number
+  color: number
+}
+
 export interface SaveV2 {
   v: 2
-  /** Portrait-step counter. 3 = touch polish. Missing on older files; the loader fills it. */
+  /** Portrait-step counter. 5 = built avatar. Missing on older files; the loader fills it. */
   saveVersion: number
   name: string
-  avatar: 'A' | 'B'
+  look: AvatarLook
+  /** Old A/B letter. Read for migration, never written for a new game. */
+  avatar?: 'A' | 'B'
   gold: number
   /** Glücksmarken from the wheel. Older saves load as 0. */
   marks: number

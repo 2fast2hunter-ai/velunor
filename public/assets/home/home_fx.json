@@ -1,0 +1,127 @@
+{
+  "loading": {
+    "logo": "loading_logo.png",
+    "pulse": {
+      "scaleFrom": 1.0,
+      "scaleTo": 1.05,
+      "alphaFrom": 0.85,
+      "alphaTo": 1.0,
+      "durationMs": 1400,
+      "ease": "Sine.easeInOut",
+      "yoyo": true,
+      "repeat": -1,
+      "glow": {
+        "color": "#fff1b0",
+        "blurPx": 24,
+        "alphaFrom": 0.0,
+        "alphaTo": 0.45
+      }
+    },
+    "silhouettes": [
+      "loading_silhouette_1.png",
+      "loading_silhouette_2.png",
+      "loading_silhouette_3.png"
+    ],
+    "shimmer": {
+      "durationMs": 1200,
+      "delayStepMs": 150,
+      "alphaFrom": 0.55,
+      "alphaTo": 0.9,
+      "ease": "Sine.easeInOut",
+      "yoyo": true,
+      "repeat": -1
+    },
+    "hintIntervalMs": 3000,
+    "reducedMotion": "Kein Puls, kein Schimmer, Logo statisch alpha 1"
+  },
+  "particles": {
+    "maxParticles": 20,
+    "layer": "über Key-Art bzw. Hintergrund, unter UI; pointer-events none",
+    "emitters": [
+      {
+        "name": "leaves",
+        "textures": [
+          "leaf_1.png",
+          "leaf_2.png",
+          "leaf_3.png"
+        ],
+        "count": 8,
+        "spawn": "oben, x zufällig 0..100 %, y -5 %",
+        "speedY": [
+          18,
+          36
+        ],
+        "speedX": [
+          -14,
+          14
+        ],
+        "swayAmpPx": [
+          10,
+          24
+        ],
+        "swayPeriodMs": [
+          2400,
+          4200
+        ],
+        "rotationSpeedDegPerS": [
+          -40,
+          40
+        ],
+        "scale": [
+          0.7,
+          1.15
+        ],
+        "alpha": [
+          0.75,
+          0.95
+        ],
+        "lifetimeMs": [
+          9000,
+          15000
+        ],
+        "fadeInMs": 600,
+        "fadeOutMs": 900
+      },
+      {
+        "name": "light",
+        "textures": [
+          "light_dot.png"
+        ],
+        "count": 12,
+        "blendMode": "ADD",
+        "spawn": "untere 60 %, x zufällig",
+        "speedY": [
+          -10,
+          -4
+        ],
+        "speedX": [
+          -6,
+          6
+        ],
+        "scale": [
+          0.6,
+          1.6
+        ],
+        "alpha": {
+          "min": 0.0,
+          "max": 0.8,
+          "twinkleMs": [
+            1400,
+            2800
+          ]
+        },
+        "lifetimeMs": [
+          4000,
+          8000
+        ],
+        "tint": [
+          "#fff6c8",
+          "#e8ffd0",
+          "#ffe9b0"
+        ]
+      }
+    ],
+    "reducedMotion": "Partikel aus (count 0)",
+    "lowPower": "count halbieren (4 Blätter, 6 Lichtpunkte)"
+  }
+}

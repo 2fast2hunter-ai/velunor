@@ -59,7 +59,7 @@ describe('regions 2 to 5', () => {
     expect([...zone.day.map((row) => row.species)].sort()).toEqual([...LEGEND_SPECIES].sort())
     expect(routeOf(11).slice(1).every((kind) => kind === 'wild')).toBe(true)
     for (const id of LEGEND_SPECIES) expect(regionRoster(5)).not.toContain(id)
-    const save = beginAdventure('Ada', 'A', 'm01', 1)
+    const save = beginAdventure('Ada', { skin: 0, hair: 0, color: 0 }, 'm01', 1)
     save.region = 5
     save.regionsOpen.push(5)
     expect(chapterUnlocked(save, 11)).toBe(false)
@@ -72,7 +72,7 @@ describe('regions 2 to 5', () => {
   })
 
   it('benches visitors after the first monster caught in the region', () => {
-    const save = beginAdventure('Ada', 'A', 'm01', 1)
+    const save = beginAdventure('Ada', { skin: 0, hair: 0, color: 0 }, 'm01', 1)
     save.regionsOpen.push(2)
     save.region = 2
     expect(battleRoster(save)).toEqual(save.team)
@@ -83,7 +83,7 @@ describe('regions 2 to 5', () => {
   })
 
   it('lets the second council open slot 4 and leaves Grünmark playable', () => {
-    const save = beginAdventure('Ada', 'A', 'm01', 1)
+    const save = beginAdventure('Ada', { skin: 0, hair: 0, color: 0 }, 'm01', 1)
     save.badges.push('Ratsiegel')
     save.regionsOpen.push(2)
     save.region = 2

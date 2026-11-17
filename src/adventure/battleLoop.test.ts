@@ -54,7 +54,7 @@ describe('battle loop guards', () => {
   })
 
   it('keeps walking through many fights, including a wipe, a catch and an awakening', () => {
-    const save = beginAdventure('Ada', 'A', 'm01', 1)
+    const save = beginAdventure('Ada', { skin: 0, hair: 0, color: 0 }, 'm01', 1)
     save.settings.catchCard = true
     const seen = new Set<number>()
     for (let i = 0; i < 40; i++) {

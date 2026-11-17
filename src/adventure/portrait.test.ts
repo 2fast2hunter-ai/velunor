@@ -61,7 +61,7 @@ describe('portrait shell', () => {
   })
 
   it('stacks the adventure screen and keeps Mehr behind one tab', () => {
-    const save = beginAdventure('Ada', 'A', 'm01', 1_000)
+    const save = beginAdventure('Ada', { skin: 0, hair: 0, color: 0 }, 'm01', 1_000)
     save.step = 4
     save.log = [0, 1, 2, 3, 4].map((n) => ({ t: n, text: `Zeile ${n}` }))
     const html = gameHtml(save, 'adventure', 1_000, pc, dex, null, false, false, null, save.step, undefined, { mapOpen: false, moreOpen: true })
@@ -97,14 +97,14 @@ describe('portrait shell', () => {
   })
 
   it('opens the chapter map and the full log without dropping the road', () => {
-    const save = beginAdventure('Ada', 'A', 'm01', 1_000)
+    const save = beginAdventure('Ada', { skin: 0, hair: 0, color: 0 }, 'm01', 1_000)
     save.chapter = 10
     const council = gameHtml(save, 'adventure', 1_000, pc, dex, null, true, false, null, 2, undefined, { mapOpen: true })
     expect(council).toContain('council-path')
     expect(council.match(/class="path-row"/g)).toHaveLength(1)
     expect(council).toContain('class="map-sheet')
     expect(council).toContain('class="drawer')
-    const logged = beginAdventure('Ada', 'A', 'm01', 1_000)
+    const logged = beginAdventure('Ada', { skin: 0, hair: 0, color: 0 }, 'm01', 1_000)
     logged.log = [{ t: 1, text: 'Erste Zeile im Protokoll' }]
     const full = gameHtml(logged, 'adventure', 1_000, pc, dex, null, false, false, { kind: 'log' })
     expect(full).toContain('Ereignisprotokoll')
@@ -148,9 +148,10 @@ describe('portrait shell', () => {
     const loaded = loadAdventure(storage, 50)
     expect(loaded?.v).toBe(2)
     expect(loaded?.saveVersion).toBe(SAVE_VERSION)
-    expect(SAVE_VERSION).toBe(4)
+    expect(SAVE_VERSION).toBe(5)
     expect(loaded?.name).toBe('Ada')
     expect(loaded?.avatar).toBe('B')
+    expect(loaded?.look).toEqual({ skin: 3, hair: 1, color: 3 })
     expect(loaded?.gold).toBe(4321)
     expect(loaded?.marks).toBe(7)
     expect(loaded?.chapter).toBe(2)

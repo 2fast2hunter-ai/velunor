@@ -115,7 +115,7 @@ describe('boss mechanics', () => {
   })
 
   it('puts the warden mechanic on the guardian fight and leaves the clock alone', () => {
-    const save = beginAdventure('Ada', 'A', 'm01', 1)
+    const save = beginAdventure('Ada', { skin: 0, hair: 0, color: 0 }, 'm01', 1)
     const lead = save.active
     if (lead) save.mons[lead].lvl = 25
     challengeGuardian(save)

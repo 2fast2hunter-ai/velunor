@@ -37,6 +37,8 @@ import { takeChests } from './chests'
 import { bankRoad, buyChestForGold, buyChestForMarks, claimRoad, craftSpecies, debugStarChests, meltDuplicate, raiseStar } from './sources'
 import { chestAnimMs, type ChestTier } from './lootbox'
 import { needsConfirm, shopOffer } from './shopOffer'
+import { chooseLook, paintLooks } from './avatar'
+import { nameProblem, pickLook, pickName } from './home'
 import { beginAdventure, exportCode, importCode, loadAdventure, writeSave } from './save'
 import { equipFrame, equipTitle } from './achievements'
 import { buyHortSlot, moveFromHort, moveToHort } from './hort'
@@ -60,7 +62,7 @@ import {
   type EncounterOutcome,
   type OfflineSummary
 } from './sim'
-import type { SaveV2 } from './types'
+import type { AvatarLook, SaveV2 } from './types'
 import { PC_VIEW_FALLBACK, sheetShouldClose, virtualWindow } from './virtualList'
 import {
   BATTERY_FPS,
@@ -102,9 +104,12 @@ let sideOpen = false
 let mapOpen = false
 let moreOpen = false
 let overlay: Overlay | null = null
-let draftName = 'Abenteurer'
-let draftAvatar: 'A' | 'B' = 'A'
+let draftName = ''
+let draftLook: AvatarLook = { skin: 0, hair: 0, color: 0 }
 let draftPick = ''
+let draftStep: 'name' | 'starter' = 'name'
+let draftLangOpen = false
+let homeReady = false
 let draftLang: Lang = 'de'
 let pendingImport: SaveV2 | null = null
 let lastInput = Date.now()
@@ -157,7 +162,9 @@ export function bootAdventure(): void {
   window.addEventListener('resize', fit)
   window.addEventListener('pointerdown', wake)
   window.addEventListener('keydown', wake)
-  draftLang = localStorage.getItem('velunor_lang') === 'en' ? 'en' : 'de'
+  const storedLang = localStorage.getItem('velunor_lang')
+  draftLang = storedLang === 'en' || storedLang === 'de' ? storedLang : (navigator.language.toLowerCase().startsWith('en') ? 'en' : 'de')
+  document.documentElement.lang = draftLang
   window.addEventListener('pagehide', () => {
     if (!save) return
     const paused = batteryPause(save.settings.battery, currentPresence())
@@ -289,7 +296,7 @@ const REGION_TINT = [0x7dcea0, 0x7dcea0, 0x9ad7ff, 0xff8a3d, 0x7e57c2, 0xf0c14a]
 
 function showK8Demo(part: string | null): void {
   const fight = part === 'aura'
-  save = beginAdventure('Ada', 'A', 'm01', Date.now())
+  save = beginAdventure('Ada', { skin: 0, hair: 0, color: 0 }, 'm01', Date.now())
   const lead = save.active
   if (lead && save.mons[lead]) save.mons[lead].lvl = 12
   const water = `a${save.nextId}`
@@ -312,7 +319,7 @@ function showK8Demo(part: string | null): void {
 
 function showK7Demo(part: string | null): void {
   const kind = part === 'kampf' ? 'kampf' : part === 'vorschau' ? 'vorschau' : 'before'
-  save = beginAdventure('Ada', 'A', 'm01', Date.now())
+  save = beginAdventure('Ada', { skin: 0, hair: 0, color: 0 }, 'm01', Date.now())
   const lead = save.active
   if (lead && save.mons[lead]) save.mons[lead].lvl = kind === 'kampf' ? 12 : 25
   if (kind === 'vorschau') {
@@ -339,7 +346,7 @@ function showK7Demo(part: string | null): void {
 function showK6Demo(part: string | null): void {
   const kind = part === 'konter' ? 'konter' : part === 'karte' ? 'karte' : 'before'
   holdCounter = kind === 'konter'
-  save = beginAdventure('Ada', 'A', 'm01', Date.now())
+  save = beginAdventure('Ada', { skin: 0, hair: 0, color: 0 }, 'm01', Date.now())
   const lead = save.active
   if (lead && save.mons[lead]) {
     save.mons[lead].lvl = kind === 'konter' ? 5 : 25
@@ -359,7 +366,7 @@ function showK6Demo(part: string | null): void {
 
 function showK5Demo(part: string | null): void {
   const kind = part === 'tooltip' ? 'tooltip' : part === 'before' ? 'before' : 'status'
-  save = beginAdventure('Ada', 'A', 'm01', Date.now())
+  save = beginAdventure('Ada', { skin: 0, hair: 0, color: 0 }, 'm01', Date.now())
   screen = 'adventure'
   const uid = save.active
   if (uid && save.mons[uid]) save.mons[uid].lvl = 25
@@ -515,7 +522,7 @@ function showK3Demo(part: string | null): void {
 }
 
 function showShopDemo(kind: 'shop' | 'shop-poor' | 'shop-ask'): void {
-  save = beginAdventure('Ada', 'A', 'm01', Date.now())
+  save = beginAdventure('Ada', { skin: 0, hair: 0, color: 0 }, 'm01', Date.now())
   screen = 'shop'
   shopTab = 'chests'
   save.region = 1
@@ -534,7 +541,7 @@ function showShopDemo(kind: 'shop' | 'shop-poor' | 'shop-ask'): void {
 }
 
 function showChestDemo(kind: 'lager' | 'raten' | 'seal'): void {
-  save = beginAdventure('Ada', 'A', 'm01', Date.now())
+  save = beginAdventure('Ada', { skin: 0, hair: 0, color: 0 }, 'm01', Date.now())
   screen = 'activities'
   activity = 'chests'
   if (kind === 'raten') overlay = { kind: 'chest-rates', tier: 'kiesel' }
@@ -581,7 +588,13 @@ function startChestAnim(speed: Speed, reduced: boolean): void {
 
 function showOnboarding(): void {
   save = null
-  paint(onboardingHtml(draftName, draftAvatar, draftPick, draftLang))
+  if (!homeReady) {
+    homeReady = true
+    draftName = pickName(draftLang, Math.random)
+    draftLook = pickLook(Math.random)
+  }
+  document.documentElement.lang = draftLang
+  paint(onboardingHtml(draftName, draftLook, draftPick, draftLang, draftStep, draftLangOpen))
 }
 
 async function start(next: SaveV2): Promise<void> {
@@ -601,6 +614,7 @@ async function start(next: SaveV2): Promise<void> {
 
 function render(step = save?.step): void {
   if (!save) return
+  document.documentElement.lang = save.settings.lang === 'en' ? 'en' : 'de'
   const prev = document.getElementById('pc-viewport')
   if (prev && keepPcScroll) pcScroll = prev.scrollTop
   keepPcScroll = true
@@ -633,6 +647,7 @@ function paint(html: string): void {
   if (!host) return
   host.innerHTML = html
   fit()
+  paintLooks(host, art)
 }
 
 function syncTurn(): void {
@@ -1521,9 +1536,17 @@ function onClick(event: Event): void {
     tip.textContent = node.getAttribute('data-tip') ?? ''
     return
   }
+  if (act === 'lang-sheet') {
+    if (save) return
+    draftLangOpen = !draftLangOpen
+    showOnboarding()
+    return
+  }
   if (act === 'lang') {
     draftLang = node.getAttribute('data-lang') === 'en' ? 'en' : 'de'
     localStorage.setItem('velunor_lang', draftLang)
+    document.documentElement.lang = draftLang
+    draftLangOpen = false
     if (!save) {
       showOnboarding()
       return
@@ -1532,21 +1555,52 @@ function onClick(event: Event): void {
     render()
     return
   }
-  if (act === 'avatar') {
-    draftAvatar = node.getAttribute('data-avatar') === 'B' ? 'B' : 'A'
+  if (act === 'look') {
+    if (save) return
+    const part = node.getAttribute('data-part')
+    const index = Number(node.getAttribute('data-index'))
+    if (part === 'skin' || part === 'hair' || part === 'color') {
+      draftLook = chooseLook(draftLook, part, index)
+      showOnboarding()
+    }
+    return
+  }
+  if (act === 'random-name') {
+    if (save) return
+    draftName = pickName(draftLang, Math.random)
+    showOnboarding()
+    return
+  }
+  if (act === 'random-look') {
+    if (save) return
+    draftLook = pickLook(Math.random)
+    showOnboarding()
+    return
+  }
+  if (act === 'next') {
+    if (save) return
+    const field = document.querySelector('[data-field="name"]')
+    if (field instanceof HTMLInputElement) draftName = field.value
+    if (nameProblem(draftName)) return
+    draftStep = 'starter'
+    showOnboarding()
+    return
+  }
+  if (act === 'back') {
+    if (save) return
+    draftStep = 'name'
     showOnboarding()
     return
   }
   if (act === 'pick') {
+    if (save) return
     draftPick = node.getAttribute('data-species') ?? ''
     showOnboarding()
     return
   }
   if (act === 'start') {
-    if (!draftPick) return
-    const field = document.querySelector('[data-field="name"]')
-    if (field instanceof HTMLInputElement) draftName = field.value
-    const next = beginAdventure(draftName, draftAvatar, draftPick, Date.now())
+    if (save || !draftPick || nameProblem(draftName)) return
+    const next = beginAdventure(draftName.trim(), draftLook, draftPick, Date.now())
     next.settings.lang = draftLang
     if (draftLang === 'en' && next.log[0]) next.log[0].text = t('en', 'say.start', { name: next.name })
     void start(next)
@@ -1963,6 +2017,17 @@ function onInput(event: Event): void {
   if (!(target instanceof HTMLInputElement)) return
   if (target.dataset.field === 'name') {
     draftName = target.value
+    const problem = nameProblem(draftName)
+    const text = problem ? t(draftLang, `start.err.${problem}`) : ''
+    const error = document.getElementById('name-error')
+    const reason = document.getElementById('home-reason')
+    const button = document.getElementById('home-next')
+    if (error) error.textContent = text
+    if (reason) {
+      reason.textContent = text
+      reason.hidden = !text
+    }
+    if (button instanceof HTMLButtonElement && button.dataset.act === 'next') button.disabled = Boolean(problem)
     return
   }
   if (target.dataset.field === 'q' || target.dataset.field === 'dex-q') {

@@ -28,7 +28,7 @@ function memory(): StorageLike {
 }
 
 function fillPc(count: number) {
-  const save = beginAdventure('Ada', 'A', 'm01', 1_000)
+  const save = beginAdventure('Ada', { skin: 0, hair: 0, color: 0 }, 'm01', 1_000)
   const starter = save.team[0]
   for (let i = 0; i < count; i++) {
     const uid = `p${i}`
@@ -85,7 +85,7 @@ describe('portrait menus', () => {
   })
 
   it('lays codex, wheel, hort and options out as portrait lists', () => {
-    const save = beginAdventure('Ada', 'A', 'm01', 1_000)
+    const save = beginAdventure('Ada', { skin: 0, hair: 0, color: 0 }, 'm01', 1_000)
     save.badges = ['Kieselwappen', 'Wellenwappen', 'Funkenwappen']
     const codex = gameHtml(save, 'codex', 1_000, pcQuery, dex, null, false, false, null)
     expect(codex).toContain('data-cols="4"')
@@ -117,7 +117,7 @@ describe('portrait menus', () => {
   })
 
   it('draws welcome, warden and catch results as bottom sheets', () => {
-    const save = beginAdventure('Ada', 'A', 'm01', 1_000)
+    const save = beginAdventure('Ada', { skin: 0, hair: 0, color: 0 }, 'm01', 1_000)
     const summary = emptySummary()
     summary.fights = 3
     const welcome = gameHtml(save, 'adventure', 1_000, pcQuery, dex, null, false, false, {
@@ -152,7 +152,7 @@ describe('portrait menus', () => {
 
   it('migrates an older saveVersion on velunor_v2 without dropping the profile', () => {
     const storage = memory()
-    const save = beginAdventure('Ada', 'B', 'm02', 1_000)
+    const save = beginAdventure('Ada', { skin: 3, hair: 1, color: 3 }, 'm02', 1_000)
     save.gold = 4321
     save.marks = 7
     save.badges = ['Sonnenwappen']
@@ -165,11 +165,11 @@ describe('portrait menus', () => {
     raw.gold = 4321
     storage.setItem(SAVE_KEY_V2, JSON.stringify(raw))
     const loaded = loadAdventure(storage, 5_000)
-    expect(SAVE_VERSION).toBe(4)
+    expect(SAVE_VERSION).toBe(5)
     expect(loaded?.v).toBe(2)
-    expect(loaded?.saveVersion).toBe(4)
+    expect(loaded?.saveVersion).toBe(5)
     expect(loaded?.name).toBe('Ada')
-    expect(loaded?.avatar).toBe('B')
+    expect(loaded?.look).toEqual({ skin: 3, hair: 1, color: 3 })
     expect(loaded?.gold).toBe(4321)
     expect(loaded?.marks).toBe(7)
     expect(loaded?.badges).toEqual(['Sonnenwappen'])

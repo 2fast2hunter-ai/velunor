@@ -94,7 +94,7 @@ describe('order tactics', () => {
   })
 
   it('sends the next fighter in team order', () => {
-    const save = beginAdventure('Ada', 'A', 'm01', 1)
+    const save = beginAdventure('Ada', { skin: 0, hair: 0, color: 0 }, 'm01', 1)
     const lead = save.active
     if (!lead) throw new Error('starter')
     save.mons[lead].hp = 0
@@ -112,7 +112,7 @@ describe('order tactics', () => {
   })
 
   it('counters only after a knockout against the same guardian', () => {
-    const save = beginAdventure('Ada', 'A', 'm01', 1)
+    const save = beginAdventure('Ada', { skin: 0, hair: 0, color: 0 }, 'm01', 1)
     const lead = save.active
     if (!lead) throw new Error('starter')
     save.mons[lead].lvl = 5

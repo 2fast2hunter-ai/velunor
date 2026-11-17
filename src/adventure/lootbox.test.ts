@@ -53,7 +53,7 @@ describe('lootbox L1', () => {
   })
 
   it('gives a new monster level 1 and a duplicate two levels of EP', () => {
-    const save = beginAdventure('Ada', 'A', 'm01', 1_000)
+    const save = beginAdventure('Ada', { skin: 0, hair: 0, color: 0 }, 'm01', 1_000)
     save.mons[save.team[0]].lvl = 10
     save.mons[save.team[0]].exp = 0
     const added = duplicateExp(10)
@@ -104,7 +104,7 @@ describe('lootbox L1', () => {
   }, 120_000)
 
   it('prints the same percentages the simulation uses', () => {
-    const save = beginAdventure('Ada', 'A', 'm01', 1_000)
+    const save = beginAdventure('Ada', { skin: 0, hair: 0, color: 0 }, 'm01', 1_000)
     expect(enteredRegions(save)).toEqual([1])
     const html = gameHtml(save, 'activities', 1_000, pc, dex, null, false, false, { kind: 'chest-rates', tier: 'kiesel' }, save.step, { tab: 'chests', mult: 1, symbols: null, note: '' })
     const table = effectiveTable('kiesel', poolFor(enteredRegions(save)))
@@ -144,8 +144,8 @@ describe('lootbox L1', () => {
     }))
     const loaded = loadAdventure(storage, 50)
     expect(loaded?.v).toBe(2)
-    expect(loaded?.saveVersion).toBe(4)
-    expect(SAVE_VERSION).toBe(4)
+    expect(loaded?.saveVersion).toBe(5)
+    expect(SAVE_VERSION).toBe(5)
     expect(loaded?.gold).toBe(4321)
     expect(loaded?.mons.u1.lvl).toBe(40)
     expect(loaded?.chests).toEqual({ kiesel: 5, silber: 0, gold: 0, sternen: 0 })

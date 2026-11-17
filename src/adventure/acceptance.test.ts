@@ -139,7 +139,7 @@ describe('region 1 path', () => {
     expect(dayPart(new Date(2026, 10, 11, 8, 0).getTime())).toBe('day')
     expect(dayPart(new Date(2026, 10, 11, 19, 59).getTime())).toBe('day')
     expect(dayPart(new Date(2026, 10, 11, 20, 0).getTime())).toBe('night')
-    const save = beginAdventure('Ada', 'A', 'm01', 0)
+    const save = beginAdventure('Ada', { skin: 0, hair: 0, color: 0 }, 'm01', 0)
     const day = hereSightings(save, new Date(2026, 10, 11, 12).getTime())
     const night = hereSightings(save, new Date(2026, 10, 11, 21).getTime())
     expect(day.map((row) => row.species)).toEqual(expect.arrayContaining(['m66', 'm41', 'm11', 'm03']))
@@ -156,7 +156,7 @@ describe('acceptance loop', () => {
   }
 
   it('starts with a level-5 starter, 3000 G and an automatic wild catch attempt', () => {
-    const save = beginAdventure('Ada', 'B', 'm02', 1_000)
+    const save = beginAdventure('Ada', { skin: 3, hair: 1, color: 3 }, 'm02', 1_000)
     expect(save.gold).toBe(START_GOLD)
     expect(save.mons[save.team[0]].lvl).toBe(5)
     expect(save.mons[save.team[0]].species).toBe('m02')
@@ -186,7 +186,7 @@ describe('acceptance loop', () => {
   })
 
   it('turns a duplicate into Art-EP and keeps a species when asked', () => {
-    const save = beginAdventure('Ada', 'A', 'm01', 1_000)
+    const save = beginAdventure('Ada', { skin: 0, hair: 0, color: 0 }, 'm01', 1_000)
     const uid = save.team[0]
     save.mons[uid].lvl = 5
     save.mons[uid].exp = 0
@@ -207,7 +207,7 @@ describe('acceptance loop', () => {
   })
 
   it('puts a new species in the PC when the team is full', () => {
-    const save = beginAdventure('Ada', 'A', 'm01', 1_000)
+    const save = beginAdventure('Ada', { skin: 0, hair: 0, color: 0 }, 'm01', 1_000)
     for (const id of ['m02', 'm03', 'm04', 'm05', 'm06']) {
       const uid = `x${id}`
       save.mons[uid] = makeMon(id, 5, 1, 'r1c1')
@@ -228,7 +228,7 @@ describe('acceptance loop', () => {
   })
 
   it('heals at a spring and returns a wiped team without taking monsters or gold', () => {
-    const save = beginAdventure('Ada', 'A', 'm01', 1_000)
+    const save = beginAdventure('Ada', { skin: 0, hair: 0, color: 0 }, 'm01', 1_000)
     const route = routeOf(1)
     const spring = route.findIndex((kind, index) => index > 0 && kind === 'spring')
     save.step = spring
@@ -253,7 +253,7 @@ describe('acceptance loop', () => {
   })
 
   it('opens chapter 2 after the first badge and loops when asked', () => {
-    const save = beginAdventure('Ada', 'A', 'm07', 1_000)
+    const save = beginAdventure('Ada', { skin: 0, hair: 0, color: 0 }, 'm07', 1_000)
     expect(chapterUnlocked(save, 2)).toBe(false)
     for (const id of ['m02', 'm28', 'm66', 'm18', 'm51']) {
       const uid = `g-${id}`
@@ -285,7 +285,7 @@ describe('acceptance loop', () => {
   })
 
   it('retries the warden after a level, not on a timer', () => {
-    const save = beginAdventure('Ada', 'A', 'm03', 1_000)
+    const save = beginAdventure('Ada', { skin: 0, hair: 0, color: 0 }, 'm03', 1_000)
     save.mons[save.team[0]].lvl = 1
     save.mons[save.team[0]].hp = 1
     save.step = 20
@@ -310,7 +310,7 @@ describe('acceptance loop', () => {
     expect(offlineEncounterCount(10 * 60 * 60 * 1000)).toBe(offlineEncounterCount(OFFLINE_CAP_MS))
     expect(offlineEncounterCount(OFFLINE_CAP_MS)).toBe(Math.floor(OFFLINE_CAP_MS / BASE_ENCOUNTER_MS))
     expect(WELCOME_AFTER_MS).toBe(5 * 60 * 1000)
-    const save = beginAdventure('Ada', 'A', 'm01', 0)
+    const save = beginAdventure('Ada', { skin: 0, hair: 0, color: 0 }, 'm01', 0)
     const uid = save.team[0]
     save.mons[uid].lvl = 5
     save.mons[uid].exp = 0
@@ -334,7 +334,7 @@ describe('acceptance loop', () => {
   })
 
   it('simulates an 8 hour absence quickly', () => {
-    const save = beginAdventure('Ada', 'A', 'm01', 0)
+    const save = beginAdventure('Ada', { skin: 0, hair: 0, color: 0 }, 'm01', 0)
     save.mons[save.team[0]].lvl = 12
     save.lastSeenAt = 0
     const started = performance.now()
@@ -422,7 +422,7 @@ describe('presentation', () => {
   })
 
   it('keeps one monster in the team', () => {
-    const save = beginAdventure('Ada', 'A', 'm01', 1)
+    const save = beginAdventure('Ada', { skin: 0, hair: 0, color: 0 }, 'm01', 1)
     expect(moveToPc(save, save.team[0])).toMatch(/Team/)
     const extra = 'pc1'
     save.mons[extra] = makeMon('m02', 5, 1, 'r1c1')

@@ -14,7 +14,10 @@ import {
 import { fontFactor } from './touch'
 import { baseLine, dexPlaces, dexStatus, dexStatusLabel, listCodex, regionProgress, speciesNumber, type DexFilter } from './dex'
 import { goalName, goalTitle, rarityLabel, t, typeLabel, weatherLabel, whenLabel, type Lang } from './i18n'
+import { colorHex, colorId, skinHex } from './avatar'
+import { nameProblem } from './home'
 import { exportCode } from './save'
+import type { AvatarLook } from './types'
 import {
   CHEST_TIERS,
   chestParticles,
@@ -181,7 +184,7 @@ function chapterLine(save: SaveV2, step: number, mapOpen: boolean): string {
     ? tr(save, 'nav.council', { step, total: chapter.council.members.length })
     : tr(save, 'nav.step', { step })
   return `<button type="button" class="chapter-line" data-act="map" aria-expanded="${mapOpen ? 'true' : 'false'}">
-    ${ui('chapter')}<span class="chapter-text">${esc(region.name)} · ${esc(chapter.name)} · ${esc(place)}</span>
+    ${lookFace(save.look)}${ui('chapter')}<span class="chapter-text">${esc(region.name)} · ${esc(chapter.name)} · ${esc(place)}</span>
     <span class="chev" aria-hidden="true">${ui('chevron')}</span>
   </button>`
 }
@@ -219,6 +222,7 @@ function moreSheet(save: SaveV2, open: boolean): string {
     ['guide', 'moreGuide', 'nav.guide']
   ]
   return `<div class="more-sheet card" ${open ? '' : 'hidden'}>
+    <div class="more-who">${lookFace(save.look)}<b>${esc(save.name)}</b></div>
     ${items.map(([id, icon, label]) => `<button type="button" data-act="screen" data-screen="${id}">${ui(icon)}${tr(save, label)}</button>`).join('')}
   </div>`
 }
@@ -1225,41 +1229,77 @@ function card(save: SaveV2, uid: string): string {
   </div>`
 }
 
-export function onboardingHtml(name: string, avatar: 'A' | 'B', picked: string, lang: Lang = 'de'): string {
-  const chosen = picked ? species(picked) : null
-  const stats = picked ? monStats(makePreview(picked)) : null
-  return `<div id="stage" class="onboard">
-    <div>
-      <div class="kicker">${t(lang, 'start.kicker')}</div>
-      <h1>Grünmark</h1>
-      <p>${t(lang, 'start.lead')}</p>
-      <div class="row-actions"><button data-act="lang" data-lang="de" class="${lang === 'de' ? 'primary' : ''}">Deutsch</button><button data-act="lang" data-lang="en" class="${lang === 'en' ? 'primary' : ''}">English</button></div>
+export function lookFace(look: AvatarLook): string {
+  return `<canvas class="look-face" data-look="${look.skin},${look.hair},${look.color}" width="512" height="512"></canvas>`
+}
+
+export function onboardingHtml(name: string, look: AvatarLook, picked: string, lang: Lang = 'de', step: 'name' | 'starter' = 'name', langOpen = false): string {
+  const problem = nameProblem(name)
+  const nameStep = step !== 'starter'
+  const starterReady = Boolean(picked)
+  const reason = nameStep
+    ? (problem ? t(lang, `start.err.${problem}`) : '')
+    : (starterReady ? '' : t(lang, 'start.pick'))
+  const nextLabel = nameStep ? t(lang, 'start.next') : t(lang, 'start.go')
+  const nextAct = nameStep ? 'next' : 'start'
+  const nextOff = nameStep ? Boolean(problem) : !starterReady
+  return `<div id="stage" class="home" lang="${lang}">
+    <div class="home-scroll">
+      <div class="home-top">
+        <p class="home-kicker">${t(lang, 'start.kicker')}</p>
+        <button type="button" class="lang-chip" data-act="lang-sheet" aria-expanded="${langOpen ? 'true' : 'false'}" aria-label="${esc(t(lang, 'start.lang'))}">${lang === 'en' ? 'EN' : 'DE'} ▾</button>
+      </div>
+      ${nameStep ? nameStepHtml(name, look, lang, problem ? t(lang, `start.err.${problem}`) : '') : starterStepHtml(name, look, picked, lang)}
     </div>
-    <div class="card panel">
-      <label>${t(lang, 'start.name')}<br/><input class="start-name" data-field="name" maxlength="24" value="${esc(name)}"/></label>
-      <p>${t(lang, 'start.avatar')}</p>
-      <div class="choices">
-        <button class="choice ${avatar === 'A' ? 'on' : ''}" data-act="avatar" data-avatar="A"><div class="avatar">A</div>A</button>
-        <button class="choice ${avatar === 'B' ? 'on' : ''}" data-act="avatar" data-avatar="B"><div class="avatar b">B</div>B</button>
-      </div>
-      <p>${t(lang, 'start.starter')}</p>
-      <div class="choices">
-        ${STARTERS.map((starter) => `<button class="pick ${picked === starter.id ? 'on' : ''}" data-act="pick" data-species="${starter.id}"><img src="${monsterArt(starter.id, true)}" alt=""/><div>${esc(starter.label)}</div></button>`).join('')}
-      </div>
-      ${chosen && stats ? `<div class="card" style="padding:12px;margin-top:12px">
-        <h2>${esc(chosen.name)}</h2>
-        <p>${esc(typeName(chosen.type))} · ${esc(rarityInfo(chosen.baseRarity).name)} · Lv 5</p>
-        <div class="stats">
-          <div class="stat">HP<br/>${stats.hp}</div><div class="stat">ATK<br/>${stats.atk}</div><div class="stat">DEF<br/>${stats.def}</div><div class="stat">SPD<br/>${stats.spd}</div>
-        </div>
-        <p><b>${esc(chosen.skill.name ?? '')}</b> — ${esc(chosen.skill.description ?? '')}</p>
-        <p>${esc(chosen.blurb)}</p>
-        <button class="primary" data-act="start">${t(lang, 'start.go')}</button>
-      </div>` : `<p class="muted">${t(lang, 'start.pick')}</p>`}
+    <div class="home-bar">
+      <p class="home-reason" id="home-reason" ${reason ? '' : 'hidden'}>${esc(reason)}</p>
+      <button type="button" class="primary" id="home-next" data-act="${nextAct}" ${nextOff ? 'disabled' : ''}>${esc(nextLabel)}</button>
+    </div>
+    <div class="lang-sheet card" ${langOpen ? '' : 'hidden'}>
+      <button type="button" data-act="lang" data-lang="de" class="${lang === 'de' ? 'primary' : ''}">Deutsch</button>
+      <button type="button" data-act="lang" data-lang="en" class="${lang === 'en' ? 'primary' : ''}">English</button>
     </div>
   </div>`
 }
 
-function makePreview(id: string) {
-  return { species: id, lvl: 5, exp: 0, hp: null, shiny: false, caughtAt: 0, caughtWhere: 'r1c1', keepDupes: false }
+function nameStepHtml(name: string, look: AvatarLook, lang: Lang, error: string): string {
+  const skins = Array.from({ length: 6 }, (_, index) => `<button type="button" class="look-choice" data-act="look" data-part="skin" data-index="${index}" aria-pressed="${look.skin === index ? 'true' : 'false'}" aria-label="${esc(t(lang, 'start.skinN', { n: index + 1 }))}"><span class="swatch" style="background:${skinHex(index)}"></span><span>${index + 1}</span></button>`).join('')
+  const hairs = Array.from({ length: 8 }, (_, index) => `<button type="button" class="look-choice" data-act="look" data-part="hair" data-index="${index}" aria-pressed="${look.hair === index ? 'true' : 'false'}"><canvas class="look-face" data-look="${look.skin},${index},${look.color}" width="512" height="512"></canvas><span>${esc(t(lang, `start.hair${index}`))}</span></button>`).join('')
+  const colors = Array.from({ length: 8 }, (_, index) => {
+    const id = colorId(index)
+    return `<button type="button" class="look-choice" data-act="look" data-part="color" data-index="${index}" aria-pressed="${look.color === index ? 'true' : 'false'}"><span class="swatch is-color" style="background:${colorHex(index)}"></span><span>${esc(t(lang, `start.${id}`))}</span></button>`
+  }).join('')
+  return `<h1>${t(lang, 'start.you')}</h1>
+    <p class="home-lead">${t(lang, 'start.lead')}</p>
+    <label class="home-label" for="hero-name">${t(lang, 'start.name')}</label>
+    <div class="name-row">
+      <input id="hero-name" data-field="name" maxlength="16" autocomplete="nickname" placeholder="${esc(t(lang, 'start.placeholder'))}" value="${esc(name)}"/>
+      <button type="button" class="dice" data-act="random-name" aria-label="${esc(t(lang, 'start.randomName'))}"><img src="${art('home/dice.png')}" alt=""/></button>
+    </div>
+    <p class="home-error" id="name-error" role="alert">${esc(error)}</p>
+    <div class="look-head">
+      <div class="look-preview">${lookFace(look)}</div>
+      <button type="button" class="dice look-dice" data-act="random-look">${esc(t(lang, 'start.randomLook'))}</button>
+    </div>
+    <p class="home-label">${t(lang, 'start.skin')}</p>
+    <div class="look-row is-skin">${skins}</div>
+    <p class="home-label">${t(lang, 'start.hair')}</p>
+    <div class="look-row">${hairs}</div>
+    <p class="home-label">${t(lang, 'start.color')}</p>
+    <div class="look-row">${colors}</div>`
+}
+
+function starterStepHtml(name: string, look: AvatarLook, picked: string, lang: Lang): string {
+  const cards = STARTERS.map((starter) => {
+    const row = species(starter.id)
+    const on = picked === starter.id
+    return `<button type="button" class="starter-card ${on ? 'on' : ''}" data-act="pick" data-species="${starter.id}" aria-pressed="${on ? 'true' : 'false'}">
+      <img src="${monsterArt(starter.id, true)}" alt=""/>
+      <span><b>${esc(row.name)}</b><span>${esc(typeLabel(lang, row.type, typeName(row.type)))}</span></span>
+    </button>`
+  }).join('')
+  return `<button type="button" class="home-back" data-act="back">${esc(t(lang, 'start.back'))}</button>
+    <h1>${t(lang, 'start.pickTitle')}</h1>
+    <div class="home-you">${lookFace(look)}<b>${esc(name.trim())}</b></div>
+    <div class="starter-list">${cards}</div>`
 }

@@ -47,7 +47,7 @@ describe('weather', () => {
     const shares = sightingShares(encounterTable(chapter, ts))
     expect(shares.reduce((sum, row) => sum + row.pct, 0)).toBeCloseTo(100, 5)
     expect(shares.find((row) => row.species === 'm54')?.pct).toBeCloseTo(7, 5)
-    const save = beginAdventure('Ada', 'A', 'm01', ts)
+    const save = beginAdventure('Ada', { skin: 0, hair: 0, color: 0 }, 'm01', ts)
     save.chapter = 3
     const seen = hereSightings(save, ts).map((row) => row.species)
     expect(seen).toContain('m54')
@@ -56,7 +56,7 @@ describe('weather', () => {
 
 describe('shimmer', () => {
   it('uses 1/4000 in the wild, doubles a finished region, and keeps 1/512 for the hort', () => {
-    const save = beginAdventure('Ada', 'A', 'm01', 1)
+    const save = beginAdventure('Ada', { skin: 0, hair: 0, color: 0 }, 'm01', 1)
     expect(SHINY_ADVENTURE_RATE).toBeCloseTo(1 / 4000)
     expect(SHINY_HORT_RATE).toBeCloseTo(1 / 512)
     expect(shinyChance(save, 1)).toBeCloseTo(1 / 4000)
@@ -78,7 +78,7 @@ describe('shimmer', () => {
       nextFloat(state)
       if (nextFloat(state) < SHINY_ADVENTURE_RATE) break
     }
-    const save = beginAdventure('Ada', 'A', 'm01', Date.UTC(2026, 3, 4, 8))
+    const save = beginAdventure('Ada', { skin: 0, hair: 0, color: 0 }, 'm01', Date.UTC(2026, 3, 4, 8))
     save.rng = seed
     save.step = routeOf(save.chapter).findIndex((kind, index) => index > 0 && kind === 'wild')
     save.mons[save.team[0]].lvl = 12
@@ -91,7 +91,7 @@ describe('shimmer', () => {
   })
 
   it('allows only one shimmer of a species on the team', () => {
-    const save = beginAdventure('Ada', 'A', 'm01', 1)
+    const save = beginAdventure('Ada', { skin: 0, hair: 0, color: 0 }, 'm01', 1)
     const leader = save.team[0]
     save.mons[leader].shiny = true
     const other = 'pc-shiny'

@@ -22,7 +22,7 @@ describe('section A wards and court', () => {
     expect(catchChance(8, 30, 30, 1, 0.6, 10)).toBeCloseTo(0.13)
     expect(expectedCatchAttempts(8)).toBeGreaterThan(10)
     expect(expectedCatchAttempts(9)).toBeLessThan(20)
-    const save = beginAdventure('Ada', 'A', 'm01', 1_000)
+    const save = beginAdventure('Ada', { skin: 0, hair: 0, color: 0 }, 'm01', 1_000)
     save.mons[save.team[0]].lvl = 20
     let moved = false
     for (let i = 0; i < 40 && !moved; i++) {
@@ -65,7 +65,7 @@ describe('section A wards and court', () => {
   })
 
   it('starts the warden at step 20 without a button', () => {
-    const save = beginAdventure('Ada', 'A', 'm01', 1_000)
+    const save = beginAdventure('Ada', { skin: 0, hair: 0, color: 0 }, 'm01', 1_000)
     save.step = 20
     save.challengeNow = false
     save.loop = true
@@ -76,14 +76,14 @@ describe('section A wards and court', () => {
   })
 
   it('opens the gate again after ten wins and on a manual challenge', () => {
-    const save = beginAdventure('Ada', 'A', 'm01', 1_000)
+    const save = beginAdventure('Ada', { skin: 0, hair: 0, color: 0 }, 'm01', 1_000)
     save.guardMark = 30
     save.guardWins = 10
     save.mons[save.team[0]].lvl = 5
     save.step = 20
     const retry = resolveEncounter(save, 1_000, { offline: false, trace: false })
     expect(retry.traces.length).toBeGreaterThan(0)
-    const held = beginAdventure('Bea', 'B', 'm02', 1_000)
+    const held = beginAdventure('Bea', { skin: 3, hair: 1, color: 3 }, 'm02', 1_000)
     held.guardMark = 80
     held.guardWins = 0
     held.step = 4
@@ -137,7 +137,7 @@ describe('section A wards and court', () => {
 
   it('turns screen shake off once and then keeps the choice', () => {
     const storage = memory()
-    const save = beginAdventure('Ada', 'A', 'm01', 1_000)
+    const save = beginAdventure('Ada', { skin: 0, hair: 0, color: 0 }, 'm01', 1_000)
     expect(save.settings.shake).toBe(false)
     expect(save.fxShake).toBe(1)
     save.settings.shake = true

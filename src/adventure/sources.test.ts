@@ -18,7 +18,7 @@ import {
 
 describe('lootbox sources and pity', () => {
   it('banks one road chest every two hours and stops at four', () => {
-    const save = beginAdventure('Ada', 'A', 'm01', 1)
+    const save = beginAdventure('Ada', { skin: 0, hair: 0, color: 0 }, 'm01', 1)
     expect(bankRoad(save, 2 * 60 * 60 * 1000)).toBe(1)
     expect(save.roadReady).toBe(1)
     expect(bankRoad(save, 8 * 60 * 60 * 1000)).toBe(3)
@@ -30,7 +30,7 @@ describe('lootbox sources and pity', () => {
   })
 
   it('drops a kiesel on a find and a silver chest on one trainer in ten', () => {
-    const save = beginAdventure('Ada', 'A', 'm01', 1)
+    const save = beginAdventure('Ada', { skin: 0, hair: 0, color: 0 }, 'm01', 1)
     expect(grantFindChest(save)).toBe(1)
     expect(save.chests.kiesel).toBe(6)
     expect(grantTrainerChest(save, () => 0.09)).toBe(true)
@@ -41,7 +41,7 @@ describe('lootbox sources and pity', () => {
   it('matches the wild shard table and frees a species after two duplicate-worth of shards', () => {
     expect(wildShardChance(0)).toBeCloseTo(0.2)
     expect(wildShardChance(9)).toBeCloseTo(0.01)
-    const save = beginAdventure('Ada', 'A', 'm01', 1)
+    const save = beginAdventure('Ada', { skin: 0, hair: 0, color: 0 }, 'm01', 1)
     const rarity = species('m66').baseRarity
     const need = 2 * [5, 6, 8, 10, 15, 20, 30, 40, 60, 100][rarity]
     let unlocked = false
@@ -58,7 +58,7 @@ describe('lootbox sources and pity', () => {
     expect(pityPush('gold', 19).force).toBe(true)
     expect(pityPush('sternen', 49).force).toBe(true)
     expect(pityPush('sternen', 29).bonusPp).toBe(3)
-    const save = beginAdventure('Ada', 'A', 'm01', 1)
+    const save = beginAdventure('Ada', { skin: 0, hair: 0, color: 0 }, 'm01', 1)
     save.chests.sternen = 50
     const pool = { unlockedRegions: [1, 2, 3, 4, 5], ownedSpecies: [] as string[], region: 1 }
     let hit = false
@@ -78,7 +78,7 @@ describe('lootbox sources and pity', () => {
   })
 
   it('sells chests for gold and marks and pays one gold chest per ten codex entries', () => {
-    const save = beginAdventure('Ada', 'A', 'm01', 1)
+    const save = beginAdventure('Ada', { skin: 0, hair: 0, color: 0 }, 'm01', 1)
     save.gold = 100_000
     save.region = 2
     expect(buyChestForGold(save, 'kiesel', Date.parse('2026-11-17T12:00:00Z'))).toBeNull()
