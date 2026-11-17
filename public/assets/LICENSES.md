@@ -18,3 +18,4 @@
 - backgrounds/bg_gm_{wiese,bach,wald}.jpg/.webp, fx/fx_bannsiegel*.png/jpg: KI-generiert (Grok-Bot-Bildgenerator), 11.11.2026, eigenes Asset, keine Fremdvorlage.
 - backgrounds/bg_gm_{wiese,bach,wald}_p.jpg/.webp (1080×980), backgrounds/bg_frame_desktop.jpg/.webp, icons/tab_{abenteuer,team,kodex,aktivitaeten,mehr}*.png: KI-generiert (Grok-Bot-Bildgenerator), 15.11.2026, eigenes Asset für das Hochformat.
 - shop/: Laden-Grafiken von Smettbo, 17.11.2026, eigenes Asset. WebP-Fassung für das Bundle. Rahmen 480×600, 9-Slice links 133 / oben 130 / rechts 129 / unten 147. frucht_fang und die Vorschau preview_shop werden nicht ausgeliefert; die Glücksfrucht nutzt frucht_glueck.
+- battle/dmg_digits.png: Trefferzahlen von Smettbo, gesetzt in Fredoka Bold. Fredoka ist eine Schrift von Google Fonts unter der SIL Open Font License 1.1 (https://openfontlicense.org). Die Vorschau preview_digits.jpg wird nicht ausgeliefert.
