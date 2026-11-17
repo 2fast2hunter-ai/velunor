@@ -172,8 +172,8 @@ describe('acceptance loop', () => {
       save.mons[save.team[0]].lvl = 12
       const outcome = resolveEncounter(save, new Date(2026, 10, 11, 12).getTime(), { offline: false, trace: false })
       if (outcome.win && outcome.traces[0]?.foeKo) {
-        expect(outcome.lines.some((line) => line.startsWith('Bannsiegel'))).toBe(true)
-        expect(outcome.catch).not.toBeNull()
+        expect(outcome.lines.some((line) => line.startsWith('Bannsiegel'))).toBe(false)
+        expect(outcome.catch).toBeNull()
         sawSeal = true
         if (outcome.catch?.success && outcome.catch.place !== 'exp') {
           const ids = [...save.team, ...save.pc]

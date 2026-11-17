@@ -18,6 +18,8 @@ import { exportCode } from './save'
 import {
   CHEST_TIERS,
   chestParticles,
+  pityLine,
+  starCost,
   effectiveTable,
   enteredRegions,
   formatPercent,
@@ -302,7 +304,7 @@ function drawerSheet(save: SaveV2, now: number): string {
   const current = forecast[0]
   const clock = clockLabel(save, now)
   const body = rows.map((row) => `<div class="sight-row">
-      <span class="seal-ring" style="--pity:${Math.max(0, Math.min(1, row.pity / 10))}" title="${row.pity ? `Bannsiegel +${row.pity.toLocaleString('de-DE')} Pp` : ''}">
+      <span class="seal-ring" style="--pity:${Math.max(0, Math.min(1, row.pity / 10))}" title="${row.pity ? `Spur ${row.pity}` : ''}">
         <img class="${row.caught ? '' : 'sil'}" src="${monsterArt(row.species)}" alt=""/>
       </span>
       <div><b>${row.caught ? esc(row.name) : '???'}</b><div class="muted">${esc(row.type)}</div></div>
@@ -608,7 +610,8 @@ function chestRatesHtml(save: SaveV2, tier: ChestTier): string {
       <ul>${speciesRows}</ul>
     </details>`
   }).join('')
-  return `<p class="muted">${esc(tr(save, 'chest.hint'))}</p><div class="rate-list">${rows}</div>`
+  const pity = pityLine(tier, tier === 'kiesel' ? 0 : save.pity[tier])
+  return `<p class="muted">${esc(tr(save, 'chest.hint'))}</p>${pity ? `<p data-pity="${tier}">${esc(pity)}</p>` : ''}<div class="rate-list">${rows}</div>`
 }
 
 function chestView(save: SaveV2, wheel: WheelPanel): string {
@@ -628,6 +631,12 @@ function chestView(save: SaveV2, wheel: WheelPanel): string {
       <div class="card panel">
         <h2>${tr(save, 'act.chests')}</h2>
         <div class="chest-grid">${tiles}</div>
+        <p>${tr(save, 'chest.road', { n: save.roadReady })}</p>
+        <button type="button" class="primary" data-act="chest-claim" ${save.roadReady > 0 ? '' : 'disabled'}>${tr(save, 'chest.claim')}</button>
+        <button type="button" data-act="chest-buy" data-tier="kiesel">${tr(save, 'chest.kiesel')} · ${tr(save, 'chest.buyGold')}</button>
+        <button type="button" data-act="chest-buy" data-tier="silber">${tr(save, 'chest.silber')} · ${tr(save, 'chest.buyGold')}</button>
+        <button type="button" data-act="chest-marks" data-tier="gold">${tr(save, 'chest.gold')} · ${tr(save, 'chest.buyMarks')}</button>
+        <button type="button" data-act="chest-marks" data-tier="sternen">${tr(save, 'chest.sternen')} · ${tr(save, 'chest.buyMarks')}</button>
       </div>
     </div>
     <div class="menu-dock" data-dock="chests">${activityTabs(save, wheel)}</div>
@@ -802,7 +811,7 @@ function options(save: SaveV2, debug: boolean): string {
     <p><button data-act="copy-code">${tr(save, 'opt.copy')}</button></p>
     <h2>${tr(save, 'opt.import')}</h2>
     <textarea id="import-code" rows="3"></textarea>
-    ${debug ? `<div class="card" style="padding:12px;margin-top:12px"><b>${tr(save, 'opt.debug')}</b><p class="muted">${tr(save, 'opt.debugNote')}</p><input id="debug-hours" type="number" min="0" step="0.1" value="10"/> <button type="button" class="primary" data-act="jump">${tr(save, 'opt.jump')}</button></div>` : ''}
+    ${debug ? `<div class="card" style="padding:12px;margin-top:12px"><b>${tr(save, 'opt.debug')}</b><p class="muted">${tr(save, 'opt.debugNote')}</p><input id="debug-hours" type="number" min="0" step="0.1" value="10"/> <button type="button" class="primary" data-act="jump">${tr(save, 'opt.jump')}</button> <button type="button" data-act="debug-stars">${tr(save, 'chest.debug')}</button></div>` : ''}
     <p><button type="button" class="ghost" data-act="reset">${tr(save, 'opt.reset')}</button></p>
       </div>
     </div>
@@ -1004,7 +1013,7 @@ function card(save: SaveV2, uid: string): string {
   return `<div class="sheet sheet-full" data-sheet="swipe">${grab()}
     <div class="sheet-body">
     <img class="hero" src="${monsterArt(sp.id, true)}" alt=""/>
-    <h2>${esc(sp.name)}${mon.shiny ? ' · Schimmer' : ''}</h2>
+    <h2>${esc(sp.name)}${mon.shiny ? ' · Schimmer' : ''} · ${tr(save, 'chest.star', { n: save.stars[sp.id] ?? 0 })}</h2>
     <p>${esc(typeLabel(L(save), sp.type, typeName(sp.type)))} · ${esc(rarityLabel(L(save), sp.baseRarity, rarityInfo(sp.baseRarity).name))} · Lv ${mon.lvl} · ${tr(save, 'card.awaken', { n: mon.lvl >= 50 ? 2 : mon.lvl >= 25 ? 1 : 0 })}</p>
     <div class="bar-exp"><span style="width:${pct}%"></span></div>
     <p class="muted">EP ${mon.exp.toLocaleString('de-DE')} / ${need.toLocaleString('de-DE')}</p>
@@ -1019,6 +1028,8 @@ function card(save: SaveV2, uid: string): string {
     <p class="muted">${tr(save, 'card.caught', { when, where: placeLabel(mon.caughtWhere, L(save)) })}</p>
     <label class="switch"><input type="checkbox" data-field="buddy" data-uid="${uid}" ${save.buddy === uid ? 'checked' : ''}/> ${tr(save, 'team.buddy')}</label>
     <label class="switch"><input type="checkbox" data-field="keep" data-uid="${uid}" ${mon.keepDupes ? 'checked' : ''}/> ${tr(save, 'card.keep')}</label>
+    <p>${tr(save, 'chest.star', { n: save.stars[sp.id] ?? 0 })} · ${save.shards[sp.id] ?? 0}</p>
+    ${(save.stars[sp.id] ?? 0) < 5 ? `<button type="button" class="primary" data-act="star" data-id="${sp.id}">${tr(save, 'chest.starUp')} (${starCost(sp.baseRarity, (save.stars[sp.id] ?? 0) + 1)})</button>` : ''}
     </div>
     <button type="button" class="primary" data-act="close">${tr(save, 'codex.close')}</button>
   </div>`

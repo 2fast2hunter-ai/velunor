@@ -28,9 +28,10 @@ describe('section A wards and court', () => {
     for (let i = 0; i < 40 && !moved; i++) {
       save.step = 1
       resolveEncounter(save, 2_000 + i, { offline: false, trace: false })
-      moved = Object.values(save.sealPity).some((value) => value >= 0.5)
+      moved = Object.values(save.shards).some((value) => value > 0) || Object.keys(save.mons).length > 1
     }
     expect(moved).toBe(true)
+    expect(save.sealPity).toEqual({})
   })
 
   it('lays the court path and the new caps', () => {

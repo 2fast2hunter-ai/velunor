@@ -36,7 +36,7 @@ const dex: CodexQuery = { q: '', type: '', rarity: '', shiny: '' }
 
 describe('lootbox L1', () => {
   it('keeps pity off and shows the file text', () => {
-    expect(features.pity).toBe(false)
+    expect(features.pity).toBe(true)
     expect(t('de', 'chest.hint')).toBe(RATES_HINT)
     expect(chestParticles(6, false)).toBe(0)
     expect(chestParticles(7, false)).toBe(40)
@@ -58,11 +58,12 @@ describe('lootbox L1', () => {
     save.mons[save.team[0]].exp = 0
     const added = duplicateExp(10)
     expect(added).toBe(expToNext(10) + expToNext(11))
-    const dupe = applyChest(save, { speciesId: 'm01', rarity: 0, isNew: false, gold: 120 }, 2_000, 99)
+    const dupe = applyChest(save, { speciesId: 'm01', rarity: 0, isNew: false, gold: 120, pity: 0 }, 2_000)
     expect(dupe.place).toBe('exp')
-    expect(save.mons[save.team[0]].lvl).toBe(12)
+    expect(save.mons[save.team[0]].lvl).toBe(10)
+    expect(save.shards.m01).toBe(5)
     expect(save.gold).toBe(START_GOLD + 120)
-    const fresh = applyChest(save, { speciesId: 'm66', rarity: 0, isNew: true, gold: 50 }, 3_000, 99)
+    const fresh = applyChest(save, { speciesId: 'm66', rarity: 0, isNew: true, gold: 50, pity: 0 }, 3_000)
     expect(fresh.place).toBe('team')
     expect(save.mons[save.team[1]].lvl).toBe(1)
     while (save.team.length < 6) {
@@ -70,7 +71,7 @@ describe('lootbox L1', () => {
       save.mons[uid] = makeMon('m02', 1, 4_000, 'test')
       save.team.push(uid)
     }
-    const parked = applyChest(save, { speciesId: 'm11', rarity: 0, isNew: true, gold: 10 }, 5_000, 99)
+    const parked = applyChest(save, { speciesId: 'm11', rarity: 0, isNew: true, gold: 10, pity: 0 }, 5_000)
     expect(parked.place).toBe('pc')
     expect(save.pc.some((uid) => save.mons[uid]?.species === 'm11')).toBe(true)
   })

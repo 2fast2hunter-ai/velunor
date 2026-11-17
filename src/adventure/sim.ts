@@ -39,10 +39,11 @@ import {
 } from './route'
 import { chapterCapNow, regionRoster } from './dex'
 import { enteredRegions } from './lootbox'
+import { bankRoad, grantCouncilChest, grantFindChest, grantTrainerChest, grantWardenChest, rollWildShard } from './sources'
 import { rollShiny, shinyChance, teamBlocksShiny } from './shiny'
 import { syncAchievements } from './achievements'
 import { advanceHort, HORT_EP_RATE } from './hort'
-import { applyFruitWeights, catchMods, combatExpFactor, fruitActive, fruitDef, grantGold, rollFindFruit } from './shop'
+import { applyFruitWeights, combatExpFactor, fruitActive, fruitDef, grantGold, rollFindFruit } from './shop'
 import { bossScale, type BossScale } from './gauntlet'
 import { battleRoster, fightsHere, ownsRegional, seatRegional } from './origin'
 import { makeMon, takeId } from './save'
@@ -570,29 +571,10 @@ function doWild(save: SaveV2, chapter: ChapterDef, now: number, opts: ResolveOpt
   outcome.gold = bouts.gold
   noteFarmWin(save)
   say(save, outcome, now, line(save, 'say.winGold', { gold: outcome.gold }), quiet)
-  if (trace.foeKo && bouts.lastFighter) {
-    const fighter = save.mons[bouts.lastFighter]
-    const rarity = species(speciesId).baseRarity
-    const mods = catchMods(save, now)
-    const pity = save.sealPity?.[speciesId] ?? 0
-    const chance = catchChance(rarity, level, fighter.lvl, mods.mult, mods.cap, pity)
-    const roll = rngOf(save)()
-    const success = roll < chance
-    const percent = Math.round(chance * 100)
-    say(save, outcome, now, line(save, 'say.seal', { pct: percent }), quiet)
-    if (success) {
-      const caught = applyCatch(save, speciesId, level, shiny, now, `r${save.region}c${chapter.id}`, chapter, opts)
-      caught.chance = chance
-      outcome.catch = caught
-      if (caught.place === 'exp') say(save, outcome, now, line(save, 'say.dupeExp', { name: caught.name }), quiet)
-      else if (caught.place === 'kept') say(save, outcome, now, line(save, 'say.dupeKeep', { name: caught.name }), quiet)
-      else say(save, outcome, now, line(save, 'say.caught', { name: caught.name, place: line(save, caught.place === 'team' ? 'say.placeTeam' : 'say.placePc') }), quiet)
-      save.sealPity[speciesId] = 0
-    } else {
-      outcome.catch = { species: speciesId, name, chance, success: false, place: null, shiny, level }
-      save.sealPity[speciesId] = Math.min(SEAL_PITY_CAP, pity + SEAL_PITY_STEP)
-      say(save, outcome, now, line(save, 'say.escaped'), quiet)
-    }
+  if (trace.foeKo) {
+    const traceDrop = rollWildShard(save, speciesId, rngOf(save), now)
+    if (traceDrop === 'unlock') say(save, outcome, now, line(save, 'say.spurUnlock', { name }), quiet)
+    else if (traceDrop === 'shard') say(save, outcome, now, line(save, 'say.spur', { name }), quiet)
   }
   advance(save, chapter)
   return finish(save, chapter, outcome)
@@ -633,6 +615,7 @@ function doTrainer(save: SaveV2, chapter: ChapterDef, now: number, opts: Resolve
     return finish(save, chapter, outcome)
   }
   outcome.gold = 25 * foes.reduce((sum, foe) => sum + foe.level, 0)
+  if (grantTrainerChest(save, rngOf(save))) say(save, outcome, now, line(save, 'say.trainerChest'), quiet)
   noteFarmWin(save)
   say(save, outcome, now, line(save, 'say.trainerWin', { name, gold: outcome.gold }), quiet)
   advance(save, chapter)
@@ -727,7 +710,10 @@ function doGuardian(save: SaveV2, chapter: ChapterDef, now: number, opts: Resolv
     }
     return finish(save, chapter, outcome)
   }
-  if (badge && !hasBadge(save, badge)) save.badges.push(badge)
+  if (badge && !hasBadge(save, badge)) {
+    save.badges.push(badge)
+    if (!chapter.council) grantWardenChest(save)
+  }
   const paidGuard = grantGold(save, guard.gold, now)
   healTeam(save)
   clearGuard(save)
@@ -786,7 +772,11 @@ export function recordCouncilWin(save: SaveV2, now: number, quiet: boolean): Enc
   const index = Math.min(council.members.length - 1, Math.max(0, save.step - 1))
   const member = council.members[index]
   const pay = councilPurse(save, member.id, member.gold, chapter.guardian.badge)
-  if (!save.councilBeaten.includes(member.id)) save.councilBeaten.push(member.id)
+  const firstMember = !save.councilBeaten.includes(member.id)
+  if (firstMember) {
+    grantCouncilChest(save, member.epithet.includes('Großwächter'))
+    save.councilBeaten.push(member.id)
+  }
   const paid = grantGold(save, pay, now)
   outcome.gold = paid
   say(save, outcome, now, line(save, 'say.councilWin', { epithet: member.epithet, name: member.name, gold: paid }), quiet)
@@ -911,6 +901,7 @@ export function resolveEncounter(save: SaveV2, now: number, opts: ResolveOpts): 
       const label = fruitDef(found).name
       say(save, outcome, now, line(save, 'say.findFruit', { gold, fruit: label }), quiet)
     } else say(save, outcome, now, line(save, 'say.find', { gold }), quiet)
+    if (grantFindChest(save) > 0) say(save, outcome, now, line(save, 'say.findChest'), quiet)
     advance(save, chapter)
     return finish(save, chapter, outcome)
   }
@@ -922,6 +913,8 @@ export function resolveEncounter(save: SaveV2, now: number, opts: ResolveOpts): 
 
 export function simulateOffline(save: SaveV2, rawMs: number, now: number): { summary: OfflineSummary; countedMs: number } {
   const countedMs = Math.min(Math.max(0, rawMs), OFFLINE_CAP_MS)
+  bankRoad(save, countedMs)
+  save.roadAt = now
   const count = Math.floor(countedMs / BASE_ENCOUNTER_MS)
   const summary = emptySummary()
   const levelLeft = new Map<string, number>()
@@ -1046,7 +1039,7 @@ export function hereSightings(save: SaveV2, now: number): { species: string; nam
     pct: row.pct,
     caught: (save.dex[row.species]?.caught ?? 0) > 0,
     type: typeName(species(row.species).type),
-    pity: save.sealPity?.[row.species] ?? 0
+    pity: save.shards[row.species] ?? 0
   }))
 }
 
