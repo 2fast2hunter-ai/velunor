@@ -28,12 +28,21 @@ import {
 } from './lootbox'
 import type { ChestGrant } from './chests'
 import { workshopCost } from './sources'
+import {
+  SHOP_ART,
+  compactAmount,
+  quotaLine,
+  shopOffers,
+  stockLine,
+  type ShopOffer,
+  type ShopTab
+} from './shopOffer'
 import { fightsHere } from './origin'
 import { chapterById, gateBadge, placeLabel, regionById, regions, routeOf, type NodeKind } from './route'
 import { chapterUnlocked, dexCaughtCount, hereSightings, rarityName } from './sim'
 import { GOALS } from './achievements'
 import { HORT_PRICES, hortOffer } from './hort'
-import { CRYSTALS, FRUITS, crystalExp, crystalPrice, crystalUnlocked, fruitDef, fruitMinutes, fruitPrice, sellValue, shopLevel, wappenCount } from './shop'
+import { fruitDef, fruitMinutes } from './shop'
 import { weatherForecast, weatherName, type WeatherId } from './weather'
 import { FACES, MULTIPLIERS, PRIZES, faceById, spinCost, wheelOpen, type Multiplier, type SymbolId } from './wheel'
 import { expToNext, isAlive, monStats, realHp } from './stats'
@@ -75,6 +84,9 @@ export type Overlay =
   | { kind: 'chest-rates'; tier: ChestTier }
   | { kind: 'chest-reveal'; grant: ChestGrant; hold?: 'seal' | 'beam' | 'card' }
   | { kind: 'chest-summary'; grants: ChestGrant[] }
+  | { kind: 'shop-confirm'; offerId: string }
+  | { kind: 'shop-info'; offerId: string }
+  | { kind: 'wallet'; id: 'gold' | 'marks' }
 
 export interface ShellFlags {
   mapOpen?: boolean
@@ -85,6 +97,8 @@ export interface ShellFlags {
   pcView?: number
   filtersOpen?: boolean
   dexOpen?: boolean
+  shopTab?: ShopTab
+  shopHint?: boolean
 }
 
 const base = (): string => import.meta.env.BASE_URL || '/'
@@ -528,47 +542,59 @@ function codex(save: SaveV2, filter: CodexQuery, shell: ShellFlags): string {
   </div>`
 }
 
-function shop(save: SaveV2, now: number): string {
-  const crests = wappenCount(save)
-  const mons = [...save.team, ...save.pc].map((uid) => {
-    const mon = save.mons[uid]
-    return `<option value="${uid}">${esc(species(mon.species).name)} Lv ${mon.lvl}</option>`
-  }).join('')
-  const level = shopLevel(save)
-  const crystals = CRYSTALS.map((item) => {
-    const open = crystalUnlocked(save, item.id)
-    const price = crystalPrice(save, item.id)
-    const exp = crystalExp(item.id, level)
-    return `<article class="list-row">
-      <div><b>${esc(item.name)}</b><div class="muted">+${exp.toLocaleString('de-DE')} EP · ${price.toLocaleString('de-DE')} G${item.wappen ? ` · ab ${item.wappen} Wappen` : ''}</div><span>×${save.bag.crystals[item.id]}</span></div>
-      <div class="list-actions">
-        <button type="button" data-act="sell-crystal" data-id="${item.id}">${tr(save, 'shop.sell', { n: sellValue(price) })}</button>
-        <button type="button" data-act="use-crystal" data-id="${item.id}">${tr(save, 'shop.use')}</button>
-        <button type="button" class="primary" data-act="buy-crystal" data-id="${item.id}" ${open ? '' : 'disabled'}>${tr(save, 'shop.buy')}</button>
-      </div>
-    </article>`
-  }).join('')
-  const fruits = FRUITS.map((item) => `<article class="list-row">
-      <div><b>${esc(item.name)}</b><div class="muted">${esc(item.effect)} · ${fruitPrice(save, item.id).toLocaleString('de-DE')} G · 1 h</div><span>×${save.bag.fruits[item.id]}</span></div>
-      <div class="list-actions">
-        <button type="button" data-act="sell-fruit" data-id="${item.id}">${tr(save, 'shop.sell', { n: sellValue(item.price) })}</button>
-        <button type="button" data-act="use-fruit" data-id="${item.id}">${tr(save, 'shop.eat')}</button>
-        <button type="button" class="primary" data-act="buy-fruit" data-id="${item.id}">${tr(save, 'shop.buy')}</button>
-      </div>
-    </article>`).join('')
-  return `<div class="menu-screen">
-    <div class="menu-scroll">
-      <div class="card panel">
-        <h2>${tr(save, 'shop.title')}</h2>
-        <p class="muted">${tr(save, 'shop.note', { n: crests })}</p>
-        <label class="switch">${tr(save, 'shop.give')} <select id="crystal-target">${mons}</select></label>
-        <p class="muted">Stand ${new Date(now).toLocaleTimeString(L(save) === 'en' ? 'en' : 'de-DE', { hour: '2-digit', minute: '2-digit' })}</p>
-        <h2>${tr(save, 'shop.crystals')}</h2>
-        ${crystals}
-        <h2>${tr(save, 'shop.fruits')}</h2>
-        ${fruits}
-      </div>
+function coin(kind: 'gold' | 'marks', large = false): string {
+  const src = kind === 'gold'
+    ? (large ? SHOP_ART.gold : SHOP_ART.goldSm)
+    : (large ? SHOP_ART.marks : SHOP_ART.marksSm)
+  return `<img class="coin" src="${art(src)}" alt=""/>`
+}
+
+function shopCard(save: SaveV2, row: ShopOffer, now: number): string {
+  const buy = row.canBuy
+    ? `${coin(row.pay)} ${row.price.toLocaleString('de-DE')}`
+    : esc(row.reason)
+  const info = row.info === 'chest' && row.chestTier
+    ? `<button type="button" class="shop-info" data-act="chest-info" data-tier="${row.chestTier}" aria-label="Raten"></button>`
+    : `<button type="button" class="shop-info" data-act="shop-info" data-id="${row.id}" aria-label="Info"></button>`
+  const limit = row.quota ? `<p class="shop-limit">${esc(quotaLine(row.quota, now, save.settings.lang))}</p>` : ''
+  const picture = row.art
+    ? `<img class="shop-item" src="${art(row.art)}" alt=""${row.pict ? ` style="height:${row.pict}%"` : ''}/>`
+    : ''
+  return `<article class="shop-card ${row.tone}" data-offer="${row.id}" style="border-image-source:url('${art(SHOP_ART.frame)}')">
+    <div class="shop-art${row.foot ? ' foot' : ''}" style="background-image:url('${art(row.plate)}')">${picture}${info}</div>
+    <h3>${esc(row.name)}</h3>
+    <p>${esc(row.effect)}</p>
+    ${limit}
+    <button type="button" class="shop-buy ${row.canBuy ? 'can' : 'blocked'}" data-act="${row.canBuy ? 'shop-buy' : 'shop-blocked'}" data-id="${row.id}" data-reason="${esc(row.reason)}">${buy}</button>
+  </article>`
+}
+
+function shop(save: SaveV2, now: number, tab: ShopTab, hint: boolean): string {
+  const rows = shopOffers(save, now).filter((row) => row.tab === tab)
+  const groups = [...new Set(rows.map((row) => row.group))]
+  const body = groups.map((group) => `<h3 class="shop-group">${esc(group)}</h3><div class="shop-grid">${rows.filter((row) => row.group === group).map((row) => shopCard(save, row, now)).join('')}</div>`).join('')
+  const tabs: [ShopTab, string][] = [
+    ['chests', tr(save, 'shop.tab.chests')],
+    ['boost', tr(save, 'shop.tab.boost')],
+    ['marks', tr(save, 'shop.tab.marks')]
+  ]
+  const stock = tab === 'chests'
+    ? `<button type="button" class="shop-stock" data-act="activity" data-id="chests">${esc(tr(save, 'shop.stock', { n: stockLine(save) }))}</button>`
+    : ''
+  const open = hint
+    ? `<button type="button" class="shop-toast" data-act="activity" data-id="chests">${esc(tr(save, 'shop.open'))}</button>`
+    : ''
+  return `<div class="shop-screen" lang="${L(save)}">
+    <header class="shop-head">
+      <h2>${esc(tr(save, 'shop.head'))}</h2>
+      <button type="button" class="wallet" data-act="wallet" data-id="gold">${coin('gold', true)}<b>${compactAmount(save.gold)}</b></button>
+      <button type="button" class="wallet" data-act="wallet" data-id="marks">${coin('marks', true)}<b>${compactAmount(save.marks)}</b></button>
+    </header>
+    <div class="shop-tabs" data-shop-tabs="1" style="--tab-bar:url('${art(SHOP_ART.tabBar)}');--tab-on:url('${art(SHOP_ART.tabOn)}');--tab-off:url('${art(SHOP_ART.tabOff)}')">
+      ${tabs.map(([id, label]) => `<button type="button" data-act="shop-tab" data-id="${id}" class="${tab === id ? 'on' : ''}">${label}</button>`).join('')}
     </div>
+    <div class="shop-scroll">${body}${stock}</div>
+    ${open}
   </div>`
 }
 
@@ -634,10 +660,7 @@ function chestView(save: SaveV2, wheel: WheelPanel): string {
         <div class="chest-grid">${tiles}</div>
         <p>${tr(save, 'chest.road', { n: save.roadReady })}</p>
         <button type="button" class="primary" data-act="chest-claim" ${save.roadReady > 0 ? '' : 'disabled'}>${tr(save, 'chest.claim')}</button>
-        <button type="button" data-act="chest-buy" data-tier="kiesel">${tr(save, 'chest.kiesel')} · ${tr(save, 'chest.buyGold')}</button>
-        <button type="button" data-act="chest-buy" data-tier="silber">${tr(save, 'chest.silber')} · ${tr(save, 'chest.buyGold')}</button>
-        <button type="button" data-act="chest-marks" data-tier="gold">${tr(save, 'chest.gold')} · ${tr(save, 'chest.buyMarks')}</button>
-        <button type="button" data-act="chest-marks" data-tier="sternen">${tr(save, 'chest.sternen')} · ${tr(save, 'chest.buyMarks')}</button>
+        <p class="muted">${tr(save, 'shop.inShop')}</p>
         <h3>Werkstatt</h3>
         <p>Velunorstaub ${save.dust}</p>
         ${poolFor(enteredRegions(save)).filter((id) => !Object.values(save.mons).some((mon) => mon.species === id)).slice(0, 6).map((id) => {
@@ -843,7 +866,7 @@ function center(save: SaveV2, screen: Screen, now: number, pc: PcQuery, dex: Cod
   if (screen === 'team') return team(save, pc, selected, shell)
   if (screen === 'codex') return codex(save, dex, shell)
   if (screen === 'activities') return activitiesView(save, now, selected, wheel)
-  if (screen === 'shop') return shop(save, now)
+  if (screen === 'shop') return shop(save, now, shell.shopTab ?? 'chests', shell.shopHint === true)
   if (screen === 'achievements') return achievementsView(save)
   if (screen === 'options') return options(save, debug)
   return guide(save)
@@ -860,11 +883,14 @@ export function gameHtml(save: SaveV2, screen: Screen, now: number, pc: PcQuery,
       ${progress(save)}
     </div>` : ''
   const typeScale = fontFactor(save.settings.font)
-  return `<div id="stage" data-font="${save.settings.font}" data-swipe="${save.settings.swipeTabs ? '1' : '0'}" data-battery="${save.settings.battery ? '1' : '0'}" style="--font-scale:${typeScale}" class="${adventure ? 'is-adventure' : 'is-menu'} ${save.settings.reduceMotion ? 'reduce-motion' : ''}">
+  const stageStyle = screen === 'shop'
+    ? `--font-scale:${typeScale};background-image:url('${art(SHOP_ART.bg)}');background-size:100% 100%`
+    : `--font-scale:${typeScale}`
+  return `<div id="stage" data-font="${save.settings.font}" data-swipe="${save.settings.swipeTabs ? '1' : '0'}" data-battery="${save.settings.battery ? '1' : '0'}" style="${stageStyle}" class="${adventure ? 'is-adventure' : 'is-menu'} ${screen === 'shop' ? 'is-shop' : ''} ${save.settings.reduceMotion ? 'reduce-motion' : ''}">
     <div class="band band-top"></div>
     <div class="safe">
       <div class="anchor anchor-top">
-        ${header(save, now)}
+        ${screen === 'shop' ? '' : header(save, now)}
         ${adventure ? chapterLine(save, step, mapOpen) : ''}
         ${adventure ? path(save, step) : ''}
       </div>
@@ -889,6 +915,36 @@ function grab(): string {
 }
 
 function overlayHtml(save: SaveV2, overlay: Overlay): string {
+  if (overlay.kind === 'wallet') {
+    const gold = overlay.id === 'gold'
+    const amount = (gold ? save.gold : save.marks).toLocaleString('de-DE')
+    return `<div class="sheet" data-sheet="swipe">${grab()}<h2>${coin(gold ? 'gold' : 'marks', true)} ${amount}</h2><p>${esc(tr(save, gold ? 'shop.goldFrom' : 'shop.marksFrom'))}</p><button type="button" class="primary" data-act="close">${esc(tr(save, 'shop.close'))}</button></div>`
+  }
+  if (overlay.kind === 'shop-info') {
+    const row = shopOffers(save, Date.now()).find((item) => item.id === overlay.offerId)
+    if (!row) return `<div class="sheet"><button type="button" class="primary" data-act="close">Schließen</button></div>`
+    const extra = row.act === 'buy-crystal'
+      ? `<button type="button" data-act="use-crystal" data-id="${row.dataId}">${esc(tr(save, 'shop.use'))}</button><button type="button" data-act="sell-crystal" data-id="${row.dataId}">${esc(tr(save, 'shop.sellBtn'))}</button>`
+      : row.act === 'buy-fruit'
+        ? `<button type="button" data-act="use-fruit" data-id="${row.dataId}">${esc(tr(save, 'shop.eat'))}</button><button type="button" data-act="sell-fruit" data-id="${row.dataId}">${esc(tr(save, 'shop.sellBtn'))}</button>`
+        : ''
+    const hero = row.art ? `<img class="hero" src="${art(row.art)}" alt=""/>` : ''
+    return `<div class="sheet shop-sheet" data-sheet="swipe">${grab()}${hero}<h2>${esc(row.name)}</h2><p>${esc(row.effect)}</p>${extra}<button type="button" class="primary" data-act="close">${esc(tr(save, 'shop.close'))}</button></div>`
+  }
+  if (overlay.kind === 'shop-confirm') {
+    const row = shopOffers(save, Date.now()).find((item) => item.id === overlay.offerId)
+    if (!row) return `<div class="sheet"><button type="button" class="primary" data-act="close">${esc(tr(save, 'shop.buy'))}</button></div>`
+    const balance = row.pay === 'gold' ? save.gold : save.marks
+    const after = Math.max(0, balance - row.price)
+    return `<div class="sheet shop-sheet shop-confirm" data-sheet="swipe">${grab()}
+      ${row.art ? `<img class="hero" src="${art(row.art)}" alt=""/>` : ''}
+      <h2>${esc(row.name)}</h2>
+      <p class="shop-price">${coin(row.pay, true)} ${row.price.toLocaleString('de-DE')}</p>
+      <p class="shop-price">${esc(tr(save, 'shop.after'))} ${coin(row.pay, true)} ${after.toLocaleString('de-DE')}</p>
+      <button type="button" class="primary" data-act="shop-yes" data-id="${row.id}">${esc(tr(save, 'shop.buy'))}</button>
+      <button type="button" class="ghost" data-act="close">${esc(tr(save, 'reset.no'))}</button>
+    </div>`
+  }
   if (overlay.kind === 'chest-rates') {
     return `<div class="sheet" data-sheet="swipe">${grab()}<h2>${tr(save, CHEST_KEY[overlay.tier])}</h2>${chestRatesHtml(save, overlay.tier)}<button type="button" class="primary" data-act="close">${tr(save, 'chest.next')}</button></div>`
   }

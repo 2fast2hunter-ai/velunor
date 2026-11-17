@@ -91,6 +91,20 @@ function resetShopDay(save: SaveV2, now: number): void {
   save.chestBought = { kiesel: 0, silber: 0 }
 }
 
+export function goldChestLeft(save: SaveV2, tier: 'kiesel' | 'silber', now: number): { left: number; max: number } {
+  const bought = save.chestDay === dayKey(now) ? save.chestBought[tier] : 0
+  const max = file.shopGold.daily
+  return { left: Math.max(0, max - bought), max }
+}
+
+export function chestMarkPrice(tier: 'gold' | 'sternen'): number {
+  return file.shopMarks[tier]
+}
+
+export function chestIsFull(save: SaveV2, tier: ChestTier): boolean {
+  return save.chests[tier] >= file.storageCap
+}
+
 export function chestGoldPrice(save: SaveV2, tier: 'kiesel' | 'silber'): number {
   const base = tier === 'kiesel' ? file.shopGold.kiesel : file.shopGold.silber
   return base * Math.max(1, save.region)

@@ -21,6 +21,7 @@ import {
 import { t, type Lang } from './i18n'
 import { shotAt, shouldRecover } from './present'
 import { species } from '../data'
+import { sfx } from '../ui'
 import { actorTransform, hitShake, koPose, lungeOffset, numberStyle, parallaxShift } from '../battle/stage'
 import { clearBattleFx, holdBattleFx, mountBattleFx, playBattleFx, setFxRunning } from '../battle/phaserFx'
 import { BANNER_MS, CRIT_HITSTOP_MS, KO_MS, LUNGE_HOLD_MS, LUNGE_OUT_MS, moveLabel, NUMBER_MS, RECOIL_MS, STONE_CRIT_HITSTOP_MS, typeFx } from '../battle/typeFx'
@@ -28,6 +29,7 @@ import type { TypeId } from '../types'
 import { takeChests } from './chests'
 import { bankRoad, buyChestForGold, buyChestForMarks, claimRoad, craftSpecies, debugStarChests, meltDuplicate, raiseStar } from './sources'
 import { chestAnimMs, type ChestTier } from './lootbox'
+import { needsConfirm, shopOffer } from './shopOffer'
 import { beginAdventure, exportCode, importCode, loadAdventure, writeSave } from './save'
 import { equipFrame, equipTitle } from './achievements'
 import { buyHortSlot, moveFromHort, moveToHort } from './hort'
@@ -107,6 +109,8 @@ let raf = 0
 let playGen = 0
 let pendingOutcome: EncounterOutcome | null = null
 let activity: WheelPanel['tab'] = 'hort'
+let shopTab: 'chests' | 'boost' | 'marks' = 'chests'
+let shopFlashUntil = 0
 let chestFrame = 0
 let wheelMult: Multiplier = 1
 let wheelSymbols: [SymbolId, SymbolId, SymbolId] | null = null
@@ -122,7 +126,7 @@ let pcPainted = -1
 let sheetY: number | null = null
 let away = false
 let screenLocked = false
-let gesture: { x: number; y: number; t: number; block: boolean } | null = null
+let gesture: { x: number; y: number; t: number; block: boolean; shop: boolean } | null = null
 let heldCard = ''
 let ignoreClick = false
 
@@ -175,6 +179,10 @@ export function bootAdventure(): void {
   }
   if (debug && (fxDemo === 'lager' || fxDemo === 'raten' || fxDemo === 'seal')) {
     showChestDemo(fxDemo)
+    return
+  }
+  if (debug && (fxDemo === 'shop' || fxDemo === 'shop-poor' || fxDemo === 'shop-ask')) {
+    showShopDemo(fxDemo)
     return
   }
   const skipLegacy = localStorage.getItem(RESET_FLAG) === '1' && !localStorage.getItem(SAVE_KEY_V2)
@@ -231,6 +239,25 @@ function showFxDemo(kind: 'fire' | 'hit' | 'ko'): void {
   }, 400)
 }
 
+function showShopDemo(kind: 'shop' | 'shop-poor' | 'shop-ask'): void {
+  save = beginAdventure('Ada', 'A', 'm01', Date.now())
+  screen = 'shop'
+  shopTab = 'chests'
+  save.region = 1
+  save.chestDay = new Date().toISOString().slice(0, 10)
+  save.chestBought = { kiesel: 2, silber: 0 }
+  if (kind === 'shop-poor') {
+    save.gold = 700
+    save.marks = 0
+  } else {
+    save.gold = 20_000
+    save.marks = 400
+  }
+  if (kind === 'shop-ask') overlay = { kind: 'shop-confirm', offerId: 'chest-silber' }
+  render()
+  document.getElementById('stage')?.setAttribute('data-fx', 'hold')
+}
+
 function showChestDemo(kind: 'lager' | 'raten' | 'seal'): void {
   save = beginAdventure('Ada', 'A', 'm01', Date.now())
   screen = 'activities'
@@ -245,6 +272,16 @@ function showChestDemo(kind: 'lager' | 'raten' | 'seal'): void {
   }
   render()
   document.getElementById('stage')?.setAttribute('data-fx', 'hold')
+}
+
+function performShopBuy(row: { act: string; dataId: string }): string | null {
+  if (!save) return 'Unbekannt.'
+  if (row.act === 'chest-buy') return buyChestForGold(save, row.dataId === 'silber' ? 'silber' : 'kiesel', Date.now())
+  if (row.act === 'chest-marks') return buyChestForMarks(save, row.dataId === 'sternen' ? 'sternen' : 'gold')
+  if (row.act === 'buy-crystal') return buyCrystal(save, row.dataId as 's')
+  if (row.act === 'buy-fruit') return buyFruit(save, row.dataId as 'fang')
+  if (row.act === 'buy-prize') return buyPrize(save, row.dataId, Date.now())
+  return 'Unbekannt.'
 }
 
 function chestTier(value: string | null): ChestTier | null {
@@ -297,7 +334,7 @@ function render(step = save?.step): void {
     mult: wheelMult,
     symbols: wheelSymbols,
     note: wheelNote
-  }, { mapOpen, moreOpen, pcScroll, filtersOpen, dexOpen }))
+  }, { mapOpen, moreOpen, pcScroll, filtersOpen, dexOpen, shopTab, shopHint: Date.now() < shopFlashUntil }))
   if (screen === 'team') {
     pcIds = visiblePc(save, pc)
     const view = document.getElementById('pc-viewport')
@@ -1058,6 +1095,52 @@ function onClick(event: Event): void {
     void runOffline(hours * 3600e3)
     return
   }
+  if (act === 'wallet') {
+    const id = node.getAttribute('data-id')
+    overlay = { kind: 'wallet', id: id === 'marks' ? 'marks' : 'gold' }
+    render()
+    return
+  }
+  if (act === 'shop-tab') {
+    const id = node.getAttribute('data-id')
+    if (id === 'chests' || id === 'boost' || id === 'marks') shopTab = id
+    render()
+    return
+  }
+  if (act === 'shop-info') {
+    overlay = { kind: 'shop-info', offerId: node.getAttribute('data-id') ?? '' }
+    render()
+    return
+  }
+  if (act === 'shop-blocked') {
+    node.classList.remove('shop-shake')
+    void (node as HTMLElement).offsetWidth
+    node.classList.add('shop-shake')
+    return
+  }
+  if (act === 'shop-buy' || act === 'shop-yes') {
+    const id = node.getAttribute('data-id') ?? ''
+    const row = shopOffer(save, Date.now(), id)
+    if (!row || !row.canBuy) return
+    const balance = row.pay === 'gold' ? save.gold : save.marks
+    if (act === 'shop-buy' && needsConfirm(row.price, balance, row.pay)) {
+      overlay = { kind: 'shop-confirm', offerId: row.id }
+      render()
+      return
+    }
+    const reason = performShopBuy(row)
+    overlay = null
+    if (!reason) sfx('coin')
+    if (!reason && (row.act === 'chest-buy' || row.act === 'chest-marks')) {
+      shopFlashUntil = Date.now() + 3000
+      window.setTimeout(() => { if (screen === 'shop') render() }, 3100)
+    }
+    save.log.push({ t: Date.now(), text: reason ?? t(save.settings.lang, 'shop.bought', { name: row.name }) })
+    if (save.log.length > 50) save.log.splice(0, save.log.length - 50)
+    try { writeSave(localStorage, save) } catch { /* ignore */ }
+    render()
+    return
+  }
   if (act === 'buy-crystal' || act === 'buy-fruit' || act === 'sell-crystal' || act === 'sell-fruit' || act === 'use-fruit' || act === 'use-crystal') {
     const id = node.getAttribute('data-id') ?? ''
     let reason: string | null = 'Unbekannt.'
@@ -1068,7 +1151,7 @@ function onClick(event: Event): void {
     if (act === 'use-fruit') reason = useFruit(save, id as 'fang', Date.now())
     if (act === 'use-crystal') {
       const target = document.getElementById('crystal-target')
-      const uid = target instanceof HTMLSelectElement ? target.value : ''
+      const uid = target instanceof HTMLSelectElement && target.value ? target.value : (save.active ?? save.team[0] ?? '')
       reason = useCrystal(save, id as 's', uid, chapterCapNow(save, chapterById(save.region, save.chapter)))
     }
     save.log.push({ t: Date.now(), text: reason ?? 'Erledigt.' })
@@ -1376,7 +1459,8 @@ function onPointerDown(event: PointerEvent): void {
   const card = target?.closest('[data-press="card"]')
   heldCard = card?.getAttribute('data-uid') ?? ''
   const block = Boolean(target?.closest('input, textarea, select, .sheet-grab'))
-  gesture = { x: event.clientX, y: event.clientY, t: performance.now(), block }
+  const onShop = Boolean(target?.closest('.shop-screen'))
+  gesture = { x: event.clientX, y: event.clientY, t: performance.now(), block, shop: onShop }
 }
 
 function onPointerUp(event: PointerEvent): void {
@@ -1406,8 +1490,19 @@ function onPointerUp(event: PointerEvent): void {
       return
     }
   }
+  const dir = start ? swipeDirection(event.clientX - start.x, event.clientY - start.y, fitScale(window.innerWidth, window.innerHeight)) : 0
+  if (save && start?.shop && !start.block && !overlay && dir !== 0) {
+    const order = ['chests', 'boost', 'marks'] as const
+    const index = order.indexOf(shopTab)
+    const next = index + dir
+    if (next >= 0 && next < order.length) {
+      ignoreClick = true
+      shopTab = order[next]
+      render()
+    }
+    return
+  }
   if (!save || !start || start.block || overlay || moreOpen || mapOpen || !save.settings.swipeTabs) return
-  const dir = swipeDirection(event.clientX - start.x, event.clientY - start.y, fitScale(window.innerWidth, window.innerHeight))
   const next = nextTab(screen, dir, true)
   if (!next || next === screen) return
   ignoreClick = true
