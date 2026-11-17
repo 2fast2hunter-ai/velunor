@@ -26,17 +26,54 @@ export const SHOP_TABS = ['chests', 'boost', 'marks'] as const
 export type ShopTab = (typeof SHOP_TABS)[number]
 export type ShopPay = 'gold' | 'marks'
 
-/** Swap these paths when the chest and crystal art arrives. */
+/**
+ * Smettbo shop art. Swap these paths when a drawing is replaced.
+ * Fangfrucht is no longer sold; the Glücksfrucht (id fang) uses frucht_glueck.
+ */
 export const SHOP_ART = {
-  gold: 'icons/gold_128.png',
-  marks: 'icons/gems_128.png',
-  kiesel: 'icons/rank_bronze_96.png',
-  silber: 'icons/rank_silver_96.png',
-  goldChest: 'icons/rank_gold_96.png',
-  sternen: 'icons/star_128.png',
-  crystal: 'icons/essence_128.png',
-  fruit: 'icons/catalog_64.png'
+  bg: 'shop/shop_bg.webp',
+  frame: 'shop/card_frame.webp',
+  gold: 'shop/icon_gold.webp',
+  goldSm: 'shop/icon_gold_64.webp',
+  marks: 'shop/icon_marke.webp',
+  marksSm: 'shop/icon_marke_64.webp',
+  chest: {
+    kiesel: 'shop/chest_kiesel.webp',
+    silber: 'shop/chest_silber.webp',
+    gold: 'shop/chest_gold.webp',
+    sternen: 'shop/chest_sternen.webp'
+  },
+  plate: {
+    kiesel: 'shop/card_bg_kiesel.webp',
+    silber: 'shop/card_bg_silber.webp',
+    gold: 'shop/card_bg_gold.webp',
+    sternen: 'shop/card_bg_sternen.webp',
+    neutral: 'shop/card_bg_neutral.webp'
+  },
+  crystal: {
+    s: 'shop/ep_kristall_s.webp',
+    m: 'shop/ep_kristall_m.webp',
+    l: 'shop/ep_kristall_l.webp',
+    xl: 'shop/ep_kristall_xl.webp'
+  },
+  fruit: {
+    fang: 'shop/frucht_glueck.webp',
+    goldfang: 'shop/frucht_goldfang.webp',
+    spuer: 'shop/frucht_spur.webp'
+  },
+  tabBar: 'shop/tab_bar_bg.webp',
+  tabOn: 'shop/tab_active.webp',
+  tabOff: 'shop/tab_inactive.webp'
 } as const
+
+/** 9-slice insets of the 480×600 frame. Corners stay this size; only the edges stretch. */
+export const FRAME_SLICE = { top: 130, right: 129, bottom: 147, left: 133 } as const
+
+/** Card width stays within 15 percent of the 480px frame. */
+export const CARD_WIDTH = { base: 480, min: 408, max: 552 } as const
+
+/** Crystal drawings, shortest to tallest, feet on the same line. */
+export const CRYSTAL_PICT = { s: 60, m: 72, l: 86, xl: 96 } as const
 
 export interface ShopQuota {
   left: number
@@ -52,6 +89,7 @@ export interface ShopOffer {
   price: number
   pay: ShopPay
   art: string
+  plate: string
   tone: string
   quota: ShopQuota | null
   canBuy: boolean
@@ -60,6 +98,10 @@ export interface ShopOffer {
   dataId: string
   info: 'chest' | 'item'
   chestTier?: ChestTier
+  /** Draw the picture against the bottom of the plate. */
+  foot: boolean
+  /** Picture height as a percent of the plate. 0 uses the default fit. */
+  pict: number
 }
 
 export function missingText(amount: number, lang: Lang = 'de'): string {
@@ -98,8 +140,8 @@ export function quotaLine(quota: ShopQuota, now: number, lang: Lang = 'de'): str
   return t(lang, 'shop.tomorrow', { time: resetCountdown(now) })
 }
 
-function offer(partial: ShopOffer): ShopOffer {
-  return partial
+function offer(partial: Omit<ShopOffer, 'foot' | 'pict'> & Partial<Pick<ShopOffer, 'foot' | 'pict'>>): ShopOffer {
+  return { foot: false, pict: 0, ...partial }
 }
 
 function say(save: SaveV2, key: string, vars?: Record<string, string | number>): string {
@@ -107,12 +149,7 @@ function say(save: SaveV2, key: string, vars?: Record<string, string | number>):
 }
 
 function chestOffer(save: SaveV2, tier: ChestTier, tab: ShopTab, now: number): ShopOffer {
-  const art: Record<ChestTier, string> = {
-    kiesel: SHOP_ART.kiesel,
-    silber: SHOP_ART.silber,
-    gold: SHOP_ART.goldChest,
-    sternen: SHOP_ART.sternen
-  }
+  const art = SHOP_ART.chest[tier]
   const gold = tier === 'kiesel' || tier === 'silber'
   const price = gold ? chestGoldPrice(save, tier) : chestMarkPrice(tier === 'gold' ? 'gold' : 'sternen')
   const pay: ShopPay = gold ? 'gold' : 'marks'
@@ -130,7 +167,8 @@ function chestOffer(save: SaveV2, tier: ChestTier, tab: ShopTab, now: number): S
     effect: say(save, 'shop.chestFx'),
     price,
     pay,
-    art: art[tier],
+    art,
+    plate: SHOP_ART.plate[tier],
     tone: `tone-${tier}`,
     quota,
     canBuy: reason === '',
@@ -166,7 +204,10 @@ export function shopOffers(save: SaveV2, now: number): ShopOffer[] {
       effect: `+${crystalExp(item.id, level).toLocaleString('de-DE')} EP.`,
       price,
       pay: 'gold',
-      art: SHOP_ART.crystal,
+      art: SHOP_ART.crystal[item.id],
+      plate: SHOP_ART.plate.neutral,
+      foot: true,
+      pict: CRYSTAL_PICT[item.id],
       tone: 'tone-plain',
       quota: null,
       canBuy: reason === '',
@@ -187,7 +228,8 @@ export function shopOffers(save: SaveV2, now: number): ShopOffer[] {
       effect: say(save, `fruit.fx.${item.id}`),
       price,
       pay: 'gold',
-      art: SHOP_ART.fruit,
+      art: SHOP_ART.fruit[item.id as keyof typeof SHOP_ART.fruit] ?? '',
+      plate: SHOP_ART.plate.neutral,
       tone: 'tone-plain',
       quota: null,
       canBuy: reason === '',
@@ -214,6 +256,7 @@ export function shopOffers(save: SaveV2, now: number): ShopOffer[] {
       price: prize.marks,
       pay: 'marks',
       art: `monsters/${sp.id}_256.png`,
+      plate: SHOP_ART.plate.neutral,
       tone: 'tone-plain',
       quota: null,
       canBuy: reason === '',
