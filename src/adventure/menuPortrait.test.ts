@@ -132,7 +132,7 @@ describe('portrait menus', () => {
       kind: 'catch', species: 'm01', level: 5, place: 'team'
     })
     expect(caught).toContain('data-sheet="swipe"')
-    expect(caught).toContain('gefangen!')
+    expect(caught).toContain('Neu dabei!')
 
     const guard = gameHtml(save, 'adventure', 1_000, pcQuery, dex, null, false, false, {
       kind: 'guard', win: true, badge: 'Sonnenwappen', gold: 40, text: 'Wappen errungen.'
