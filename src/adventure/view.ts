@@ -39,13 +39,15 @@ import {
 } from './shopOffer'
 import { UI_ART, type UiArtId } from './uiArt'
 import { fightsHere } from './origin'
-import { chapterById, gateBadge, placeLabel, regionById, regions, routeOf, type NodeKind } from './route'
+import { chapterById, councilOf, gateBadge, placeLabel, regionById, regions, routeOf, type NodeKind } from './route'
 import { chapterUnlocked, dexCaughtCount, hereSightings, rarityName } from './sim'
 import { GOALS } from './achievements'
 import { HORT_PRICES, hortOffer } from './hort'
 import { fruitDef, fruitMinutes } from './shop'
 import { teamWeatherMarks, weatherArrow, weatherForecast, weatherName, WEATHER_SHIFTS, type WeatherId } from './weather'
 import { typeArrow } from './order'
+import { councilAssignment, guardianAssignment, mechIcon, mechName, mechTip, type MechId } from './mech'
+import { ultName, ultPattern } from './ult'
 import { FACES, MULTIPLIERS, PRIZES, faceById, spinCost, wheelOpen, type Multiplier, type SymbolId } from './wheel'
 import { expToNext, isAlive, monStats, realHp } from './stats'
 import type { OfflineSummary } from './sim'
@@ -93,6 +95,8 @@ export type Overlay =
 export interface ShellFlags {
   mapOpen?: boolean
   moreOpen?: boolean
+  /** A fight is on screen. The preview card stays off the field. */
+  fighting?: boolean
   /** Scroll offset of the PC viewport, in logical px. */
   pcScroll?: number
   /** Measured PC viewport height. 0 uses the fallback. */
@@ -244,7 +248,7 @@ function path(save: SaveV2, here: number): string {
   return pathNodes(cells, false)
 }
 
-function battle(save: SaveV2, now: number): string {
+function battle(save: SaveV2, now: number, fighting = false): string {
   const chapter = chapterById(save.region, save.chapter)
   const scene = SCENE_FILES[chapter.scene]
   const active = save.active && save.mons[save.active] ? save.active : save.team[0]
@@ -266,6 +270,8 @@ function battle(save: SaveV2, now: number): string {
         <button type="button" class="status-mark" id="foe-status" data-act="status" data-who="foe" hidden><img alt=""/></button>
         <p class="status-tip" id="foe-tip" hidden></p>
         <b id="foe-name"><img class="wx-arrow" id="foe-arrow" alt="" hidden/></b>
+        <div class="mech-row" id="foe-mechs" hidden></div>
+        <img class="helper" id="foe-helper" alt="" hidden/>
         <div class="hp"><span id="foe-hp" style="width:100%"></span></div>
         <div class="ult" id="foe-ult" data-n="0" hidden></div>
         <img class="sprite" id="foe-sprite" alt="" hidden/>
@@ -296,7 +302,7 @@ function battle(save: SaveV2, now: number): string {
       <div class="wx-stack"><div class="wx-chip" id="wx-chip">${weatherChip(save, now)}</div></div>
       ${bossAhead(save) ? `<p class="wx-preview">${esc(weatherPreview(save, now))}</p>` : ''}
     </div>
-    ${sealed ? '' : `<div class="guard-dock">${guardCard(save)}<button type="button" class="primary challenge-fab" data-act="challenge">${ui('challenge')}${tr(save, chapter.council || chapter.foyer ? 'battle.resume' : 'battle.challenge')}</button></div>`}
+    ${sealed ? '' : `<div class="guard-dock">${fighting ? '' : guardCard(save)}<button type="button" class="primary challenge-fab" data-act="challenge">${ui('challenge')}${tr(save, chapter.council || chapter.foyer ? 'battle.resume' : 'battle.challenge')}</button></div>`}
   </div>`
 }
 
@@ -368,7 +374,34 @@ function guardCard(save: SaveV2): string {
         : ''
     return [`<span>${esc(species(mon.species).name)}${mark}</span>`]
   }).join('')
-  return `<div class="guard-card"><b>Gegen ${esc(typeName(foeType))}</b>${bits}</div>`
+  const lead = bossLead(save)
+  const preview = lead ? bossPreview(lead.speciesId, lead.level, lead.mechs) : ''
+  return `<div class="guard-card"><div class="guard-title">Gegen ${esc(typeName(foeType))}</div><div class="guard-names">${bits}</div>${preview}</div>`
+}
+
+function bossLead(save: SaveV2): { speciesId: string; level: number; mechs: MechId[] } | null {
+  const chapter = chapterById(save.region, save.chapter)
+  if (chapter.foyer) {
+    const council = councilOf(save.region)
+    const member = council?.council?.members.find((row) => !save.councilBeaten.includes(row.id))
+    const lead = member?.team[0]
+    if (!member || !lead) return null
+    return { speciesId: lead.species, level: lead.level, mechs: councilAssignment(member.id) }
+  }
+  if (chapter.council) {
+    const member = chapter.council.members.find((row) => !save.councilBeaten.includes(row.id))
+    const lead = member?.team[0]
+    if (!member || !lead) return null
+    return { speciesId: lead.species, level: lead.level, mechs: councilAssignment(member.id) }
+  }
+  const lead = chapter.guardian.team[0]
+  if (!lead) return null
+  return { speciesId: lead.species, level: lead.level, mechs: guardianAssignment(chapter.guardian.badge, chapter.guardian.name, Boolean(chapter.special)) }
+}
+
+function bossPreview(speciesId: string, _level: number, mechs: MechId[]): string {
+  const lines = mechs.map((id) => `<div class="mech-line"><img src="${art(mechIcon(id))}" alt=""/><span><b>${esc(mechName(id))}</b>${esc(mechTip(id))}</span></div>`).join('')
+  return `${lines}<div class="guard-ult"><div>Boss-Ult: ${esc(ultName(ultPattern(speciesId)))}</div><span class="ult" data-n="0"></span></div>`
 }
 
 function weatherPreview(save: SaveV2, now: number): string {
@@ -976,7 +1009,7 @@ export function gameHtml(save: SaveV2, screen: Screen, now: number, pc: PcQuery,
         ${adventure ? chapterLine(save, step, mapOpen) : ''}
         ${adventure ? path(save, step) : ''}
       </div>
-      <div class="anchor anchor-mid">${adventure ? battle(save, now) : center(save, screen, now, pc, dex, selected, debug, wheel, shell)}</div>
+      <div class="anchor anchor-mid">${adventure ? battle(save, now, shell.fighting) : center(save, screen, now, pc, dex, selected, debug, wheel, shell)}</div>
       <div class="anchor anchor-bot">
         ${adventure ? teamDock(save) : ''}
         ${adventure ? logBox(save) : ''}

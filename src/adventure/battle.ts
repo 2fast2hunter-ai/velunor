@@ -6,6 +6,7 @@ import { awakenCount } from './stats'
 import { weatherFactor, type WeatherId } from './weather'
 import { ULT_BOSS_FETTER, ULT_DAMAGE, ULT_HEAL, ULT_IMPULSE, ULT_IMPULSE_ATTACKS, ULT_PIERCE, ULT_WALL_CUT, gainUlt, ultName, ultPattern, ultReady, ultUnlocked, wallActions, type UltPattern } from './ult'
 import { ANCHOR_ULT, COUNTER_BLOW, COUNTER_ULT } from './order'
+import { AIDE_ATK, AIDE_EVERY, AIDE_HP, ARMOR_CRITS, ARMOR_CUT, MIRROR, PULSE_EVERY, PULSE_MULT, RAGE_HP, RAGE_MULT, type MechId } from './mech'
 import { AILMENTS, ailmentFor, bossDuration, bossImmune, type AilmentId } from './ailment'
 
 export interface FightSide {
@@ -27,6 +28,8 @@ export interface FightSide {
   counter?: boolean
   /** Last monster of the bench, and the only one still up. */
   anchor?: boolean
+  /** Warden, council, or world beast. Empty on wild foes. */
+  mechs?: MechId[]
 }
 
 export interface FightHit {
@@ -43,6 +46,12 @@ export interface FightHit {
   weather?: number
   /** Set when this swing was the ultimate. */
   ult?: UltPattern
+  /** Reflected by Spiegel. */
+  mirror?: boolean
+  /** The background helper, not the boss. */
+  helper?: boolean
+  /** The unavoidable extra hit. */
+  pulse?: boolean
 }
 
 export interface FightFrame {
@@ -58,6 +67,8 @@ export interface FightFrame {
   foeMark?: AilmentId | null
   allyStacks?: number
   foeStacks?: number
+  /** Beistand is on screen: the boss is still up and at or above 60 % HP. */
+  helper?: boolean
 }
 
 export interface FightTrace {
@@ -73,6 +84,7 @@ export interface FightTrace {
   allyKo: boolean
   timeout: boolean
   counter?: boolean
+  mechs?: MechId[]
   allyHp: number
   foeHp: number
 }
@@ -111,6 +123,8 @@ interface Actor {
   wallFresh: boolean
   skip: boolean
   mark: { id: AilmentId; left: number; stacks: number; sourceType: TypeId } | null
+  armorCrits: number
+  bossAttacks: number
 }
 
 const ALLY_TARGET = new Set(['self', 'ally_all', 'ally_lowest_hp_pct', 'self_and_ally_lowest_hp_pct'])
@@ -188,7 +202,9 @@ function makeActor(side: FightSide): Actor {
     wallLeft: 0,
     wallFresh: false,
     skip: false,
-    mark: null
+    mark: null,
+    armorCrits: 0,
+    bossAttacks: 0
   }
 }
 
@@ -287,7 +303,8 @@ export function fight1v1(allySide: FightSide, foeSide: FightSide, rng: () => num
       allyMark: ally.mark?.id ?? null,
       foeMark: foe.mark?.id ?? null,
       allyStacks: ally.mark?.stacks ?? 0,
-      foeStacks: foe.mark?.stacks ?? 0
+      foeStacks: foe.mark?.stacks ?? 0,
+      helper: Boolean(foe.side.mechs?.includes('beistand') && foe.hp > 0 && foe.hp / foe.side.maxHp >= AIDE_HP)
     })
   }
   const offer = (attacker: Actor, target: Actor, kind: 'strike' | 'skill' | 'ult') => {
@@ -347,19 +364,26 @@ export function fight1v1(allySide: FightSide, foeSide: FightSide, rng: () => num
     return past
   }
 
-  const strike = (attacker: Actor, target: Actor, skillMult: number, pierce: number, ult?: UltPattern): number => {
+  let bossSwung = false
+  const hasMech = (unit: Actor, id: MechId) => Boolean(unit.side.mechs?.includes(id))
+  const strike = (attacker: Actor, target: Actor, skillMult: number, pierce: number, ult?: UltPattern, extra?: { atkScale?: number; unavoidable?: boolean; helper?: boolean; pulse?: boolean }): number => {
     const tMult = typeMult(attacker.side.type, target.side.type)
     const wMult = ult === 'heilleucht' ? 1 : weatherFactor(weather, attacker.side.type)
-    const boosted = attacker.impulseLeft > 0 && !ult
+    const boosted = attacker.impulseLeft > 0 && !ult && !extra?.helper && !extra?.pulse
     const crit = rng() < combat.critChance
     const variance = combat.varianceMin + (combat.varianceMax - combat.varianceMin) * rng()
-    const blow = attacker.opening ? 1 + COUNTER_BLOW : 1
-    if (attacker.opening) attacker.struck = true
-    let dmg = rawDamage(atkOf(attacker), defOf(target, pierce), skillMult * blow, tMult * wMult, crit, variance)
+    const blow = attacker.opening && !extra?.helper && !extra?.pulse ? 1 + COUNTER_BLOW : 1
+    if (attacker.opening && !extra?.helper && !extra?.pulse) attacker.struck = true
+    if (!extra?.helper && !extra?.pulse && attacker.side.boss) bossSwung = true
+    const rage = hasMech(attacker, 'wut') && !extra?.helper && attacker.hp / attacker.side.maxHp < RAGE_HP
+    let dmg = rawDamage(atkOf(attacker) * (extra?.atkScale ?? 1), defOf(target, pierce), skillMult * blow * (rage ? RAGE_MULT : 1), tMult * wMult, crit, variance)
     if (attacker.mark?.id === 'schock') dmg = Math.floor(dmg * AILMENTS.schock.damage)
-    if (attacker.mark?.id === 'spreu' && rng() < AILMENTS.spreu.miss) dmg = 0
+    if (!extra?.unavoidable && attacker.mark?.id === 'spreu' && rng() < AILMENTS.spreu.miss) dmg = 0
+    const landed = dmg > 0
+    if (landed && hasMech(target, 'panzerung') && target.armorCrits < ARMOR_CRITS) dmg = Math.max(1, Math.floor(dmg * (1 - ARMOR_CUT)))
     if (boosted) attacker.impulseLeft -= 1
     if (crit) target.ultCharge = gainUlt(target.side.level ?? 0, target.ultCharge, 1)
+    if (crit && landed && hasMech(target, 'panzerung')) target.armorCrits += 1
     const past = hurt(target, dmg, false)
     if (trace && past > 0) {
       pending.push({
@@ -372,8 +396,26 @@ export function fight1v1(allySide: FightSide, foeSide: FightSide, rng: () => num
         kind: 'hit',
         awaken: awakenCount(attacker.side.level ?? 0) > 0,
         weather: wMult,
-        ult
+        ult,
+        helper: extra?.helper,
+        pulse: extra?.pulse
       })
+    }
+    if (past > 0 && !ult && hasMech(target, 'spiegel') && attacker.hp > 0) {
+      const back = Math.floor(past * MIRROR)
+      if (back > 0) {
+        hurt(attacker, back, false)
+        if (trace) pending.push({
+          from: target === ally ? 'ally' : 'foe',
+          amount: back,
+          crit: false,
+          type: target.side.type,
+          band: 'neutral',
+          ko: attacker.hp <= 0,
+          kind: 'hit',
+          mirror: true
+        })
+      }
     }
     const thorns = target.statuses.find((status) => status.id === 'thorns')
     if (past > 0 && thorns && attacker.hp > 0) {
@@ -381,6 +423,23 @@ export function fight1v1(allySide: FightSide, foeSide: FightSide, rng: () => num
       if (reflected > 0) hurt(attacker, reflected, false)
     }
     return dmg
+  }
+  const noteBossAttack = (unit: Actor, other: Actor) => {
+    if (!bossSwung || unit.hp <= 0) {
+      bossSwung = false
+      return
+    }
+    bossSwung = false
+    unit.bossAttacks += 1
+    const n = unit.bossAttacks
+    if (hasMech(unit, 'beistand') && n % AIDE_EVERY === 0 && unit.hp / unit.side.maxHp >= AIDE_HP && other.hp > 0) {
+      strike(unit, other, 1, 0, undefined, { atkScale: AIDE_ATK, helper: true })
+      push('Ein Helfer greift an.')
+    }
+    if (hasMech(unit, 'puls') && n % PULSE_EVERY === 0 && other.hp > 0 && unit.hp > 0) {
+      strike(unit, other, PULSE_MULT, 0, undefined, { unavoidable: true, pulse: true })
+      push('Ein Puls trifft.')
+    }
   }
 
   const cast = (unit: Actor, other: Actor) => {
@@ -416,6 +475,7 @@ export function fight1v1(allySide: FightSide, foeSide: FightSide, rng: () => num
     }
     unit.cd = skill.cooldown
     push(`${unit.side.name} setzt ${skill.name ?? 'eine Fähigkeit'} ein.`)
+    if (hadDamage) noteBossAttack(unit, other)
   }
 
   const castUlt = (unit: Actor, other: Actor) => {
@@ -443,6 +503,7 @@ export function fight1v1(allySide: FightSide, foeSide: FightSide, rng: () => num
     tickMark(unit, true)
     if (unit.struck) unit.opening = false
     push(`${unit.side.name} setzt ${ultName(pattern)} ein.`)
+    if (pattern === 'durchschlag') noteBossAttack(unit, other)
   }
 
   const act = (unit: Actor, other: Actor) => {
@@ -491,6 +552,7 @@ export function fight1v1(allySide: FightSide, foeSide: FightSide, rng: () => num
         }
         if (unit.cd > 0) unit.cd -= 1
         push(`${unit.side.name} greift an.`)
+        noteBossAttack(unit, other)
       }
       tickMark(unit, true)
       if (unit.struck) unit.opening = false
@@ -534,7 +596,8 @@ export function fight1v1(allySide: FightSide, foeSide: FightSide, rng: () => num
     timeout,
     allyHp: Math.max(0, ally.hp),
     foeHp: Math.max(0, foe.hp),
-    counter: Boolean(allySide.counter)
+    counter: Boolean(allySide.counter),
+    mechs: foeSide.mechs?.length ? [...foeSide.mechs] : undefined
   }
 }
 

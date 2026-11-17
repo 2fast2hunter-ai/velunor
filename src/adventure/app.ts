@@ -23,6 +23,7 @@ import { shotAt, shouldRecover } from './present'
 import { species, typeColor } from '../data'
 import { teamWeatherMarks, weatherArrow, weatherAt } from './weather'
 import { ultName } from './ult'
+import { mechIcon, type MechId } from './mech'
 import { AILMENTS, ailmentIcon, type AilmentId } from './ailment'
 import { sfx } from '../ui'
 import { actorTransform, hitShake, koPose, lungeOffset, numberStyle, parallaxShift } from '../battle/stage'
@@ -180,6 +181,10 @@ export function bootAdventure(): void {
 
   const params = new URLSearchParams(window.location.search)
   const fxDemo = params.get('fx')
+  if (debug && fxDemo === 'k7') {
+    showK7Demo(params.get('part'))
+    return
+  }
   if (debug && fxDemo === 'k6') {
     showK6Demo(params.get('part'))
     return
@@ -276,6 +281,32 @@ function showFxDemo(kind: 'fire' | 'hit' | 'ko', requested: string | null = null
 }
 
 const REGION_TINT = [0x7dcea0, 0x7dcea0, 0x9ad7ff, 0xff8a3d, 0x7e57c2, 0xf0c14a]
+
+function showK7Demo(part: string | null): void {
+  const kind = part === 'kampf' ? 'kampf' : part === 'vorschau' ? 'vorschau' : 'before'
+  save = beginAdventure('Ada', 'A', 'm01', Date.now())
+  const lead = save.active
+  if (lead && save.mons[lead]) save.mons[lead].lvl = kind === 'kampf' ? 12 : 25
+  if (kind === 'vorschau') {
+    const water = `a${save.nextId}`
+    save.nextId += 1
+    save.mons[water] = { species: 'm02', lvl: 25, exp: 0, hp: null, shiny: false, caughtAt: 1, caughtWhere: 'r1c1', keepDupes: false }
+    save.team.push(water)
+    save.dex.m02 = { seen: 1, caught: 1 }
+  }
+  if (kind === 'kampf' && lead && save.mons[lead]) save.mons[lead].species = 'm02'
+  save.settings.speed = 1
+  save.settings.reduceMotion = true
+  if (kind === 'kampf') {
+    challengeGuardian(save)
+    void start(save)
+    return
+  }
+  screen = 'adventure'
+  render()
+  document.querySelector('#foe-actor .hp')?.setAttribute('hidden', '')
+  document.getElementById('foe-ult')?.setAttribute('hidden', '')
+}
 
 function showK6Demo(part: string | null): void {
   const kind = part === 'konter' ? 'konter' : part === 'karte' ? 'karte' : 'before'
@@ -550,7 +581,7 @@ function render(step = save?.step): void {
     mult: wheelMult,
     symbols: wheelSymbols,
     note: wheelNote
-  }, { mapOpen, moreOpen, pcScroll, filtersOpen, dexOpen, shopTab, shopHint: Date.now() < shopFlashUntil }))
+  }, { mapOpen, moreOpen, pcScroll, filtersOpen, dexOpen, shopTab, shopHint: Date.now() < shopFlashUntil, fighting: animating }))
   if (screen === 'team') {
     pcIds = visiblePc(save, pc)
     const view = document.getElementById('pc-viewport')
@@ -1007,6 +1038,8 @@ function play(outcome: EncounterOutcome, speed: Speed, done: () => void): void {
       paintUlt('foe-ult', shot?.foeUlt ?? 0, shot?.foeUltOpen ?? false)
       paintMark('ally-status', shot?.allyMark ?? null, shot?.allyStacks ?? 0)
       paintMark('foe-status', shot?.foeMark ?? null, shot?.foeStacks ?? 0)
+      paintMechs(shot?.mechs ?? [])
+      paintHelper(Boolean(shot?.helper), shot?.foeSpecies ?? '')
       const konter = document.getElementById('konter-label')
       if (konter) {
         konter.hidden = !shot?.counter
@@ -1091,6 +1124,29 @@ function paintMark(id: string, mark: string | null, stacks: number): void {
   }
   const piles = spec.id === 'giftnebel' && stacks > 1 ? ` Stapel ${stacks}.` : ''
   node.dataset.tip = `${spec.tip}${piles}`
+}
+
+function paintMechs(ids: MechId[]): void {
+  const row = document.getElementById('foe-mechs')
+  if (!row) return
+  const key = ids.join(',')
+  if (row.dataset.ids !== key) {
+    row.dataset.ids = key
+    row.innerHTML = ids.map((id) => `<img src="${art(mechIcon(id))}" alt="${id}"/>`).join('')
+  }
+  row.hidden = ids.length === 0
+}
+
+function paintHelper(on: boolean, speciesId: string): void {
+  const img = document.getElementById('foe-helper')
+  if (!(img instanceof HTMLImageElement)) return
+  if (!on || !speciesId) {
+    img.hidden = true
+    return
+  }
+  const src = monsterArt(speciesId, true)
+  if (!img.src.endsWith(src) && img.getAttribute('src') !== src) img.src = src
+  img.hidden = false
 }
 
 function paintUlt(id: string, n: number, open: boolean): void {
