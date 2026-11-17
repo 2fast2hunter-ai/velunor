@@ -406,3 +406,25 @@ export function clearBattleFx(): void {
   pool.releaseAll()
   scene?.release()
 }
+
+/** Caps or pauses the particle canvas. A limit under 60 turns Phaser's fps gate on. */
+export function setFxRunning(running: boolean, fps: number): void {
+  const loop = game?.loop as {
+    fpsLimit?: number
+    hasFpsLimit?: boolean
+    _limitRate?: number
+    sleep?: () => void
+    wake?: () => void
+  } | undefined
+  if (!loop) return
+  const limit = fps > 0 && fps < 60 ? fps : 0
+  loop.fpsLimit = limit
+  loop.hasFpsLimit = limit > 0
+  loop._limitRate = limit > 0 ? 1000 / limit : 0
+  try {
+    if (running) loop.wake?.()
+    else loop.sleep?.()
+  } catch {
+    /* the effect canvas is optional */
+  }
+}

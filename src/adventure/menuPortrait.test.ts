@@ -150,7 +150,7 @@ describe('portrait menus', () => {
     expect(sheetShouldClose(Math.ceil(SHEET_SWIPE / 3), 1 / 3)).toBe(true)
   })
 
-  it('migrates saveVersion 1 to 2 on velunor_v2 without dropping the profile', () => {
+  it('migrates an older saveVersion on velunor_v2 without dropping the profile', () => {
     const storage = memory()
     const save = beginAdventure('Ada', 'B', 'm02', 1_000)
     save.gold = 4321
@@ -165,9 +165,9 @@ describe('portrait menus', () => {
     raw.gold = 4321
     storage.setItem(SAVE_KEY_V2, JSON.stringify(raw))
     const loaded = loadAdventure(storage, 5_000)
-    expect(SAVE_VERSION).toBe(2)
+    expect(SAVE_VERSION).toBe(3)
     expect(loaded?.v).toBe(2)
-    expect(loaded?.saveVersion).toBe(2)
+    expect(loaded?.saveVersion).toBe(3)
     expect(loaded?.name).toBe('Ada')
     expect(loaded?.avatar).toBe('B')
     expect(loaded?.gold).toBe(4321)

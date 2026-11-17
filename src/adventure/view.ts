@@ -11,6 +11,7 @@ import {
   STARTERS,
   assetPath
 } from './const'
+import { fontFactor } from './touch'
 import { baseLine, dexPlaces, dexStatus, dexStatusLabel, listCodex, regionProgress, speciesNumber, type DexFilter } from './dex'
 import { goalName, goalTitle, rarityLabel, t, typeLabel, weatherLabel, whenLabel, type Lang } from './i18n'
 import { exportCode } from './save'
@@ -426,7 +427,7 @@ function team(save: SaveV2, query: PcQuery, selected: string | null, shell: Shel
     const uid = save.team[index]
     if (!uid || !save.mons[uid]) return `<div class="mon-card slot" aria-hidden="true"><span>${index + 1}</span></div>`
     const mon = save.mons[uid]
-    return `<button type="button" class="mon-card ${selected === uid ? 'on' : ''}" data-act="select" data-uid="${uid}" data-index="${index}" draggable="true" data-drag="team">
+    return `<button type="button" class="mon-card ${selected === uid ? 'on' : ''}" data-act="select" data-uid="${uid}" data-index="${index}" data-press="card" draggable="true" data-drag="team">
       <img src="${monsterArt(mon.species)}" alt=""/>
       <div>${index + 1}. ${esc(species(mon.species).name)}</div>
       <div class="muted">Lv ${mon.lvl}${save.buddy === uid ? ` · ${tr(save, 'team.buddy')}` : ''}${fightsHere(save, mon) ? '' : ` · ${tr(save, 'team.other')}`}</div>
@@ -707,6 +708,14 @@ function options(save: SaveV2, debug: boolean): string {
     <label class="switch"><input type="checkbox" data-field="shake" ${save.settings.shake ? 'checked' : ''}/> ${tr(save, 'opt.shake')}</label>
     <label class="switch"><input type="checkbox" data-field="flash" ${save.settings.flashes ? 'checked' : ''}/> ${tr(save, 'opt.flash')}</label>
     <label class="switch"><input type="checkbox" data-field="motion" ${save.settings.reduceMotion ? 'checked' : ''}/> ${tr(save, 'opt.motion')}</label>
+    <label class="switch"><input type="checkbox" data-field="swipe" ${save.settings.swipeTabs ? 'checked' : ''}/> ${tr(save, 'opt.swipe')}</label>
+    <label class="switch"><input type="checkbox" data-field="haptic" ${save.settings.haptics ? 'checked' : ''}/> ${tr(save, 'opt.haptic')}</label>
+    <div class="row-actions">
+      <span>${tr(save, 'opt.font')}</span>
+      ${([100, 115, 130] as const).map((size) => `<button type="button" data-act="font" data-size="${size}" class="${save.settings.font === size ? 'primary' : ''}">${size} %</button>`).join('')}
+    </div>
+    <label class="switch"><input type="checkbox" data-field="battery" ${save.settings.battery ? 'checked' : ''}/> ${tr(save, 'opt.battery')}</label>
+    <p class="muted">${tr(save, 'opt.batteryNote')}</p>
     <label class="switch"><input type="checkbox" data-field="loop" ${save.loop ? 'checked' : ''}/> ${tr(save, 'nav.loop')}</label>
     <div class="row-actions">
       <span>${tr(save, 'opt.power')}</span>
@@ -758,7 +767,8 @@ export function gameHtml(save: SaveV2, screen: Screen, now: number, pc: PcQuery,
       <p class="muted">${tr(save, 'nav.crest', { name: save.badges.includes(chapter.guardian.badge) ? chapter.guardian.badge : '—' })}</p>
       ${progress(save)}
     </div>` : ''
-  return `<div id="stage" class="${adventure ? 'is-adventure' : 'is-menu'} ${save.settings.reduceMotion ? 'reduce-motion' : ''}">
+  const typeScale = fontFactor(save.settings.font)
+  return `<div id="stage" data-font="${save.settings.font}" data-swipe="${save.settings.swipeTabs ? '1' : '0'}" data-battery="${save.settings.battery ? '1' : '0'}" style="--font-scale:${typeScale}" class="${adventure ? 'is-adventure' : 'is-menu'} ${save.settings.reduceMotion ? 'reduce-motion' : ''}">
     <div class="band band-top"></div>
     <div class="safe">
       <div class="anchor anchor-top">
