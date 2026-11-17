@@ -23,6 +23,7 @@ import { shotAt, shouldRecover } from './present'
 import { species, typeColor } from '../data'
 import { teamWeatherMarks, weatherArrow, weatherAt } from './weather'
 import { ultName } from './ult'
+import { activeCombos, AURA_FRAMES, AURA_MS } from './combo'
 import { mechIcon, type MechId } from './mech'
 import { AILMENTS, ailmentIcon, type AilmentId } from './ailment'
 import { sfx } from '../ui'
@@ -181,6 +182,10 @@ export function bootAdventure(): void {
 
   const params = new URLSearchParams(window.location.search)
   const fxDemo = params.get('fx')
+  if (debug && fxDemo === 'k8') {
+    showK8Demo(params.get('part'))
+    return
+  }
   if (debug && fxDemo === 'k7') {
     showK7Demo(params.get('part'))
     return
@@ -281,6 +286,29 @@ function showFxDemo(kind: 'fire' | 'hit' | 'ko', requested: string | null = null
 }
 
 const REGION_TINT = [0x7dcea0, 0x7dcea0, 0x9ad7ff, 0xff8a3d, 0x7e57c2, 0xf0c14a]
+
+function showK8Demo(part: string | null): void {
+  const fight = part === 'aura'
+  save = beginAdventure('Ada', 'A', 'm01', Date.now())
+  const lead = save.active
+  if (lead && save.mons[lead]) save.mons[lead].lvl = 12
+  const water = `a${save.nextId}`
+  save.nextId += 1
+  save.mons[water] = { species: 'm02', lvl: 12, exp: 0, hp: null, shiny: false, caughtAt: 1, caughtWhere: 'r1c1', keepDupes: false }
+  save.team.push(water)
+  save.dex.m02 = { seen: 1, caught: 1 }
+  save.settings.speed = 1
+  save.settings.reduceMotion = false
+  if (fight) {
+    challengeGuardian(save)
+    void start(save)
+    return
+  }
+  screen = 'adventure'
+  render()
+  document.querySelector('#foe-actor .hp')?.setAttribute('hidden', '')
+  document.getElementById('foe-ult')?.setAttribute('hidden', '')
+}
 
 function showK7Demo(part: string | null): void {
   const kind = part === 'kampf' ? 'kampf' : part === 'vorschau' ? 'vorschau' : 'before'
@@ -1091,7 +1119,10 @@ function play(outcome: EncounterOutcome, speed: Speed, done: () => void): void {
       finishOnce()
     }
   }
-  const run = () => { raf = requestAnimationFrame(frame) }
+  const run = () => {
+    showAura(speed)
+    raf = requestAnimationFrame(frame)
+  }
   if (outcome.boss?.species && !holdCounter) showBossIntro(outcome.boss, run)
   else run()
 }
@@ -1124,6 +1155,34 @@ function paintMark(id: string, mark: string | null, stacks: number): void {
   }
   const piles = spec.id === 'giftnebel' && stacks > 1 ? ` Stapel ${stacks}.` : ''
   node.dataset.tip = `${spec.tip}${piles}`
+}
+
+let auraTimer = 0
+
+function showAura(speed: number): void {
+  if (!save) return
+  const types = save.team.flatMap((uid) => {
+    const mon = save!.mons[uid]
+    return mon ? [species(mon.species).type] : []
+  })
+  if (!activeCombos(types).length) return
+  const node = document.getElementById('aura-flash')
+  if (!(node instanceof HTMLElement)) return
+  window.clearInterval(auraTimer)
+  node.style.backgroundImage = `url(${art('battle/aura_flash.png')})`
+  node.style.backgroundPosition = '0 0'
+  node.hidden = false
+  const step = AURA_MS / AURA_FRAMES / Math.max(1, speed)
+  let frame = 0
+  auraTimer = window.setInterval(() => {
+    frame += 1
+    if (frame >= AURA_FRAMES) {
+      window.clearInterval(auraTimer)
+      node.hidden = true
+      return
+    }
+    node.style.backgroundPosition = `${-frame * 256}px 0`
+  }, step)
 }
 
 function paintMechs(ids: MechId[]): void {

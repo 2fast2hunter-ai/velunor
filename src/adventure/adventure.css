@@ -290,6 +290,13 @@ textarea { width: 100%; box-sizing: border-box; background: #121a30; color: inhe
   box-sizing: border-box;
   z-index: 4;
 }
+.dock.has-combo { grid-template-columns: 72px minmax(0, 1fr) 148px; }
+.combo-mark { width: 64px; height: 64px; align-self: center; object-fit: contain; }
+.aura-flash {
+  position: absolute; z-index: 6; left: 28%; top: 70%; width: 256px; height: 256px;
+  transform: translate(-50%, -70%); pointer-events: none;
+  background-repeat: no-repeat; background-size: 1280px 256px;
+}
 .team-rail {
   display: grid;
   grid-template-columns: repeat(6, minmax(0, 1fr));
