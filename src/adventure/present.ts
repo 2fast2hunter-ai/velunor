@@ -1,4 +1,5 @@
 import type { FightHit, FightTrace } from './battle'
+import type { MechId } from './mech'
 import { watchdogLimit, type Speed } from './const'
 
 export interface StallInput {
@@ -37,6 +38,8 @@ export interface FrameShot {
   allyStacks: number
   foeStacks: number
   counter: boolean
+  mechs: MechId[]
+  helper: boolean
 }
 
 /** The battle frame at `elapsed` ms. Missing traces never throw. */
@@ -71,6 +74,8 @@ export function shotAt(traces: FightTrace[], elapsed: number, dur: number): Fram
     foeMark: shot.foeMark ?? null,
     allyStacks: shot.allyStacks ?? 0,
     foeStacks: shot.foeStacks ?? 0,
-    counter: Boolean(trace.counter)
+    counter: Boolean(trace.counter),
+    mechs: trace.mechs ?? [],
+    helper: Boolean(shot.helper)
   }
 }

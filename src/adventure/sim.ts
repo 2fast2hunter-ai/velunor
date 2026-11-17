@@ -5,6 +5,7 @@ import type { FightSide, FightTrace } from './battle'
 import { fight1v1 } from './battle'
 import { weatherAt } from './weather'
 import { orderMods, type OrderSeat } from './order'
+import { councilAssignment, guardianAssignment, type MechId } from './mech'
 import {
   BASE_ENCOUNTER_MS,
   BENCH_EXP,
@@ -332,7 +333,7 @@ function seatsOf(save: SaveV2): OrderSeat[] {
   })
 }
 
-function foeSide(speciesId: string, level: number, shiny = false, scale: BossScale = { hp: 1, atk: 1, def: 1 }, hpFraction = 1): FightSide {
+function foeSide(speciesId: string, level: number, shiny = false, scale: BossScale = { hp: 1, atk: 1, def: 1 }, hpFraction = 1, mechs: MechId[] = []): FightSide {
   const sp = species(speciesId)
   const stats = monStats({ species: speciesId, lvl: level, exp: 0, hp: null, shiny, caughtAt: 0, caughtWhere: '', keepDupes: false })
   const maxHp = Math.max(1, Math.round(stats.hp * scale.hp))
@@ -349,7 +350,8 @@ function foeSide(speciesId: string, level: number, shiny = false, scale: BossSca
     skill: sp.skill,
     passive: sp.passive ?? null,
     level,
-    boss: scale.hp !== 1 || scale.atk !== 1 || scale.def !== 1
+    boss: scale.hp !== 1 || scale.atk !== 1 || scale.def !== 1 || mechs.length > 0,
+    mechs: mechs.length ? mechs : undefined
   }
 }
 
@@ -640,7 +642,8 @@ function runGauntlet(
   foes: { species: string; level: number; shiny?: boolean }[],
   scale: BossScale,
   opts: ResolveOpts,
-  now: number
+  now: number,
+  mechs: MechId[] = []
 ): { traces: FightTrace[]; wins: number; lastFighter: string | null; wiped: boolean; exp: number } {
   const traces: FightTrace[] = []
   let index = 0
@@ -667,7 +670,7 @@ function runGauntlet(
     const allyMon = save.mons[fighter]
     const cap = chapterCapNow(save, chapter)
     const foeType = species(foe.species).type
-    const trace = fight1v1(sideFrom(allyMon, cap, orderMods(seatsOf(save), fighter, foeType, enteredAfterKo)), foeSide(foe.species, foe.level, foe.shiny ?? false, scale, foeFraction), rngOf(save), opts.trace, opts.offline ? null : weatherAt(now))
+    const trace = fight1v1(sideFrom(allyMon, cap, orderMods(seatsOf(save), fighter, foeType, enteredAfterKo)), foeSide(foe.species, foe.level, foe.shiny ?? false, scale, foeFraction, mechs), rngOf(save), opts.trace, opts.offline ? null : weatherAt(now))
     traces.push(trace)
     lastFighter = fighter
     if (opts.summary) opts.summary.fights += 1
@@ -714,7 +717,7 @@ function doGuardian(save: SaveV2, chapter: ChapterDef, now: number, opts: Resolv
   outcome.boss = { name: guard.name, title: guard.epithet, species: guard.team[0].species }
   say(save, outcome, now, line(save, 'say.guard', { epithet: guard.epithet, name: guard.name, type: typeName(species(guard.team[0].species).type) }), quiet)
   const foes = guard.team.map((mon) => ({ species: mon.species, level: mon.level }))
-  const bouts = runGauntlet(save, chapter, foes, bossScale(guard), opts, now)
+  const bouts = runGauntlet(save, chapter, foes, bossScale(guard), opts, now, guardianAssignment(guard.badge, guard.name, Boolean(chapter.special)))
   outcome.traces = bouts.traces
   if (bouts.wins < foes.length) {
     outcome.win = false
@@ -846,7 +849,7 @@ function doCouncil(save: SaveV2, chapter: ChapterDef, now: number, opts: Resolve
   outcome.boss = { name: member.name, title: member.epithet, species: member.team[0]?.species ?? '' }
   say(save, outcome, now, line(save, 'say.councilEnter', { epithet: member.epithet, name: member.name, cap: chapter.cap }), quiet)
   const foes = member.team.map((mon) => ({ species: mon.species, level: mon.level }))
-  const bouts = runGauntlet(save, chapter, foes, bossScale(member), opts, now)
+  const bouts = runGauntlet(save, chapter, foes, bossScale(member), opts, now, councilAssignment(member.id))
   outcome.traces = bouts.traces
   if (bouts.wins < foes.length) {
     outcome.win = false

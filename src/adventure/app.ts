@@ -23,6 +23,7 @@ import { shotAt, shouldRecover } from './present'
 import { species, typeColor } from '../data'
 import { teamWeatherMarks, weatherArrow, weatherAt } from './weather'
 import { ultName } from './ult'
+import { mechIcon, type MechId } from './mech'
 import { AILMENTS, ailmentIcon, type AilmentId } from './ailment'
 import { sfx } from '../ui'
 import { actorTransform, hitShake, koPose, lungeOffset, numberStyle, parallaxShift } from '../battle/stage'
@@ -1007,6 +1008,8 @@ function play(outcome: EncounterOutcome, speed: Speed, done: () => void): void {
       paintUlt('foe-ult', shot?.foeUlt ?? 0, shot?.foeUltOpen ?? false)
       paintMark('ally-status', shot?.allyMark ?? null, shot?.allyStacks ?? 0)
       paintMark('foe-status', shot?.foeMark ?? null, shot?.foeStacks ?? 0)
+      paintMechs(shot?.mechs ?? [])
+      paintHelper(Boolean(shot?.helper), shot?.foeSpecies ?? '')
       const konter = document.getElementById('konter-label')
       if (konter) {
         konter.hidden = !shot?.counter
@@ -1091,6 +1094,29 @@ function paintMark(id: string, mark: string | null, stacks: number): void {
   }
   const piles = spec.id === 'giftnebel' && stacks > 1 ? ` Stapel ${stacks}.` : ''
   node.dataset.tip = `${spec.tip}${piles}`
+}
+
+function paintMechs(ids: MechId[]): void {
+  const row = document.getElementById('foe-mechs')
+  if (!row) return
+  const key = ids.join(',')
+  if (row.dataset.ids !== key) {
+    row.dataset.ids = key
+    row.innerHTML = ids.map((id) => `<img src="${art(mechIcon(id))}" alt="${id}"/>`).join('')
+  }
+  row.hidden = ids.length === 0
+}
+
+function paintHelper(on: boolean, speciesId: string): void {
+  const img = document.getElementById('foe-helper')
+  if (!(img instanceof HTMLImageElement)) return
+  if (!on || !speciesId) {
+    img.hidden = true
+    return
+  }
+  const src = monsterArt(speciesId, true)
+  if (!img.src.endsWith(src) && img.getAttribute('src') !== src) img.src = src
+  img.hidden = false
 }
 
 function paintUlt(id: string, n: number, open: boolean): void {

@@ -366,6 +366,23 @@ textarea { width: 100%; box-sizing: border-box; background: #121a30; color: inhe
 }
 .guard-card .up { color: #69f0ae; }
 .guard-card .down { color: #ff5252; }
+.guard-card .mech-line {
+  display: flex; align-items: center; justify-content: center; gap: 8px;
+  width: 100%; font-size: 36px; line-height: 1.15; text-align: left;
+}
+.guard-card .mech-line img { width: 36px; height: 36px; object-fit: contain; flex: 0 0 auto; }
+.guard-card .ult { width: 160px; height: 36px; flex: 0 0 auto; }
+.guard-card .ult.is-locked { height: 36px; }
+.guard-card .ult.is-locked::after { content: none; }
+.mech-row {
+  display: flex; gap: 6px; justify-content: center; margin: 0 0 6px;
+  padding: 4px; border-radius: 14px; background: rgba(8, 12, 24, 0.82);
+}
+.mech-row img { width: 64px; height: 64px; object-fit: contain; }
+.combatant .helper {
+  position: absolute; height: 180px; width: auto; right: 112%; bottom: 20px;
+  pointer-events: none; filter: drop-shadow(0 8px 8px rgba(0, 0, 0, 0.45));
+}
 .konter-label {
   margin: 0 0 8px; padding: 6px 16px; border-radius: 999px; background: #ffd54f; color: #1a1208;
   font-weight: 900; font-size: 36px; line-height: 1.2;

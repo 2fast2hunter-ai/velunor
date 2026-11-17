@@ -39,13 +39,15 @@ import {
 } from './shopOffer'
 import { UI_ART, type UiArtId } from './uiArt'
 import { fightsHere } from './origin'
-import { chapterById, gateBadge, placeLabel, regionById, regions, routeOf, type NodeKind } from './route'
+import { chapterById, councilOf, gateBadge, placeLabel, regionById, regions, routeOf, type NodeKind } from './route'
 import { chapterUnlocked, dexCaughtCount, hereSightings, rarityName } from './sim'
 import { GOALS } from './achievements'
 import { HORT_PRICES, hortOffer } from './hort'
 import { fruitDef, fruitMinutes } from './shop'
 import { teamWeatherMarks, weatherArrow, weatherForecast, weatherName, WEATHER_SHIFTS, type WeatherId } from './weather'
 import { typeArrow } from './order'
+import { councilAssignment, guardianAssignment, mechIcon, mechName, mechTip, type MechId } from './mech'
+import { ultName, ultPattern, ultUnlocked } from './ult'
 import { FACES, MULTIPLIERS, PRIZES, faceById, spinCost, wheelOpen, type Multiplier, type SymbolId } from './wheel'
 import { expToNext, isAlive, monStats, realHp } from './stats'
 import type { OfflineSummary } from './sim'
@@ -266,6 +268,8 @@ function battle(save: SaveV2, now: number): string {
         <button type="button" class="status-mark" id="foe-status" data-act="status" data-who="foe" hidden><img alt=""/></button>
         <p class="status-tip" id="foe-tip" hidden></p>
         <b id="foe-name"><img class="wx-arrow" id="foe-arrow" alt="" hidden/></b>
+        <div class="mech-row" id="foe-mechs" hidden></div>
+        <img class="helper" id="foe-helper" alt="" hidden/>
         <div class="hp"><span id="foe-hp" style="width:100%"></span></div>
         <div class="ult" id="foe-ult" data-n="0" hidden></div>
         <img class="sprite" id="foe-sprite" alt="" hidden/>
@@ -368,7 +372,37 @@ function guardCard(save: SaveV2): string {
         : ''
     return [`<span>${esc(species(mon.species).name)}${mark}</span>`]
   }).join('')
-  return `<div class="guard-card"><b>Gegen ${esc(typeName(foeType))}</b>${bits}</div>`
+  const lead = bossLead(save)
+  const preview = lead ? bossPreview(lead.speciesId, lead.level, lead.mechs) : ''
+  return `<div class="guard-card"><b>Gegen ${esc(typeName(foeType))}</b>${bits}${preview}</div>`
+}
+
+function bossLead(save: SaveV2): { speciesId: string; level: number; mechs: MechId[] } | null {
+  const chapter = chapterById(save.region, save.chapter)
+  if (chapter.foyer) {
+    const council = councilOf(save.region)
+    const member = council?.council?.members.find((row) => !save.councilBeaten.includes(row.id))
+    const lead = member?.team[0]
+    if (!member || !lead) return null
+    return { speciesId: lead.species, level: lead.level, mechs: councilAssignment(member.id) }
+  }
+  if (chapter.council) {
+    const member = chapter.council.members.find((row) => !save.councilBeaten.includes(row.id))
+    const lead = member?.team[0]
+    if (!member || !lead) return null
+    return { speciesId: lead.species, level: lead.level, mechs: councilAssignment(member.id) }
+  }
+  const lead = chapter.guardian.team[0]
+  if (!lead) return null
+  return { speciesId: lead.species, level: lead.level, mechs: guardianAssignment(chapter.guardian.badge, chapter.guardian.name, Boolean(chapter.special)) }
+}
+
+function bossPreview(speciesId: string, level: number, mechs: MechId[]): string {
+  const lines = mechs.map((id) => `<span class="mech-line"><img src="${art(mechIcon(id))}" alt=""/><span>${esc(mechName(id))} · ${esc(mechTip(id))}</span></span>`).join('')
+  const open = ultUnlocked(level)
+  const bar = `<span class="ult${open ? '' : ' is-locked'}" data-n="${open ? 5 : 0}"></span>`
+  const lock = open ? '' : ' · ab Lv 25'
+  return `${lines}<span class="mech-line"><span>Ult ${esc(ultName(ultPattern(speciesId)))}${lock}</span>${bar}</span>`
 }
 
 function weatherPreview(save: SaveV2, now: number): string {
