@@ -11,6 +11,7 @@ import {
   SEAL_SCALE_IN_MS,
   SEAL_SPIN_MS,
   WELCOME_AFTER_MS,
+  STARTERS,
   debugAllowed,
   encounterMs,
   fitScale,
@@ -162,6 +163,7 @@ export function bootAdventure(): void {
   window.addEventListener('resize', fit)
   window.addEventListener('pointerdown', wake)
   window.addEventListener('keydown', wake)
+  window.addEventListener('keydown', onStarterKey)
   const storedLang = localStorage.getItem('velunor_lang')
   draftLang = storedLang === 'en' || storedLang === 'de' ? storedLang : (navigator.language.toLowerCase().startsWith('en') ? 'en' : 'de')
   document.documentElement.lang = draftLang
@@ -595,6 +597,113 @@ function showOnboarding(): void {
   }
   document.documentElement.lang = draftLang
   paint(onboardingHtml(draftName, draftLook, draftPick, draftLang, draftStep, draftLangOpen))
+  if (draftStep === 'starter') {
+    bindStarterScroller()
+    placeStarter(draftPick)
+  }
+}
+
+let starterFx = 0
+
+function placeStarter(id: string): void {
+  const scroller = document.getElementById('starter-scroller')
+  if (!scroller) return
+  const card = (id ? scroller.querySelector(`[data-species="${id}"]`) : null) ?? scroller.querySelector('.starter-card')
+  if (!(card instanceof HTMLElement)) return
+  scroller.scrollLeft = Math.max(0, card.offsetLeft - (scroller.clientWidth - card.offsetWidth) / 2)
+  const index = card.dataset.index ?? '0'
+  document.querySelectorAll('.starter-dot').forEach((dot) => {
+    const on = dot.getAttribute('data-index') === index
+    dot.classList.toggle('on', on)
+    dot.setAttribute('aria-current', on ? 'true' : 'false')
+  })
+}
+
+function bindStarterScroller(): void {
+  const scroller = document.getElementById('starter-scroller')
+  if (!scroller) return
+  scroller.addEventListener('scroll', () => {
+    const cards = [...scroller.querySelectorAll('.starter-card')]
+    const mid = scroller.scrollLeft + scroller.clientWidth / 2
+    let best: Element | null = cards[0] ?? null
+    let dist = Number.POSITIVE_INFINITY
+    for (const card of cards) {
+      if (!(card instanceof HTMLElement)) continue
+      const delta = Math.abs(card.offsetLeft + card.offsetWidth / 2 - mid)
+      if (delta < dist) {
+        dist = delta
+        best = card
+      }
+    }
+    if (best instanceof HTMLElement) {
+      const index = best.dataset.index ?? '0'
+      document.querySelectorAll('.starter-dot').forEach((dot) => {
+        const on = dot.getAttribute('data-index') === index
+        dot.classList.toggle('on', on)
+        dot.setAttribute('aria-current', on ? 'true' : 'false')
+      })
+    }
+  }, { passive: true })
+}
+
+function onStarterKey(event: KeyboardEvent): void {
+  if (save || draftStep !== 'starter') return
+  const scroller = document.getElementById('starter-scroller')
+  if (!scroller) return
+  const cards = [...scroller.querySelectorAll('.starter-card')].filter((node): node is HTMLElement => node instanceof HTMLElement)
+  const active = document.activeElement
+  const index = cards.findIndex((card) => card === active || card.contains(active))
+  if ((event.key === 'ArrowRight' || event.key === 'ArrowLeft') && index >= 0) {
+    event.preventDefault()
+    const next = event.key === 'ArrowRight' ? Math.min(cards.length - 1, index + 1) : Math.max(0, index - 1)
+    cards[next].focus()
+    placeStarter(cards[next].dataset.species ?? '')
+  }
+  if ((event.key === 'Enter' || event.key === ' ') && active instanceof HTMLElement && active.classList.contains('starter-card')) {
+    event.preventDefault()
+    draftPick = active.dataset.species ?? ''
+    showOnboarding()
+  }
+}
+
+function playStarterPreview(node: HTMLElement, speciesId: string): void {
+  const host = document.getElementById('starter-fx')
+  const stage = document.getElementById('stage')
+  if (!(host instanceof HTMLElement) || !(stage instanceof HTMLElement) || !speciesId) return
+  let row: ReturnType<typeof species>
+  try { row = species(speciesId) } catch { return }
+  const box = node.getBoundingClientRect()
+  const frame = stage.getBoundingClientRect()
+  const scale = frame.width / (stage.clientWidth || 1) || 1
+  host.hidden = false
+  host.style.left = `${((box.left - frame.left) / scale).toFixed(1)}px`
+  host.style.top = `${((box.top - frame.top) / scale).toFixed(1)}px`
+  host.style.width = `${(box.width / scale).toFixed(1)}px`
+  host.style.height = `${(box.height / scale).toFixed(1)}px`
+  mountBattleFx(host)
+  const reduced = window.matchMedia('(prefers-reduced-motion: reduce)').matches
+  const kind = speciesId === 'm03' ? 'heal' : speciesId === 'm02' ? 'status' : 'hit'
+  window.clearTimeout(starterFx)
+  preloadBattleStrips([row.type], () => onBattleFxReady(() => {
+    const width = host.clientWidth || 200
+    const height = host.clientHeight || 200
+    playBattleFx({
+      type: row.type,
+      crit: false,
+      band: 'neutral',
+      awaken: false,
+      shimmer: false,
+      reduced,
+      tempo: 1,
+      from: { x: width * 0.22, y: height * 0.62 },
+      to: { x: width * 0.78, y: height * 0.4 },
+      kind
+    })
+    starterFx = window.setTimeout(() => {
+      host.hidden = true
+      clearBattleFx()
+    }, 2000)
+  }))
 }
 
 async function start(next: SaveV2): Promise<void> {
@@ -1590,6 +1699,16 @@ function onClick(event: Event): void {
     if (save) return
     draftStep = 'name'
     showOnboarding()
+    return
+  }
+  if (act === 'preview') {
+    if (save) return
+    if (node instanceof HTMLElement) playStarterPreview(node, node.getAttribute('data-species') ?? '')
+    return
+  }
+  if (act === 'starter-dot') {
+    if (save) return
+    placeStarter(STARTERS[Number(node.getAttribute('data-index'))]?.id ?? '')
     return
   }
   if (act === 'pick') {
