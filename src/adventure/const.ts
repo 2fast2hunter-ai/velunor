@@ -74,6 +74,15 @@ export function fitScale(width: number, height: number): number {
   return Math.min(width / SHELL_W, height / SHELL_H)
 }
 
+/**
+ * Empty device pixels under the painted tab bar.
+ * The home-indicator inset is part of the bar, so only letterboxing remains.
+ */
+export function tabBarBottomGap(width: number, height: number): number {
+  const scale = fitScale(width, height)
+  return Math.max(0, (height - SHELL_H * scale) / 2)
+}
+
 export const CATCH_BASE = [0.6, 0.5, 0.4, 0.3, 0.22, 0.15, 0.1, 0.05, 0.03, 0.015] as const
 /** Extra catch chance per failed seal of the same species, in percentage points. */
 export const SEAL_PITY_STEP = 0.5
