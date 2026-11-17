@@ -9,6 +9,7 @@ import {
   layoutDigits,
   hitLook,
   hitstopMs,
+  numberAlpha,
   numberHoldMs
 } from './hitReadout'
 
@@ -43,6 +44,13 @@ describe('hit readout styles', () => {
     expect(numberHoldMs(1)).toBe(600)
     expect(numberHoldMs(2)).toBe(300)
     expect(numberHoldMs(3)).toBe(200)
+  })
+
+  it('keeps full alpha until the last 30 percent of the float', () => {
+    expect(numberAlpha(0)).toBe(1)
+    expect(numberAlpha(0.7)).toBe(1)
+    expect(numberAlpha(0.85)).toBeCloseTo(0.5)
+    expect(numberAlpha(1)).toBe(0)
   })
 
   it('shakes 4, 8 and 12 px and halves that when reduced or at ×3', () => {

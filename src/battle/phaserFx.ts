@@ -9,6 +9,7 @@ import {
   hitLook,
   labelFrame,
   layoutDigits,
+  numberAlpha,
   type HitGrade
 } from './hitReadout'
 import { effectScale, flightMs, FX_SIZE, particleBudget, POOL_SIZE, typeFx, type TypeFxDef } from './typeFx'
@@ -150,11 +151,11 @@ class FxScene extends Phaser.Scene {
     placed.forEach((item, index) => {
       const glyph = slot.glyphs[index]
       if (!glyph || !texture.has(item.frame)) return
-      glyph.setTexture(DIGIT_ATLAS_KEY, item.frame).setVisible(true).setPosition(-total / 2 + item.x, -style.baseline)
+      glyph.setTexture(DIGIT_ATLAS_KEY, item.frame).clearTint().setAlpha(1).setVisible(true).setPosition(-total / 2 + item.x, -style.baseline)
     })
     const word = labelFrame(grade)
     if (word && texture.has(word)) {
-      slot.label.setTexture(DIGIT_ATLAS_KEY, word).setVisible(true).setPosition(0, -style.frameHeight - 4)
+      slot.label.setTexture(DIGIT_ATLAS_KEY, word).clearTint().setAlpha(1).setVisible(true).setPosition(0, -style.frameHeight - 4)
     }
   }
 
@@ -171,7 +172,7 @@ class FxScene extends Phaser.Scene {
       const rise = 90 * t
       const bounce = slot.bounce ? Math.sin(age / 70) * 10 * (1 - t) : 0
       slot.root.setPosition(slot.x, slot.y - rise + bounce)
-      slot.root.setAlpha(t > 0.72 ? Math.max(0, 1 - (t - 0.72) / 0.28) : 1)
+      slot.root.setAlpha(numberAlpha(t))
     }
   }
 

@@ -102,6 +102,13 @@ export function numberHoldMs(speed: number): number {
   return NUMBER_FLOAT_MS / pace
 }
 
+/** Full cover until the last 30% of the float, then a linear fade. */
+export function numberAlpha(t: number): number {
+  if (t <= 0.7) return 1
+  if (t >= 1) return 0
+  return (1 - t) / 0.3
+}
+
 export function cameraShake(grade: HitGrade, kind: ImpactKind, opts: ImpactOpts): ShakeSpec {
   const base = kind === 'ult' ? SHAKE.ult : grade === 'crit' || grade === 'strong' ? SHAKE.heavy : SHAKE.normal
   if (opts.reduced || opts.speed >= 3) return { ms: base.ms, px: base.px * 0.5 }

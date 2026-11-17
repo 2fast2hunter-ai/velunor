@@ -230,8 +230,12 @@ function showFxDemo(kind: 'fire' | 'hit' | 'ko'): void {
         const picture = foe.querySelector('img')
         if (picture instanceof HTMLImageElement) picture.style.filter = 'brightness(2.8)'
         foe.style.transform = `translate(-50%, -100%) translate(${hitShake(40)}px, 0px) scale(0.72)`
-        const shown = showHitNumber(to.x, to.y - 80, 36, 'crit', numberHoldMs(1))
-        if (!shown) spawnFloat(document.getElementById('floats'), { amount: 36, crit: true, band: 'strong' }, typeFx('fire').base, '70%', numberHoldMs(1))
+        const head = numberPoint(foe, fx)
+        const critShown = showHitNumber(head.x - 170, head.y, 36, 'crit', numberHoldMs(1))
+        const strongShown = showHitNumber(head.x + 170, head.y, 48, 'strong', numberHoldMs(1))
+        if (!critShown) spawnFloat(document.getElementById('floats'), { amount: 36, crit: true, band: 'strong' }, typeFx('fire').base, '42%', numberHoldMs(1))
+        if (!strongShown) spawnFloat(document.getElementById('floats'), { amount: 48, crit: false, band: 'strong' }, typeFx('fire').base, '78%', numberHoldMs(1))
+        window.setTimeout(() => document.getElementById('battle')?.setAttribute('data-digits', 'ready'), 90)
       }
     }
     window.setTimeout(() => {
@@ -705,7 +709,8 @@ function play(outcome: EncounterOutcome, speed: Speed, done: () => void): void {
               showMove(attackTitle(attackerId, hit.type), hit.from === 'ally' ? allyActor : foeActor, k)
               const grade = hitGrade(hit.band, hit.crit)
               const hold = numberHoldMs(speed)
-              const shown = showHitNumber(to.x, to.y - 70, hit.amount, grade, hold)
+              const above = numberPoint(hit.from === 'ally' ? foeActor : allyActor, fxHost)
+              const shown = showHitNumber(above.x, above.y, hit.amount, grade, hold)
               if (!shown) spawnFloat(floats, hit, typeFx(hit.type).base, hit.from === 'ally' ? '70%' : '30%', hold)
             }
             const struck = hit.from === 'ally' ? foeActor : allyActor
@@ -785,6 +790,18 @@ function play(outcome: EncounterOutcome, speed: Speed, done: () => void): void {
 }
 
 const floatPool: HTMLDivElement[] = []
+
+function numberPoint(actor: HTMLElement, host: HTMLElement): { x: number; y: number } {
+  const pt = stagePoint(actor, host)
+  const img = actor.querySelector('img')
+  if (!(img instanceof HTMLElement)) return { x: pt.x, y: pt.y - 220 }
+  const box = img.getBoundingClientRect()
+  const frame = host.getBoundingClientRect()
+  const height = host.clientHeight || frame.height || 1
+  const top = ((box.top - frame.top) / (frame.height || 1)) * height
+  // Crit frames hang about 30px under the baseline and the label sits ~200px above it.
+  return { x: pt.x, y: Math.max(220, top - 48) }
+}
 
 function stagePoint(actor: HTMLElement, host: HTMLElement): { x: number; y: number } {
   const box = actor.getBoundingClientRect()
