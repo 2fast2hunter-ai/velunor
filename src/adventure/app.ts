@@ -23,6 +23,7 @@ import { shotAt, shouldRecover } from './present'
 import { species, typeColor } from '../data'
 import { teamWeatherMarks, weatherArrow, weatherAt } from './weather'
 import { ultName } from './ult'
+import { AILMENTS, ailmentIcon, type AilmentId } from './ailment'
 import { sfx } from '../ui'
 import { actorTransform, hitShake, koPose, lungeOffset, numberStyle, parallaxShift } from '../battle/stage'
 import { bossUltHitstop, bossUltShake, cameraShake, hitGrade, hitstopMs, numberHoldMs } from '../battle/hitReadout'
@@ -178,6 +179,10 @@ export function bootAdventure(): void {
 
   const params = new URLSearchParams(window.location.search)
   const fxDemo = params.get('fx')
+  if (debug && fxDemo === 'k5') {
+    showK5Demo(params.get('part'))
+    return
+  }
   if (debug && fxDemo === 'k4') {
     showK4Demo(params.get('part'))
     return
@@ -266,6 +271,29 @@ function showFxDemo(kind: 'fire' | 'hit' | 'ko', requested: string | null = null
 }
 
 const REGION_TINT = [0x7dcea0, 0x7dcea0, 0x9ad7ff, 0xff8a3d, 0x7e57c2, 0xf0c14a]
+
+function showK5Demo(part: string | null): void {
+  const tip = part === 'tooltip'
+  const brand = AILMENTS.brand
+  const wet = AILMENTS.naesse
+  paint(`<div id="stage" class="fx-demo"><div class="anchor anchor-mid"><div class="battle" id="battle" data-fx="live" style="height:980px">
+    <div class="battle-world" id="battle-world">
+      <div class="combatant foe" id="foe-actor" style="left:72%;top:58%">
+        <button type="button" class="status-mark" data-act="status" data-who="foe" data-tip="${wet.tip}"><img src="${art(ailmentIcon('naesse'))}" alt="Nässe"/></button>
+        <p class="status-tip" id="foe-tip" hidden>${wet.tip}</p>
+        <b>Ziel</b><div class="hp"><span style="width:70%"></span></div>
+        <img class="sprite" src="${monsterArt('m02', true)}" alt=""/>
+      </div>
+      <div class="combatant ally" id="ally-actor" style="left:28%;top:72%">
+        <button type="button" class="status-mark" data-act="status" data-who="ally" data-tip="${brand.tip}"><img src="${art(ailmentIcon('brand'))}" alt="Brand"/></button>
+        <p class="status-tip" id="ally-tip" ${tip ? '' : 'hidden'}>${brand.tip}</p>
+        <b>Funkfuchs</b><div class="hp"><span style="width:64%"></span></div>
+        <img class="sprite" src="${monsterArt('m01', true)}" alt=""/>
+      </div>
+    </div>
+  </div></div></div>`)
+  document.getElementById('battle')?.setAttribute('data-fx', 'hold')
+}
 
 function showK4Demo(part: string | null): void {
   const kind = part === 'ult' || part === 'gesperrt' ? part : 'leiste'
@@ -931,6 +959,8 @@ function play(outcome: EncounterOutcome, speed: Speed, done: () => void): void {
       paintWeatherArrow('foe-arrow', shot ? species(shot.foeSpecies).type : null, weather)
       paintUlt('ally-ult', shot?.allyUlt ?? 0, shot?.allyUltOpen ?? false)
       paintUlt('foe-ult', shot?.foeUlt ?? 0, shot?.foeUltOpen ?? false)
+      paintMark('ally-status', shot?.allyMark ?? null, shot?.allyStacks ?? 0)
+      paintMark('foe-status', shot?.foeMark ?? null, shot?.foeStacks ?? 0)
       if (foeKo >= 1 && shot && dissolved !== `foe-${shot.foeSpecies}` && fxHost && foeActor) {
         dissolved = `foe-${shot.foeSpecies}`
         const at = stagePoint(foeActor, fxHost)
@@ -993,6 +1023,24 @@ function setActorName(node: HTMLElement, name: string): void {
   const arrow = node.querySelector('img')
   node.textContent = name
   if (arrow) node.appendChild(arrow)
+}
+
+function paintMark(id: string, mark: string | null, stacks: number): void {
+  const node = document.getElementById(id)
+  if (!(node instanceof HTMLButtonElement)) return
+  if (!mark || !(mark in AILMENTS)) {
+    node.hidden = true
+    return
+  }
+  const spec = AILMENTS[mark as AilmentId]
+  node.hidden = false
+  const img = node.querySelector('img')
+  if (img instanceof HTMLImageElement) {
+    img.src = art(ailmentIcon(spec.id))
+    img.alt = spec.name
+  }
+  const piles = spec.id === 'giftnebel' && stacks > 1 ? ` Stapel ${stacks}.` : ''
+  node.dataset.tip = `${spec.tip}${piles}`
 }
 
 function paintUlt(id: string, n: number, open: boolean): void {
@@ -1245,6 +1293,15 @@ function onClick(event: Event): void {
   const node = target.closest('[data-act]')
   if (!node) return
   const act = node.getAttribute('data-act')
+  if (act === 'status') {
+    if (save && save.settings.speed !== 1) return
+    const who = node.getAttribute('data-who') === 'foe' ? 'foe' : 'ally'
+    const tip = document.getElementById(`${who}-tip`)
+    if (!(tip instanceof HTMLElement)) return
+    tip.hidden = !tip.hidden
+    tip.textContent = node.getAttribute('data-tip') ?? ''
+    return
+  }
   if (act === 'lang') {
     draftLang = node.getAttribute('data-lang') === 'en' ? 'en' : 'de'
     localStorage.setItem('velunor_lang', draftLang)

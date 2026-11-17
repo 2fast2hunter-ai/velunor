@@ -32,6 +32,10 @@ export interface FrameShot {
   foeUlt: number
   allyUltOpen: boolean
   foeUltOpen: boolean
+  allyMark: string | null
+  foeMark: string | null
+  allyStacks: number
+  foeStacks: number
 }
 
 /** The battle frame at `elapsed` ms. Missing traces never throw. */
@@ -61,6 +65,10 @@ export function shotAt(traces: FightTrace[], elapsed: number, dur: number): Fram
     allyUlt: shot.allyUlt ?? 0,
     foeUlt: shot.foeUlt ?? 0,
     allyUltOpen: Boolean(shot.allyUltOpen),
-    foeUltOpen: Boolean(shot.foeUltOpen)
+    foeUltOpen: Boolean(shot.foeUltOpen),
+    allyMark: shot.allyMark ?? null,
+    foeMark: shot.foeMark ?? null,
+    allyStacks: shot.allyStacks ?? 0,
+    foeStacks: shot.foeStacks ?? 0
   }
 }

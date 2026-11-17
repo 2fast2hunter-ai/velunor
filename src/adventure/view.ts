@@ -262,6 +262,8 @@ function battle(save: SaveV2, now: number): string {
       <div class="parallax near" id="parallax-near"></div>
       <div id="battle-fx"></div>
       <div class="combatant foe" id="foe-actor" style="left:${FOE_X}%;top:${FOE_Y}%">
+        <button type="button" class="status-mark" id="foe-status" data-act="status" data-who="foe" hidden><img alt=""/></button>
+        <p class="status-tip" id="foe-tip" hidden></p>
         <b id="foe-name"><img class="wx-arrow" id="foe-arrow" alt="" hidden/></b>
         <div class="hp"><span id="foe-hp" style="width:100%"></span></div>
         <div class="ult" id="foe-ult" data-n="0" hidden></div>
@@ -269,6 +271,8 @@ function battle(save: SaveV2, now: number): string {
         <span class="ground-shadow"></span>
       </div>
       <div class="combatant ally" id="ally-actor" style="left:${ALLY_X}%;top:${FEET_Y}%">
+        <button type="button" class="status-mark" id="ally-status" data-act="status" data-who="ally" hidden><img alt=""/></button>
+        <p class="status-tip" id="ally-tip" hidden></p>
         <b id="ally-name">${mon ? esc(species(mon.species).name) : ''}<img class="wx-arrow" id="ally-arrow" alt="" ${mon && weatherArrow(weatherForecast(now)[0].weather, species(mon.species).type) ? `src="${art(weatherArrow(weatherForecast(now)[0].weather, species(mon.species).type) === 'up' ? 'battle/stat_up.png' : 'battle/stat_down.png')}"` : 'hidden'}/></b>
         <div class="hp"><span id="ally-hp" style="width:${(hp.hp / hp.max) * 100}%"></span></div>
         <div class="ult ${mon && mon.lvl >= 25 ? '' : 'is-locked'}" id="ally-ult" data-n="0" title="${mon && mon.lvl >= 25 ? 'Ult' : 'ab Level 25'}"></div>

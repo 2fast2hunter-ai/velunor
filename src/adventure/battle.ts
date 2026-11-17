@@ -5,6 +5,7 @@ import { ACTION_LIMIT } from './const'
 import { awakenCount } from './stats'
 import { weatherFactor, type WeatherId } from './weather'
 import { ULT_BOSS_FETTER, ULT_DAMAGE, ULT_HEAL, ULT_IMPULSE, ULT_IMPULSE_ATTACKS, ULT_PIERCE, ULT_WALL_CUT, gainUlt, ultName, ultPattern, ultReady, ultUnlocked, wallActions, type UltPattern } from './ult'
+import { AILMENTS, ailmentFor, bossDuration, bossImmune, type AilmentId } from './ailment'
 
 export interface FightSide {
   speciesId: string
@@ -48,6 +49,10 @@ export interface FightFrame {
   foeUlt?: number
   allyUltOpen?: boolean
   foeUltOpen?: boolean
+  allyMark?: AilmentId | null
+  foeMark?: AilmentId | null
+  allyStacks?: number
+  foeStacks?: number
 }
 
 export interface FightTrace {
@@ -97,6 +102,7 @@ interface Actor {
   wallLeft: number
   wallFresh: boolean
   skip: boolean
+  mark: { id: AilmentId; left: number; stacks: number; sourceType: TypeId } | null
 }
 
 const ALLY_TARGET = new Set(['self', 'ally_all', 'ally_lowest_hp_pct', 'self_and_ally_lowest_hp_pct'])
@@ -121,7 +127,8 @@ function atkOf(unit: Actor): number {
 }
 
 function defOf(unit: Actor, pierce = 0): number {
-  return Math.max(0, unit.side.def * (1 + mod(unit, 'def_up', 'def_down')) * (1 - pierce))
+  const wet = unit.mark?.id === 'naesse' ? AILMENTS.naesse.def : 1
+  return Math.max(0, unit.side.def * (1 + mod(unit, 'def_up', 'def_down')) * (1 - pierce) * wet)
 }
 
 /** Published strike: 1.5·ATK²/(ATK+DEF) × type × variance × crit. */
@@ -170,7 +177,8 @@ function makeActor(side: FightSide): Actor {
     impulseLeft: 0,
     wallLeft: 0,
     wallFresh: false,
-    skip: false
+    skip: false,
+    mark: null
   }
 }
 
@@ -265,8 +273,39 @@ export function fight1v1(allySide: FightSide, foeSide: FightSide, rng: () => num
       allyUlt: ally.ultCharge,
       foeUlt: foe.ultCharge,
       allyUltOpen: ultUnlocked(ally.side.level ?? 0),
-      foeUltOpen: ultUnlocked(foe.side.level ?? 0)
+      foeUltOpen: ultUnlocked(foe.side.level ?? 0),
+      allyMark: ally.mark?.id ?? null,
+      foeMark: foe.mark?.id ?? null,
+      allyStacks: ally.mark?.stacks ?? 0,
+      foeStacks: foe.mark?.stacks ?? 0
     })
+  }
+  const offer = (attacker: Actor, target: Actor, kind: 'strike' | 'skill' | 'ult') => {
+    const id = ailmentFor(attacker.side.type, kind)
+    if (!id || target.hp <= 0) return
+    if (target.side.boss && bossImmune(target.side.type, id)) return
+    const spec = AILMENTS[id]
+    const left = bossDuration(spec.attacks, Boolean(target.side.boss))
+    if (target.mark?.id === 'giftnebel' && id === 'giftnebel') {
+      target.mark.stacks = Math.min(spec.stacks, target.mark.stacks + 1)
+      target.mark.left = left
+      target.mark.sourceType = attacker.side.type
+      return
+    }
+    target.mark = { id, left, stacks: 1, sourceType: attacker.side.type }
+  }
+  const tickMark = (unit: Actor, attacked: boolean) => {
+    const mark = unit.mark
+    if (!mark) return
+    if (attacked && (mark.id === 'brand' || mark.id === 'giftnebel')) {
+      const spec = AILMENTS[mark.id]
+      const factor = spec.weather ? weatherFactor(weather, mark.sourceType) : 1
+      hurt(unit, Math.max(0, Math.floor(unit.side.maxHp * spec.dot * mark.stacks * factor)), true)
+    }
+    if (attacked || mark.id === 'frost') {
+      mark.left -= 1
+      if (mark.left <= 0) unit.mark = null
+    }
   }
   const bandOf = (mult: number): FightHit['band'] => (mult > 1 ? 'strong' : mult < 1 ? 'weak' : 'neutral')
   push(`${ally.side.name} gegen ${foe.side.name}`)
@@ -304,7 +343,9 @@ export function fight1v1(allySide: FightSide, foeSide: FightSide, rng: () => num
     const boosted = attacker.impulseLeft > 0 && !ult
     const crit = rng() < combat.critChance
     const variance = combat.varianceMin + (combat.varianceMax - combat.varianceMin) * rng()
-    const dmg = rawDamage(atkOf(attacker), defOf(target, pierce), skillMult, tMult * wMult, crit, variance)
+    let dmg = rawDamage(atkOf(attacker), defOf(target, pierce), skillMult, tMult * wMult, crit, variance)
+    if (attacker.mark?.id === 'schock') dmg = Math.floor(dmg * AILMENTS.schock.damage)
+    if (attacker.mark?.id === 'spreu' && rng() < AILMENTS.spreu.miss) dmg = 0
     if (boosted) attacker.impulseLeft -= 1
     if (crit) target.ultCharge = gainUlt(target.side.level ?? 0, target.ultCharge, 1)
     const past = hurt(target, dmg, false)
@@ -386,11 +427,18 @@ export function fight1v1(allySide: FightSide, foeSide: FightSide, rng: () => num
       unit.hp = Math.min(unit.side.maxHp, unit.hp + gain)
       if (trace && gain > 0) pending.push({ from: unit === ally ? 'ally' : 'foe', amount: gain, crit: false, type: unit.side.type, band: 'neutral', ko: false, kind: 'heal', ult: pattern })
     }
+    offer(unit, other, 'ult')
+    tickMark(unit, true)
     push(`${unit.side.name} setzt ${ultName(pattern)} ein.`)
   }
 
   const act = (unit: Actor, other: Actor) => {
     if (unit.hp <= 0 || other.hp <= 0) return
+    if (unit.mark?.id === 'frost' && rng() < AILMENTS.frost.skip) {
+      tickMark(unit, false)
+      push(`${unit.side.name} zögert.`)
+      return
+    }
     if (unit.skip) {
       unit.skip = false
       tick(unit)
@@ -419,12 +467,18 @@ export function fight1v1(allySide: FightSide, foeSide: FightSide, rng: () => num
     if (ultReady(unit.side.level ?? 0, unit.ultCharge)) castUlt(unit, other)
     else {
       unit.ultCharge = gainUlt(unit.side.level ?? 0, unit.ultCharge, 1)
-      if (unit.cd <= 0 && skillUsable(unit, other)) cast(unit, other)
-      else {
-        if (other.hp > 0 && unit.hp > 0) strike(unit, other, 1, 0)
+      if (unit.cd <= 0 && skillUsable(unit, other)) {
+        cast(unit, other)
+        if (unit.side.skill.effects.some((effect) => effect.kind === 'damage')) offer(unit, other, 'skill')
+      } else {
+        if (other.hp > 0 && unit.hp > 0) {
+          strike(unit, other, 1, 0)
+          offer(unit, other, 'strike')
+        }
         if (unit.cd > 0) unit.cd -= 1
         push(`${unit.side.name} greift an.`)
       }
+      tickMark(unit, true)
     }
     if (foeHp > 0 && other.hp <= 0) unit.ultCharge = gainUlt(unit.side.level ?? 0, unit.ultCharge, 2)
     if (unit.hp > 0) tick(unit)

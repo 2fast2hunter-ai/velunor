@@ -431,6 +431,16 @@ textarea { width: 100%; box-sizing: border-box; background: #121a30; color: inhe
 .ult.is-locked::after { content: 'ab Lv 25'; position: absolute; inset: 0; text-align: center; font-size: 16px; line-height: 22px; color: #fff8e1; font-weight: 800; }
 @keyframes ult-pulse { 50% { filter: brightness(1.45); } }
 .combatant b { text-shadow: 0 2px 8px #000; margin-bottom: 4px; }
+.status-mark {
+  width: 48px; height: 48px; padding: 0; border: 0; border-radius: 14px;
+  background: rgba(8, 12, 24, 0.72); margin-bottom: 6px;
+}
+.status-mark img { width: 40px; height: 40px; object-fit: contain; display: block; margin: 4px auto; }
+.status-tip {
+  position: absolute; z-index: 8; left: 50%; top: -8px; transform: translate(-50%, -100%);
+  width: max-content; max-width: 280px; margin: 0; padding: 8px 12px; border-radius: 14px;
+  background: rgba(8, 12, 24, 0.92); color: #fff8e1; font-weight: 700; font-size: 18px; text-align: center;
+}
 
 .seal {
   position: absolute;

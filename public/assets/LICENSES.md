@@ -20,3 +20,4 @@
 - shop/: Laden-Grafiken von Smettbo, 17.11.2026, eigenes Asset. WebP-Fassung für das Bundle. Rahmen 480×600, 9-Slice links 133 / oben 130 / rechts 129 / unten 147. frucht_fang und die Vorschau preview_shop werden nicht ausgeliefert; die Glücksfrucht nutzt frucht_glueck.
 - battle/dmg_digits.png: Trefferzahlen von Smettbo, gesetzt in Fredoka Bold. Fredoka ist eine Schrift von Google Fonts unter der SIL Open Font License 1.1 (https://openfontlicense.org). Die Vorschau preview_digits.jpg wird nicht ausgeliefert.
 - battle/proj_*.png, battle/hit_*.png, battle/battle_fx.json sowie weather_*, dissolve, confetti, stat_up/down: Kampf-Effekte von Smettbo, 17.11.2026, eigenes Asset. K2 nutzt nur die Projektil- und Treffer-Streifen. Die Vorschauen preview_fx.jpg und preview_a5.jpg werden nicht ausgeliefert.
+- battle/status_*.png, mech_*.png, combo_synergy*.png, aura_flash.png: Kampf-Icons von Smettbo, 17.11.2026, eigenes Asset. K5 nutzt nur die Status-Icons.

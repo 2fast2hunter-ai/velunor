@@ -11,13 +11,13 @@ export const FX_MIN_MS = 150
 export type StripKind = 'projectile-loop' | 'beam-tile' | 'buildup' | 'melee-overlay' | 'wave-loop' | 'hit'
 
 interface StripFile {
-  frame_w: number
-  frame_h: number
-  frames: number
-  fps: number | null
-  duration_ms: number | null
-  loop: boolean
-  kind: string
+  frame_w?: number
+  frame_h?: number
+  frames?: number
+  fps?: number | null
+  duration_ms?: number | null
+  loop?: boolean
+  kind?: string
   type?: string
 }
 
@@ -36,7 +36,7 @@ export interface StripDef {
 const FILES = manifest.files as Record<string, StripFile>
 
 function asStrip(file: string, row: StripFile): StripDef | null {
-  if (row.duration_ms == null || row.fps == null || !row.type) return null
+  if (row.duration_ms == null || row.fps == null || !row.type || row.frame_w == null || row.frame_h == null || row.frames == null || row.loop == null || row.kind == null) return null
   if (row.kind !== 'projectile-loop' && row.kind !== 'beam-tile' && row.kind !== 'buildup' && row.kind !== 'melee-overlay' && row.kind !== 'wave-loop' && row.kind !== 'hit') return null
   return {
     file,
