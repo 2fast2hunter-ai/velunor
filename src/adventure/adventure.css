@@ -842,3 +842,50 @@ img.is-shiny { filter: drop-shadow(0 0 10px #f0c14a); }
 }
 .row-actions { min-width: 0; }
 .row-actions > span { min-width: 0; overflow: hidden; text-overflow: ellipsis; }
+
+.chest-grid { display: grid; grid-template-columns: 1fr 1fr; gap: 12px; }
+.chest-tile { background: #10182c; border-radius: 18px; padding: 12px; display: flex; flex-direction: column; gap: 8px; }
+.chest-tile h3 { margin: 0; }
+.chest-count { margin: 0; font-size: calc(64px * var(--font-scale, 1)); font-weight: 800; }
+.chest-info, .chest-tile .primary, .chest-tile .ghost {
+  min-width: 132px;
+  min-height: 132px;
+  font-size: calc(32px * var(--font-scale, 1));
+}
+.chest-info { background: #1c2c4e; color: #fff8e1; border: 2px solid #f0c14a; }
+.chest-tile button:disabled { opacity: 0.4; }
+.rate-list { display: flex; flex-direction: column; gap: 8px; }
+.rate-list details, .rate-list li { font-size: calc(28px * var(--font-scale, 1)); }
+.rate-list summary { min-height: 132px; display: flex; align-items: center; justify-content: space-between; gap: 12px; cursor: pointer; }
+.chest-stage { position: relative; min-height: 640px; display: grid; place-items: center; }
+.chest-seal { width: 280px; height: 280px; object-fit: contain; mix-blend-mode: plus-lighter; }
+.chest-stage[data-phase="seal"] .chest-seal,
+.chest-stage[data-phase="beam"] .chest-seal { animation: chest-spin 1.2s linear infinite; }
+.chest-beam {
+  position: absolute;
+  width: 72px;
+  height: 0;
+  bottom: 180px;
+  border-radius: 40px;
+  opacity: 0;
+  box-shadow: 0 0 24px currentColor;
+}
+.chest-stage[data-phase="beam"] .chest-beam,
+.chest-stage[data-phase="card"] .chest-beam { height: 320px; opacity: 0.9; }
+.chest-card { text-align: center; opacity: 0; }
+.chest-card img { width: 240px; height: 240px; object-fit: contain; }
+.chest-stage[data-phase="card"] .chest-card { opacity: 1; }
+.chest-ring { position: absolute; inset: 0; pointer-events: none; }
+.chest-ring i {
+  position: absolute;
+  width: 10px;
+  height: 10px;
+  margin: -5px;
+  border-radius: 50%;
+  background: #ffd54f;
+  box-shadow: 0 0 10px #ffd54f;
+}
+.chest-stage[data-particles="0"] .chest-ring,
+#stage.reduce-motion .chest-ring,
+#stage.reduce-motion .chest-seal { animation: none; }
+@keyframes chest-spin { to { transform: rotate(360deg); } }

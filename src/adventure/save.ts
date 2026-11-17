@@ -3,6 +3,7 @@ import { emptyBag } from './shop'
 import { SAVE_KEY_V1, SAVE_KEY_V2, SAVE_VERSION, START_GOLD, STARTER_LEVEL } from './const'
 import { chapterById, councilOf, findChapter, speciesKnown } from './route'
 import { expToNext } from './stats'
+import { clampChestCount, emptyPity, enteredRegions, startChests, type ChestTier } from './lootbox'
 import { fontScale } from './touch'
 import type { AdventureSettings, OwnedMon, SaveV2, StorageLike } from './types'
 
@@ -80,6 +81,9 @@ export function blankSave(now: number): SaveV2 {
     migratedFrom: null,
     councilBeaten: [],
     regionsOpen: [1],
+    regionsEntered: [1],
+    chests: startChests(),
+    pity: emptyPity(),
     bag: emptyBag(),
     activeFruits: [],
     hortSlots: 1,
@@ -309,6 +313,25 @@ export function normalize(save: SaveV2, now: number): SaveV2 {
   }
   save.regionsOpen = [...new Set(open)]
   if (!save.regionsOpen.includes(save.region)) save.region = 1
+  const rawChests = save.chests
+  if (!rawChests || typeof rawChests !== 'object') save.chests = startChests()
+  else {
+    const next = startChests()
+    for (const tier of Object.keys(next) as ChestTier[]) next[tier] = clampChestCount(rawChests[tier])
+    save.chests = next
+  }
+  const rawPity = save.pity
+  save.pity = emptyPity()
+  if (rawPity && typeof rawPity === 'object') {
+    save.pity.silber = Math.max(0, Math.floor(Number(rawPity.silber)) || 0)
+    save.pity.gold = Math.max(0, Math.floor(Number(rawPity.gold)) || 0)
+    save.pity.sternen = Math.max(0, Math.floor(Number(rawPity.sternen)) || 0)
+  }
+  save.regionsEntered = enteredRegions({
+    regionsOpen: save.regionsOpen,
+    region: save.region,
+    regionsEntered: Array.isArray(save.regionsEntered) ? save.regionsEntered : []
+  })
   const here = findChapter(save.region, save.chapter)
   save.chapter = here ? here.id : 1
   const stepNow = chapterById(save.region, save.chapter).council ? 5 : 20

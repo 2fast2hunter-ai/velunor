@@ -15,6 +15,16 @@ import { fontFactor } from './touch'
 import { baseLine, dexPlaces, dexStatus, dexStatusLabel, listCodex, regionProgress, speciesNumber, type DexFilter } from './dex'
 import { goalName, goalTitle, rarityLabel, t, typeLabel, weatherLabel, whenLabel, type Lang } from './i18n'
 import { exportCode } from './save'
+import {
+  CHEST_TIERS,
+  chestParticles,
+  effectiveTable,
+  enteredRegions,
+  formatPercent,
+  poolFor,
+  type ChestTier
+} from './lootbox'
+import type { ChestGrant } from './chests'
 import { fightsHere } from './origin'
 import { chapterById, gateBadge, placeLabel, regionById, regions, routeOf, type NodeKind } from './route'
 import { chapterUnlocked, dexCaughtCount, hereSightings, rarityName } from './sim'
@@ -31,7 +41,7 @@ import { PC_VIEW_FALLBACK, virtualWindow } from './virtualList'
 export type Screen = 'adventure' | 'progress' | 'team' | 'codex' | 'activities' | 'shop' | 'achievements' | 'options' | 'guide'
 
 export interface WheelPanel {
-  tab: 'hort' | 'wheel'
+  tab: 'hort' | 'wheel' | 'chests'
   mult: Multiplier
   symbols: [SymbolId, SymbolId, SymbolId] | null
   note: string
@@ -59,6 +69,9 @@ export type Overlay =
   | { kind: 'offline'; done: number; total: number }
   | { kind: 'log' }
   | { kind: 'guard'; win: boolean; badge: string | null; gold: number; text: string }
+  | { kind: 'chest-rates'; tier: ChestTier }
+  | { kind: 'chest-reveal'; grant: ChestGrant; hold?: 'seal' | 'beam' | 'card' }
+  | { kind: 'chest-summary'; grants: ChestGrant[] }
 
 export interface ShellFlags {
   mapOpen?: boolean
@@ -568,11 +581,74 @@ function glyph(id: SymbolId): string {
 
 function activityTabs(save: SaveV2, wheel: WheelPanel): string {
   return `<button type="button" data-act="activity" data-id="hort" class="${wheel.tab === 'hort' ? 'primary' : ''}">${tr(save, 'act.hort')}</button>
+    <button type="button" data-act="activity" data-id="chests" class="${wheel.tab === 'chests' ? 'primary' : ''}">${tr(save, 'act.chests')}</button>
     <button type="button" data-act="activity" data-id="wheel" class="${wheel.tab === 'wheel' ? 'primary' : ''}">${tr(save, 'act.wheel')}</button>`
 }
 
+const CHEST_KEY: Record<ChestTier, string> = {
+  kiesel: 'chest.kiesel',
+  silber: 'chest.silber',
+  gold: 'chest.gold',
+  sternen: 'chest.sternen'
+}
+
+function chestPlace(save: SaveV2, grant: ChestGrant): string {
+  if (grant.place === 'team') return tr(save, 'chest.team')
+  if (grant.place === 'pc') return tr(save, 'chest.pc')
+  return tr(save, 'chest.dupe')
+}
+
+function chestRatesHtml(save: SaveV2, tier: ChestTier): string {
+  const table = effectiveTable(tier, poolFor(enteredRegions(save)))
+  const rows = table.map((row) => {
+    const name = rarityInfo(row.rarity).name
+    const speciesRows = row.species.map((entry) => `<li>${esc(species(entry.id).name)} <b data-chance="${entry.id}">${formatPercent(entry.chance)} %</b></li>`).join('')
+    return `<details>
+      <summary><span>${esc(name)}</span> <b data-rate="${row.rarity}">${formatPercent(row.percent)} %</b></summary>
+      <ul>${speciesRows}</ul>
+    </details>`
+  }).join('')
+  return `<p class="muted">${esc(tr(save, 'chest.hint'))}</p><div class="rate-list">${rows}</div>`
+}
+
+function chestView(save: SaveV2, wheel: WheelPanel): string {
+  const tiles = CHEST_TIERS.map((tier) => {
+    const count = save.chests[tier]
+    const off = count <= 0 ? 'disabled' : ''
+    return `<article class="chest-tile">
+      <h3>${tr(save, CHEST_KEY[tier])}</h3>
+      <p class="chest-count">${count}</p>
+      <button type="button" class="chest-info" data-act="chest-info" data-tier="${tier}">${tr(save, 'chest.info')}</button>
+      <button type="button" class="primary" data-act="chest-open" data-tier="${tier}" ${off}>${tr(save, 'chest.open')}</button>
+      <button type="button" class="ghost" data-act="chest-all" data-tier="${tier}" ${off}>${tr(save, 'chest.all')}</button>
+    </article>`
+  }).join('')
+  return `<div class="menu-screen">
+    <div class="menu-scroll">
+      <div class="card panel">
+        <h2>${tr(save, 'act.chests')}</h2>
+        <div class="chest-grid">${tiles}</div>
+      </div>
+    </div>
+    <div class="menu-dock" data-dock="chests">${activityTabs(save, wheel)}</div>
+  </div>`
+}
+
+function ringDots(count: number): string {
+  let html = ''
+  for (let i = 0; i < count; i++) {
+    const angle = (i / count) * Math.PI * 2
+    const x = 50 + Math.cos(angle) * 34
+    const y = 42 + Math.sin(angle) * 22
+    html += `<i style="left:${x.toFixed(2)}%;top:${y.toFixed(2)}%"></i>`
+  }
+  return html
+}
+
 function activitiesView(save: SaveV2, now: number, selected: string | null, wheel: WheelPanel): string {
-  return wheel.tab === 'wheel' ? wheelView(save, wheel) : hortView(save, now, selected, wheel)
+  if (wheel.tab === 'wheel') return wheelView(save, wheel)
+  if (wheel.tab === 'chests') return chestView(save, wheel)
+  return hortView(save, now, selected, wheel)
 }
 
 function wheelView(save: SaveV2, wheel: WheelPanel): string {
@@ -797,6 +873,35 @@ function grab(): string {
 }
 
 function overlayHtml(save: SaveV2, overlay: Overlay): string {
+  if (overlay.kind === 'chest-rates') {
+    return `<div class="sheet" data-sheet="swipe">${grab()}<h2>${tr(save, CHEST_KEY[overlay.tier])}</h2>${chestRatesHtml(save, overlay.tier)}<button type="button" class="primary" data-act="close">${tr(save, 'chest.next')}</button></div>`
+  }
+  if (overlay.kind === 'chest-summary') {
+    const lines = overlay.grants.map((grant) => `<li><b>${esc(grant.name)}</b> · ${esc(rarityInfo(grant.rarity).name)} · ${esc(chestPlace(save, grant))} · ${grant.gold.toLocaleString(L(save) === 'en' ? 'en' : 'de-DE')} G</li>`).join('')
+    const goldSum = overlay.grants.reduce((sum, grant) => sum + grant.gold, 0)
+    return `<div class="sheet" data-sheet="swipe">${grab()}<h2>${tr(save, 'chest.summary')}</h2><ul class="rate-list">${lines}</ul><p>${goldSum.toLocaleString(L(save) === 'en' ? 'en' : 'de-DE')} G</p><button type="button" class="primary" data-act="close">${tr(save, 'chest.next')}</button></div>`
+  }
+  if (overlay.kind === 'chest-reveal') {
+    const grant = overlay.grant
+    const color = rarityInfo(grant.rarity).color
+    const particles = chestParticles(grant.rarity, save.settings.reduceMotion)
+    const phase = overlay.hold ?? (save.settings.reduceMotion ? 'card' : 'seal')
+    return `<div class="sheet chest-sheet">${grab()}
+      <div class="chest-stage" data-phase="${phase}" data-particles="${particles}" data-reduced="${save.settings.reduceMotion ? '1' : '0'}">
+        <img class="chest-seal" alt="" src="${art(SEAL_ADD)}" data-fb="${art(SEAL_FALLBACK)}"/>
+        <div class="chest-beam" style="background:${color}"></div>
+        <div class="chest-ring">${ringDots(particles)}</div>
+        <article class="chest-card">
+          <img src="${monsterArt(grant.speciesId, true)}" alt=""/>
+          <h2>${esc(grant.name)}</h2>
+          <p>${esc(rarityInfo(grant.rarity).name)}</p>
+          <p>${esc(chestPlace(save, grant))}</p>
+          <p>${grant.gold.toLocaleString(L(save) === 'en' ? 'en' : 'de-DE')} G</p>
+        </article>
+      </div>
+      <button type="button" class="primary" data-act="chest-skip">${tr(save, 'chest.next')}</button>
+    </div>`
+  }
   if (overlay.kind === 'log') {
     return `<div class="sheet log-full" data-sheet="swipe">${grab()}<h2>${tr(save, 'log.title')}</h2><div class="log-full-body">${logLines(save, 50)}</div><button type="button" class="primary" data-act="close">${tr(save, 'log.close')}</button></div>`
   }

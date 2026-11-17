@@ -38,6 +38,7 @@ import {
   type NodeKind
 } from './route'
 import { chapterCapNow, regionRoster } from './dex'
+import { enteredRegions } from './lootbox'
 import { rollShiny, shinyChance, teamBlocksShiny } from './shiny'
 import { syncAchievements } from './achievements'
 import { advanceHort, HORT_EP_RATE } from './hort'
@@ -948,6 +949,8 @@ export function travelTo(save: SaveV2, regionId: number, chapterId: number): str
     return line(save, 'err.missing')
   }
   save.chapter = chapterId
+  save.region = regionId
+  save.regionsEntered = enteredRegions(save)
   save.step = 1
   save.lastHealStep = 1
   save.hold = false
