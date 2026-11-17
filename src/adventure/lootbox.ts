@@ -26,6 +26,8 @@ export interface OpenChestState {
   region: number
   /** Opens since the last pity success. Omitted means 0 and is not written back. */
   pity?: number
+  /** Glücksfrucht: extra percentage points on rarity 5 and up, once. */
+  luckPp?: number
 }
 
 export interface ChestRoll {
@@ -338,7 +340,7 @@ export function openChest(tier: ChestTier, state: OpenChestState, rng: () => num
   const prepared = prepare(tier, pool)
   if (prepared.total <= 0) throw new Error('Die Truhe hat keinen Pool.')
   const push = pityPush(tier, state.pity ?? 0)
-  const weights = withSoftBonus(prepared.weights, push.minRarity, push.bonusPp)
+  const weights = withSoftBonus(withSoftBonus(prepared.weights, push.minRarity, push.bonusPp), 5, state.luckPp ?? 0)
   const rarity = push.force
     ? pickWeightedRarity(prepared.weights, prepared.lists, rng, push.minRarity)
     : pickWeightedRarity(weights, prepared.lists, rng, 0)

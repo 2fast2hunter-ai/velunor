@@ -52,7 +52,12 @@ export function takeChests(save: SaveV2, tier: ChestTier, count: number, now: nu
   for (let i = 0; i < n; i++) {
     const state = chestStateOf(save)
     if (tier !== 'kiesel') state.pity = save.pity[tier]
-    const roll = openChest(tier, state, () => draw(save))
+    state.luckPp = save.chestLuck
+    let openTier: ChestTier = tier
+    if (tier === 'silber' && save.chestTree.master && (save.silverOpened + 1) % 25 === 0) openTier = 'gold'
+    if (tier === 'silber') save.silverOpened += 1
+    const roll = openChest(openTier, state, () => draw(save))
+    if (save.chestLuck) save.chestLuck = 0
     if (tier !== 'kiesel') save.pity[tier] = roll.pity
     grants.push(applyChest(save, roll, now))
     save.chests[tier] -= 1

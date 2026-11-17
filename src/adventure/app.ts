@@ -26,7 +26,7 @@ import { clearBattleFx, holdBattleFx, mountBattleFx, playBattleFx, setFxRunning 
 import { BANNER_MS, CRIT_HITSTOP_MS, KO_MS, LUNGE_HOLD_MS, LUNGE_OUT_MS, moveLabel, NUMBER_MS, RECOIL_MS, STONE_CRIT_HITSTOP_MS, typeFx } from '../battle/typeFx'
 import type { TypeId } from '../types'
 import { takeChests } from './chests'
-import { bankRoad, buyChestForGold, buyChestForMarks, claimRoad, debugStarChests, raiseStar } from './sources'
+import { bankRoad, buyChestForGold, buyChestForMarks, claimRoad, craftSpecies, debugStarChests, meltDuplicate, raiseStar } from './sources'
 import { chestAnimMs, type ChestTier } from './lootbox'
 import { beginAdventure, exportCode, importCode, loadAdventure, writeSave } from './save'
 import { equipFrame, equipTitle } from './achievements'
@@ -1125,6 +1125,20 @@ function onClick(event: Event): void {
   if (act === 'chest-marks') {
     const tier = node.getAttribute('data-tier') === 'sternen' ? 'sternen' : 'gold'
     const reason = buyChestForMarks(save, tier)
+    if (reason) save.log.push({ t: Date.now(), text: reason })
+    try { writeSave(localStorage, save) } catch { /* ignore */ }
+    render()
+    return
+  }
+  if (act === 'melt') {
+    const reason = meltDuplicate(save, node.getAttribute('data-uid') ?? '')
+    if (reason) save.log.push({ t: Date.now(), text: reason })
+    try { writeSave(localStorage, save) } catch { /* ignore */ }
+    render()
+    return
+  }
+  if (act === 'craft') {
+    const reason = craftSpecies(save, node.getAttribute('data-id') ?? '', Date.now())
     if (reason) save.log.push({ t: Date.now(), text: reason })
     try { writeSave(localStorage, save) } catch { /* ignore */ }
     render()

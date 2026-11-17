@@ -48,9 +48,9 @@ export const CRYSTALS: CrystalDef[] = [
 ]
 
 export const FRUITS: FruitDef[] = [
-  { id: 'fang', name: 'Fangfrucht', price: 4000, effect: 'Fangchance ×1,25' },
-  { id: 'goldfang', name: 'Goldfangfrucht', price: 15000, effect: 'Fangchance ×1,5, Deckel 70 %' },
-  { id: 'spuer', name: 'Spürfrucht', price: 8000, effect: 'Die zwei seltensten Arten am Ort ×2' },
+  { id: 'fang', name: 'Glücksfrucht', price: 4000, effect: 'Nächste Truhe: +1 Pp auf Seltenheit ab 5' },
+  { id: 'goldfang', name: 'Goldfangfrucht', price: 15000, effect: 'Wird in Gold erstattet' },
+  { id: 'spuer', name: 'Spurfrucht', price: 8000, effect: 'Spur-Chance +50 %' },
   { id: 'neugier', name: 'Neugierfrucht', price: 10000, effect: 'Nie gefangene Arten ×3' },
   { id: 'glanz', name: 'Glanzfrucht', price: 25000, effect: 'Schimmer-Chance ×2' },
   { id: 'lern', name: 'Lernfrucht', price: 6000, effect: 'Kampf-EP +25 %' },
@@ -227,6 +227,17 @@ export function useCrystal(save: SaveV2, id: CrystalId, uid: string, cap: number
 
 export function useFruit(save: SaveV2, id: FruitId, now: number): string | null {
   if (save.bag.fruits[id] <= 0) return say(save, 'err.noFruit')
+  if (id === 'goldfang') {
+    save.bag.fruits[id] -= 1
+    save.gold += fruitPrice(save, id)
+    return null
+  }
+  if (id === 'fang') {
+    save.bag.fruits[id] -= 1
+    save.stats.fruitsUsed += 1
+    save.chestLuck = 1
+    return null
+  }
   save.bag.fruits[id] -= 1
   save.stats.fruitsUsed += 1
   const until = now + FRUIT_MS
