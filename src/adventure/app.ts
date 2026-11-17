@@ -179,6 +179,10 @@ export function bootAdventure(): void {
 
   const params = new URLSearchParams(window.location.search)
   const fxDemo = params.get('fx')
+  if (debug && fxDemo === 'k6') {
+    showK6Demo(params.get('part'))
+    return
+  }
   if (debug && fxDemo === 'k5') {
     showK5Demo(params.get('part'))
     return
@@ -271,6 +275,38 @@ function showFxDemo(kind: 'fire' | 'hit' | 'ko', requested: string | null = null
 }
 
 const REGION_TINT = [0x7dcea0, 0x7dcea0, 0x9ad7ff, 0xff8a3d, 0x7e57c2, 0xf0c14a]
+
+function showK6Demo(part: string | null): void {
+  const kind = part === 'konter' ? 'konter' : part === 'karte' ? 'karte' : 'before'
+  save = beginAdventure('Ada', 'A', 'm01', Date.now())
+  screen = 'adventure'
+  const lead = save.active
+  if (lead && save.mons[lead]) save.mons[lead].lvl = 25
+  if (kind === 'karte') {
+    const water = `a${save.nextId}`
+    save.nextId += 1
+    save.mons[water] = { species: 'm02', lvl: 25, exp: 0, hp: null, shiny: false, caughtAt: 1, caughtWhere: 'r1c1', keepDupes: false }
+    save.team.push(water)
+  }
+  save.settings.speed = 1
+  render()
+  const foeName = document.getElementById('foe-name')
+  if (foeName) setActorName(foeName, 'Tropfmolch')
+  const foeImg = document.getElementById('foe-sprite')
+  if (foeImg instanceof HTMLImageElement) {
+    foeImg.hidden = false
+    foeImg.src = monsterArt('m02', true)
+  }
+  const foeHp = document.getElementById('foe-hp')
+  if (foeHp) foeHp.style.width = '70%'
+  paintUlt('ally-ult', kind === 'konter' ? 2 : 0, true)
+  paintUlt('foe-ult', 0, false)
+  if (kind === 'konter') {
+    const label = document.getElementById('konter-label')
+    if (label) label.hidden = false
+  }
+  document.getElementById('battle')?.setAttribute('data-fx', 'hold')
+}
 
 function showK5Demo(part: string | null): void {
   const kind = part === 'tooltip' ? 'tooltip' : part === 'before' ? 'before' : 'status'
@@ -884,6 +920,7 @@ function play(outcome: EncounterOutcome, speed: Speed, done: () => void): void {
   let allySeen = ''
   let enterAt = -1
   let dissolved = ''
+  let konterFor = ''
   const frame = (now: number) => {
     if (gen !== playGen) return
     if (!paintDue(now, drawnAt, battery)) {
@@ -974,6 +1011,12 @@ function play(outcome: EncounterOutcome, speed: Speed, done: () => void): void {
       paintUlt('foe-ult', shot?.foeUlt ?? 0, shot?.foeUltOpen ?? false)
       paintMark('ally-status', shot?.allyMark ?? null, shot?.allyStacks ?? 0)
       paintMark('foe-status', shot?.foeMark ?? null, shot?.foeStacks ?? 0)
+      const konter = document.getElementById('konter-label')
+      if (konter && shot?.counter && konterFor !== shot.allySpecies) {
+        konterFor = shot.allySpecies
+        konter.hidden = false
+        window.setTimeout(() => { konter.hidden = true }, 800)
+      }
       if (foeKo >= 1 && shot && dissolved !== `foe-${shot.foeSpecies}` && fxHost && foeActor) {
         dissolved = `foe-${shot.foeSpecies}`
         const at = stagePoint(foeActor, fxHost)
