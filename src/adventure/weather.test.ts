@@ -1,7 +1,7 @@
 import { describe, expect, it } from 'vitest'
 import type { TypeId } from '../types'
 import { rawDamage } from './battle'
-import { meanWeatherFactor, teamWeatherMarks, weatherFactor, WEATHERS, WEATHER_SHIFTS } from './weather'
+import { meanWeatherFactor, teamWeatherMarks, weatherArrow, weatherFactor, WEATHERS, WEATHER_SHIFTS } from './weather'
 
 const TYPES: TypeId[] = [
   'fire', 'water', 'plant', 'earth', 'wind', 'ice', 'lightning', 'poison', 'metal', 'stone',
@@ -13,6 +13,9 @@ describe('weather damage', () => {
     expect(weatherFactor(null, 'fire')).toBe(1)
     expect(weatherFactor('regen', 'water')).toBe(1.15)
     expect(weatherFactor('regen', 'fire')).toBe(0.85)
+    expect(weatherArrow('regen', 'fire')).toBe('down')
+    expect(weatherArrow('regen', 'water')).toBe('up')
+    expect(weatherArrow('regen', 'beast')).toBeNull()
     expect(weatherFactor('klar', 'light')).toBe(1.1)
     expect(weatherFactor('klar', 'ice')).toBe(0.9)
     expect(weatherFactor('gewitter', 'lightning')).toBe(1.15)
@@ -39,6 +42,7 @@ describe('weather damage', () => {
     const wet = rawDamage(40, 20, 1, 1.5 * weatherFactor('regen', 'fire'), false, 1)
     expect(wet).toBeLessThan(typed)
     expect(teamWeatherMarks(['water', 'water', 'fire'], 'regen')).toEqual({ up: 2, down: 1 })
+    expect(teamWeatherMarks(['fire'], 'regen')).toEqual({ up: 0, down: 1 })
   })
 
   it('keeps every type within 3 percent of neutral across the six weathers', () => {

@@ -335,16 +335,20 @@ textarea { width: 100%; box-sizing: border-box; background: #121a30; color: inhe
 .parallax.mid { background: radial-gradient(60% 30% at 50% 40%, rgba(255,255,255,0.14), transparent 70%); }
 .parallax.near { background: linear-gradient(0deg, rgba(0,0,0,0.28), transparent 28%); }
 #battle-fx { position: absolute; inset: 0; pointer-events: none; z-index: 4; }
+.wx-stack {
+  position: absolute; z-index: 7; top: 28px; left: 50%; transform: translateX(-50%);
+  display: flex; flex-direction: column; align-items: center; gap: 12px;
+  width: min(94%, 960px); pointer-events: none;
+}
 .wx-chip {
-  position: absolute; z-index: 7; top: 36px; left: 50%; transform: translateX(-50%);
-  display: flex; align-items: center; gap: 8px; max-width: 94%;
+  position: static; transform: none;
+  display: flex; align-items: center; gap: 8px; max-width: 100%;
   padding: 8px 14px; border-radius: 999px; background: rgba(8, 12, 24, 0.82);
   color: #f4efe4; font-weight: 800; font-size: 20px; white-space: nowrap;
 }
-.fx-demo .wx-preview { position: absolute; top: 92px; left: 0; right: 0; z-index: 7; margin: 0; }
 .wx-chip img { width: 36px; height: 36px; object-fit: contain; }
 .wx-arrow { width: 28px; height: 28px; margin-left: 6px; vertical-align: middle; }
-.wx-preview { margin: 8px 24px 0; text-align: center; font-weight: 800; }
+.wx-preview { margin: 0; text-align: center; font-weight: 800; }
 .name-banner, .boss-intro, .victory {
   position: absolute; z-index: 8; left: 50%; transform: translateX(-50%);
 }
@@ -353,7 +357,7 @@ textarea { width: 100%; box-sizing: border-box; background: #121a30; color: inhe
   color: #fff8e1; font-weight: 800; font-size: 32px;
 }
 .boss-intro {
-  top: 12%; width: 78%; text-align: center; padding: 28px 18px; border-radius: 28px;
+  top: 220px; width: 78%; text-align: center; padding: 28px 18px; border-radius: 28px;
   background: rgba(8, 12, 24, 0.9); color: #fff8e1;
 }
 .boss-intro img { width: 220px; height: 220px; object-fit: contain; filter: invert(1) brightness(1.4); }

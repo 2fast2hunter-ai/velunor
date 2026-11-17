@@ -273,7 +273,7 @@ function battle(save: SaveV2, now: number): string {
         ${mon ? `<img class="sprite ${mon.shiny ? 'is-shiny' : ''}" id="ally-sprite" src="${monsterArt(mon.species, true)}" alt=""/>` : ''}
         <span class="ground-shadow"></span>
       </div>
-      <div class="wx-chip" id="wx-chip">${weatherChip(save, now)}</div>
+      <div class="wx-stack"><div class="wx-chip" id="wx-chip">${weatherChip(save, now)}</div></div>
       <div id="floats"></div>
       <div class="move-banner" id="move-banner" hidden></div>
       <div class="name-banner" id="name-banner" hidden></div>

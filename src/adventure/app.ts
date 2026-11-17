@@ -21,7 +21,7 @@ import {
 import { t, type Lang } from './i18n'
 import { shotAt, shouldRecover } from './present'
 import { species, typeColor } from '../data'
-import { weatherArrow, weatherAt } from './weather'
+import { teamWeatherMarks, weatherArrow, weatherAt } from './weather'
 import { sfx } from '../ui'
 import { actorTransform, hitShake, koPose, lungeOffset, numberStyle, parallaxShift } from '../battle/stage'
 import { cameraShake, hitGrade, hitstopMs, numberHoldMs } from '../battle/hitReadout'
@@ -262,20 +262,31 @@ function showFxDemo(kind: 'fire' | 'hit' | 'ko', requested: string | null = null
 
 const REGION_TINT = [0x7dcea0, 0x7dcea0, 0x9ad7ff, 0xff8a3d, 0x7e57c2, 0xf0c14a]
 
+function arrowTag(type: TypeId, weather: 'regen'): string {
+  const arrow = weatherArrow(weather, type)
+  if (!arrow) return ''
+  return `<img class="wx-arrow" src="${art(arrow === 'up' ? 'battle/stat_up.png' : 'battle/stat_down.png')}" alt=""/>`
+}
+
 function showK3Demo(part: string | null): void {
   const kind = part === 'ko' || part === 'sieg' || part === 'intro' ? part : 'wetter'
+  const allyType = species('m01').type
+  const foeType = species('m66').type
+  const marks = teamWeatherMarks([allyType], 'regen')
   paint(`<div id="stage" class="fx-demo"><div class="anchor anchor-mid"><div class="battle" id="battle" data-fx="live" style="height:980px">
     <div class="battle-world" id="battle-world">
       <div id="battle-fx"></div>
-      <div class="wx-chip" id="wx-chip"><img src="${art('battle/weather_icon_regen.png')}" alt=""/> Regen · Wasser +15 % · Feuer −15 %</div>
-      <div class="combatant foe" id="foe-actor" style="left:72%;top:58%"><b>Ziel <img class="wx-arrow" src="${art('battle/stat_down.png')}" alt=""/></b><img class="sprite" src="${monsterArt('m66', true)}" alt=""/></div>
-      <div class="combatant ally" id="ally-actor" style="left:28%;top:72%"><b>Funkfuchs <img class="wx-arrow" src="${art('battle/stat_up.png')}" alt=""/></b><img class="sprite" src="${monsterArt('m01', true)}" alt=""/></div>
+      <div class="wx-stack">
+        <div class="wx-chip" id="wx-chip"><img src="${art('battle/weather_icon_regen.png')}" alt=""/> Regen · Wasser +15 % · Feuer −15 %</div>
+        <p class="wx-preview">Jetzt: Regen. Dein Team: ${marks.up} ▲, ${marks.down} ▼</p>
+      </div>
+      <div class="combatant foe" id="foe-actor" style="left:72%;top:58%"><b>Ziel ${arrowTag(foeType, 'regen')}</b><img class="sprite" src="${monsterArt('m66', true)}" alt=""/></div>
+      <div class="combatant ally" id="ally-actor" style="left:28%;top:72%"><b>Funkfuchs ${arrowTag(allyType, 'regen')}</b><img class="sprite" src="${monsterArt('m01', true)}" alt=""/></div>
       <div class="name-banner" id="name-banner" hidden>Funkfuchs</div>
       <div class="boss-intro" id="boss-intro" hidden></div>
       <button type="button" class="victory" id="victory" hidden></button>
       <img class="crest-fly" id="crest-fly" alt="" hidden/>
     </div>
-    <p class="wx-preview">Jetzt: Regen. Dein Team: 2 ▲, 1 ▼</p>
   </div></div></div>`)
   const host = document.getElementById('battle-fx')
   if (host) mountBattleFx(host)
