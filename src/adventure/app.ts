@@ -25,6 +25,8 @@ import { actorTransform, hitShake, koPose, lungeOffset, numberStyle, parallaxShi
 import { clearBattleFx, holdBattleFx, mountBattleFx, playBattleFx, setFxRunning } from '../battle/phaserFx'
 import { BANNER_MS, CRIT_HITSTOP_MS, KO_MS, LUNGE_HOLD_MS, LUNGE_OUT_MS, moveLabel, NUMBER_MS, RECOIL_MS, STONE_CRIT_HITSTOP_MS, typeFx } from '../battle/typeFx'
 import type { TypeId } from '../types'
+import { takeChests } from './chests'
+import { chestAnimMs, type ChestTier } from './lootbox'
 import { beginAdventure, exportCode, importCode, loadAdventure, writeSave } from './save'
 import { equipFrame, equipTitle } from './achievements'
 import { buyHortSlot, moveFromHort, moveToHort } from './hort'
@@ -104,6 +106,7 @@ let raf = 0
 let playGen = 0
 let pendingOutcome: EncounterOutcome | null = null
 let activity: WheelPanel['tab'] = 'hort'
+let chestFrame = 0
 let wheelMult: Multiplier = 1
 let wheelSymbols: [SymbolId, SymbolId, SymbolId] | null = null
 let wheelNote = ''
@@ -169,6 +172,10 @@ export function bootAdventure(): void {
     showFxDemo(fxDemo)
     return
   }
+  if (debug && (fxDemo === 'lager' || fxDemo === 'raten' || fxDemo === 'seal')) {
+    showChestDemo(fxDemo)
+    return
+  }
   const skipLegacy = localStorage.getItem(RESET_FLAG) === '1' && !localStorage.getItem(SAVE_KEY_V2)
   const loaded = skipLegacy ? null : loadAdventure(localStorage, Date.now())
   if (!loaded?.started) showOnboarding()
@@ -221,6 +228,42 @@ function showFxDemo(kind: 'fire' | 'hit' | 'ko'): void {
       document.getElementById('battle')?.setAttribute('data-fx', 'hold')
     }, 220)
   }, 400)
+}
+
+function showChestDemo(kind: 'lager' | 'raten' | 'seal'): void {
+  save = beginAdventure('Ada', 'A', 'm01', Date.now())
+  screen = 'activities'
+  activity = 'chests'
+  if (kind === 'raten') overlay = { kind: 'chest-rates', tier: 'kiesel' }
+  if (kind === 'seal') {
+    overlay = {
+      kind: 'chest-reveal',
+      hold: 'card',
+      grant: { speciesId: 'm33', rarity: 7, isNew: true, gold: 400, name: 'Bergtitan', place: 'team' }
+    }
+  }
+  render()
+  document.getElementById('stage')?.setAttribute('data-fx', 'hold')
+}
+
+function chestTier(value: string | null): ChestTier | null {
+  if (value === 'kiesel' || value === 'silber' || value === 'gold' || value === 'sternen') return value
+  return null
+}
+
+function startChestAnim(speed: Speed, reduced: boolean): void {
+  if (chestFrame) cancelAnimationFrame(chestFrame)
+  const stage = document.querySelector('.chest-stage')
+  if (!(stage instanceof HTMLElement) || reduced || stage.dataset.phase === 'card') return
+  const ms = chestAnimMs(speed)
+  const started = performance.now()
+  const step = (now: number) => {
+    if (!stage.isConnected) return
+    const t = Math.min(1, (now - started) / ms)
+    stage.dataset.phase = t < 0.4 ? 'seal' : t < 0.72 ? 'beam' : 'card'
+    if (t < 1) chestFrame = requestAnimationFrame(step)
+  }
+  chestFrame = requestAnimationFrame(step)
 }
 
 function showOnboarding(): void {
@@ -1054,8 +1097,36 @@ function onClick(event: Event): void {
     return
   }
   if (act === 'activity') {
-    activity = node.getAttribute('data-id') === 'wheel' ? 'wheel' : 'hort'
+    const id = node.getAttribute('data-id')
+    activity = id === 'wheel' || id === 'chests' ? id : 'hort'
     screen = 'activities'
+    render()
+    return
+  }
+  if (act === 'chest-info' || act === 'chest-open' || act === 'chest-all') {
+    const tier = chestTier(node.getAttribute('data-tier'))
+    if (!tier) return
+    if (act === 'chest-info') {
+      overlay = { kind: 'chest-rates', tier }
+      render()
+      return
+    }
+    const grants = takeChests(save, tier, act === 'chest-all' ? 10 : 1, Date.now())
+    if (!grants.length) return
+    overlay = act === 'chest-all' ? { kind: 'chest-summary', grants } : { kind: 'chest-reveal', grant: grants[0] }
+    try { writeSave(localStorage, save) } catch { /* ignore */ }
+    render()
+    if (overlay?.kind === 'chest-reveal') startChestAnim(save.settings.speed, save.settings.reduceMotion)
+    return
+  }
+  if (act === 'chest-skip') {
+    const stage = document.querySelector('.chest-stage')
+    if (stage instanceof HTMLElement && stage.dataset.phase !== 'card') {
+      if (chestFrame) cancelAnimationFrame(chestFrame)
+      stage.dataset.phase = 'card'
+      return
+    }
+    overlay = null
     render()
     return
   }

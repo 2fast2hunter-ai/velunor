@@ -1,4 +1,5 @@
 import type { Speed } from './const'
+import type { ChestCounts, PityState } from './lootbox'
 import type { Lang } from './i18n'
 
 export type PowerSave = 0 | 2 | 5
@@ -107,6 +108,10 @@ export interface SaveV2 {
   councilBeaten: string[]
   /** Region ids the player may enter. Each council seal opens the next one. */
   regionsOpen: number[]
+  /** Regions whose chapter 1 has been entered. The chest pool uses this. */
+  regionsEntered: number[]
+  chests: ChestCounts
+  pity: PityState
   bag: BagState
   activeFruits: ActiveFruit[]
   /** Unlocked hort places, 1 to 4. The same number of eggs can incubate. */
