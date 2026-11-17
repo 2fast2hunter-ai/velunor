@@ -874,19 +874,20 @@ img.is-shiny { filter: drop-shadow(0 0 10px #f0c14a); }
   font-weight: 800;
 }
 .shop-tabs button.on { background: var(--tab-on) center / 100% 100% no-repeat; color: #2a2110; }
-.shop-scroll { flex: 1 1 auto; min-height: 0; overflow: auto; padding: 0 44px 16px; }
-.shop-group { margin: 16px 0 8px; font-size: 34px; }
+.shop-scroll { flex: 1 1 auto; min-height: 0; overflow: auto; padding: 0 44px 12px; }
+.shop-group { margin: 8px 0 6px; font-size: 32px; }
 .shop-grid { display: grid; grid-template-columns: 480px 480px; gap: 32px; justify-content: center; align-items: start; }
 .shop-card {
   box-sizing: border-box;
   width: 480px;
   display: flex;
   flex-direction: column;
-  gap: 8px;
+  gap: 6px;
   border-style: solid;
-  border-width: 130px 129px 147px 133px;
+  /* 35% of the 133/130/129/147 slice so the interior keeps about 81% of the card. */
+  border-width: 46px 45px 51px 47px;
   border-image-slice: 130 129 147 133;
-  border-image-width: 130px 129px 147px 133px;
+  border-image-width: 1;
   border-image-repeat: stretch;
   background: #1a160f;
   background-clip: padding-box;
@@ -894,7 +895,8 @@ img.is-shiny { filter: drop-shadow(0 0 10px #f0c14a); }
 .shop-art {
   position: relative;
   width: 100%;
-  aspect-ratio: 480 / 360;
+  height: 156px;
+  flex: 0 0 auto;
   display: flex;
   align-items: center;
   justify-content: center;
@@ -940,7 +942,7 @@ img.is-shiny { filter: drop-shadow(0 0 10px #f0c14a); }
 .shop-buy.can { background: #f0c14a; color: #2a2110; }
 .shop-buy.blocked { background: #3a4258; color: #c5d0e6; }
 .shop-buy.shop-shake { animation: shop-shake 280ms linear; }
-.shop-stock { width: 100%; margin-top: 16px; background: #10182c; color: #fff; border: 2px solid #31456f; border-radius: 24px; font-size: 34px; }
+.shop-stock { width: 100%; margin-top: 10px; background: #10182c; color: #fff; border: 2px solid #31456f; border-radius: 24px; font-size: 32px; }
 .shop-price { display: flex; align-items: center; gap: 12px; font-size: 44px; font-weight: 800; }
 .shop-sheet img.hero { width: 220px; height: 220px; object-fit: contain; align-self: center; flex: 0 0 auto; }
 .shop-confirm { overflow: auto; max-height: 92%; }

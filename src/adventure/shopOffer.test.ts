@@ -74,6 +74,7 @@ describe('shop offers', () => {
     const css = readFileSync(new URL('./adventure.css', import.meta.url), 'utf8')
     expect(css).toContain('grid-template-columns: 480px 480px')
     expect(css).toContain('border-image-slice: 130 129 147 133')
+    expect(css).toContain('border-width: 46px 45px 51px 47px')
     expect(css).toContain('min-height: 132px')
     expect(shopOffers(save, now).find((row) => row.id === 'crystal-s')?.pict).toBe(60)
     expect(shopOffers(save, now).find((row) => row.id === 'crystal-m')?.pict).toBe(72)
