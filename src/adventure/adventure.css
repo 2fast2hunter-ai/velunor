@@ -335,14 +335,19 @@ textarea { width: 100%; box-sizing: border-box; background: #121a30; color: inhe
 .parallax.mid { background: radial-gradient(60% 30% at 50% 40%, rgba(255,255,255,0.14), transparent 70%); }
 .parallax.near { background: linear-gradient(0deg, rgba(0,0,0,0.28), transparent 28%); }
 #battle-fx { position: absolute; inset: 0; pointer-events: none; z-index: 4; }
+.battle-top {
+  position: absolute; z-index: 7; top: 12px; left: 16px; right: 16px;
+  display: flex; flex-direction: column; align-items: center; gap: 8px;
+  pointer-events: none;
+}
 .wx-stack {
-  position: absolute; z-index: 7; top: 28px; left: 50%; transform: translateX(-50%);
-  display: flex; flex-direction: column; align-items: center; gap: 12px;
-  width: min(94%, 960px); pointer-events: none;
+  position: static; transform: none; width: 100%;
+  display: flex; flex-direction: column; align-items: center; gap: 8px;
 }
 .wx-chip {
   position: static; transform: none;
-  display: flex; align-items: center; gap: 8px; max-width: 100%;
+  display: flex; align-items: center; justify-content: center; gap: 8px;
+  max-width: 100%; box-sizing: border-box;
   padding: 8px 14px; border-radius: 999px; background: rgba(8, 12, 24, 0.82);
   color: #f4efe4; font-weight: 800; font-size: 20px; white-space: nowrap;
 }
@@ -457,12 +462,10 @@ textarea { width: 100%; box-sizing: border-box; background: #121a30; color: inhe
 }
 
 .battle-status {
-  position: absolute;
-  left: 16px;
-  right: 16px;
-  top: 12px;
+  position: static;
+  width: 100%;
+  box-sizing: border-box;
   margin: 0;
-  z-index: 4;
   background: rgba(8, 12, 24, 0.78);
   border-radius: 14px;
   padding: 8px 14px;
