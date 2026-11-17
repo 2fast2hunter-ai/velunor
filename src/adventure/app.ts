@@ -24,8 +24,9 @@ import { species } from '../data'
 import { sfx } from '../ui'
 import { actorTransform, hitShake, koPose, lungeOffset, numberStyle, parallaxShift } from '../battle/stage'
 import { cameraShake, hitGrade, hitstopMs, numberHoldMs } from '../battle/hitReadout'
-import { clearBattleFx, holdBattleFx, mountBattleFx, onBattleFxReady, playBattleFx, setFxRunning, showHitNumber } from '../battle/phaserFx'
-import { BANNER_MS, KO_MS, LUNGE_HOLD_MS, LUNGE_OUT_MS, moveLabel, RECOIL_MS, typeFx } from '../battle/typeFx'
+import { clearBattleFx, holdBattleFx, mountBattleFx, onBattleFxReady, playBattleFx, preloadBattleStrips, setFxRunning, showHitNumber } from '../battle/phaserFx'
+import { effectTiming, battleStripTypes } from '../battle/strips'
+import { BANNER_MS, KO_MS, LUNGE_OUT_MS, moveLabel, RECOIL_MS, typeFx } from '../battle/typeFx'
 import type { TypeId } from '../types'
 import { takeChests } from './chests'
 import { bankRoad, buyChestForGold, buyChestForMarks, claimRoad, craftSpecies, debugStarChests, meltDuplicate, raiseStar } from './sources'
@@ -173,9 +174,10 @@ export function bootAdventure(): void {
     try { writeSave(localStorage, save) } catch { /* keep playing */ }
   }, AUTOSAVE_MS)
 
-  const fxDemo = new URLSearchParams(window.location.search).get('fx')
-  if (debug && (fxDemo === 'fire' || fxDemo === 'hit' || fxDemo === 'ko')) {
-    showFxDemo(fxDemo)
+  const params = new URLSearchParams(window.location.search)
+  const fxDemo = params.get('fx')
+  if (debug && (fxDemo === 'fire' || fxDemo === 'hit' || fxDemo === 'ko' || fxDemo === 'strip')) {
+    showFxDemo(fxDemo === 'strip' ? 'hit' : fxDemo, params.get('type'))
     return
   }
   if (debug && (fxDemo === 'lager' || fxDemo === 'raten' || fxDemo === 'seal')) {
@@ -192,7 +194,12 @@ export function bootAdventure(): void {
   else void start(loaded)
 }
 
-function showFxDemo(kind: 'fire' | 'hit' | 'ko'): void {
+function demoType(requested: string | null): TypeId {
+  const known = battleStripTypes()
+  return requested && known.includes(requested as TypeId) ? requested as TypeId : 'fire'
+}
+
+function showFxDemo(kind: 'fire' | 'hit' | 'ko', requested: string | null = null): void {
   paint(`<div id="stage" class="fx-demo"><div class="anchor anchor-mid"><div class="battle" id="battle" data-fx="live" style="height:980px">
     <div class="battle-world" id="battle-world">
       <div class="parallax far" id="parallax-far"></div>
@@ -207,8 +214,9 @@ function showFxDemo(kind: 'fire' | 'hit' | 'ko'): void {
     </div>
   </div></div></div>`)
   const host = document.getElementById('battle-fx')
+  const type = demoType(requested)
   if (host) mountBattleFx(host)
-  onBattleFxReady(() => window.setTimeout(() => {
+  preloadBattleStrips([type], () => onBattleFxReady(() => window.setTimeout(() => {
     const fx = document.getElementById('battle-fx')
     const ally = document.getElementById('ally-actor')
     const foe = document.getElementById('foe-actor')
@@ -221,28 +229,30 @@ function showFxDemo(kind: 'fire' | 'hit' | 'ko'): void {
       showMove(attackTitle('m01', 'fire'), ally, 1)
       spawnFloat(document.getElementById('floats'), { amount: 54, crit: false, band: 'neutral' }, '#ffffff', '70%')
     } else {
-      ally.style.transform = actorTransform('ally', kind === 'hit' ? LUNGE_OUT_MS + LUNGE_HOLD_MS : LUNGE_OUT_MS * 0.85, -1, 0, 0, distance)
-      showMove(attackTitle('m01', 'fire'), ally, 1)
+      ally.style.transform = actorTransform('ally', kind === 'hit' ? LUNGE_OUT_MS * 0.35 : LUNGE_OUT_MS * 0.85, -1, 0, 0, distance)
+      showMove(moveLabel(type), ally, 1)
       const from = stagePoint(ally, fx)
       const to = stagePoint(foe, fx)
-      playBattleFx({ type: 'fire', crit: false, band: 'neutral', awaken: false, shimmer: false, reduced: false, tempo: 1, from, to })
+      const timing = effectTiming(type, 1)
+      playBattleFx({ type, crit: kind === 'hit', band: 'neutral', awaken: false, shimmer: false, reduced: false, tempo: 1, from, to })
+      window.setTimeout(() => document.getElementById('battle')?.setAttribute('data-proj', 'ready'), Math.max(40, Math.round(timing.travelMs * 0.45)))
       if (kind === 'hit') {
-        const picture = foe.querySelector('img')
-        if (picture instanceof HTMLImageElement) picture.style.filter = 'brightness(2.8)'
-        foe.style.transform = `translate(-50%, -100%) translate(${hitShake(40)}px, 0px) scale(0.72)`
-        const head = numberPoint(foe, fx)
-        const critShown = showHitNumber(head.x - 170, head.y, 36, 'crit', numberHoldMs(1))
-        const strongShown = showHitNumber(head.x + 170, head.y, 48, 'strong', numberHoldMs(1))
-        if (!critShown) spawnFloat(document.getElementById('floats'), { amount: 36, crit: true, band: 'strong' }, typeFx('fire').base, '42%', numberHoldMs(1))
-        if (!strongShown) spawnFloat(document.getElementById('floats'), { amount: 48, crit: false, band: 'strong' }, typeFx('fire').base, '78%', numberHoldMs(1))
-        window.setTimeout(() => document.getElementById('battle')?.setAttribute('data-digits', 'ready'), 90)
+        window.setTimeout(() => {
+          const picture = foe.querySelector('img')
+          if (picture instanceof HTMLImageElement) picture.style.filter = 'brightness(2.8)'
+          foe.style.transform = `translate(-50%, -100%) translate(${hitShake(40)}px, 0px) scale(0.72)`
+          const head = numberPoint(foe, fx)
+          const shown = showHitNumber(head.x, head.y, 36, 'crit', numberHoldMs(1))
+          if (!shown) spawnFloat(document.getElementById('floats'), { amount: 36, crit: true, band: 'neutral' }, typeFx(type).base, '70%', numberHoldMs(1))
+          document.getElementById('battle')?.setAttribute('data-digits', 'ready')
+        }, timing.travelMs)
       }
     }
     window.setTimeout(() => {
-      if (kind !== 'ko') holdBattleFx(kind === 'hit' ? 0.92 : 0.5)
+      if (kind !== 'ko') holdBattleFx(kind === 'hit' ? 0.55 : 0.5)
       document.getElementById('battle')?.setAttribute('data-fx', 'hold')
     }, 280)
-  }, 80))
+  }, 40)))
 }
 
 function showShopDemo(kind: 'shop' | 'shop-poor' | 'shop-ask'): void {
@@ -648,6 +658,7 @@ function play(outcome: EncounterOutcome, speed: Speed, done: () => void): void {
   let backstop = 0
   const finishOnce = () => {
     window.clearTimeout(backstop)
+    window.clearTimeout(impactTimer)
     clearBattleFx()
     finish()
   }
@@ -667,7 +678,10 @@ function play(outcome: EncounterOutcome, speed: Speed, done: () => void): void {
   const fxHost = document.getElementById('battle-fx')
   const floats = document.getElementById('floats')
   const critFlash = document.getElementById('crit-flash')
-  if (fxHost) mountBattleFx(fxHost)
+  if (fxHost) {
+    mountBattleFx(fxHost)
+    preloadBattleStrips(fightTypes(outcome))
+  }
   const battery = Boolean(save?.settings.battery)
   setFxRunning(true, battery ? BATTERY_FPS : 60)
   const reduced = Boolean(save?.settings.reduceMotion)
@@ -681,6 +695,7 @@ function play(outcome: EncounterOutcome, speed: Speed, done: () => void): void {
   let prevFoe: number | null = null
   let hitAt = -1
   let drawnAt = 0
+  let impactTimer = 0
   const frame = (now: number) => {
     if (gen !== playGen) return
     if (!paintDue(now, drawnAt, battery)) {
@@ -705,28 +720,33 @@ function play(outcome: EncounterOutcome, speed: Speed, done: () => void): void {
             const to = hit.from === 'ally' ? foePt : allyPt
             playBattleFx({ type: hit.type, crit: hit.crit, band: hit.band, awaken: Boolean(hit.awaken), shimmer: Boolean(outcome.shiny), reduced, tempo: speed, from, to, kind: hit.kind })
             const attackerId = hit.from === 'ally' ? shot.allySpecies : shot.foeSpecies
-            if (hit.kind === 'hit') {
-              showMove(attackTitle(attackerId, hit.type), hit.from === 'ally' ? allyActor : foeActor, k)
-              const grade = hitGrade(hit.band, hit.crit)
-              const hold = numberHoldMs(speed)
-              const above = numberPoint(hit.from === 'ally' ? foeActor : allyActor, fxHost)
-              const shown = showHitNumber(above.x, above.y, hit.amount, grade, hold)
-              if (!shown) spawnFloat(floats, hit, typeFx(hit.type).base, hit.from === 'ally' ? '70%' : '30%', hold)
-            }
             const struck = hit.from === 'ally' ? foeActor : allyActor
-            struck.classList.remove('recoil')
-            void struck.offsetWidth
-            struck.classList.add('recoil')
-            const picture = struck.querySelector('img')
-            if (picture instanceof HTMLImageElement) picture.style.animationDuration = `${RECOIL_MS * k}ms`
+            const travel = hit.kind === 'hit' ? effectTiming(hit.type, speed).travelMs : 0
+            if (hit.kind === 'hit') showMove(attackTitle(attackerId, hit.type), hit.from === 'ally' ? allyActor : foeActor, k)
+            window.clearTimeout(impactTimer)
+            impactTimer = window.setTimeout(() => {
+              if (gen !== playGen || !hit) return
+              if (hit.kind === 'hit') {
+                const grade = hitGrade(hit.band, hit.crit)
+                const hold = numberHoldMs(speed)
+                const above = numberPoint(struck, fxHost)
+                const shown = showHitNumber(above.x, above.y, hit.amount, grade, hold)
+                if (!shown) spawnFloat(floats, hit, typeFx(hit.type).base, hit.from === 'ally' ? '70%' : '30%', hold)
+                struck.classList.remove('recoil')
+                void struck.offsetWidth
+                struck.classList.add('recoil')
+                const picture = struck.querySelector('img')
+                if (picture instanceof HTMLImageElement) picture.style.animationDuration = `${RECOIL_MS * k}ms`
+              }
+              if (save?.settings.shake && hit.kind === 'hit') {
+                const spec = cameraShake(hitGrade(hit.band, hit.crit), 'hit', { speed, reduced })
+                shakeStart = performance.now() - started
+                shakeFor = spec.ms
+                shakePx = spec.px
+              }
+              if (allowFlash && hit.crit && critFlash) critFlash.style.opacity = '0.15'
+            }, travel)
           }
-          if (save?.settings.shake && hit) {
-            const spec = cameraShake(hitGrade(hit.band, hit.crit), 'hit', { speed, reduced })
-            shakeStart = elapsed
-            shakeFor = spec.ms
-            shakePx = spec.px
-          }
-          if (allowFlash && shot.hits.some((row) => row.crit) && critFlash) critFlash.style.opacity = '0.15'
         } else if (critFlash && elapsed - hitAt > 50 * k) critFlash.style.opacity = '0'
         prevAlly = shot.allyHp
         prevFoe = shot.foeHp
@@ -734,12 +754,15 @@ function play(outcome: EncounterOutcome, speed: Speed, done: () => void): void {
       const hit = shot?.hits.find((row) => row.kind === 'hit')
       const hitstop = hit ? hitstopMs(hitGrade(hit.band, hit.crit), 'hit', { speed, reduced }) : 0
       const age = hitAt < 0 ? -1 : elapsed - hitAt
-      const pose = age < 0 ? -1 : age < hitstop ? 0 : (age - hitstop) / k
+      const travel = hit ? effectTiming(hit.type, speed).travelMs : 0
+      const sinceImpact = age < 0 ? -1 : age - travel
+      const pose = age < 0 ? -1 : sinceImpact < 0 ? age / k : sinceImpact < hitstop ? travel / k : (age - hitstop) / k
+      const hitAge = sinceImpact < 0 ? -1 : sinceImpact < hitstop ? 0 : (sinceImpact - hitstop) / k
       const reach = allyActor && foeActor ? reachDistance(allyActor, foeActor, hit?.type === 'fighting' ? 0.88 : 0.76) : 160
       const allyMove = hit?.from === 'ally' ? pose : -1
       const foeMove = hit?.from === 'foe' ? pose : -1
-      const allyHit = hit?.from === 'foe' ? pose : -1
-      const foeHit = hit?.from === 'ally' ? pose : -1
+      const allyHit = hit?.from === 'foe' ? hitAge : -1
+      const foeHit = hit?.from === 'ally' ? hitAge : -1
       const allyKo = shot?.allyHp === 0 ? Math.min(1, Math.max(0, age) / (KO_MS * k)) : 0
       const foeKo = shot?.foeHp === 0 ? Math.min(1, Math.max(0, age) / (KO_MS * k)) : 0
       if (allyActor) {
@@ -790,6 +813,18 @@ function play(outcome: EncounterOutcome, speed: Speed, done: () => void): void {
 }
 
 const floatPool: HTMLDivElement[] = []
+
+function fightTypes(outcome: EncounterOutcome): TypeId[] {
+  const found = new Set<TypeId>()
+  for (const trace of outcome.traces) {
+    try { found.add(species(trace.allySpecies).type) } catch { /* skip a missing species */ }
+    try { found.add(species(trace.foeSpecies).type) } catch { /* skip a missing species */ }
+    for (const frame of trace.frames) {
+      for (const hit of frame.hits ?? []) found.add(hit.type)
+    }
+  }
+  return [...found]
+}
 
 function numberPoint(actor: HTMLElement, host: HTMLElement): { x: number; y: number } {
   const pt = stagePoint(actor, host)
