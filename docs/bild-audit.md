@@ -1,6 +1,6 @@
 # Bild-Audit
 
-Stand vor dem weichen Look. Jede Zeile ist eine Stelle ohne eigenes Bild. Der Pfad liegt schon im Code (`src/adventure/uiArt.ts`, Ausnahme: Truhen im Lager nutzen die vorhandenen Shop-Grafiken, Werkstatt-Zeilen das Monsterportrait). Dateien unter `public/assets/`. Platzhalter sind 128×128, transparent, runde Scheibe. Später nur die Datei tauschen.
+Jede Zeile ist eine Stelle, die vorher kein eigenes Bild hatte. Der Pfad liegt in `src/adventure/uiArt.ts`. Ausgeliefert wird die WebP-Fassung derselben Datei unter `public/assets/ui/`. Truhen im Lager nutzen die Shop-Zeichnungen, Werkstatt-Zeilen das Monsterportrait.
 
 | Ort | Element | Datei | Größe | Motiv |
 | --- | --- | --- | --- | --- |

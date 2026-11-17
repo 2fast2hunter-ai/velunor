@@ -18,7 +18,18 @@ html, body, #game {
 }
 
 button, input, select { font: inherit; color: inherit; }
-.ui-icon { width: 40px; height: 40px; object-fit: contain; vertical-align: middle; flex: 0 0 auto; }
+.ui-icon {
+  width: 64px;
+  height: 64px;
+  object-fit: contain;
+  object-position: center;
+  vertical-align: middle;
+  flex: 0 0 auto;
+  border: 0;
+  border-radius: 0;
+  background: transparent;
+  box-shadow: none;
+}
 
 #fit {
   position: absolute;
@@ -124,9 +135,14 @@ button, .primary, .ghost, .text-btn, .filter-bar, input, select, textarea {
   background: radial-gradient(circle at 50% 40%, #2a3c62, #10182c 72%);
   box-sizing: border-box;
 }
-.ui-icon, .shop-item, .coin, .tab img, .hud-gold img, .chest-art {
+.shop-item, .coin, .tab img, .hud-gold img, .chest-art {
   border-radius: 22px;
 }
+.hud .ui-icon, .chapter-line .ui-icon, .speed .ui-icon, .grip .ui-icon, .log .ui-icon, .mini .ui-icon {
+  width: 56px;
+  height: 56px;
+}
+.speed button { display: flex; flex-direction: column; align-items: center; justify-content: center; gap: 2px; }
 
 .nav, .side, .center { min-height: 0; }
 
@@ -296,7 +312,7 @@ textarea { width: 100%; box-sizing: border-box; background: #121a30; color: inhe
   cursor: pointer;
   box-sizing: border-box;
 }
-.mini.is-empty { opacity: 0.28; pointer-events: none; }
+.mini.is-empty { opacity: 0.85; pointer-events: none; }
 .mini.is-active { border-color: #f0c14a; }
 .mini.is-fainted { filter: grayscale(1); opacity: 0.55; }
 .mini img { width: 84px; height: 84px; object-fit: contain; }
@@ -921,11 +937,10 @@ img.is-shiny { filter: drop-shadow(0 0 10px #f0c14a); }
   flex-direction: column;
   gap: 6px;
   border-style: solid;
-  /* 35% of the 133/130/129/147 slice so the interior keeps about 81% of the card. */
-  border-width: 36px 36px 41px 37px;
-  clip-path: inset(0 round 40px);
+  /* Soft frame slice is 56 px. Drawn at 36 px so the interior is 85% of the 480 px card. */
+  border-width: 36px;
   filter: drop-shadow(0 16px 28px rgba(6, 10, 24, 0.24));
-  border-image-slice: 130 129 147 133;
+  border-image-slice: 56;
   border-image-width: 1;
   border-image-repeat: stretch;
   background: #1a160f;
