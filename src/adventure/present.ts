@@ -36,6 +36,7 @@ export interface FrameShot {
   foeMark: string | null
   allyStacks: number
   foeStacks: number
+  counter: boolean
 }
 
 /** The battle frame at `elapsed` ms. Missing traces never throw. */
@@ -69,6 +70,7 @@ export function shotAt(traces: FightTrace[], elapsed: number, dur: number): Fram
     allyMark: shot.allyMark ?? null,
     foeMark: shot.foeMark ?? null,
     allyStacks: shot.allyStacks ?? 0,
-    foeStacks: shot.foeStacks ?? 0
+    foeStacks: shot.foeStacks ?? 0,
+    counter: Boolean(trace.counter)
   }
 }

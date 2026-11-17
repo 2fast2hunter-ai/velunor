@@ -1,9 +1,10 @@
-import { rarityInfo, species, typeMult, typeName } from '../data'
+import { rarityInfo, species, typeName } from '../data'
 import { nextFloat } from '../rng'
 import type { TypeId } from '../types'
 import type { FightSide, FightTrace } from './battle'
 import { fight1v1 } from './battle'
 import { weatherAt } from './weather'
+import { orderMods, type OrderSeat } from './order'
 import {
   BASE_ENCOUNTER_MS,
   BENCH_EXP,
@@ -299,7 +300,7 @@ function storeHp(mon: OwnedMon, battleHp: number, battleMax: number): void {
   mon.hp = Math.max(1, Math.min(real, Math.round(fraction * real)))
 }
 
-function sideFrom(mon: OwnedMon, cap: number): FightSide {
+function sideFrom(mon: OwnedMon, cap: number, mods?: { defMul: number; atkMul: number; counter: boolean; anchor: boolean }): FightSide {
   const sp = species(mon.species)
   const level = battleLevel(mon.lvl, cap)
   const stats = monStats({ ...mon, lvl: level })
@@ -312,13 +313,23 @@ function sideFrom(mon: OwnedMon, cap: number): FightSide {
     type: sp.type,
     maxHp,
     hp: Math.max(1, Math.round(maxHp * fraction)),
-    atk: stats.atk,
-    def: stats.def,
+    atk: Math.max(1, Math.round(stats.atk * (mods?.atkMul ?? 1))),
+    def: Math.max(1, Math.round(stats.def * (mods?.defMul ?? 1))),
     spd: stats.spd,
     skill: awakenSkill(sp.skill, level),
     passive: sp.passive ?? null,
-    level
+    level,
+    counter: mods?.counter,
+    anchor: mods?.anchor
   }
+}
+
+function seatsOf(save: SaveV2): OrderSeat[] {
+  return save.team.flatMap((uid) => {
+    const mon = save.mons[uid]
+    if (!mon) return []
+    return [{ uid, type: species(mon.species).type, alive: isAlive(mon) }]
+  })
 }
 
 function foeSide(speciesId: string, level: number, shiny = false, scale: BossScale = { hp: 1, atk: 1, def: 1 }, hpFraction = 1): FightSide {
@@ -342,24 +353,11 @@ function foeSide(speciesId: string, level: number, shiny = false, scale: BossSca
   }
 }
 
-export function pickFighter(save: SaveV2, foeType: TypeId): string | null {
+export function pickFighter(save: SaveV2, _foeType: TypeId): string | null {
   const living = battleRoster(save)
   if (!living.length) return null
   if (save.active && living.includes(save.active)) return save.active
-  if (!save.settings.autoSwitch) return living[0]
-  let best = living[0]
-  let bestScore = -1
-  let bestLevel = -1
-  for (const uid of living) {
-    const mon = save.mons[uid]
-    const score = typeMult(species(mon.species).type, foeType)
-    if (score > bestScore + 1e-9 || (Math.abs(score - bestScore) <= 1e-9 && mon.lvl > bestLevel)) {
-      best = uid
-      bestScore = score
-      bestLevel = mon.lvl
-    }
-  }
-  return best
+  return living[0]
 }
 
 function wipe(save: SaveV2, now: number, quiet: boolean): void {
@@ -498,7 +496,7 @@ function fightOne(save: SaveV2, chapter: ChapterDef, speciesId: string, level: n
   save.active = fighter
   const allyMon = save.mons[fighter]
   const cap = chapterCapNow(save, chapter)
-  const ally = sideFrom(allyMon, cap)
+  const ally = sideFrom(allyMon, cap, orderMods(seatsOf(save), fighter, foe.type, false))
   const trace = fight1v1(ally, foe, rngOf(save), opts.trace, opts.offline ? null : weatherAt(now))
   storeHp(allyMon, trace.allyHp, trace.allyMax)
   if (trace.win) {
@@ -652,6 +650,7 @@ function runGauntlet(
   let lastFighter: string | null = null
   const seen = new Set<number>()
   let guard = 0
+  let enteredAfterKo = false
   while (index < foes.length && guard < 24) {
     guard += 1
     if (!livingTeam(save).length) return { traces, wins, lastFighter, wiped: true, exp }
@@ -667,7 +666,8 @@ function runGauntlet(
     save.active = fighter
     const allyMon = save.mons[fighter]
     const cap = chapterCapNow(save, chapter)
-    const trace = fight1v1(sideFrom(allyMon, cap), foeSide(foe.species, foe.level, foe.shiny ?? false, scale, foeFraction), rngOf(save), opts.trace, opts.offline ? null : weatherAt(now))
+    const foeType = species(foe.species).type
+    const trace = fight1v1(sideFrom(allyMon, cap, orderMods(seatsOf(save), fighter, foeType, enteredAfterKo)), foeSide(foe.species, foe.level, foe.shiny ?? false, scale, foeFraction), rngOf(save), opts.trace, opts.offline ? null : weatherAt(now))
     traces.push(trace)
     lastFighter = fighter
     if (opts.summary) opts.summary.fights += 1
@@ -678,9 +678,11 @@ function runGauntlet(
       index += 1
       foeFraction = 1
       wins += 1
+      enteredAfterKo = false
     } else {
       storeHp(allyMon, 0, trace.allyMax)
       foeFraction = trace.foeMax > 0 ? Math.max(0.01, trace.foeHp / trace.foeMax) : 1
+      enteredAfterKo = true
     }
   }
   return { traces, wins, lastFighter, wiped: wins < foes.length && !livingTeam(save).length, exp }

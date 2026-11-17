@@ -45,6 +45,7 @@ import { GOALS } from './achievements'
 import { HORT_PRICES, hortOffer } from './hort'
 import { fruitDef, fruitMinutes } from './shop'
 import { teamWeatherMarks, weatherArrow, weatherForecast, weatherName, WEATHER_SHIFTS, type WeatherId } from './weather'
+import { typeArrow } from './order'
 import { FACES, MULTIPLIERS, PRIZES, faceById, spinCost, wheelOpen, type Multiplier, type SymbolId } from './wheel'
 import { expToNext, isAlive, monStats, realHp } from './stats'
 import type { OfflineSummary } from './sim'
@@ -273,6 +274,7 @@ function battle(save: SaveV2, now: number): string {
       <div class="combatant ally" id="ally-actor" style="left:${ALLY_X}%;top:${FEET_Y}%">
         <button type="button" class="status-mark" id="ally-status" data-act="status" data-who="ally" hidden><img alt=""/></button>
         <p class="status-tip" id="ally-tip" hidden></p>
+        <div class="konter-label" id="konter-label" hidden>Konter!</div>
         <b id="ally-name">${mon ? esc(species(mon.species).name) : ''}<img class="wx-arrow" id="ally-arrow" alt="" ${mon && weatherArrow(weatherForecast(now)[0].weather, species(mon.species).type) ? `src="${art(weatherArrow(weatherForecast(now)[0].weather, species(mon.species).type) === 'up' ? 'battle/stat_up.png' : 'battle/stat_down.png')}"` : 'hidden'}/></b>
         <div class="hp"><span id="ally-hp" style="width:${(hp.hp / hp.max) * 100}%"></span></div>
         <div class="ult ${mon && mon.lvl >= 25 ? '' : 'is-locked'}" id="ally-ult" data-n="0" title="${mon && mon.lvl >= 25 ? 'Ult' : 'ab Level 25'}"></div>
@@ -294,7 +296,7 @@ function battle(save: SaveV2, now: number): string {
       <div class="wx-stack"><div class="wx-chip" id="wx-chip">${weatherChip(save, now)}</div></div>
       ${bossAhead(save) ? `<p class="wx-preview">${esc(weatherPreview(save, now))}</p>` : ''}
     </div>
-    ${sealed ? '' : `<button type="button" class="primary challenge-fab" data-act="challenge">${ui('challenge')}${tr(save, chapter.council || chapter.foyer ? 'battle.resume' : 'battle.challenge')}</button>`}
+    ${sealed ? '' : `<div class="guard-dock">${guardCard(save)}<button type="button" class="primary challenge-fab" data-act="challenge">${ui('challenge')}${tr(save, chapter.council || chapter.foyer ? 'battle.resume' : 'battle.challenge')}</button></div>`}
   </div>`
 }
 
@@ -342,6 +344,31 @@ function bossAhead(save: SaveV2): boolean {
   const chapter = chapterById(save.region, save.chapter)
   if (chapter.council || chapter.special || chapter.foyer) return true
   return routeOf(chapter.id)[save.step] === 'guardian'
+}
+
+function guardCard(save: SaveV2): string {
+  const chapter = chapterById(save.region, save.chapter)
+  const badge = gateBadge(save.region, chapter)
+  if (badge && save.badges.includes(badge)) return ''
+  let speciesId = chapter.guardian.team[0]?.species ?? ''
+  if (chapter.council) {
+    const member = chapter.council.members.find((row) => !save.councilBeaten.includes(row.id))
+    speciesId = member?.team[0]?.species ?? speciesId
+  }
+  if (!speciesId) return ''
+  const foeType = species(speciesId).type
+  const bits = save.team.flatMap((uid) => {
+    const mon = save.mons[uid]
+    if (!mon) return []
+    const arrow = typeArrow(species(mon.species).type, foeType)
+    const mark = arrow === 'up'
+      ? `<b class="up">▲</b>`
+      : arrow === 'down'
+        ? `<b class="down">▼</b>`
+        : ''
+    return [`<span>${esc(species(mon.species).name)}${mark}</span>`]
+  }).join('')
+  return `<div class="guard-card"><b>Gegen ${esc(typeName(foeType))}</b>${bits}</div>`
 }
 
 function weatherPreview(save: SaveV2, now: number): string {

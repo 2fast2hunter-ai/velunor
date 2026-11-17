@@ -5,6 +5,7 @@ import { ACTION_LIMIT } from './const'
 import { awakenCount } from './stats'
 import { weatherFactor, type WeatherId } from './weather'
 import { ULT_BOSS_FETTER, ULT_DAMAGE, ULT_HEAL, ULT_IMPULSE, ULT_IMPULSE_ATTACKS, ULT_PIERCE, ULT_WALL_CUT, gainUlt, ultName, ultPattern, ultReady, ultUnlocked, wallActions, type UltPattern } from './ult'
+import { ANCHOR_ULT, COUNTER_BLOW, COUNTER_ULT } from './order'
 import { AILMENTS, ailmentFor, bossDuration, bossImmune, type AilmentId } from './ailment'
 
 export interface FightSide {
@@ -22,6 +23,10 @@ export interface FightSide {
   level?: number
   /** Wächter, Rat, Weltenbiest. Fessel lasts half as long. */
   boss?: boolean
+  /** Came in after a knockout and is strong against this foe. */
+  counter?: boolean
+  /** Last monster of the bench, and the only one still up. */
+  anchor?: boolean
 }
 
 export interface FightHit {
@@ -67,6 +72,7 @@ export interface FightTrace {
   foeKo: boolean
   allyKo: boolean
   timeout: boolean
+  counter?: boolean
   allyHp: number
   foeHp: number
 }
@@ -97,6 +103,8 @@ interface Actor {
   passiveShield: number
   passiveDuration: number
   ultCharge: number
+  opening: boolean
+  struck: boolean
   impulseLeft: number
   /** Actions of Schildwall still left. 0 means none. */
   wallLeft: number
@@ -173,7 +181,9 @@ function makeActor(side: FightSide): Actor {
     passivePct,
     passiveShield,
     passiveDuration,
-    ultCharge: 0,
+    ultCharge: side.counter && ultUnlocked(side.level ?? 0) ? COUNTER_ULT : 0,
+    opening: Boolean(side.counter),
+    struck: false,
     impulseLeft: 0,
     wallLeft: 0,
     wallFresh: false,
@@ -343,7 +353,9 @@ export function fight1v1(allySide: FightSide, foeSide: FightSide, rng: () => num
     const boosted = attacker.impulseLeft > 0 && !ult
     const crit = rng() < combat.critChance
     const variance = combat.varianceMin + (combat.varianceMax - combat.varianceMin) * rng()
-    let dmg = rawDamage(atkOf(attacker), defOf(target, pierce), skillMult, tMult * wMult, crit, variance)
+    const blow = attacker.opening ? 1 + COUNTER_BLOW : 1
+    if (attacker.opening) attacker.struck = true
+    let dmg = rawDamage(atkOf(attacker), defOf(target, pierce), skillMult * blow, tMult * wMult, crit, variance)
     if (attacker.mark?.id === 'schock') dmg = Math.floor(dmg * AILMENTS.schock.damage)
     if (attacker.mark?.id === 'spreu' && rng() < AILMENTS.spreu.miss) dmg = 0
     if (boosted) attacker.impulseLeft -= 1
@@ -429,6 +441,7 @@ export function fight1v1(allySide: FightSide, foeSide: FightSide, rng: () => num
     }
     offer(unit, other, 'ult')
     tickMark(unit, true)
+    if (unit.struck) unit.opening = false
     push(`${unit.side.name} setzt ${ultName(pattern)} ein.`)
   }
 
@@ -466,7 +479,8 @@ export function fight1v1(allySide: FightSide, foeSide: FightSide, rng: () => num
     const foeHp = other.hp
     if (ultReady(unit.side.level ?? 0, unit.ultCharge)) castUlt(unit, other)
     else {
-      unit.ultCharge = gainUlt(unit.side.level ?? 0, unit.ultCharge, 1)
+      const pace = 1 + (unit.side.anchor ? ANCHOR_ULT : 0)
+      unit.ultCharge = gainUlt(unit.side.level ?? 0, unit.ultCharge, pace)
       if (unit.cd <= 0 && skillUsable(unit, other)) {
         cast(unit, other)
         if (unit.side.skill.effects.some((effect) => effect.kind === 'damage')) offer(unit, other, 'skill')
@@ -479,6 +493,7 @@ export function fight1v1(allySide: FightSide, foeSide: FightSide, rng: () => num
         push(`${unit.side.name} greift an.`)
       }
       tickMark(unit, true)
+      if (unit.struck) unit.opening = false
     }
     if (foeHp > 0 && other.hp <= 0) unit.ultCharge = gainUlt(unit.side.level ?? 0, unit.ultCharge, 2)
     if (unit.hp > 0) tick(unit)
@@ -518,7 +533,8 @@ export function fight1v1(allySide: FightSide, foeSide: FightSide, rng: () => num
     allyKo: ally.hp <= 0,
     timeout,
     allyHp: Math.max(0, ally.hp),
-    foeHp: Math.max(0, foe.hp)
+    foeHp: Math.max(0, foe.hp),
+    counter: Boolean(allySide.counter)
   }
 }
 

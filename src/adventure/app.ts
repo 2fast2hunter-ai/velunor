@@ -109,6 +109,7 @@ let lastInput = Date.now()
 let timer = 0
 let animating = false
 let lastTick = 0
+let holdCounter = false
 let progressAt = Date.now()
 let raf = 0
 let playGen = 0
@@ -179,6 +180,10 @@ export function bootAdventure(): void {
 
   const params = new URLSearchParams(window.location.search)
   const fxDemo = params.get('fx')
+  if (debug && fxDemo === 'k6') {
+    showK6Demo(params.get('part'))
+    return
+  }
   if (debug && fxDemo === 'k5') {
     showK5Demo(params.get('part'))
     return
@@ -271,6 +276,27 @@ function showFxDemo(kind: 'fire' | 'hit' | 'ko', requested: string | null = null
 }
 
 const REGION_TINT = [0x7dcea0, 0x7dcea0, 0x9ad7ff, 0xff8a3d, 0x7e57c2, 0xf0c14a]
+
+function showK6Demo(part: string | null): void {
+  const kind = part === 'konter' ? 'konter' : part === 'karte' ? 'karte' : 'before'
+  holdCounter = kind === 'konter'
+  save = beginAdventure('Ada', 'A', 'm01', Date.now())
+  const lead = save.active
+  if (lead && save.mons[lead]) {
+    save.mons[lead].lvl = kind === 'konter' ? 5 : 25
+    if (kind === 'konter') save.mons[lead].hp = 1
+  }
+  if (kind === 'karte' || kind === 'konter') {
+    const water = `a${save.nextId}`
+    save.nextId += 1
+    save.mons[water] = { species: 'm02', lvl: 25, exp: 0, hp: null, shiny: false, caughtAt: 1, caughtWhere: 'r1c1', keepDupes: false }
+    save.team.push(water)
+    save.dex.m02 = { seen: 1, caught: 1 }
+  }
+  save.settings.speed = 1
+  if (kind === 'konter') challengeGuardian(save)
+  void start(save)
+}
 
 function showK5Demo(part: string | null): void {
   const kind = part === 'tooltip' ? 'tooltip' : part === 'before' ? 'before' : 'status'
@@ -848,6 +874,8 @@ function play(outcome: EncounterOutcome, speed: Speed, done: () => void): void {
   backstop = window.setTimeout(finishOnce, dur + 40)
   const k = tempoScale(speed)
   const started = performance.now()
+  let counterAt = -1
+  let frozen = -1
   const seal = document.getElementById('seal') as HTMLImageElement | null
   const allyHp = document.getElementById('ally-hp')
   const foeHp = document.getElementById('foe-hp')
@@ -892,8 +920,13 @@ function play(outcome: EncounterOutcome, speed: Speed, done: () => void): void {
     }
     drawnAt = now
     try {
-      const elapsed = now - started
+      let elapsed = now - started
+      if (frozen >= 0) elapsed = frozen
       const shot = shotAt(outcome.traces, Math.min(elapsed, battleEnd), battleEnd)
+      if (holdCounter && shot?.counter) {
+        if (counterAt < 0) counterAt = elapsed
+        if (frozen < 0 && elapsed - counterAt >= 320) frozen = elapsed
+      }
       if (shot && allyHp && foeHp) {
         allyHp.style.width = `${(shot.allyHp / shot.allyMax) * 100}%`
         foeHp.style.width = `${(shot.foeHp / shot.foeMax) * 100}%`
@@ -974,6 +1007,10 @@ function play(outcome: EncounterOutcome, speed: Speed, done: () => void): void {
       paintUlt('foe-ult', shot?.foeUlt ?? 0, shot?.foeUltOpen ?? false)
       paintMark('ally-status', shot?.allyMark ?? null, shot?.allyStacks ?? 0)
       paintMark('foe-status', shot?.foeMark ?? null, shot?.foeStacks ?? 0)
+      const konter = document.getElementById('konter-label')
+      if (konter) {
+        konter.hidden = !shot?.counter
+      }
       if (foeKo >= 1 && shot && dissolved !== `foe-${shot.foeSpecies}` && fxHost && foeActor) {
         dissolved = `foe-${shot.foeSpecies}`
         const at = stagePoint(foeActor, fxHost)
@@ -1022,7 +1059,7 @@ function play(outcome: EncounterOutcome, speed: Speed, done: () => void): void {
     }
   }
   const run = () => { raf = requestAnimationFrame(frame) }
-  if (outcome.boss?.species) showBossIntro(outcome.boss, run)
+  if (outcome.boss?.species && !holdCounter) showBossIntro(outcome.boss, run)
   else run()
 }
 
