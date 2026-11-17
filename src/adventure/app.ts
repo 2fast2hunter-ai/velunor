@@ -23,6 +23,7 @@ import { shotAt, shouldRecover } from './present'
 import { species, typeColor } from '../data'
 import { teamWeatherMarks, weatherArrow, weatherAt } from './weather'
 import { ultName } from './ult'
+import { AILMENTS, ailmentIcon, type AilmentId } from './ailment'
 import { sfx } from '../ui'
 import { actorTransform, hitShake, koPose, lungeOffset, numberStyle, parallaxShift } from '../battle/stage'
 import { bossUltHitstop, bossUltShake, cameraShake, hitGrade, hitstopMs, numberHoldMs } from '../battle/hitReadout'
@@ -178,6 +179,10 @@ export function bootAdventure(): void {
 
   const params = new URLSearchParams(window.location.search)
   const fxDemo = params.get('fx')
+  if (debug && fxDemo === 'k5') {
+    showK5Demo(params.get('part'))
+    return
+  }
   if (debug && fxDemo === 'k4') {
     showK4Demo(params.get('part'))
     return
@@ -266,6 +271,42 @@ function showFxDemo(kind: 'fire' | 'hit' | 'ko', requested: string | null = null
 }
 
 const REGION_TINT = [0x7dcea0, 0x7dcea0, 0x9ad7ff, 0xff8a3d, 0x7e57c2, 0xf0c14a]
+
+function showK5Demo(part: string | null): void {
+  const kind = part === 'tooltip' ? 'tooltip' : part === 'before' ? 'before' : 'status'
+  save = beginAdventure('Ada', 'A', 'm01', Date.now())
+  screen = 'adventure'
+  const uid = save.active
+  if (uid && save.mons[uid]) save.mons[uid].lvl = 25
+  save.settings.speed = 1
+  render()
+  const foeName = document.getElementById('foe-name')
+  if (foeName) setActorName(foeName, 'Tropfmolch')
+  const foeImg = document.getElementById('foe-sprite')
+  if (foeImg instanceof HTMLImageElement) {
+    foeImg.hidden = false
+    foeImg.src = monsterArt('m02', true)
+  }
+  const foeHp = document.getElementById('foe-hp')
+  if (foeHp) foeHp.style.width = '72%'
+  const allyHp = document.getElementById('ally-hp')
+  if (allyHp) allyHp.style.width = '64%'
+  paintUlt('ally-ult', 3, true)
+  paintUlt('foe-ult', 2, true)
+  if (kind !== 'before') {
+    paintMark('ally-status', 'naesse', 1)
+    paintMark('foe-status', 'brand', 1)
+  }
+  if (kind === 'tooltip') {
+    const tip = document.getElementById('ally-tip')
+    const button = document.getElementById('ally-status')
+    if (tip && button) {
+      tip.hidden = false
+      tip.textContent = button.dataset.tip ?? ''
+    }
+  }
+  document.getElementById('battle')?.setAttribute('data-fx', 'hold')
+}
 
 function showK4Demo(part: string | null): void {
   const kind = part === 'ult' || part === 'gesperrt' ? part : 'leiste'
@@ -931,6 +972,8 @@ function play(outcome: EncounterOutcome, speed: Speed, done: () => void): void {
       paintWeatherArrow('foe-arrow', shot ? species(shot.foeSpecies).type : null, weather)
       paintUlt('ally-ult', shot?.allyUlt ?? 0, shot?.allyUltOpen ?? false)
       paintUlt('foe-ult', shot?.foeUlt ?? 0, shot?.foeUltOpen ?? false)
+      paintMark('ally-status', shot?.allyMark ?? null, shot?.allyStacks ?? 0)
+      paintMark('foe-status', shot?.foeMark ?? null, shot?.foeStacks ?? 0)
       if (foeKo >= 1 && shot && dissolved !== `foe-${shot.foeSpecies}` && fxHost && foeActor) {
         dissolved = `foe-${shot.foeSpecies}`
         const at = stagePoint(foeActor, fxHost)
@@ -993,6 +1036,24 @@ function setActorName(node: HTMLElement, name: string): void {
   const arrow = node.querySelector('img')
   node.textContent = name
   if (arrow) node.appendChild(arrow)
+}
+
+function paintMark(id: string, mark: string | null, stacks: number): void {
+  const node = document.getElementById(id)
+  if (!(node instanceof HTMLButtonElement)) return
+  if (!mark || !(mark in AILMENTS)) {
+    node.hidden = true
+    return
+  }
+  const spec = AILMENTS[mark as AilmentId]
+  node.hidden = false
+  const img = node.querySelector('img')
+  if (img instanceof HTMLImageElement) {
+    img.src = art(ailmentIcon(spec.id))
+    img.alt = spec.name
+  }
+  const piles = spec.id === 'giftnebel' && stacks > 1 ? ` Stapel ${stacks}.` : ''
+  node.dataset.tip = `${spec.tip}${piles}`
 }
 
 function paintUlt(id: string, n: number, open: boolean): void {
@@ -1245,6 +1306,15 @@ function onClick(event: Event): void {
   const node = target.closest('[data-act]')
   if (!node) return
   const act = node.getAttribute('data-act')
+  if (act === 'status') {
+    if (save && save.settings.speed !== 1) return
+    const who = node.getAttribute('data-who') === 'foe' ? 'foe' : 'ally'
+    const tip = document.getElementById(`${who}-tip`)
+    if (!(tip instanceof HTMLElement)) return
+    tip.hidden = !tip.hidden
+    tip.textContent = node.getAttribute('data-tip') ?? ''
+    return
+  }
   if (act === 'lang') {
     draftLang = node.getAttribute('data-lang') === 'en' ? 'en' : 'de'
     localStorage.setItem('velunor_lang', draftLang)

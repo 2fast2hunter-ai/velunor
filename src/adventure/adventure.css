@@ -335,14 +335,19 @@ textarea { width: 100%; box-sizing: border-box; background: #121a30; color: inhe
 .parallax.mid { background: radial-gradient(60% 30% at 50% 40%, rgba(255,255,255,0.14), transparent 70%); }
 .parallax.near { background: linear-gradient(0deg, rgba(0,0,0,0.28), transparent 28%); }
 #battle-fx { position: absolute; inset: 0; pointer-events: none; z-index: 4; }
+.battle-top {
+  position: absolute; z-index: 7; top: 12px; left: 16px; right: 16px;
+  display: flex; flex-direction: column; align-items: center; gap: 8px;
+  pointer-events: none;
+}
 .wx-stack {
-  position: absolute; z-index: 7; top: 28px; left: 50%; transform: translateX(-50%);
-  display: flex; flex-direction: column; align-items: center; gap: 12px;
-  width: min(94%, 960px); pointer-events: none;
+  position: static; transform: none; width: 100%;
+  display: flex; flex-direction: column; align-items: center; gap: 8px;
 }
 .wx-chip {
   position: static; transform: none;
-  display: flex; align-items: center; gap: 8px; max-width: 100%;
+  display: flex; align-items: center; justify-content: center; gap: 8px;
+  max-width: 100%; box-sizing: border-box;
   padding: 8px 14px; border-radius: 999px; background: rgba(8, 12, 24, 0.82);
   color: #f4efe4; font-weight: 800; font-size: 20px; white-space: nowrap;
 }
@@ -431,6 +436,17 @@ textarea { width: 100%; box-sizing: border-box; background: #121a30; color: inhe
 .ult.is-locked::after { content: 'ab Lv 25'; position: absolute; inset: 0; text-align: center; font-size: 16px; line-height: 22px; color: #fff8e1; font-weight: 800; }
 @keyframes ult-pulse { 50% { filter: brightness(1.45); } }
 .combatant b { text-shadow: 0 2px 8px #000; margin-bottom: 4px; }
+.status-mark {
+  width: 48px; height: 48px; padding: 0; border: 0; border-radius: 14px;
+  background: rgba(8, 12, 24, 0.72); margin-bottom: 6px;
+}
+.status-mark img { width: 40px; height: 40px; object-fit: contain; display: block; margin: 4px auto; }
+.status-tip {
+  position: absolute; z-index: 9; top: 0; left: calc(100% + 16px);
+  width: max-content; max-width: 320px; margin: 0; padding: 10px 14px; border-radius: 16px;
+  background: rgba(8, 12, 24, 0.94); color: #fff8e1; font-weight: 700; font-size: 36px; line-height: 1.25; text-align: left;
+}
+.combatant.foe .status-tip { left: auto; right: calc(100% + 16px); }
 
 .seal {
   position: absolute;
@@ -446,12 +462,10 @@ textarea { width: 100%; box-sizing: border-box; background: #121a30; color: inhe
 }
 
 .battle-status {
-  position: absolute;
-  left: 16px;
-  right: 16px;
-  top: 12px;
+  position: static;
+  width: 100%;
+  box-sizing: border-box;
   margin: 0;
-  z-index: 4;
   background: rgba(8, 12, 24, 0.78);
   border-radius: 14px;
   padding: 8px 14px;
