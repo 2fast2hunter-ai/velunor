@@ -2,6 +2,7 @@ import type { Speed } from './const'
 import type { Lang } from './i18n'
 
 export type PowerSave = 0 | 2 | 5
+export type FontScale = 100 | 115 | 130
 
 export interface OwnedMon {
   species: string
@@ -34,6 +35,13 @@ export interface AdventureSettings {
   reduceMotion: boolean
   powerSave: PowerSave
   lang: Lang
+  /** Horizontal swipe moves between the portrait tabs. */
+  swipeTabs: boolean
+  /** Vibration API pulse for an unlock and for a crest. */
+  haptics: boolean
+  font: FontScale
+  /** Hidden or locked: stop drawing and catch up offline. Visible: 30 fps. */
+  battery: boolean
 }
 
 export interface AdventureStats {
@@ -53,7 +61,7 @@ export interface AdventureStats {
  */
 export interface SaveV2 {
   v: 2
-  /** Portrait-step counter. 2 = portrait menus. Missing on older files; the loader fills it. */
+  /** Portrait-step counter. 3 = touch polish. Missing on older files; the loader fills it. */
   saveVersion: number
   name: string
   avatar: 'A' | 'B'

@@ -22,7 +22,7 @@ import { t, type Lang } from './i18n'
 import { shotAt, shouldRecover } from './present'
 import { species } from '../data'
 import { actorTransform, hitShake, koPose, lungeOffset, numberStyle, parallaxShift } from '../battle/stage'
-import { clearBattleFx, holdBattleFx, mountBattleFx, playBattleFx } from '../battle/phaserFx'
+import { clearBattleFx, holdBattleFx, mountBattleFx, playBattleFx, setFxRunning } from '../battle/phaserFx'
 import { BANNER_MS, CRIT_HITSTOP_MS, KO_MS, LUNGE_HOLD_MS, LUNGE_OUT_MS, moveLabel, NUMBER_MS, RECOIL_MS, STONE_CRIT_HITSTOP_MS, typeFx } from '../battle/typeFx'
 import type { TypeId } from '../types'
 import { beginAdventure, exportCode, importCode, loadAdventure, writeSave } from './save'
@@ -40,6 +40,7 @@ import {
   reorderTeam,
   resolveEncounter,
   sendOut,
+  simulateOffline,
   setBuddy,
   setKeepDupes,
   setLoop,
@@ -49,6 +50,21 @@ import {
 } from './sim'
 import type { SaveV2 } from './types'
 import { PC_VIEW_FALLBACK, sheetShouldClose, virtualWindow } from './virtualList'
+import {
+  BATTERY_FPS,
+  batteryPause,
+  fontScale,
+  longPressCard,
+  nextTab,
+  paintDue,
+  requestHaptic,
+  resumeGap,
+  shouldCatchUp,
+  stampWhilePaused,
+  swipeDirection,
+  type HapticKind,
+  type Presence
+} from './touch'
 import {
   art,
   gameHtml,
@@ -93,8 +109,6 @@ let wheelSymbols: [SymbolId, SymbolId, SymbolId] | null = null
 let wheelNote = ''
 let dragUid = ''
 let dragKind = ''
-let pressTimer = 0
-let pressedUid = ''
 let pcScroll = 0
 let keepPcScroll = true
 let filtersOpen = false
@@ -102,6 +116,11 @@ let dexOpen = false
 let pcIds: string[] = []
 let pcPainted = -1
 let sheetY: number | null = null
+let away = false
+let screenLocked = false
+let gesture: { x: number; y: number; t: number; block: boolean } | null = null
+let heldCard = ''
+let ignoreClick = false
 
 const debug = debugAllowed(import.meta.env.DEV, window.location.search)
 
@@ -117,6 +136,7 @@ export function bootAdventure(): void {
   root.addEventListener('drop', onDrop)
   root.addEventListener('pointerdown', onPointerDown)
   root.addEventListener('pointerup', onPointerUp)
+  root.addEventListener('pointercancel', onPointerUp)
   root.addEventListener('scroll', onPcScroll, true)
   window.addEventListener('resize', fit)
   window.addEventListener('pointerdown', wake)
@@ -124,24 +144,23 @@ export function bootAdventure(): void {
   draftLang = localStorage.getItem('velunor_lang') === 'en' ? 'en' : 'de'
   window.addEventListener('pagehide', () => {
     if (!save) return
-    if (Date.now() - lastTick < encounterMs(save.settings.speed) * 2) save.lastSeenAt = Date.now()
+    const paused = batteryPause(save.settings.battery, currentPresence())
+    if (!paused && Date.now() - lastTick < encounterMs(save.settings.speed) * 2) save.lastSeenAt = Date.now()
     writeSave(localStorage, save)
   })
-  document.addEventListener('visibilitychange', () => {
-    if (!save?.started) return
-    if (document.hidden) {
-      releasePresentation(true)
-      kick()
-      return
-    }
-    if (overlay) return
-    const raw = Date.now() - save.lastSeenAt
-    if (raw >= WELCOME_AFTER_MS) void runOffline(raw)
+  document.addEventListener('visibilitychange', onPresence)
+  document.addEventListener('freeze', () => {
+    screenLocked = true
+    onPresence()
+  })
+  document.addEventListener('resume', () => {
+    screenLocked = false
+    onPresence()
   })
   window.setInterval(watchdog, 1000)
   window.setInterval(() => {
     if (!save?.started || overlay?.kind === 'offline') return
-    save.lastSeenAt = Date.now()
+    save.lastSeenAt = stampWhilePaused(save.lastSeenAt, Date.now(), away)
     try { writeSave(localStorage, save) } catch { /* keep playing */ }
   }, AUTOSAVE_MS)
 
@@ -216,8 +235,8 @@ async function start(next: SaveV2): Promise<void> {
   screen = 'adventure'
   noteProgress()
   render()
-  const raw = Date.now() - save.lastSeenAt
-  if (raw >= WELCOME_AFTER_MS) await runOffline(raw)
+  const raw = resumeGap(Date.now(), save.lastSeenAt)
+  if ((save.settings.battery && shouldCatchUp(raw)) || raw >= WELCOME_AFTER_MS) await runOffline(raw)
   else {
     lastTick = Date.now() - encounterMs(save.settings.speed)
     kick()
@@ -353,9 +372,58 @@ function watchdog(): void {
 
 function kick(): void {
   window.clearTimeout(timer)
+  if (away) return
   if (!save?.started || animating || overlay) return
   if (save.hold && !save.challengeNow) return
   timer = window.setTimeout(loop, 30)
+}
+
+function currentPresence(): Presence {
+  if (screenLocked) return 'locked'
+  if (document.hidden) return 'hidden'
+  return 'visible'
+}
+
+function onPresence(): void {
+  if (!save?.started) return
+  const pause = batteryPause(save.settings.battery, currentPresence())
+  if (pause) {
+    if (!away) {
+      away = true
+      releasePresentation(true)
+      window.clearTimeout(timer)
+      dropFrame()
+      setFxRunning(false, BATTERY_FPS)
+      try { writeSave(localStorage, save) } catch { /* keep the gap */ }
+    }
+    return
+  }
+  setFxRunning(true, save.settings.battery ? BATTERY_FPS : 60)
+  if (away) {
+    away = false
+    const raw = resumeGap(Date.now(), save.lastSeenAt)
+    if (shouldCatchUp(raw)) {
+      void runOffline(raw)
+      return
+    }
+  }
+  if (document.hidden) {
+    releasePresentation(true)
+    kick()
+    return
+  }
+  if (overlay) return
+  const raw = resumeGap(Date.now(), save.lastSeenAt)
+  if (raw >= WELCOME_AFTER_MS) void runOffline(raw)
+}
+
+function buzz(kind: HapticKind): void {
+  if (!save) return
+  requestHaptic(kind, save.settings.haptics, (pattern) => {
+    const vibrate = navigator.vibrate?.bind(navigator)
+    if (!vibrate) return false
+    return vibrate(pattern) !== false
+  })
 }
 
 function loop(): void {
@@ -363,6 +431,10 @@ function loop(): void {
   if (!save?.started || animating || overlay || (save.hold && !save.challengeNow)) return
   const dur = encounterMs(save.settings.speed)
   const now = Date.now()
+  if (save.settings.battery && (document.hidden || screenLocked)) {
+    away = true
+    return
+  }
   if (document.hidden) {
     if (animating) {
       dropFrame()
@@ -426,6 +498,8 @@ function finishPresent(outcome: EncounterOutcome): void {
   noteProgress()
   if (!save) return
   const fresh = outcome.catch
+  if (fresh?.success && (fresh.place === 'team' || fresh.place === 'pc' || fresh.place === 'kept')) buzz('unlock')
+  if (outcome.badge) buzz('crest')
   if (fresh?.success && (fresh.place === 'team' || fresh.place === 'pc') && save.settings.catchCard) {
     overlay = { kind: 'catch', species: fresh.species, level: fresh.level, place: fresh.place }
     render()
@@ -505,6 +579,8 @@ function play(outcome: EncounterOutcome, speed: Speed, done: () => void): void {
   const floats = document.getElementById('floats')
   const critFlash = document.getElementById('crit-flash')
   if (fxHost) mountBattleFx(fxHost)
+  const battery = Boolean(save?.settings.battery)
+  setFxRunning(true, battery ? BATTERY_FPS : 60)
   const reduced = Boolean(save?.settings.reduceMotion)
   const allowShake = Boolean(save?.settings.shake) && !reduced
   const allowFlash = Boolean(save?.settings.flashes) && !reduced
@@ -513,8 +589,14 @@ function play(outcome: EncounterOutcome, speed: Speed, done: () => void): void {
   let prevAlly: number | null = null
   let prevFoe: number | null = null
   let hitAt = -1
+  let drawnAt = 0
   const frame = (now: number) => {
     if (gen !== playGen) return
+    if (!paintDue(now, drawnAt, battery)) {
+      raf = requestAnimationFrame(frame)
+      return
+    }
+    drawnAt = now
     try {
       const elapsed = now - started
       const shot = shotAt(outcome.traces, Math.min(elapsed, battleEnd), battleEnd)
@@ -694,17 +776,34 @@ function paintSeal(seal: HTMLImageElement, t: number, k: number, caught: boolean
 async function runOffline(rawMs: number): Promise<void> {
   if (!save) return
   window.clearTimeout(timer)
-  animating = true
   const counted = Math.min(Math.max(0, rawMs), OFFLINE_CAP_MS)
   const total = Math.floor(counted / BASE_ENCOUNTER_MS)
+  if (total < OFFLINE_BLOCK && rawMs < WELCOME_AFTER_MS) {
+    const quiet = simulateOffline(save, rawMs, Date.now())
+    animating = false
+    overlay = null
+    lastTick = Date.now()
+    if (quiet.summary.catches.length) buzz('unlock')
+    if (quiet.summary.badges.length) buzz('crest')
+    try { writeSave(localStorage, save) } catch { /* keep playing */ }
+    render()
+    kick()
+    return
+  }
+  animating = true
   const summary: OfflineSummary = emptySummary()
   const levelLeft = new Map<string, number>()
   const start = save.lastSeenAt || Date.now() - counted
   overlay = { kind: 'offline', done: 0, total }
   render()
+  let reached = save.lastSeenAt
+  let stopped = false
   for (let i = 0; i < total; i++) {
+    if (away && save.settings.battery) { stopped = true; break }
     if (save.hold && !save.challengeNow) break
-    resolveEncounter(save, start + (i + 1) * BASE_ENCOUNTER_MS, { offline: true, trace: false, summary, levelLeft })
+    const at = start + (i + 1) * BASE_ENCOUNTER_MS
+    resolveEncounter(save, at, { offline: true, trace: false, summary, levelLeft })
+    reached = at
     if ((i + 1) % OFFLINE_BLOCK === 0 || i + 1 === total) {
       overlay = { kind: 'offline', done: i + 1, total }
       const bar = document.querySelector('.progress-track span') as HTMLElement | null
@@ -714,18 +813,28 @@ async function runOffline(rawMs: number): Promise<void> {
       await new Promise((resolve) => window.setTimeout(resolve, 0))
     }
   }
-  save.lastSeenAt = Date.now()
+  save.lastSeenAt = stopped ? reached : Date.now()
   lastTick = Date.now()
   try { writeSave(localStorage, save) } catch { /* ignore */ }
   animating = false
+  if (stopped) {
+    overlay = null
+    return
+  }
   overlay = rawMs >= WELCOME_AFTER_MS
     ? { kind: 'welcome', summary, countedMs: counted, rawMs }
     : null
+  if (summary.catches.length) buzz('unlock')
+  if (summary.badges.length) buzz('crest')
   render()
   if (!overlay) kick()
 }
 
 function onClick(event: Event): void {
+  if (ignoreClick) {
+    ignoreClick = false
+    return
+  }
   const target = event.target
   if (!(target instanceof Element)) return
   const node = target.closest('[data-act]')
@@ -982,6 +1091,11 @@ function onClick(event: Event): void {
     render()
     return
   }
+  if (act === 'font') {
+    save.settings.font = fontScale(Number(node.getAttribute('data-size')))
+    render()
+    return
+  }
   if (act === 'power') {
     const minutes = Number(node.getAttribute('data-min'))
     save.settings.powerSave = minutes === 2 || minutes === 5 ? minutes : 0
@@ -1073,6 +1187,13 @@ function syncField(target: EventTarget | null): void {
   if (field === 'shake' && target instanceof HTMLInputElement) save.settings.shake = target.checked
   if (field === 'flash' && target instanceof HTMLInputElement) save.settings.flashes = target.checked
   if (field === 'motion' && target instanceof HTMLInputElement) save.settings.reduceMotion = target.checked
+  if (field === 'swipe' && target instanceof HTMLInputElement) save.settings.swipeTabs = target.checked
+  if (field === 'haptic' && target instanceof HTMLInputElement) save.settings.haptics = target.checked
+  if (field === 'battery' && target instanceof HTMLInputElement) {
+    save.settings.battery = target.checked
+    setFxRunning(true, target.checked ? BATTERY_FPS : 60)
+    onPresence()
+  }
   if (field === 'buddy' && target instanceof HTMLInputElement) setBuddy(save, target.dataset.uid ?? '')
   if (field === 'keep' && target instanceof HTMLInputElement) setKeepDupes(save, target.dataset.uid ?? '', target.checked)
   if (field === 'type' || field === 'rarity' || field === 'shiny' || field === 'sort') {
@@ -1123,20 +1244,21 @@ function onPcScroll(event: Event): void {
 }
 
 function onPointerDown(event: PointerEvent): void {
-  const grab = event.target instanceof Element ? event.target.closest('.sheet-grab') : null
+  ignoreClick = false
+  const target = event.target instanceof Element ? event.target : null
+  const grab = target?.closest('.sheet-grab') ?? null
   sheetY = grab ? event.clientY : null
-  const node = event.target instanceof Element ? event.target.closest('[data-drag="team"]') : null
-  if (!node) return
-  pressedUid = node.getAttribute('data-uid') ?? ''
-  window.clearTimeout(pressTimer)
-  pressTimer = window.setTimeout(() => {
-    dragUid = pressedUid
-    dragKind = 'team'
-  }, 350)
+  const card = target?.closest('[data-press="card"]')
+  heldCard = card?.getAttribute('data-uid') ?? ''
+  const block = Boolean(target?.closest('input, textarea, select, .sheet-grab'))
+  gesture = { x: event.clientX, y: event.clientY, t: performance.now(), block }
 }
 
 function onPointerUp(event: PointerEvent): void {
-  window.clearTimeout(pressTimer)
+  const start = gesture
+  const card = heldCard
+  gesture = null
+  heldCard = ''
   if (sheetY != null) {
     const dy = event.clientY - sheetY
     sheetY = null
@@ -1148,12 +1270,26 @@ function onPointerUp(event: PointerEvent): void {
       return
     }
   }
-  if (!save || dragKind !== 'team' || !dragUid) return
-  const node = event.target instanceof Element ? document.elementFromPoint(event.clientX, event.clientY)?.closest('[data-drag="team"]') : null
-  const uid = node?.getAttribute('data-uid') ?? ''
-  if (uid && uid !== dragUid) applyDrag('team', dragUid, 'team', uid)
-  dragUid = ''
-  dragKind = ''
+  if (save && card && start) {
+    const scale = fitScale(window.innerWidth, window.innerHeight) || 1
+    const moved = Math.hypot(event.clientX - start.x, event.clientY - start.y) / scale
+    if (longPressCard(moved, performance.now() - start.t) && save.mons[card]) {
+      ignoreClick = true
+      selected = card
+      overlay = { kind: 'card', uid: card }
+      render()
+      return
+    }
+  }
+  if (!save || !start || start.block || overlay || moreOpen || mapOpen || !save.settings.swipeTabs) return
+  const dir = swipeDirection(event.clientX - start.x, event.clientY - start.y, fitScale(window.innerWidth, window.innerHeight))
+  const next = nextTab(screen, dir, true)
+  if (!next || next === screen) return
+  ignoreClick = true
+  screen = next
+  sideOpen = false
+  render()
+  kick()
 }
 
 function applyDrag(fromKind: string, fromUid: string, toKind: string, toUid: string): void {

@@ -3,7 +3,8 @@ import { emptyBag } from './shop'
 import { SAVE_KEY_V1, SAVE_KEY_V2, SAVE_VERSION, START_GOLD, STARTER_LEVEL } from './const'
 import { chapterById, councilOf, findChapter, speciesKnown } from './route'
 import { expToNext } from './stats'
-import type { OwnedMon, SaveV2, StorageLike } from './types'
+import { fontScale } from './touch'
+import type { AdventureSettings, OwnedMon, SaveV2, StorageLike } from './types'
 
 interface LegacyMon {
   uid?: string
@@ -21,6 +22,25 @@ interface LegacySave {
 }
 
 const TEAM_ORDER = ['F1', 'F2', 'H1', 'H2', 'H3']
+
+function settingsFrom(raw: Partial<AdventureSettings> | undefined, shake: boolean): AdventureSettings {
+  const speed = raw?.speed
+  const power = raw?.powerSave
+  return {
+    speed: speed === 2 || speed === 3 ? speed : 1,
+    autoSwitch: raw?.autoSwitch !== false,
+    catchCard: raw?.catchCard !== false,
+    shake,
+    flashes: raw?.flashes !== false,
+    reduceMotion: raw?.reduceMotion === true,
+    powerSave: power === 2 || power === 5 ? power : 0,
+    lang: raw?.lang === 'en' ? 'en' : 'de',
+    swipeTabs: raw?.swipeTabs !== false,
+    haptics: raw?.haptics !== false,
+    font: fontScale(raw?.font),
+    battery: raw?.battery === true
+  }
+}
 
 export function blankSave(now: number): SaveV2 {
   return {
@@ -42,7 +62,7 @@ export function blankSave(now: number): SaveV2 {
     buddy: null,
     mons: {},
     dex: {},
-    settings: { speed: 1, autoSwitch: true, catchCard: true, shake: false, flashes: true, reduceMotion: false, powerSave: 0, lang: 'de' },
+    settings: settingsFrom(undefined, false),
     stats: { wins: 0, catches: 0, dupes: 0, eggs: 0, shinies: 0, fruitsUsed: 0, crystalsUsed: 0 },
     rng: freshSeed(),
     nextId: 1,
@@ -181,7 +201,9 @@ export function migrateFromV1(raw: unknown, now: number): SaveV2 | null {
 
 export function normalize(save: SaveV2, now: number): SaveV2 {
   save.v = 2
-  // Version 2 is the portrait-menu step. Older files only gain this counter.
+  // saveVersion climbs to the current step. 2 was portrait menus.
+  // 3 adds swipe, vibration, font scale and battery mode.
+  // Older files keep every stored value. Missing setting fields take the defaults.
   const seenVersion = Math.max(0, Math.floor(Number(save.saveVersion)) || 0)
   if (seenVersion < SAVE_VERSION) save.saveVersion = SAVE_VERSION
   save.name = (save.name || 'Abenteurer').toString().slice(0, 24)
@@ -235,22 +257,11 @@ export function normalize(save: SaveV2, now: number): SaveV2 {
   if (!save.active) save.active = save.team[0] ?? null
   if (save.buddy && !save.team.includes(save.buddy)) save.buddy = null
   save.dex = save.dex ?? {}
-  const speed = save.settings?.speed
-  const power = save.settings?.powerSave
   const storedShake = save.settings?.shake === true
   save.fxShake = Math.max(0, Math.floor(Number(save.fxShake)) || 0)
   const shake = save.fxShake < 1 ? false : storedShake
   if (save.fxShake < 1) save.fxShake = 1
-  save.settings = {
-    speed: speed === 2 || speed === 3 ? speed : 1,
-    autoSwitch: save.settings?.autoSwitch !== false,
-    catchCard: save.settings?.catchCard !== false,
-    shake,
-    flashes: save.settings?.flashes !== false,
-    reduceMotion: save.settings?.reduceMotion === true,
-    powerSave: power === 2 || power === 5 ? power : 0,
-    lang: save.settings?.lang === 'en' ? 'en' : 'de'
-  }
+  save.settings = settingsFrom(save.settings, shake)
   const shinyHeld = Object.values(save.mons).filter((mon) => mon.shiny).length
   save.stats = {
     wins: save.stats?.wins ?? 0,
