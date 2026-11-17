@@ -4,6 +4,7 @@ import { mulberry32 } from '../rng'
 import { fight1v1, type FightHit, type FightSide, type FightTrace } from './battle'
 import { ENCOUNTER_MS } from './const'
 import { assignMechs, councilAssignment, guardianAssignment, MECHS } from './mech'
+import { orderMods } from './order'
 import { regions } from './route'
 import { beginAdventure } from './save'
 import { monStats } from './stats'
@@ -124,41 +125,111 @@ describe('boss mechanics', () => {
   })
 })
 
-function sample(allyLevel: number, foeLevel: number, scale: number, mechs: FightSide['mechs'], trials: number): { wins: number; frames: number } {
-  let wins = 0
-  let frames = 0
-  for (let seed = 1; seed <= trials; seed++) {
-    const allyStats = monStats({ species: 'm02', lvl: allyLevel, exp: 0, hp: null, shiny: false, caughtAt: 0, caughtWhere: '', keepDupes: false })
-    const foeStats = monStats({ species: 'm17', lvl: foeLevel, exp: 0, hp: null, shiny: false, caughtAt: 0, caughtWhere: '', keepDupes: false })
-    const ally = side('m02', allyLevel, { maxHp: allyStats.hp, hp: allyStats.hp, atk: allyStats.atk, def: allyStats.def, spd: allyStats.spd, skill: species('m02').skill })
-    const foe = side('m17', foeLevel, {
-      maxHp: Math.round(foeStats.hp * scale),
-      hp: Math.round(foeStats.hp * scale),
-      atk: Math.round(foeStats.atk * scale),
-      def: Math.round(foeStats.def * scale),
-      spd: foeStats.spd,
-      skill: species('m17').skill,
-      boss: true,
-      mechs
-    })
-    const trace = fight1v1(ally, foe, mulberry32(seed), true)
-    if (trace.win) wins += 1
-    frames += trace.frames.length
+const SCALE = { hp: 1.4, atk: 1.34, def: 1.4 }
+const WARDEN = [
+  { species: 'm17', level: 7 },
+  { species: 'm04', level: 8 },
+  { species: 'm18', level: 10 }
+]
+
+function actor(id: string, level: number, scale = { hp: 1, atk: 1, def: 1 }, mechs?: FightSide['mechs'], hpFrac = 1): FightSide {
+  const sp = species(id)
+  const stats = monStats({ species: id, lvl: level, exp: 0, hp: null, shiny: false, caughtAt: 0, caughtWhere: '', keepDupes: false })
+  const maxHp = Math.max(1, Math.round(stats.hp * scale.hp))
+  return {
+    speciesId: id, name: sp.name, type: sp.type, maxHp,
+    hp: Math.max(1, Math.round(maxHp * (hpFrac > 0 ? hpFrac : 1))),
+    atk: Math.max(1, Math.round(stats.atk * scale.atk)),
+    def: Math.max(1, Math.round(stats.def * scale.def)),
+    spd: stats.spd, skill: sp.skill, passive: sp.passive ?? null, level,
+    boss: scale.hp !== 1 || Boolean(mechs?.length), mechs
   }
-  return { wins, frames }
+}
+
+function runBench(ids: string[], level: number, mechs: FightSide['mechs'], rng: () => number): { clear: boolean; bouts: Array<'win' | 'ko' | 'timeout'> } {
+  const alive = ids.map(() => true)
+  const bouts: Array<'win' | 'ko' | 'timeout'> = []
+  let foeIndex = 0
+  let fraction = 1
+  let afterKo = false
+  let guard = 0
+  while (foeIndex < WARDEN.length && guard < 24) {
+    guard += 1
+    const fighter = alive.findIndex(Boolean)
+    if (fighter < 0) return { clear: false, bouts }
+    const foe = WARDEN[foeIndex]
+    const seats = ids.map((id, index) => ({ uid: String(index), type: species(id).type, alive: alive[index] }))
+    const mods = orderMods(seats, String(fighter), species(foe.species).type, afterKo)
+    const ally = actor(ids[fighter], level)
+    ally.atk = Math.max(1, Math.round(ally.atk * mods.atkMul))
+    ally.def = Math.max(1, Math.round(ally.def * mods.defMul))
+    ally.counter = mods.counter
+    ally.anchor = mods.anchor
+    const trace = fight1v1(ally, actor(foe.species, foe.level, SCALE, mechs, fraction), rng, false)
+    const kind = bucket(trace)
+    bouts.push(kind)
+    const advance = kind === 'win' || (kind === 'timeout' && trace.win)
+    if (advance) {
+      foeIndex += 1
+      fraction = 1
+      afterKo = false
+    } else {
+      alive[fighter] = false
+      fraction = trace.foeMax > 0 ? Math.max(0.01, trace.foeHp / trace.foeMax) : 1
+      afterKo = true
+    }
+  }
+  return { clear: foeIndex >= WARDEN.length, bouts }
+}
+
+function bucket(trace: FightTrace): 'win' | 'ko' | 'timeout' {
+  if (trace.timeout) return 'timeout'
+  if (trace.win) return 'win'
+  return 'ko'
+}
+
+const BENCH = ['m66', 'm11', 'm14', 'm61', 'm03', 'm72']
+
+function tallyOne(mechs: FightSide['mechs'], trials: number): { win: number; ko: number; timeout: number } {
+  const out = { win: 0, ko: 0, timeout: 0 }
+  for (let seed = 1; seed <= trials; seed++) {
+    const trace = fight1v1(actor('m61', 12), actor('m17', 7, SCALE, mechs), mulberry32(seed), false)
+    out[bucket(trace)] += 1
+  }
+  return out
+}
+
+function tallyBench(mechs: FightSide['mechs'], trials: number): { sieg: number; ko: number; timeout: number } {
+  const out = { sieg: 0, ko: 0, timeout: 0 }
+  for (let seed = 1; seed <= trials; seed++) {
+    const run = runBench(BENCH, 12, mechs, mulberry32(seed))
+    if (run.bouts.some((kind) => kind === 'timeout')) out.timeout += 1
+    else if (run.clear) out.sieg += 1
+    else out.ko += 1
+  }
+  return out
 }
 
 describe('boss mechanic sample', () => {
-  it('records the close fight: Tropfmolch 25 against Kieselkrabbe 25 at scale 1.4', () => {
-    const trials = 200
-    const plain = sample(25, 25, 1.4, undefined, trials)
-    const rows = Object.fromEntries(MECHS.map((id) => [id, sample(25, 25, 1.4, [id], trials)]))
-    expect(plain.wins).toBe(78)
-    expect(plain.frames).toBe(6400)
-    expect(rows.panzerung).toEqual({ wins: 3, frames: 6400 })
-    expect(rows.wut).toEqual({ wins: 78, frames: 6400 })
-    expect(rows.beistand).toEqual({ wins: 52, frames: 6780 })
-    expect(rows.puls).toEqual({ wins: 41, frames: 6791 })
-    expect(rows.spiegel).toEqual({ wins: 9, frames: 6400 })
+  it('measures the cap fight and the ordered bench', () => {
+    const trials = 500
+    const one: Record<string, { win: number; ko: number; timeout: number }> = { none: tallyOne(undefined, trials) }
+    const bench: Record<string, { sieg: number; ko: number; timeout: number }> = { none: tallyBench(undefined, trials) }
+    for (const id of MECHS) {
+      one[id] = tallyOne([id], trials)
+      bench[id] = tallyBench([id], trials)
+    }
+    expect(one.none).toEqual({ win: 463, ko: 37, timeout: 0 })
+    expect(one.panzerung).toEqual({ win: 10, ko: 490, timeout: 0 })
+    expect(one.wut).toEqual({ win: 187, ko: 313, timeout: 0 })
+    expect(one.beistand).toEqual({ win: 454, ko: 46, timeout: 0 })
+    expect(one.puls).toEqual({ win: 379, ko: 121, timeout: 0 })
+    expect(one.spiegel).toEqual({ win: 24, ko: 476, timeout: 0 })
+    expect(bench.none).toEqual({ sieg: 500, ko: 0, timeout: 0 })
+    expect(bench.panzerung).toEqual({ sieg: 401, ko: 99, timeout: 0 })
+    expect(bench.wut).toEqual({ sieg: 499, ko: 1, timeout: 0 })
+    expect(bench.beistand).toEqual({ sieg: 500, ko: 0, timeout: 0 })
+    expect(bench.puls).toEqual({ sieg: 500, ko: 0, timeout: 0 })
+    expect(bench.spiegel).toEqual({ sieg: 500, ko: 0, timeout: 0 })
   })
 })

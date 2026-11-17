@@ -16,15 +16,32 @@ Ein Angriff für Puls und Beistand ist ein Schlag, eine schadensbringende Fertig
 
 ## Messung
 
-200 Kämpfe, Samen 1 bis 200. Tropfmolch Stufe 25 gegen Kieselkrabbe Stufe 25, Boss-Skala 1,4 auf HP, ATK und DEF. Ohne Mechanik 78 Siege (39 %). Fast jeder Kampf läuft in die Grenze von 32 Aktionen, der Sieg ist dann der höhere HP-Anteil.
+Die empfohlene Stufe ist die Kapitel-Obergrenze. Für den Wiesenpfad ist das Stufe 12. Der Wächter steht mit seinen eigenen Stufen und der Skala 1,4 / 1,34 / 1,4 da. 500 Kämpfe, Samen 1 bis 500. Ein Sieg ist ein K.o. des Bosses. Eine Niederlage ist ein eigener K.o. Ein Timeout ist die Grenze von 30 Aktionen, auch wenn danach noch HP übrig sind. Die Werte aus B5 bleiben unverändert.
 
-| Mechanik | Siege | Abstand | Mittlere Aktionen |
-|---|---|---|---|
-| keine | 78 | | 32,00 |
-| Panzerung | 3 | −37,5 Punkte | 32,00 |
-| Wut | 78 | 0 | 32,00 |
-| Beistand | 52 | −13,0 Punkte | 33,90 |
-| Puls | 41 | −18,5 Punkte | 33,96 |
-| Spiegel | 9 | −34,5 Punkte | 32,00 |
+### Ein Kämpfer
 
-Panzerung, Beistand, Puls und Spiegel drücken die Siegquote in diesem engen Kampf um mehr als 10 Punkte. Die Werte aus B5 bleiben unverändert. Wut verschiebt hier nichts, weil der Kampf an der Aktionsgrenze endet, bevor die 40-%-Schwelle den Ausgang dreht. Beistand und Puls verlängern den Kampf um die Extra-Treffer.
+Raufkänguru, Stufe 12, Typ Kampf, stark gegen Stein. Gegner ist die Kieselkrabbe, Stufe 7, der erste Wächter. Ohne Mechanik 463 Siege (92,6 %), 37 K.o.-Niederlagen, kein Timeout. Stufe 11 fällt auf etwa 21 %. Dazwischen gibt es keine ganzzahlige Stufe im Fenster 70–85 %. Deshalb bleibt die Obergrenze der Messpunkt: die Kämpfe enden wirklich, nicht an der Grenze.
+
+| Mechanik | Sieg | K.o. | Timeout | Abstand |
+|---|---|---|---|---|
+| keine | 463 | 37 | 0 | |
+| Panzerung | 10 | 490 | 0 | −90,6 Punkte |
+| Wut | 187 | 313 | 0 | −55,2 Punkte |
+| Beistand | 454 | 46 | 0 | −1,8 Punkte |
+| Puls | 379 | 121 | 0 | −16,8 Punkte |
+| Spiegel | 24 | 476 | 0 | −87,8 Punkte |
+
+### Sechser-Team in Reihenfolge
+
+Dieselben Wächter, drei Monster, der Boss behält nach einem K.o. seine HP. Das Team steht auf Stufe 12 in dieser Reihenfolge: Wühlmaus, Surrlibelle, Sumpfunke, Raufkänguru, Knospling, Sonnenküken. Vorhut, Konter und Schlussmann gelten. Ein Lauf zählt als Timeout, sobald ein einzelner Kampf die Grenze trifft.
+
+| Mechanik | Sieg | K.o. | Timeout | Abstand |
+|---|---|---|---|---|
+| keine | 500 | 0 | 0 | |
+| Panzerung | 401 | 99 | 0 | −19,8 Punkte |
+| Wut | 499 | 1 | 0 | −0,2 Punkte |
+| Beistand | 500 | 0 | 0 | 0 |
+| Puls | 500 | 0 | 0 | 0 |
+| Spiegel | 500 | 0 | 0 | 0 |
+
+Panzerung, Wut, Puls und Spiegel drücken den einzelnen typstarken Kampf um mehr als 10 Punkte. Im vollen Team bleibt davon nur die Panzerung über 10 Punkten. Beistand ändert den einzelnen Kampf kaum und das Team gar nicht. Kein Lauf in dieser Messung endet an der Aktionsgrenze.
