@@ -37,6 +37,7 @@ import {
   type ShopOffer,
   type ShopTab
 } from './shopOffer'
+import { UI_ART, type UiArtId } from './uiArt'
 import { fightsHere } from './origin'
 import { chapterById, gateBadge, placeLabel, regionById, regions, routeOf, type NodeKind } from './route'
 import { chapterUnlocked, dexCaughtCount, hereSightings, rarityName } from './sim'
@@ -107,6 +108,15 @@ export function art(path: string): string {
   return assetPath(path, base())
 }
 
+function ui(id: UiArtId): string {
+  return `<img class="ui-icon" src="${art(UI_ART[id])}" alt=""/>`
+}
+
+function portrait(speciesId: string, large = false, extra = ''): string {
+  const color = rarityInfo(species(speciesId).baseRarity).color
+  return `<img class="portrait ${extra}" style="--rarity:${color}" src="${monsterArt(speciesId, large)}" alt=""/>`
+}
+
 export function monsterArt(id: string, large = false): string {
   return art(`monsters/${id}${large ? '' : '_256'}.png`)
 }
@@ -152,8 +162,8 @@ function header(save: SaveV2, now: number): string {
   const weather = weatherForecast(now)[0]
   return `<header class="hud anchor-top-bar">
     <div class="hud-gold"><img src="${art('icons/gold_128.png')}" alt=""/><b id="gold">${gold(save.gold)}</b></div>
-    <div class="hud-dex">${tr(save, 'nav.codexCount', { n: caught })}</div>
-    <div class="hud-clock">${esc(clock.time)} · ${esc(clock.part)}</div>
+    <div class="hud-dex">${ui('codexCount')}${tr(save, 'nav.codexCount', { n: caught })}</div>
+    <div class="hud-clock">${ui('clock')}${esc(clock.time)} · ${esc(clock.part)}</div>
     <div class="hud-wx"><span class="wx">${weatherIcon(weather.weather)}</span> ${esc(weatherLabel(L(save), weather.weather))}</div>
   </header>`
 }
@@ -165,8 +175,8 @@ function chapterLine(save: SaveV2, step: number, mapOpen: boolean): string {
     ? tr(save, 'nav.council', { step, total: chapter.council.members.length })
     : tr(save, 'nav.step', { step })
   return `<button type="button" class="chapter-line" data-act="map" aria-expanded="${mapOpen ? 'true' : 'false'}">
-    <span class="chapter-text">${esc(region.name)} · ${esc(chapter.name)} · ${esc(place)}</span>
-    <span class="chev" aria-hidden="true">${mapOpen ? '▴' : '▾'}</span>
+    ${ui('chapter')}<span class="chapter-text">${esc(region.name)} · ${esc(chapter.name)} · ${esc(place)}</span>
+    <span class="chev" aria-hidden="true">${ui('chevron')}</span>
   </button>`
 }
 
@@ -196,14 +206,14 @@ function tabbar(save: SaveV2, screen: Screen, moreOpen: boolean): string {
 }
 
 function moreSheet(save: SaveV2, open: boolean): string {
-  const items: [Screen, string][] = [
-    ['shop', 'nav.shop'],
-    ['achievements', 'nav.achievements'],
-    ['options', 'nav.options'],
-    ['guide', 'nav.guide']
+  const items: [Screen, UiArtId, string][] = [
+    ['shop', 'moreShop', 'nav.shop'],
+    ['achievements', 'moreAchievements', 'nav.achievements'],
+    ['options', 'moreOptions', 'nav.options'],
+    ['guide', 'moreGuide', 'nav.guide']
   ]
   return `<div class="more-sheet card" ${open ? '' : 'hidden'}>
-    ${items.map(([id, label]) => `<button type="button" data-act="screen" data-screen="${id}">${tr(save, label)}</button>`).join('')}
+    ${items.map(([id, icon, label]) => `<button type="button" data-act="screen" data-screen="${id}">${ui(icon)}${tr(save, label)}</button>`).join('')}
   </div>`
 }
 
@@ -270,7 +280,7 @@ function battle(save: SaveV2, now: number): string {
     <div class="flash" id="flash"></div>
     <img class="seal" id="seal" alt="" src="${art(SEAL_ADD)}" data-fb="${art(SEAL_FALLBACK)}" style="left:${FOE_X}%;top:${FOE_Y}%"/>
     <p id="battle-text" class="battle-status">${tr(save, 'battle.place', { part: clock.part, weather: weatherLabel(L(save), weatherForecast(now)[0].weather), place: chapter.name, state: tr(save, save.hold ? 'battle.waiting' : 'battle.walking') })}</p>
-    ${sealed ? '' : `<button type="button" class="primary challenge-fab" data-act="challenge">${tr(save, chapter.council || chapter.foyer ? 'battle.resume' : 'battle.challenge')}</button>`}
+    ${sealed ? '' : `<button type="button" class="primary challenge-fab" data-act="challenge">${ui('challenge')}${tr(save, chapter.council || chapter.foyer ? 'battle.resume' : 'battle.challenge')}</button>`}
   </div>`
 }
 
@@ -278,16 +288,19 @@ function teamDock(save: SaveV2): string {
   const active = save.active && save.mons[save.active] ? save.active : save.team[0]
   const slots = Array.from({ length: 6 }, (_, index) => save.team[index] ?? '')
   const minis = slots.map((uid) => {
-    if (!uid || !save.mons[uid]) return `<span class="mini is-empty" aria-hidden="true"></span>`
+    if (!uid || !save.mons[uid]) return `<span class="mini is-empty" aria-hidden="true">${ui('slotEmpty')}</span>`
     const row = save.mons[uid]
     const bar = realHp(row)
     const fainted = !isAlive(row)
     return `<button type="button" class="mini ${uid === active ? 'is-active' : ''} ${fainted ? 'is-fainted' : ''}" data-act="send" data-uid="${uid}">
-      <img src="${monsterArt(row.species)}" alt=""/>
+      ${portrait(row.species)}
       <span class="bar"><span style="width:${fainted ? 0 : (bar.hp / bar.max) * 100}%"></span></span>
     </button>`
   }).join('')
-  const speeds = ([1, 2, 3] as const).map((speed) => `<button type="button" data-act="speed" data-speed="${speed}" class="${save.settings.speed === speed ? 'on' : ''}">×${speed}</button>`).join('')
+  const speeds = ([1, 2, 3] as const).map((speed) => {
+    const iconId = speed === 1 ? 'speed1' : speed === 2 ? 'speed2' : 'speed3'
+    return `<button type="button" data-act="speed" data-speed="${speed}" class="${save.settings.speed === speed ? 'on' : ''}">${ui(iconId)}×${speed}</button>`
+  }).join('')
   return `<div class="dock">
     <div class="team-rail">${minis}</div>
     <div class="speed" aria-label="×1 ×2 ×3">${speeds}</div>
@@ -300,7 +313,7 @@ function logLines(save: SaveV2, limit: number): string {
 }
 
 function logBox(save: SaveV2): string {
-  return `<button type="button" class="card log" id="log" data-act="log">${logLines(save, 3)}</button>`
+  return `<button type="button" class="card log" id="log" data-act="log">${ui('log')}${logLines(save, 3)}</button>`
 }
 
 function weatherIcon(id: WeatherId): string {
@@ -320,7 +333,7 @@ function drawerSheet(save: SaveV2, now: number): string {
   const clock = clockLabel(save, now)
   const body = rows.map((row) => `<div class="sight-row">
       <span class="seal-ring" style="--pity:${Math.max(0, Math.min(1, row.pity / 10))}" title="${row.pity ? `Spur ${row.pity}` : ''}">
-        <img class="${row.caught ? '' : 'sil'}" src="${monsterArt(row.species)}" alt=""/>
+        ${portrait(row.species, false, row.caught ? '' : 'sil')}
       </span>
       <div><b>${row.caught ? esc(row.name) : '???'}</b><div class="muted">${esc(row.type)}</div></div>
       <span class="pct">${Math.round(row.pct)} %</span>
@@ -340,7 +353,7 @@ function drawerSheet(save: SaveV2, now: number): string {
 
 function sightings(save: SaveV2, open: boolean): string {
   return `<button type="button" class="grip" data-act="side" aria-expanded="${open ? 'true' : 'false'}">
-    <i class="grip-pill"></i>
+    ${ui('traces')}<i class="grip-pill"></i>
     <span>${tr(save, 'side.seen')}</span>
   </button>`
 }
@@ -349,7 +362,7 @@ function fruitCard(save: SaveV2, now: number, open: boolean): string {
   const active = save.activeFruits.filter((fruit) => fruit.until > now)
   const rows = active.map((fruit) => `<div class="fruit-row"><b>${esc(fruitDef(fruit.id).name)}</b><span>${fruitMinutes(fruit.until, now)} min</span></div>`).join('')
   return `<div class="card side-card">
-    <h2>${tr(save, 'fruit.title')}</h2>
+    <h2>${ui('fruitBuff')}${tr(save, 'fruit.title')}</h2>
     ${open ? (rows || `<p class="muted">${tr(save, 'fruit.none')}</p>`) : `<p class="muted">${active.length}</p>`}
   </div>`
 }
@@ -359,7 +372,7 @@ function progress(save: SaveV2): string {
   const switches = regions.map((entry) => {
     const open = save.regionsOpen.includes(entry.id)
     const here = save.region === entry.id
-    return `<button data-act="region" data-region="${entry.id}" class="${here ? 'primary' : ''}" ${open ? '' : 'disabled'}>${esc(entry.name)}</button>`
+    return `<button data-act="region" data-region="${entry.id}" class="${here ? 'primary' : ''}" ${open ? '' : 'disabled'}>${ui('region')}${esc(entry.name)}</button>`
   }).join('')
   const buttons = region.chapters.map((chapter) => {
     const open = chapterUnlocked(save, chapter.id)
@@ -371,7 +384,7 @@ function progress(save: SaveV2): string {
         : `Lv ${chapter.levelMin}–${chapter.levelMax}, Cap ${chapter.cap}`
     const mark = chapter.special ? 'Urgrund' : (save.badges.includes(chapter.guardian.badge) ? chapter.guardian.badge : 'Wappen fehlt')
     return `<button class="text-btn" data-act="travel" data-region="${region.id}" data-chapter="${chapter.id}" ${open ? '' : 'disabled'}>
-      <b>${esc(chapter.name)}</b> ${here ? '· hier' : ''}
+      ${ui('chapterMark')}<b>${esc(chapter.name)}</b> ${here ? '· hier' : ''}
       <div class="muted">${range}, ${esc(mark)}</div>
     </button>`
   }).join('')
@@ -430,7 +443,7 @@ export function pcWindowHtml(save: SaveV2, uids: string[], selected: string | nu
     if (!mon) return ''
     const sp = species(mon.species)
     return `<button type="button" class="mon-card ${selected === uid ? 'on' : ''}" data-act="select" data-uid="${uid}" draggable="true" data-drag="pc">
-      <img src="${monsterArt(sp.id)}" alt=""/>
+      ${portrait(sp.id)}
       <div>${esc(sp.name)}</div>
       <div class="muted">Lv ${mon.lvl}${mon.shiny ? ' · Schimmer' : ''}</div>
     </button>`
@@ -455,10 +468,10 @@ function team(save: SaveV2, query: PcQuery, selected: string | null, shell: Shel
   const cards = pcWindowHtml(save, list.slice(win.start, win.end), selected)
   const roster = Array.from({ length: 6 }, (_, index) => {
     const uid = save.team[index]
-    if (!uid || !save.mons[uid]) return `<div class="mon-card slot" aria-hidden="true"><span>${index + 1}</span></div>`
+    if (!uid || !save.mons[uid]) return `<div class="mon-card slot" aria-hidden="true">${ui('slotEmpty')}<span>${index + 1}</span></div>`
     const mon = save.mons[uid]
     return `<button type="button" class="mon-card ${selected === uid ? 'on' : ''}" data-act="select" data-uid="${uid}" data-index="${index}" data-press="card" draggable="true" data-drag="team">
-      <img src="${monsterArt(mon.species)}" alt=""/>
+      ${portrait(mon.species)}
       <div>${index + 1}. ${esc(species(mon.species).name)}</div>
       <div class="muted">Lv ${mon.lvl}${save.buddy === uid ? ` · ${tr(save, 'team.buddy')}` : ''}${fightsHere(save, mon) ? '' : ` · ${tr(save, 'team.other')}`}</div>
     </button>`
@@ -476,14 +489,14 @@ function team(save: SaveV2, query: PcQuery, selected: string | null, shell: Shel
     <h2 class="pc-label">${tr(save, 'team.pc')} · ${list.length}</h2>
     <div id="pc-viewport" class="vlist" data-cols="4" data-count="${list.length}" data-start="${win.start}" data-end="${win.end}">${body}</div>
     <div class="menu-dock" data-dock="team">
-      <button type="button" data-act="nudge" data-dir="-1">${tr(save, 'team.forward')}</button>
-      <button type="button" data-act="nudge" data-dir="1">${tr(save, 'team.back')}</button>
-      <button type="button" data-act="to-pc">${tr(save, 'team.toPc')}</button>
-      <button type="button" data-act="to-team">${tr(save, 'team.toTeam')}</button>
-      <button type="button" data-act="card" data-uid="${selected ?? ''}">${tr(save, 'team.card')}</button>
+      <button type="button" data-act="nudge" data-dir="-1">${ui('forward')}${tr(save, 'team.forward')}</button>
+      <button type="button" data-act="nudge" data-dir="1">${ui('back')}${tr(save, 'team.back')}</button>
+      <button type="button" data-act="to-pc">${ui('toPc')}${tr(save, 'team.toPc')}</button>
+      <button type="button" data-act="to-team">${ui('toTeam')}${tr(save, 'team.toTeam')}</button>
+      <button type="button" data-act="card" data-uid="${selected ?? ''}">${ui('card')}${tr(save, 'team.card')}</button>
     </div>
     <div class="filter-sheet ${shell.filtersOpen ? 'open' : ''}">
-      <button type="button" class="filter-bar" data-act="filters" aria-expanded="${shell.filtersOpen ? 'true' : 'false'}">${tr(save, 'team.filters')} · ${esc(sortLabel)}</button>
+      <button type="button" class="filter-bar" data-act="filters" aria-expanded="${shell.filtersOpen ? 'true' : 'false'}">${ui('filter')}${tr(save, 'team.filters')} · ${esc(sortLabel)}</button>
       <div class="filter-body">
         <input data-field="q" placeholder="${esc(tr(save, 'team.search'))}" value="${esc(query.q)}"/>
         <select data-field="type"><option value="">${tr(save, 'team.type')}</option>${typeOptions(query.type)}</select>
@@ -492,7 +505,7 @@ function team(save: SaveV2, query: PcQuery, selected: string | null, shell: Shel
         <select data-field="sort">
           ${SORTS.map(([id, key]) => `<option value="${id}" ${query.sort === id ? 'selected' : ''}>${tr(save, key)}</option>`).join('')}
         </select>
-        <button type="button" data-act="dir">${query.dir < 0 ? tr(save, 'team.down') : tr(save, 'team.up')}</button>
+        <button type="button" data-act="dir">${ui('sort')}${query.dir < 0 ? tr(save, 'team.down') : tr(save, 'team.up')}</button>
       </div>
     </div>
   </div>`
@@ -509,14 +522,14 @@ function codex(save: SaveV2, filter: CodexQuery, shell: ShellFlags): string {
     const row = regionProgress(save, id)
     const pct = row.total ? Math.round((row.caught / row.total) * 100) : 0
     const label = row.open ? `${esc(row.name)} ${row.caught}/${row.total}` : tr(save, 'progress.locked', { name: esc(row.name) })
-    return `<div><div class="muted">${label}</div><div class="progress-track"><span style="width:${row.placeholder ? 0 : pct}%"></span></div></div>`
+    return `<div class="region-bar">${ui('regionBar')}<div><div class="muted">${label}</div><div class="progress-track"><span style="width:${row.placeholder ? 0 : pct}%"></span></div></div></div>`
   }).join('')
   const rows = listCodex(save, filter)
   const cells = rows.map((mon) => {
     const status = dexStatus(save, mon.id)
     const hidden = status === 'missing'
     return `<button type="button" class="mon-card" data-act="dex" data-species="${mon.id}">
-      <img class="${status === 'owned' || status === 'released' ? '' : 'sil'}" src="${monsterArt(mon.id)}" alt="" style="${hidden ? 'opacity:.25' : ''}"/>
+      ${portrait(mon.id, false, status === 'owned' || status === 'released' ? '' : 'sil').replace('style="', hidden ? 'style="opacity:.25;' : 'style="')}
       <div>${hidden ? tr(save, 'codex.no', { n: speciesNumber(mon.id) }) : esc(mon.name)}</div>
       <div class="muted">${dexStatusLabel(status)}</div>
     </button>`
@@ -531,7 +544,7 @@ function codex(save: SaveV2, filter: CodexQuery, shell: ShellFlags): string {
       </div>
     </div>
     <div class="filter-sheet ${shell.dexOpen ? 'open' : ''}">
-      <button type="button" class="filter-bar" data-act="dex-filters" aria-expanded="${shell.dexOpen ? 'true' : 'false'}">${tr(save, 'team.filters')}</button>
+      <button type="button" class="filter-bar" data-act="dex-filters" aria-expanded="${shell.dexOpen ? 'true' : 'false'}">${ui('filter')}${tr(save, 'team.filters')}</button>
       <div class="filter-body">
         <input data-field="dex-q" placeholder="${esc(tr(save, 'codex.search'))}" value="${esc(filter.q)}"/>
         <select data-field="dex-type"><option value="">${tr(save, 'team.type')}</option>${typeOptions(filter.type)}</select>
@@ -554,8 +567,8 @@ function shopCard(save: SaveV2, row: ShopOffer, now: number): string {
     ? `${coin(row.pay)} ${row.price.toLocaleString('de-DE')}`
     : esc(row.reason)
   const info = row.info === 'chest' && row.chestTier
-    ? `<button type="button" class="shop-info" data-act="chest-info" data-tier="${row.chestTier}" aria-label="Raten"></button>`
-    : `<button type="button" class="shop-info" data-act="shop-info" data-id="${row.id}" aria-label="Info"></button>`
+    ? `<button type="button" class="shop-info" data-act="chest-info" data-tier="${row.chestTier}" aria-label="Raten">${ui('info')}</button>`
+    : `<button type="button" class="shop-info" data-act="shop-info" data-id="${row.id}" aria-label="Info">${ui('info')}</button>`
   const limit = row.quota ? `<p class="shop-limit">${esc(quotaLine(row.quota, now, save.settings.lang))}</p>` : ''
   const picture = row.art
     ? `<img class="shop-item" src="${art(row.art)}" alt=""${row.pict ? ` style="height:${row.pict}%"` : ''}/>`
@@ -573,13 +586,13 @@ function shop(save: SaveV2, now: number, tab: ShopTab, hint: boolean): string {
   const rows = shopOffers(save, now).filter((row) => row.tab === tab)
   const groups = [...new Set(rows.map((row) => row.group))]
   const body = groups.map((group) => `<h3 class="shop-group">${esc(group)}</h3><div class="shop-grid">${rows.filter((row) => row.group === group).map((row) => shopCard(save, row, now)).join('')}</div>`).join('')
-  const tabs: [ShopTab, string][] = [
-    ['chests', tr(save, 'shop.tab.chests')],
-    ['boost', tr(save, 'shop.tab.boost')],
-    ['marks', tr(save, 'shop.tab.marks')]
+  const tabs: [ShopTab, UiArtId, string][] = [
+    ['chests', 'tabChests', tr(save, 'shop.tab.chests')],
+    ['boost', 'tabBoost', tr(save, 'shop.tab.boost')],
+    ['marks', 'tabMarks', tr(save, 'shop.tab.marks')]
   ]
   const stock = tab === 'chests'
-    ? `<button type="button" class="shop-stock" data-act="activity" data-id="chests">${esc(tr(save, 'shop.stock', { n: stockLine(save) }))}</button>`
+    ? `<button type="button" class="shop-stock" data-act="activity" data-id="chests">${ui('storage')}${esc(tr(save, 'shop.stock', { n: stockLine(save) }))}</button>`
     : ''
   const open = hint
     ? `<button type="button" class="shop-toast" data-act="activity" data-id="chests">${esc(tr(save, 'shop.open'))}</button>`
@@ -591,7 +604,7 @@ function shop(save: SaveV2, now: number, tab: ShopTab, hint: boolean): string {
       <button type="button" class="wallet" data-act="wallet" data-id="marks">${coin('marks', true)}<b>${compactAmount(save.marks)}</b></button>
     </header>
     <div class="shop-tabs" data-shop-tabs="1" style="--tab-bar:url('${art(SHOP_ART.tabBar)}');--tab-on:url('${art(SHOP_ART.tabOn)}');--tab-off:url('${art(SHOP_ART.tabOff)}')">
-      ${tabs.map(([id, label]) => `<button type="button" data-act="shop-tab" data-id="${id}" class="${tab === id ? 'on' : ''}">${label}</button>`).join('')}
+      ${tabs.map(([id, icon, label]) => `<button type="button" data-act="shop-tab" data-id="${id}" class="${tab === id ? 'on' : ''}">${ui(icon)}${label}</button>`).join('')}
     </div>
     <div class="shop-scroll">${body}${stock}</div>
     ${open}
@@ -609,9 +622,9 @@ function glyph(id: SymbolId): string {
 }
 
 function activityTabs(save: SaveV2, wheel: WheelPanel): string {
-  return `<button type="button" data-act="activity" data-id="hort" class="${wheel.tab === 'hort' ? 'primary' : ''}">${tr(save, 'act.hort')}</button>
-    <button type="button" data-act="activity" data-id="chests" class="${wheel.tab === 'chests' ? 'primary' : ''}">${tr(save, 'act.chests')}</button>
-    <button type="button" data-act="activity" data-id="wheel" class="${wheel.tab === 'wheel' ? 'primary' : ''}">${tr(save, 'act.wheel')}</button>`
+  return `<button type="button" data-act="activity" data-id="hort" class="${wheel.tab === 'hort' ? 'primary' : ''}">${ui('hort')}${tr(save, 'act.hort')}</button>
+    <button type="button" data-act="activity" data-id="chests" class="${wheel.tab === 'chests' ? 'primary' : ''}">${ui('chests')}${tr(save, 'act.chests')}</button>
+    <button type="button" data-act="activity" data-id="wheel" class="${wheel.tab === 'wheel' ? 'primary' : ''}">${ui('wheel')}${tr(save, 'act.wheel')}</button>`
 }
 
 const CHEST_KEY: Record<ChestTier, string> = {
@@ -646,6 +659,7 @@ function chestView(save: SaveV2, wheel: WheelPanel): string {
     const count = save.chests[tier]
     const off = count <= 0 ? 'disabled' : ''
     return `<article class="chest-tile">
+      <img class="ui-icon chest-art" src="${art(SHOP_ART.chest[tier])}" alt=""/>
       <h3>${tr(save, CHEST_KEY[tier])}</h3>
       <p class="chest-count">${count}</p>
       <button type="button" class="chest-info" data-act="chest-info" data-tier="${tier}">${tr(save, 'chest.info')}</button>
@@ -658,14 +672,14 @@ function chestView(save: SaveV2, wheel: WheelPanel): string {
       <div class="card panel">
         <h2>${tr(save, 'act.chests')}</h2>
         <div class="chest-grid">${tiles}</div>
-        <p>${tr(save, 'chest.road', { n: save.roadReady })}</p>
-        <button type="button" class="primary" data-act="chest-claim" ${save.roadReady > 0 ? '' : 'disabled'}>${tr(save, 'chest.claim')}</button>
+        <p>${ui('road')}${tr(save, 'chest.road', { n: save.roadReady })}</p>
+        <button type="button" class="primary" data-act="chest-claim" ${save.roadReady > 0 ? '' : 'disabled'}>${ui('road')}${tr(save, 'chest.claim')}</button>
         <p class="muted">${tr(save, 'shop.inShop')}</p>
-        <h3>Werkstatt</h3>
-        <p>Velunorstaub ${save.dust}</p>
+        <h3>${ui('dust')}Werkstatt</h3>
+        <p>${ui('dust')}Velunorstaub ${save.dust}</p>
         ${poolFor(enteredRegions(save)).filter((id) => !Object.values(save.mons).some((mon) => mon.species === id)).slice(0, 6).map((id) => {
           const sp = species(id)
-          return `<button type="button" data-act="craft" data-id="${id}">${esc(sp.name)} · ${workshopCost(sp.baseRarity)} Staub</button>`
+          return `<button type="button" data-act="craft" data-id="${id}">${portrait(id)}${esc(sp.name)} · ${workshopCost(sp.baseRarity)} Staub</button>`
         }).join('')}
       </div>
     </div>
@@ -704,7 +718,7 @@ function wheelView(save: SaveV2, wheel: WheelPanel): string {
       const owned = Object.values(save.mons).some((mon) => mon.species === prize.species)
       const label = !unlocked ? tr(save, 'wheel.later') : owned ? tr(save, 'wheel.owned') : tr(save, 'wheel.price', { n: prize.marks.toLocaleString(L(save) === 'en' ? 'en' : 'de-DE') })
       return `<article class="list-row">
-        <div class="prize-line"><img src="${monsterArt(sp.id, true)}" alt=""/><div><b>${esc(sp.name)}</b><div class="muted">${esc(prize.regionName)} · Lv 5</div></div></div>
+        <div class="prize-line">${portrait(sp.id, true)}<div><b>${esc(sp.name)}</b><div class="muted">${esc(prize.regionName)} · Lv 5</div></div></div>
         <div class="list-actions"><button type="button" class="primary" data-act="buy-prize" data-id="${prize.species}" ${unlocked && !owned ? '' : 'disabled'}>${label}</button></div>
       </article>`
     }).join('')
@@ -731,7 +745,7 @@ function wheelView(save: SaveV2, wheel: WheelPanel): string {
     <div class="menu-dock" data-dock="wheel">
       ${activityTabs(save, wheel)}
       ${open ? bets : ''}
-      <button type="button" class="primary dock-primary" data-act="spin" ${open ? '' : 'disabled'}>${tr(save, 'wheel.spin')}</button>
+      <button type="button" class="primary dock-primary" data-act="spin" ${open ? '' : 'disabled'}>${ui('spin')}${tr(save, 'wheel.spin')}</button>
     </div>
   </div>`
 }
@@ -744,7 +758,7 @@ function hortView(save: SaveV2, now: number, selected: string | null, wheel: Whe
     if (!mon) return ''
     const sp = species(mon.species)
     return `<button type="button" class="mon-card ${selected === uid ? 'on' : ''}" data-act="select" data-uid="${uid}">
-      <img src="${monsterArt(sp.id)}" alt=""/>
+      ${portrait(sp.id)}
       <div>${esc(sp.name)}${mon.shiny ? ' · Schimmer' : ''}</div>
       <div class="muted">Lv ${mon.lvl} · ${esc(typeName(sp.type))}</div>
     </button>`
@@ -753,10 +767,10 @@ function hortView(save: SaveV2, now: number, selected: string | null, wheel: Whe
     const left = Math.max(0, egg.readyAt - now)
     const hours = Math.floor(left / 3600000)
     const mins = Math.ceil((left % 3600000) / 60000)
-    return `<div class="list-row"><b>${esc(species(egg.species).name)}</b><span>${left <= 0 ? tr(save, 'hort.hatch') : `${hours} h ${mins} min`}</span></div>`
+    return `<div class="list-row">${ui('egg')}<b>${esc(species(egg.species).name)}</b><span>${left <= 0 ? tr(save, 'hort.hatch') : `${hours} h ${mins} min`}</span></div>`
   }).join('')
   const buy = offer
-    ? `<button type="button" class="primary dock-primary" data-act="buy-hort" ${offer.locked ? 'disabled' : ''}>${tr(save, 'hort.buy', { slot: offer.slot, price: offer.price.toLocaleString(locale) })}${offer.locked ? ` · ${esc(tr(save, offer.locked))}` : ''}</button>`
+    ? `<button type="button" class="primary dock-primary" data-act="buy-hort" ${offer.locked ? 'disabled' : ''}>${ui('hortBuy')}${tr(save, 'hort.buy', { slot: offer.slot, price: offer.price.toLocaleString(locale) })}${offer.locked ? ` · ${esc(tr(save, offer.locked))}` : ''}</button>`
     : ''
   return `<div class="menu-screen">
     <div class="menu-scroll">
@@ -772,8 +786,8 @@ function hortView(save: SaveV2, now: number, selected: string | null, wheel: Whe
     </div>
     <div class="menu-dock" data-dock="hort">
       ${activityTabs(save, wheel)}
-      <button type="button" data-act="to-hort">${tr(save, 'hort.to')}</button>
-      <button type="button" data-act="from-hort">${tr(save, 'hort.from')}</button>
+      <button type="button" data-act="to-hort">${ui('hortIn')}${tr(save, 'hort.to')}</button>
+      <button type="button" data-act="from-hort">${ui('hortOut')}${tr(save, 'hort.from')}</button>
       ${buy}
     </div>
   </div>`
@@ -788,8 +802,8 @@ function achievementsView(save: SaveV2): string {
     const name = goalName(L(save), goal.id, goal.name, typeBit)
     const title = goalTitle(L(save), goal.id, goal.title, typeBit)
     return `<article class="list-row achieve ${have ? 'done' : ''}">
-      <div><b>${esc(name)}</b><div class="muted">${have ? tr(save, 'ach.have', { title, frame: goal.frame }) : tr(save, 'ach.open')} · ${goal.gold.toLocaleString(L(save) === 'en' ? 'en' : 'de-DE')} G</div></div>
-      ${have ? `<div class="list-actions"><button type="button" data-act="equip-title" data-id="${goal.id}">${tr(save, 'ach.titleBtn')}</button><button type="button" data-act="equip-frame" data-id="${goal.id}">${tr(save, 'ach.frameBtn')}</button></div>` : ''}
+      ${ui('achieve')}<div><b>${esc(name)}</b><div class="muted">${have ? tr(save, 'ach.have', { title, frame: goal.frame }) : tr(save, 'ach.open')} · ${goal.gold.toLocaleString(L(save) === 'en' ? 'en' : 'de-DE')} G</div></div>
+      ${have ? `<div class="list-actions"><button type="button" data-act="equip-title" data-id="${goal.id}">${ui('equipTitle')}${tr(save, 'ach.titleBtn')}</button><button type="button" data-act="equip-frame" data-id="${goal.id}">${ui('equipFrame')}${tr(save, 'ach.frameBtn')}</button></div>` : ''}
     </article>`
   }).join('')
   return `<div class="menu-screen">
@@ -810,43 +824,46 @@ function options(save: SaveV2, debug: boolean): string {
       <div class="card panel">
     <h2>${tr(save, 'opt.title')}</h2>
     <div class="row-actions">
-      <span>${tr(save, 'opt.lang')}</span>
+      <span>${ui('lang')}${tr(save, 'opt.lang')}</span>
       <button data-act="lang" data-lang="de" class="${L(save) === 'de' ? 'primary' : ''}">Deutsch</button>
       <button data-act="lang" data-lang="en" class="${L(save) === 'en' ? 'primary' : ''}">English</button>
     </div>
     <div class="row-actions">
-      <span>${tr(save, 'opt.speed')}</span>
-      ${([1, 2, 3] as const).map((speed) => `<button data-act="speed" data-speed="${speed}" class="${save.settings.speed === speed ? 'primary' : ''}">×${speed}</button>`).join('')}
+      <span>${ui('speed1')}${tr(save, 'opt.speed')}</span>
+      ${([1, 2, 3] as const).map((speed) => {
+        const iconId = speed === 1 ? 'speed1' : speed === 2 ? 'speed2' : 'speed3'
+        return `<button data-act="speed" data-speed="${speed}" class="${save.settings.speed === speed ? 'primary' : ''}">${ui(iconId)}×${speed}</button>`
+      }).join('')}
     </div>
-    <label class="switch"><input type="checkbox" data-field="auto" ${save.settings.autoSwitch ? 'checked' : ''}/> ${tr(save, 'opt.auto')}</label>
-    <label class="switch"><input type="checkbox" data-field="card" ${save.settings.catchCard ? 'checked' : ''}/> ${tr(save, 'opt.card')}</label>
-    <label class="switch"><input type="checkbox" data-field="shake" ${save.settings.shake ? 'checked' : ''}/> ${tr(save, 'opt.shake')}</label>
-    <label class="switch"><input type="checkbox" data-field="flash" ${save.settings.flashes ? 'checked' : ''}/> ${tr(save, 'opt.flash')}</label>
-    <label class="switch"><input type="checkbox" data-field="motion" ${save.settings.reduceMotion ? 'checked' : ''}/> ${tr(save, 'opt.motion')}</label>
-    <label class="switch"><input type="checkbox" data-field="swipe" ${save.settings.swipeTabs ? 'checked' : ''}/> ${tr(save, 'opt.swipe')}</label>
-    <label class="switch"><input type="checkbox" data-field="haptic" ${save.settings.haptics ? 'checked' : ''}/> ${tr(save, 'opt.haptic')}</label>
+    <label class="switch">${ui('optAuto')}<input type="checkbox" data-field="auto" ${save.settings.autoSwitch ? 'checked' : ''}/> ${tr(save, 'opt.auto')}</label>
+    <label class="switch">${ui('optCard')}<input type="checkbox" data-field="card" ${save.settings.catchCard ? 'checked' : ''}/> ${tr(save, 'opt.card')}</label>
+    <label class="switch">${ui('optShake')}<input type="checkbox" data-field="shake" ${save.settings.shake ? 'checked' : ''}/> ${tr(save, 'opt.shake')}</label>
+    <label class="switch">${ui('optFlash')}<input type="checkbox" data-field="flash" ${save.settings.flashes ? 'checked' : ''}/> ${tr(save, 'opt.flash')}</label>
+    <label class="switch">${ui('optMotion')}<input type="checkbox" data-field="motion" ${save.settings.reduceMotion ? 'checked' : ''}/> ${tr(save, 'opt.motion')}</label>
+    <label class="switch">${ui('optSwipe')}<input type="checkbox" data-field="swipe" ${save.settings.swipeTabs ? 'checked' : ''}/> ${tr(save, 'opt.swipe')}</label>
+    <label class="switch">${ui('optHaptic')}<input type="checkbox" data-field="haptic" ${save.settings.haptics ? 'checked' : ''}/> ${tr(save, 'opt.haptic')}</label>
     <div class="row-actions">
-      <span>${tr(save, 'opt.font')}</span>
+      <span>${ui('optFont')}${tr(save, 'opt.font')}</span>
       ${([100, 115, 130] as const).map((size) => `<button type="button" data-act="font" data-size="${size}" class="${save.settings.font === size ? 'primary' : ''}">${size} %</button>`).join('')}
     </div>
-    <label class="switch"><input type="checkbox" data-field="battery" ${save.settings.battery ? 'checked' : ''}/> ${tr(save, 'opt.battery')}</label>
+    <label class="switch">${ui('optBattery')}<input type="checkbox" data-field="battery" ${save.settings.battery ? 'checked' : ''}/> ${tr(save, 'opt.battery')}</label>
     <p class="muted">${tr(save, 'opt.batteryNote')}</p>
-    <label class="switch"><input type="checkbox" data-field="loop" ${save.loop ? 'checked' : ''}/> ${tr(save, 'nav.loop')}</label>
+    <label class="switch">${ui('optLoop')}<input type="checkbox" data-field="loop" ${save.loop ? 'checked' : ''}/> ${tr(save, 'nav.loop')}</label>
     <div class="row-actions">
-      <span>${tr(save, 'opt.power')}</span>
+      <span>${ui('optPower')}${tr(save, 'opt.power')}</span>
       ${power(0, 'opt.powerOff')}${power(2, 'opt.power2')}${power(5, 'opt.power5')}
     </div>
     <h2>${tr(save, 'opt.export')}</h2>
     <textarea id="export-code" readonly rows="3">${esc(exportCode(save))}</textarea>
-    <p><button data-act="copy-code">${tr(save, 'opt.copy')}</button></p>
+    <p><button data-act="copy-code">${ui('copy')}${tr(save, 'opt.copy')}</button></p>
     <h2>${tr(save, 'opt.import')}</h2>
     <textarea id="import-code" rows="3"></textarea>
     ${debug ? `<div class="card" style="padding:12px;margin-top:12px"><b>${tr(save, 'opt.debug')}</b><p class="muted">${tr(save, 'opt.debugNote')}</p><input id="debug-hours" type="number" min="0" step="0.1" value="10"/> <button type="button" class="primary" data-act="jump">${tr(save, 'opt.jump')}</button> <button type="button" data-act="debug-stars">${tr(save, 'chest.debug')}</button></div>` : ''}
-    <p><button type="button" class="ghost" data-act="reset">${tr(save, 'opt.reset')}</button></p>
+    <p><button type="button" class="ghost" data-act="reset">${ui('reset')}${tr(save, 'opt.reset')}</button></p>
       </div>
     </div>
     <div class="menu-dock" data-dock="options">
-      <button type="button" class="primary dock-primary" data-act="import-ask">${tr(save, 'opt.importBtn')}</button>
+      <button type="button" class="primary dock-primary" data-act="import-ask">${ui('importCode')}${tr(save, 'opt.importBtn')}</button>
     </div>
   </div>`
 }
@@ -854,8 +871,8 @@ function options(save: SaveV2, debug: boolean): string {
 function guide(save: SaveV2): string {
   return `<div class="menu-screen">
     <div class="menu-scroll">
-      <div class="card panel"><h2>${tr(save, 'guide.title')}</h2>
-        ${[1, 2, 3, 4, 5, 6, 7, 8, 9, 10, 11, 12].map((n) => `<p>${tr(save, `guide.${n}`)}</p>`).join('')}
+      <div class="card panel"><h2>${ui('guide')}${tr(save, 'guide.title')}</h2>
+        ${[1, 2, 3, 4, 5, 6, 7, 8, 9, 10, 11, 12].map((n) => `<p>${ui('guide')}${tr(save, `guide.${n}`)}</p>`).join('')}
       </div>
     </div>
   </div>`
@@ -878,7 +895,7 @@ export function gameHtml(save: SaveV2, screen: Screen, now: number, pc: PcQuery,
   const moreOpen = Boolean(shell.moreOpen)
   const chapter = chapterById(save.region, save.chapter)
   const map = mapOpen ? `<div class="map-sheet card">
-      <label class="switch"><input type="checkbox" data-field="loop" ${save.loop ? 'checked' : ''}/> ${tr(save, 'nav.loop')}</label>
+      <label class="switch">${ui('optLoop')}<input type="checkbox" data-field="loop" ${save.loop ? 'checked' : ''}/> ${tr(save, 'nav.loop')}</label>
       <p class="muted">${tr(save, 'nav.crest', { name: save.badges.includes(chapter.guardian.badge) ? chapter.guardian.badge : '—' })}</p>
       ${progress(save)}
     </div>` : ''
@@ -918,7 +935,7 @@ function overlayHtml(save: SaveV2, overlay: Overlay): string {
   if (overlay.kind === 'wallet') {
     const gold = overlay.id === 'gold'
     const amount = (gold ? save.gold : save.marks).toLocaleString('de-DE')
-    return `<div class="sheet" data-sheet="swipe">${grab()}<h2>${coin(gold ? 'gold' : 'marks', true)} ${amount}</h2><p>${esc(tr(save, gold ? 'shop.goldFrom' : 'shop.marksFrom'))}</p><button type="button" class="primary" data-act="close">${esc(tr(save, 'shop.close'))}</button></div>`
+    return `<div class="sheet" data-sheet="swipe">${grab()}<h2>${coin(gold ? 'gold' : 'marks', true)} ${amount}</h2><p>${esc(tr(save, gold ? 'shop.goldFrom' : 'shop.marksFrom'))}</p><button type="button" class="primary" data-act="close">${ui('close')}${esc(tr(save, 'shop.close'))}</button></div>`
   }
   if (overlay.kind === 'shop-info') {
     const row = shopOffers(save, Date.now()).find((item) => item.id === overlay.offerId)
@@ -929,7 +946,7 @@ function overlayHtml(save: SaveV2, overlay: Overlay): string {
         ? `<button type="button" data-act="use-fruit" data-id="${row.dataId}">${esc(tr(save, 'shop.eat'))}</button><button type="button" data-act="sell-fruit" data-id="${row.dataId}">${esc(tr(save, 'shop.sellBtn'))}</button>`
         : ''
     const hero = row.art ? `<img class="hero" src="${art(row.art)}" alt=""/>` : ''
-    return `<div class="sheet shop-sheet" data-sheet="swipe">${grab()}${hero}<h2>${esc(row.name)}</h2><p>${esc(row.effect)}</p>${extra}<button type="button" class="primary" data-act="close">${esc(tr(save, 'shop.close'))}</button></div>`
+    return `<div class="sheet shop-sheet" data-sheet="swipe">${grab()}${hero}<h2>${esc(row.name)}</h2><p>${esc(row.effect)}</p>${extra}<button type="button" class="primary" data-act="close">${ui('close')}${esc(tr(save, 'shop.close'))}</button></div>`
   }
   if (overlay.kind === 'shop-confirm') {
     const row = shopOffers(save, Date.now()).find((item) => item.id === overlay.offerId)
@@ -942,7 +959,7 @@ function overlayHtml(save: SaveV2, overlay: Overlay): string {
       <p class="shop-price">${coin(row.pay, true)} ${row.price.toLocaleString('de-DE')}</p>
       <p class="shop-price">${esc(tr(save, 'shop.after'))} ${coin(row.pay, true)} ${after.toLocaleString('de-DE')}</p>
       <button type="button" class="primary" data-act="shop-yes" data-id="${row.id}">${esc(tr(save, 'shop.buy'))}</button>
-      <button type="button" class="ghost" data-act="close">${esc(tr(save, 'reset.no'))}</button>
+      <button type="button" class="ghost" data-act="close">${ui('close')}${esc(tr(save, 'reset.no'))}</button>
     </div>`
   }
   if (overlay.kind === 'chest-rates') {

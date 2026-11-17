@@ -2,6 +2,11 @@
   color: #e8eefc;
   background: #070b16;
   font-family: Nunito, "Segoe UI", sans-serif;
+  --radius-card: 24px;
+  --radius-control: 16px;
+  --radius-pill: 999px;
+  --radius-sheet: 36px;
+  --shadow-soft: 0 16px 40px rgba(6, 10, 24, 0.2);
 }
 
 html, body, #game {
@@ -13,6 +18,18 @@ html, body, #game {
 }
 
 button, input, select { font: inherit; color: inherit; }
+.ui-icon {
+  width: 64px;
+  height: 64px;
+  object-fit: contain;
+  object-position: center;
+  vertical-align: middle;
+  flex: 0 0 auto;
+  border: 0;
+  border-radius: 0;
+  background: transparent;
+  box-shadow: none;
+}
 
 #fit {
   position: absolute;
@@ -92,12 +109,40 @@ body.is-landscape-phone #turn { display: grid; }
 .is-menu .anchor-bot { grid-template-rows: auto; }
 .menu-scroll { flex: 1 1 auto; min-height: 0; overflow: auto; }
 
+.card, .mon-card, .chest-tile, .more-sheet, .map-sheet, .filter-sheet, .log, .side-card {
+  border-radius: var(--radius-card);
+  box-shadow: var(--shadow-soft);
+}
 .card {
   background: rgba(18, 28, 54, 0.92);
   border: 1px solid rgba(168, 190, 240, 0.22);
-  border-radius: 22px;
-  box-shadow: 0 12px 30px rgba(0, 0, 0, 0.28);
+  border-radius: var(--radius-card);
+  box-shadow: var(--shadow-soft);
 }
+button, .primary, .ghost, .text-btn, .filter-bar, input, select, textarea {
+  border-radius: var(--radius-control);
+}
+.wallet, .speed button, .shop-tabs button, .challenge-fab, .shop-stock {
+  border-radius: var(--radius-pill);
+}
+.hud { border-radius: 0 0 28px 28px; }
+.tabbar { border-radius: 32px 32px 0 0; box-shadow: 0 -12px 28px rgba(6, 10, 24, 0.2); }
+.sheet { border-radius: var(--radius-sheet) var(--radius-sheet) 0 0; box-shadow: var(--shadow-soft); }
+.portrait, .hero, .pick img {
+  border-radius: 50%;
+  border: 5px solid var(--rarity, #e2c56a);
+  box-shadow: var(--shadow-soft);
+  background: radial-gradient(circle at 50% 40%, #2a3c62, #10182c 72%);
+  box-sizing: border-box;
+}
+.shop-item, .coin, .tab img, .hud-gold img, .chest-art {
+  border-radius: 22px;
+}
+.hud .ui-icon, .chapter-line .ui-icon, .speed .ui-icon, .grip .ui-icon, .log .ui-icon, .mini .ui-icon {
+  width: 56px;
+  height: 56px;
+}
+.speed button { display: flex; flex-direction: column; align-items: center; justify-content: center; gap: 2px; }
 
 .nav, .side, .center { min-height: 0; }
 
@@ -267,7 +312,7 @@ textarea { width: 100%; box-sizing: border-box; background: #121a30; color: inhe
   cursor: pointer;
   box-sizing: border-box;
 }
-.mini.is-empty { opacity: 0.28; pointer-events: none; }
+.mini.is-empty { opacity: 0.85; pointer-events: none; }
 .mini.is-active { border-color: #f0c14a; }
 .mini.is-fainted { filter: grayscale(1); opacity: 0.55; }
 .mini img { width: 84px; height: 84px; object-fit: contain; }
@@ -790,6 +835,8 @@ img.is-shiny { filter: drop-shadow(0 0 10px #f0c14a); }
 .codex-grid .mon-card img { width: 96px; height: 96px; }
 .codex-grid .mon-card div, .hort-grid .mon-card div { font-size: calc(24px * var(--font-scale, 1)); line-height: calc(30px * var(--font-scale, 1)); max-width: 100%; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
 
+.region-bar { display: flex; align-items: center; gap: 12px; }
+.achieve { flex-direction: row; align-items: center; }
 .list-row {
   display: flex;
   flex-direction: column;
@@ -890,9 +937,10 @@ img.is-shiny { filter: drop-shadow(0 0 10px #f0c14a); }
   flex-direction: column;
   gap: 6px;
   border-style: solid;
-  /* 35% of the 133/130/129/147 slice so the interior keeps about 81% of the card. */
-  border-width: 46px 45px 51px 47px;
-  border-image-slice: 130 129 147 133;
+  /* Soft frame slice is 56 px. Drawn at 36 px so the interior is 85% of the 480 px card. */
+  border-width: 36px;
+  filter: drop-shadow(0 16px 28px rgba(6, 10, 24, 0.24));
+  border-image-slice: 56;
   border-image-width: 1;
   border-image-repeat: stretch;
   background: #1a160f;
@@ -931,17 +979,7 @@ img.is-shiny { filter: drop-shadow(0 0 10px #f0c14a); }
   padding: 8px;
   box-sizing: border-box;
 }
-.shop-info::after {
-  content: "i";
-  width: 52px;
-  height: 52px;
-  border-radius: 50%;
-  background: rgba(8, 12, 24, 0.55);
-  display: grid;
-  place-items: center;
-  font-size: 32px;
-  line-height: 1;
-}
+.shop-info .ui-icon { width: 52px; height: 52px; }
 .shop-card h3 { margin: 4px 0 0; font-size: 30px; line-height: 1.15; overflow-wrap: normal; hyphens: manual; }
 .shop-card p, .shop-limit { margin: 0; font-size: 30px; line-height: 1.2; overflow-wrap: normal; hyphens: auto; }
 .shop-buy { margin-top: auto; width: 100%; border: 0; font-size: 30px; font-weight: 800; display: flex; align-items: center; justify-content: center; gap: 8px; padding: 0 8px; }

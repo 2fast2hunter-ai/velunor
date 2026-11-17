@@ -167,7 +167,7 @@ export class CatalogScene extends Phaser.Scene {
     const left = x - CARD_W / 2
     const top = y - CARD_H / 2
     plate.fillStyle(0x2a3148, 1)
-    plate.fillRoundedRect(left, top, CARD_W, CARD_H, 14)
+    plate.fillRoundedRect(left, top, CARD_W, CARD_H, 24)
     const stroke = owned ? Phaser.Display.Color.HexStringToColor(rarity.color).color : 0xc8c4bc
     plate.lineStyle(3, stroke, 1)
     plate.strokeRoundedRect(left, top, CARD_W, CARD_H, 14)
@@ -202,7 +202,7 @@ export class CatalogScene extends Phaser.Scene {
     const pad = 48
     const plate = this.add.graphics()
     plate.fillStyle(0x343c58, 1)
-    plate.fillRoundedRect(left + pad, top + 72, 200, 210, 18)
+    plate.fillRoundedRect(left + pad, top + 72, 200, 210, 24)
     modal.root.add(plate)
     modal.root.add(monsterToken(this, left + pad + 100, top + 176, monster.sprite || monster.id, 168, monster.baseRarity, false, true))
     const lines = [

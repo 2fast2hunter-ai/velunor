@@ -32,7 +32,7 @@ export type ShopPay = 'gold' | 'marks'
  */
 export const SHOP_ART = {
   bg: 'shop/shop_bg.webp',
-  frame: 'shop/card_frame.webp',
+  frame: 'shop/card_frame_soft.webp',
   gold: 'shop/icon_gold.webp',
   goldSm: 'shop/icon_gold_64.webp',
   marks: 'shop/icon_marke.webp',
@@ -59,15 +59,19 @@ export const SHOP_ART = {
   fruit: {
     fang: 'shop/frucht_glueck.webp',
     goldfang: 'shop/frucht_goldfang.webp',
-    spuer: 'shop/frucht_spur.webp'
+    spuer: 'shop/frucht_spur.webp',
+    neugier: 'ui/fruit_neugier.webp',
+    glanz: 'ui/fruit_glanz.webp',
+    lern: 'ui/fruit_lern.webp',
+    muenz: 'ui/fruit_muenz.webp'
   },
   tabBar: 'shop/tab_bar_bg.webp',
   tabOn: 'shop/tab_active.webp',
   tabOff: 'shop/tab_inactive.webp'
 } as const
 
-/** 9-slice insets of the 480×600 frame. Corners stay this size; only the edges stretch. */
-export const FRAME_SLICE = { top: 130, right: 129, bottom: 147, left: 133 } as const
+/** 9-slice insets of the soft 480×600 frame. Drawn smaller so the interior stays about 85% of the card. */
+export const FRAME_SLICE = { top: 56, right: 56, bottom: 56, left: 56 } as const
 
 /** Card width stays within 15 percent of the 480px frame. */
 export const CARD_WIDTH = { base: 480, min: 408, max: 552 } as const

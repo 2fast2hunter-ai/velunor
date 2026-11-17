@@ -61,11 +61,11 @@ export function text(
 
 export function panel(g: Phaser.GameObjects.Graphics, x: number, y: number, w: number, h: number, fill = 0x1b2438): void {
   g.fillStyle(0x090b14, 0.25)
-  g.fillRoundedRect(x + 3, y + 5, w, h, 18)
+  g.fillRoundedRect(x + 3, y + 5, w, h, 24)
   g.fillStyle(fill, 0.96)
-  g.fillRoundedRect(x, y, w, h, 18)
+  g.fillRoundedRect(x, y, w, h, 24)
   g.lineStyle(2, 0x8ea0cc, 0.55)
-  g.strokeRoundedRect(x, y, w, h, 18)
+  g.strokeRoundedRect(x, y, w, h, 24)
 }
 
 export interface ButtonOpts {
@@ -92,10 +92,10 @@ export function button(
   const g = scene.add.graphics()
   const fill = opts.disabled ? 0x3c445c : (opts.fill ?? 0xf0c14a)
   g.fillStyle(fill, 1)
-  g.fillRoundedRect(-w / 2, -h / 2, w, h, 14)
+  g.fillRoundedRect(-w / 2, -h / 2, w, h, 22)
   if (!opts.disabled) {
     g.lineStyle(2, 0xfff4cc, 0.35)
-    g.strokeRoundedRect(-w / 2, -h / 2, w, h, 14)
+    g.strokeRoundedRect(-w / 2, -h / 2, w, h, 22)
   }
   const icon = opts.icon ? iconSprite(scene, -w / 2 + 22, 0, opts.icon, Math.min(28, h - 10)) : undefined
   const color = opts.disabled ? '#aeb6c9' : (opts.color ?? '#2a2112')

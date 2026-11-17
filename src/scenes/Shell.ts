@@ -189,7 +189,7 @@ export class HUDScene extends Phaser.Scene {
       const x = 230 + i * 190
       const chip = this.add.graphics()
       chip.fillStyle(0x2a334c, 1)
-      chip.fillRoundedRect(x, 16, 176, 32, 10)
+      chip.fillRoundedRect(x, 16, 176, 32, 16)
       const icon = iconSprite(this, x + 20, 32, bit[0], 22)
       const value = text(this, x + 164, 32, bit[2], 16, bit[3], [1, 0.5])
       const tip = hoverTip(this, x + 88, 32, 176, 36, bit[4])
@@ -236,7 +236,7 @@ export class HUDScene extends Phaser.Scene {
     const bg = this.add.graphics().setDepth(119)
     const bounds = this.toast.getBounds()
     bg.fillStyle(0x241848, 0.94)
-    bg.fillRoundedRect(bounds.x - 16, bounds.y - 8, bounds.width + 32, bounds.height + 16, 12)
+    bg.fillRoundedRect(bounds.x - 16, bounds.y - 8, bounds.width + 32, bounds.height + 16, 20)
     this.tweens.add({
       targets: [this.toast, bg],
       alpha: 0,

@@ -91,7 +91,7 @@ export class CityScene extends Phaser.Scene {
   private arenaSign(): void {
     const g = this.add.graphics()
     g.fillStyle(0x3e2a22, 0.92)
-    g.fillRoundedRect(36, 108, 128, 148, 16)
+    g.fillRoundedRect(36, 108, 128, 148, 24)
     g.lineStyle(3, 0xf0c14a, 0.85)
     g.strokeRoundedRect(36, 108, 128, 148, 16)
     const hit = this.add.rectangle(100, 182, 128, 148, 0xffffff, 0.001)
