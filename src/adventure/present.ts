@@ -28,6 +28,10 @@ export interface FrameShot {
   allySpecies: string
   foeSpecies: string
   hits: FightHit[]
+  allyUlt: number
+  foeUlt: number
+  allyUltOpen: boolean
+  foeUltOpen: boolean
 }
 
 /** The battle frame at `elapsed` ms. Missing traces never throw. */
@@ -53,6 +57,10 @@ export function shotAt(traces: FightTrace[], elapsed: number, dur: number): Fram
     foeName: trace.foeName,
     allySpecies: trace.allySpecies,
     foeSpecies: trace.foeSpecies,
-    hits: shot.hits ?? trace.frames[at]?.hits ?? []
+    hits: shot.hits ?? trace.frames[at]?.hits ?? [],
+    allyUlt: shot.allyUlt ?? 0,
+    foeUlt: shot.foeUlt ?? 0,
+    allyUltOpen: Boolean(shot.allyUltOpen),
+    foeUltOpen: Boolean(shot.foeUltOpen)
   }
 }

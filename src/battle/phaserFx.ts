@@ -28,6 +28,7 @@ export interface FxBurst {
   from: { x: number; y: number }
   to: { x: number; y: number }
   kind?: 'hit' | 'heal' | 'status'
+  ult?: boolean
 }
 
 interface Slot {
@@ -445,25 +446,30 @@ class FxScene extends Phaser.Scene {
     const dist = Math.hypot(dx, dy) || 1
     const angle = Math.atan2(dy, dx)
     const image = this.proj
+    const boost = () => { if (burst.ult) image.setScale(image.scaleX * 1.45, image.scaleY * 1.45) }
     image.setTexture(key, frame).clearTint().setAlpha(1).setRotation(0).setFlipX(false)
     if (strip.kind === 'beam-tile' || (strip.kind === 'buildup' && burst.type === 'dragon')) {
       image.setOrigin(0, 0.5).setPosition(from.x, from.y).setRotation(angle)
       image.setScale(dist / strip.frameW, strip.kind === 'beam-tile' ? 1.35 : 1.6)
+      boost()
       return
     }
     if (strip.kind === 'buildup' && burst.type === 'earth') {
       const ground = Math.max(from.y, to.y) + 18
       image.setOrigin(0, 98 / strip.frameH).setPosition(from.x, ground).setRotation(angle)
       image.setScale(dist / strip.frameW, 1.25)
+      boost()
       return
     }
     if (strip.kind === 'buildup' || strip.kind === 'melee-overlay') {
       image.setOrigin(0.5, 0.72).setPosition(to.x, to.y).setScale(1.7)
+      boost()
       return
     }
     const x = from.x + dx * t
     const y = from.y + dy * t - arcHeight(t, 28)
     image.setOrigin(0.5, 0.5).setPosition(x, y).setScale(1.7).setFlipX(dx < 0)
+    boost()
   }
 
   private placeHit(age: number, hitMs: number): void {
@@ -479,7 +485,7 @@ class FxScene extends Phaser.Scene {
     const frame = stripFrame(strip.frames, strip.fps, age, false, speed)
     const look = hitBurstLook(burst.band, burst.crit)
     this.hitFx.setTexture(key, frame).clearTint().setOrigin(0.5, 0.5)
-    this.hitFx.setPosition(burst.to.x, burst.to.y).setScale(1.7 * look.scale).setAlpha(look.alpha).setRotation(0).setFlipX(false)
+    this.hitFx.setPosition(burst.to.x, burst.to.y).setScale(1.7 * look.scale * (burst.ult ? 1.45 : 1)).setAlpha(look.alpha).setRotation(0).setFlipX(false)
   }
 
 

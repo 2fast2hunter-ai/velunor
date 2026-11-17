@@ -4,6 +4,7 @@ import type { SkillDef, SkillEffect, SpeciesPassive, StatusId, TypeId } from '..
 import { ACTION_LIMIT } from './const'
 import { awakenCount } from './stats'
 import { weatherFactor, type WeatherId } from './weather'
+import { ULT_BOSS_FETTER, ULT_DAMAGE, ULT_HEAL, ULT_IMPULSE, ULT_IMPULSE_ATTACKS, ULT_PIERCE, ULT_WALL_CUT, gainUlt, ultName, ultPattern, ultReady, ultUnlocked, wallActions, type UltPattern } from './ult'
 
 export interface FightSide {
   speciesId: string
@@ -18,6 +19,8 @@ export interface FightSide {
   passive: SpeciesPassive | null
   /** Presentation only. Damage already includes the awaken bonus. */
   level?: number
+  /** Wächter, Rat, Weltenbiest. Fessel lasts half as long. */
+  boss?: boolean
 }
 
 export interface FightHit {
@@ -32,6 +35,8 @@ export interface FightHit {
   awaken?: boolean
   /** Weather factor on this hit. 1 means no shift. Absent on heals. */
   weather?: number
+  /** Set when this swing was the ultimate. */
+  ult?: UltPattern
 }
 
 export interface FightFrame {
@@ -39,6 +44,10 @@ export interface FightFrame {
   foeHp: number
   text: string
   hits?: FightHit[]
+  allyUlt?: number
+  foeUlt?: number
+  allyUltOpen?: boolean
+  foeUltOpen?: boolean
 }
 
 export interface FightTrace {
@@ -82,6 +91,12 @@ interface Actor {
   passivePct: number
   passiveShield: number
   passiveDuration: number
+  ultCharge: number
+  impulseLeft: number
+  /** Actions of Schildwall still left. 0 means none. */
+  wallLeft: number
+  wallFresh: boolean
+  skip: boolean
 }
 
 const ALLY_TARGET = new Set(['self', 'ally_all', 'ally_lowest_hp_pct', 'self_and_ally_lowest_hp_pct'])
@@ -101,7 +116,8 @@ function mod(unit: Actor, up: StatusId, down: StatusId): number {
 }
 
 function atkOf(unit: Actor): number {
-  return unit.side.atk * (1 + mod(unit, 'atk_up', 'atk_down'))
+  const atk = unit.side.atk * (1 + mod(unit, 'atk_up', 'atk_down'))
+  return unit.impulseLeft > 0 ? atk * (1 + ULT_IMPULSE) : atk
 }
 
 function defOf(unit: Actor, pierce = 0): number {
@@ -149,7 +165,12 @@ function makeActor(side: FightSide): Actor {
     passiveLeft,
     passivePct,
     passiveShield,
-    passiveDuration
+    passiveDuration,
+    ultCharge: 0,
+    impulseLeft: 0,
+    wallLeft: 0,
+    wallFresh: false,
+    skip: false
   }
 }
 
@@ -236,13 +257,22 @@ export function fight1v1(allySide: FightSide, foeSide: FightSide, rng: () => num
   const pending: FightHit[] = []
   const push = (text: string) => {
     if (!trace) return
-    frames.push({ allyHp: Math.max(0, ally.hp), foeHp: Math.max(0, foe.hp), text, hits: pending.splice(0) })
+    frames.push({
+      allyHp: Math.max(0, ally.hp),
+      foeHp: Math.max(0, foe.hp),
+      text,
+      hits: pending.splice(0),
+      allyUlt: ally.ultCharge,
+      foeUlt: foe.ultCharge,
+      allyUltOpen: ultUnlocked(ally.side.level ?? 0),
+      foeUltOpen: ultUnlocked(foe.side.level ?? 0)
+    })
   }
   const bandOf = (mult: number): FightHit['band'] => (mult > 1 ? 'strong' : mult < 1 ? 'weak' : 'neutral')
   push(`${ally.side.name} gegen ${foe.side.name}`)
 
   const hurt = (target: Actor, amount: number, ignoreShield: boolean): number => {
-    let remaining = amount
+    let remaining = target.wallLeft > 0 ? Math.floor(amount * (1 - ULT_WALL_CUT)) : amount
     if (!ignoreShield && target.shield > 0 && remaining > 0) {
       const absorbed = Math.min(target.shield, remaining)
       target.shield -= absorbed
@@ -255,6 +285,8 @@ export function fight1v1(allySide: FightSide, foeSide: FightSide, rng: () => num
     const past = remaining
     if (remaining > 0) target.hp -= remaining
     if (target.hp <= 0) {
+      target.wallLeft = 0
+      target.wallFresh = false
       if (target.rebirths > 0) {
         target.rebirths -= 1
         target.hp = Math.max(1, Math.floor(target.side.maxHp * target.rebirthPct))
@@ -266,12 +298,15 @@ export function fight1v1(allySide: FightSide, foeSide: FightSide, rng: () => num
     return past
   }
 
-  const strike = (attacker: Actor, target: Actor, skillMult: number, pierce: number): number => {
+  const strike = (attacker: Actor, target: Actor, skillMult: number, pierce: number, ult?: UltPattern): number => {
     const tMult = typeMult(attacker.side.type, target.side.type)
-    const wMult = weatherFactor(weather, attacker.side.type)
+    const wMult = ult === 'heilleucht' ? 1 : weatherFactor(weather, attacker.side.type)
+    const boosted = attacker.impulseLeft > 0 && !ult
     const crit = rng() < combat.critChance
     const variance = combat.varianceMin + (combat.varianceMax - combat.varianceMin) * rng()
     const dmg = rawDamage(atkOf(attacker), defOf(target, pierce), skillMult, tMult * wMult, crit, variance)
+    if (boosted) attacker.impulseLeft -= 1
+    if (crit) target.ultCharge = gainUlt(target.side.level ?? 0, target.ultCharge, 1)
     const past = hurt(target, dmg, false)
     if (trace && past > 0) {
       pending.push({
@@ -283,7 +318,8 @@ export function fight1v1(allySide: FightSide, foeSide: FightSide, rng: () => num
         ko: target.hp <= 0,
         kind: 'hit',
         awaken: awakenCount(attacker.side.level ?? 0) > 0,
-        weather: wMult
+        weather: wMult,
+        ult
       })
     }
     const thorns = target.statuses.find((status) => status.id === 'thorns')
@@ -329,8 +365,38 @@ export function fight1v1(allySide: FightSide, foeSide: FightSide, rng: () => num
     push(`${unit.side.name} setzt ${skill.name ?? 'eine Fähigkeit'} ein.`)
   }
 
+  const castUlt = (unit: Actor, other: Actor) => {
+    const pattern = ultPattern(unit.side.speciesId)
+    unit.ultCharge = 0
+    if (pattern === 'durchschlag') {
+      if (other.hp > 0) strike(unit, other, ULT_DAMAGE, ULT_PIERCE, pattern)
+    } else if (pattern === 'schildwall') {
+      unit.wallLeft = wallActions(1)
+      unit.wallFresh = true
+      if (trace) pending.push({ from: unit === ally ? 'ally' : 'foe', amount: 0, crit: false, type: unit.side.type, band: 'neutral', ko: false, kind: 'status', ult: pattern })
+    } else if (pattern === 'impuls') {
+      unit.impulseLeft = ULT_IMPULSE_ATTACKS
+      if (trace) pending.push({ from: unit === ally ? 'ally' : 'foe', amount: 0, crit: false, type: unit.side.type, band: 'neutral', ko: false, kind: 'status', ult: pattern })
+    } else if (pattern === 'fessel') {
+      const lands = !other.side.boss || rng() < ULT_BOSS_FETTER
+      if (lands && other.hp > 0) other.skip = true
+      if (trace) pending.push({ from: unit === ally ? 'ally' : 'foe', amount: 0, crit: false, type: unit.side.type, band: 'neutral', ko: false, kind: 'status', ult: pattern })
+    } else {
+      const gain = Math.floor(unit.side.maxHp * ULT_HEAL)
+      unit.hp = Math.min(unit.side.maxHp, unit.hp + gain)
+      if (trace && gain > 0) pending.push({ from: unit === ally ? 'ally' : 'foe', amount: gain, crit: false, type: unit.side.type, band: 'neutral', ko: false, kind: 'heal', ult: pattern })
+    }
+    push(`${unit.side.name} setzt ${ultName(pattern)} ein.`)
+  }
+
   const act = (unit: Actor, other: Actor) => {
     if (unit.hp <= 0 || other.hp <= 0) return
+    if (unit.skip) {
+      unit.skip = false
+      tick(unit)
+      push(`${unit.side.name} ist gefesselt.`)
+      return
+    }
     const burn = unit.statuses.find((status) => status.id === 'burn')
     if (burn) hurt(unit, Math.max(0, Math.floor(burn.burnDmg * weatherFactor(weather, burn.sourceType ?? unit.side.type))), true)
     if (unit.hp <= 0) {
@@ -349,13 +415,24 @@ export function fight1v1(allySide: FightSide, foeSide: FightSide, rng: () => num
       push(`${unit.side.name} ist benommen.`)
       return
     }
-    if (unit.cd <= 0 && skillUsable(unit, other)) cast(unit, other)
+    const foeHp = other.hp
+    if (ultReady(unit.side.level ?? 0, unit.ultCharge)) castUlt(unit, other)
     else {
-      if (other.hp > 0 && unit.hp > 0) strike(unit, other, 1, 0)
-      if (unit.cd > 0) unit.cd -= 1
-      push(`${unit.side.name} greift an.`)
+      unit.ultCharge = gainUlt(unit.side.level ?? 0, unit.ultCharge, 1)
+      if (unit.cd <= 0 && skillUsable(unit, other)) cast(unit, other)
+      else {
+        if (other.hp > 0 && unit.hp > 0) strike(unit, other, 1, 0)
+        if (unit.cd > 0) unit.cd -= 1
+        push(`${unit.side.name} greift an.`)
+      }
     }
+    if (foeHp > 0 && other.hp <= 0) unit.ultCharge = gainUlt(unit.side.level ?? 0, unit.ultCharge, 2)
     if (unit.hp > 0) tick(unit)
+  }
+
+  const ageWall = (unit: Actor) => {
+    if (unit.wallFresh) unit.wallFresh = false
+    else if (unit.wallLeft > 0) unit.wallLeft -= 1
   }
 
   const allyFirst = ally.side.spd >= foe.side.spd
@@ -365,6 +442,8 @@ export function fight1v1(allySide: FightSide, foeSide: FightSide, rng: () => num
     const turn = actions % 2 === 0 ? (allyFirst ? ally : foe) : (allyFirst ? foe : ally)
     const other = turn === ally ? foe : ally
     act(turn, other)
+    ageWall(ally)
+    ageWall(foe)
     actions += 1
   }
   if (ally.hp > 0 && foe.hp > 0) timeout = true

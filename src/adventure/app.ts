@@ -22,9 +22,10 @@ import { t, type Lang } from './i18n'
 import { shotAt, shouldRecover } from './present'
 import { species, typeColor } from '../data'
 import { teamWeatherMarks, weatherArrow, weatherAt } from './weather'
+import { ultName } from './ult'
 import { sfx } from '../ui'
 import { actorTransform, hitShake, koPose, lungeOffset, numberStyle, parallaxShift } from '../battle/stage'
-import { cameraShake, hitGrade, hitstopMs, numberHoldMs } from '../battle/hitReadout'
+import { bossUltHitstop, bossUltShake, cameraShake, hitGrade, hitstopMs, numberHoldMs } from '../battle/hitReadout'
 import { beginBattleMood, clearBattleFx, holdBattleFx, mountBattleFx, onBattleFxReady, playBattleFx, preloadBattleStrips, setFxRunning, showBattleConfetti, showBattleDissolve, showHitNumber } from '../battle/phaserFx'
 import { effectTiming, battleStripTypes } from '../battle/strips'
 import { BANNER_MS, LUNGE_OUT_MS, moveLabel, RECOIL_MS, typeFx } from '../battle/typeFx'
@@ -177,6 +178,10 @@ export function bootAdventure(): void {
 
   const params = new URLSearchParams(window.location.search)
   const fxDemo = params.get('fx')
+  if (debug && fxDemo === 'k4') {
+    showK4Demo(params.get('part'))
+    return
+  }
   if (debug && fxDemo === 'k3') {
     showK3Demo(params.get('part'))
     return
@@ -261,6 +266,44 @@ function showFxDemo(kind: 'fire' | 'hit' | 'ko', requested: string | null = null
 }
 
 const REGION_TINT = [0x7dcea0, 0x7dcea0, 0x9ad7ff, 0xff8a3d, 0x7e57c2, 0xf0c14a]
+
+function showK4Demo(part: string | null): void {
+  const kind = part === 'ult' || part === 'gesperrt' ? part : 'leiste'
+  const locked = kind === 'gesperrt'
+  paint(`<div id="stage" class="fx-demo"><div class="anchor anchor-mid"><div class="battle" id="battle" data-fx="live" style="height:980px">
+    <div class="battle-world" id="battle-world">
+      <div id="battle-fx"></div>
+      <div class="combatant foe" id="foe-actor" style="left:72%;top:58%"><b>Ziel</b><div class="hp"><span style="width:80%"></span></div><div class="ult" id="foe-ult" data-n="3"></div><img class="sprite" src="${monsterArt('m66', true)}" alt=""/></div>
+      <div class="combatant ally" id="ally-actor" style="left:28%;top:72%"><b>Funkfuchs</b><div class="hp"><span style="width:70%"></span></div><div class="ult ${locked ? 'is-locked' : 'is-ready'}" id="ally-ult" data-n="${locked ? 0 : 5}"></div><img class="sprite" src="${monsterArt('m01', true)}" alt=""/></div>
+      <div class="move-banner" id="move-banner" hidden></div>
+    </div>
+  </div></div></div>`)
+  const mark = () => document.getElementById('battle')?.setAttribute('data-fx', 'hold')
+  if (kind !== 'ult') {
+    mark()
+    return
+  }
+  const host = document.getElementById('battle-fx')
+  if (host) mountBattleFx(host)
+  preloadBattleStrips(['fire'], () => onBattleFxReady(() => {
+    const fx = document.getElementById('battle-fx')
+    const ally = document.getElementById('ally-actor')
+    const foe = document.getElementById('foe-actor')
+    if (!fx || !ally || !foe) return
+    const banner = document.getElementById('move-banner')
+    if (banner) {
+      ally.appendChild(banner)
+      banner.hidden = false
+      banner.textContent = 'Durchschlag'
+    }
+    const from = stagePoint(ally, fx)
+    const to = stagePoint(foe, fx)
+    const head = numberPoint(foe, fx)
+    playBattleFx({ type: 'fire', crit: true, band: 'strong', awaken: true, shimmer: false, reduced: false, tempo: 1, from, to, ult: true })
+    showHitNumber(head.x, head.y, 86, 'crit', numberHoldMs(1))
+    window.setTimeout(mark, 160)
+  }))
+}
 
 function arrowTag(type: TypeId, weather: 'regen'): string {
   const arrow = weatherArrow(weather, type)
@@ -816,17 +859,17 @@ function play(outcome: EncounterOutcome, speed: Speed, done: () => void): void {
         const dropped = (prevAlly != null && shot.allyHp < prevAlly) || (prevFoe != null && shot.foeHp < prevFoe)
         if (dropped) {
           hitAt = elapsed
-          const hit = shot.hits.find((row) => row.kind === 'hit') ?? shot.hits[0]
+          const hit = shot.hits.find((row) => row.ult) ?? shot.hits.find((row) => row.kind === 'hit') ?? shot.hits[0]
           if (hit && fxHost && allyActor && foeActor) {
             const allyPt = stagePoint(allyActor, fxHost)
             const foePt = stagePoint(foeActor, fxHost)
             const from = hit.from === 'ally' ? allyPt : foePt
             const to = hit.from === 'ally' ? foePt : allyPt
-            playBattleFx({ type: hit.type, crit: hit.crit, band: hit.band, awaken: Boolean(hit.awaken), shimmer: Boolean(outcome.shiny), reduced, tempo: speed, from, to, kind: hit.kind })
+            playBattleFx({ type: hit.type, crit: hit.crit, band: hit.band, awaken: Boolean(hit.awaken), shimmer: Boolean(outcome.shiny), reduced, tempo: speed, from, to, kind: hit.kind, ult: Boolean(hit.ult) })
             const attackerId = hit.from === 'ally' ? shot.allySpecies : shot.foeSpecies
             const struck = hit.from === 'ally' ? foeActor : allyActor
             const travel = hit.kind === 'hit' ? effectTiming(hit.type, speed).travelMs : 0
-            if (hit.kind === 'hit') showMove(attackTitle(attackerId, hit.type), hit.from === 'ally' ? allyActor : foeActor, k)
+              if (hit.kind === 'hit' || hit.ult) showMove(hit.ult ? ultName(hit.ult) : attackTitle(attackerId, hit.type), hit.from === 'ally' ? allyActor : foeActor, k)
             window.clearTimeout(impactTimer)
             impactTimer = window.setTimeout(() => {
               if (gen !== playGen || !hit) return
@@ -843,7 +886,7 @@ function play(outcome: EncounterOutcome, speed: Speed, done: () => void): void {
                 if (picture instanceof HTMLImageElement) picture.style.animationDuration = `${RECOIL_MS * k}ms`
               }
               if (save?.settings.shake && hit.kind === 'hit') {
-                const spec = cameraShake(hitGrade(hit.band, hit.crit), 'hit', { speed, reduced })
+                const spec = hit.ult ? bossUltShake({ speed, reduced }) : cameraShake(hitGrade(hit.band, hit.crit), 'hit', { speed, reduced })
                 shakeStart = performance.now() - started
                 shakeFor = spec.ms
                 shakePx = spec.px
@@ -855,8 +898,8 @@ function play(outcome: EncounterOutcome, speed: Speed, done: () => void): void {
         prevAlly = shot.allyHp
         prevFoe = shot.foeHp
       }
-      const hit = shot?.hits.find((row) => row.kind === 'hit')
-      const hitstop = hit ? hitstopMs(hitGrade(hit.band, hit.crit), 'hit', { speed, reduced }) : 0
+      const hit = shot?.hits.find((row) => row.ult) ?? shot?.hits.find((row) => row.kind === 'hit')
+      const hitstop = hit ? (hit.ult ? bossUltHitstop({ speed, reduced }) : hitstopMs(hitGrade(hit.band, hit.crit), 'hit', { speed, reduced })) : 0
       const age = hitAt < 0 ? -1 : elapsed - hitAt
       const travel = hit ? effectTiming(hit.type, speed).travelMs : 0
       const sinceImpact = age < 0 ? -1 : age - travel
@@ -886,6 +929,8 @@ function play(outcome: EncounterOutcome, speed: Speed, done: () => void): void {
       }
       paintWeatherArrow('ally-arrow', shot ? species(shot.allySpecies).type : null, weather)
       paintWeatherArrow('foe-arrow', shot ? species(shot.foeSpecies).type : null, weather)
+      paintUlt('ally-ult', shot?.allyUlt ?? 0, shot?.allyUltOpen ?? false)
+      paintUlt('foe-ult', shot?.foeUlt ?? 0, shot?.foeUltOpen ?? false)
       if (foeKo >= 1 && shot && dissolved !== `foe-${shot.foeSpecies}` && fxHost && foeActor) {
         dissolved = `foe-${shot.foeSpecies}`
         const at = stagePoint(foeActor, fxHost)
@@ -948,6 +993,15 @@ function setActorName(node: HTMLElement, name: string): void {
   const arrow = node.querySelector('img')
   node.textContent = name
   if (arrow) node.appendChild(arrow)
+}
+
+function paintUlt(id: string, n: number, open: boolean): void {
+  const node = document.getElementById(id)
+  if (!node) return
+  node.hidden = false
+  node.dataset.n = String(Math.max(0, Math.min(5, Math.floor(n))))
+  node.classList.toggle('is-ready', open && n >= 5)
+  node.classList.toggle('is-locked', !open)
 }
 
 function paintWeatherArrow(id: string, type: TypeId | null, weather: ReturnType<typeof weatherAt>): void {
@@ -1028,10 +1082,12 @@ function numberPoint(actor: HTMLElement, host: HTMLElement): { x: number; y: num
   if (!(img instanceof HTMLElement)) return { x: pt.x, y: pt.y - 220 }
   const box = img.getBoundingClientRect()
   const frame = host.getBoundingClientRect()
+  const width = host.clientWidth || frame.width || 1
   const height = host.clientHeight || frame.height || 1
   const top = ((box.top - frame.top) / (frame.height || 1)) * height
-  // Crit frames hang about 30px under the baseline and the label sits ~200px above it.
-  return { x: pt.x, y: Math.max(220, top - 48) }
+  // The label sits about 200px above this point. Keep it above the name and off the HP bar.
+  const side = pt.x > width / 2 ? 1 : -1
+  return { x: pt.x + side * 78, y: Math.max(170, top - 150) }
 }
 
 function stagePoint(actor: HTMLElement, host: HTMLElement): { x: number; y: number } {
