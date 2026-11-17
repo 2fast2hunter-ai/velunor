@@ -42,6 +42,7 @@ import { needsConfirm, shopOffer } from './shopOffer'
 import { chooseLook, paintLooks } from './avatar'
 import { nameProblem, pickLook, pickName } from './home'
 import { inspectSave, nextDoor, resumeSave, type Door } from './continue'
+import { FIRST_ENTRANCE_MS, HOME_ASSETS, loadFraction, mountHomeParticles } from './homeBoot'
 import { beginAdventure, exportCode, importCode, writeSave } from './save'
 import { equipFrame, equipTitle } from './achievements'
 import { buyHortSlot, moveFromHort, moveToHort } from './hort'
@@ -86,6 +87,7 @@ import {
   art,
   brokenHtml,
   continueHtml,
+  loadingHtml,
   gameHtml,
   monsterArt,
   onboardingHtml,
@@ -235,15 +237,12 @@ export function bootAdventure(): void {
     showShopDemo(fxDemo)
     return
   }
-  const skipLegacy = localStorage.getItem(RESET_FLAG) === '1' && !localStorage.getItem(SAVE_KEY_V2)
-  const gate = skipLegacy ? { kind: 'empty' as const, save: null, backup: false } : inspectSave(localStorage, Date.now())
-  if (gate.kind === 'ready' && gate.save) {
-    keptSave = gate.save
-    showDoor(nextDoor('create', 'open-ready'))
-  } else if (gate.kind === 'broken') {
-    doorBackup = gate.backup
-    showDoor(nextDoor('create', 'open-broken'))
-  } else showOnboarding()
+  if (debug && fxDemo === 'boot') {
+    paint(loadingHtml(0.45, t(draftLang, 'boot.hint1'), params.get('part') === 'fail', draftLang))
+    return
+  }
+  paint(loadingHtml(0, t(draftLang, 'boot.hint1'), false, draftLang))
+  void openFrontDoor()
 }
 
 function demoType(requested: string | null): TypeId {
@@ -601,6 +600,97 @@ function startChestAnim(speed: Speed, reduced: boolean): void {
   chestFrame = requestAnimationFrame(step)
 }
 
+const BOOT_HINTS = ['boot.hint1', 'boot.hint2', 'boot.hint3'] as const
+let bootHint = 0
+let bootTimer = 0
+
+function openFrontDoor(): Promise<void> {
+  window.clearInterval(bootTimer)
+  bootTimer = window.setInterval(() => {
+    bootHint = (bootHint + 1) % BOOT_HINTS.length
+    const node = document.getElementById('boot-hint')
+    if (node) node.textContent = t(draftLang, BOOT_HINTS[bootHint])
+  }, 3000)
+  let done = 0
+  let failed = 0
+  const paintBar = () => {
+    const pct = Math.round(loadFraction(done, HOME_ASSETS.length) * 100)
+    const bar = document.getElementById('boot-bar')
+    const track = document.querySelector('.boot-track')
+    if (bar instanceof HTMLElement) bar.style.width = `${pct}%`
+    if (track instanceof HTMLElement) track.setAttribute('aria-valuenow', String(pct))
+  }
+  return Promise.all(HOME_ASSETS.map((file) => loadHomeImage(art(file)).then(() => {
+    done += 1
+    paintBar()
+  }, () => {
+    done += 1
+    failed += 1
+    paintBar()
+  }))).then(() => {
+    window.clearInterval(bootTimer)
+    if (failed >= 3) {
+      paint(loadingHtml(loadFraction(Math.max(0, done - failed), HOME_ASSETS.length), t(draftLang, 'boot.fail'), true, draftLang))
+      return
+    }
+    const skipLegacy = localStorage.getItem(RESET_FLAG) === '1' && !localStorage.getItem(SAVE_KEY_V2)
+    const gate = skipLegacy ? { kind: 'empty' as const, save: null, backup: false } : inspectSave(localStorage, Date.now())
+    if (gate.kind === 'ready' && gate.save) {
+      keptSave = gate.save
+      showDoor(nextDoor('create', 'open-ready'))
+    } else if (gate.kind === 'broken') {
+      doorBackup = gate.backup
+      showDoor(nextDoor('create', 'open-broken'))
+    } else showOnboarding()
+  })
+}
+
+function loadHomeImage(src: string): Promise<void> {
+  return new Promise((resolve, reject) => {
+    const img = new Image()
+    img.onload = () => resolve()
+    img.onerror = () => reject(new Error(src))
+    img.src = src
+  })
+}
+
+function effectsReduced(): boolean {
+  return window.matchMedia('(prefers-reduced-motion: reduce)').matches || Boolean(save?.settings.reduceMotion)
+}
+
+function runFirstEntrance(next: SaveV2): Promise<void> {
+  return new Promise((resolve) => {
+    const stage = document.getElementById('stage')
+    const ally = document.getElementById('ally-actor')
+    if (!stage) {
+      resolve()
+      return
+    }
+    if (ally) ally.style.opacity = '0'
+    const reduced = effectsReduced()
+    const layer = document.createElement('button')
+    layer.type = 'button'
+    layer.id = 'first-in'
+    layer.className = `first-in${reduced ? ' is-still' : ''}`
+    const id = next.team[0] && next.mons[next.team[0]] ? next.mons[next.team[0]].species : 'm01'
+    let label = id
+    try { label = species(id).name } catch { /* the id is enough */ }
+    layer.innerHTML = `<img src="${art(`home/starter_${id}.png`)}" alt=""><b>${label}</b>`
+    layer.setAttribute('aria-label', t(next.settings.lang, 'boot.enter', { name: label }))
+    stage.appendChild(layer)
+    let settled = false
+    const finish = () => {
+      if (settled) return
+      settled = true
+      layer.remove()
+      if (ally) ally.style.opacity = ''
+      resolve()
+    }
+    layer.addEventListener('click', finish)
+    window.setTimeout(finish, reduced ? 0 : FIRST_ENTRANCE_MS)
+  })
+}
+
 function showDoor(next: Door): void {
   door = next
   if (next === 'create') {
@@ -773,13 +863,14 @@ function playStarterPreview(node: HTMLElement, speciesId: string): void {
   }))
 }
 
-async function start(next: SaveV2): Promise<void> {
+async function start(next: SaveV2, intro = false): Promise<void> {
   save = next
   localStorage.removeItem(RESET_FLAG)
   try { writeSave(localStorage, save) } catch { /* ignore */ }
   screen = 'adventure'
   noteProgress()
   render()
+  if (intro) await runFirstEntrance(next)
   const raw = resumeGap(Date.now(), save.lastSeenAt)
   if ((save.settings.battery && shouldCatchUp(raw)) || raw >= WELCOME_AFTER_MS) await runOffline(raw)
   else {
@@ -824,6 +915,11 @@ function paint(html: string): void {
   host.innerHTML = html
   fit()
   paintLooks(host, art)
+  const dust = host.querySelector('.home-particles')
+  if (dust instanceof HTMLElement) {
+    const reduced = dust.dataset.reduced === '1' || window.matchMedia('(prefers-reduced-motion: reduce)').matches
+    mountHomeParticles(dust, reduced, art)
+  }
 }
 
 function syncTurn(): void {
@@ -1774,6 +1870,10 @@ function onClick(event: Event): void {
     showOnboarding()
     return
   }
+  if (act === 'reload') {
+    window.location.reload()
+    return
+  }
   if (act === 'continue') {
     if (keptSave && nextDoor(door, 'resume') === 'play') void start(resumeSave(keptSave))
     return
@@ -1815,7 +1915,7 @@ function onClick(event: Event): void {
     const next = beginAdventure(draftName.trim(), draftLook, draftPick, Date.now())
     next.settings.lang = draftLang
     if (draftLang === 'en' && next.log[0]) next.log[0].text = t('en', 'say.start', { name: next.name })
-    void start(next)
+    void start(next, true)
     return
   }
   if (!save) return
