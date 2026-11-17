@@ -1276,21 +1276,30 @@ export function brokenHtml(lang: Lang = 'de', backup = false): string {
   </div>`
 }
 
-function homeTop(lang: Lang, open: boolean, hero = false, reduced = false): string {
+function homeTop(lang: Lang, open: boolean, hero = false, reduced = false, compact = false): string {
+  const chip = `<button type="button" class="lang-chip" data-act="lang-sheet" aria-expanded="${open ? 'true' : 'false'}" aria-label="${esc(t(lang, 'start.lang'))}">${lang === 'en' ? 'EN' : 'DE'} ▾</button>`
   if (!hero) {
     return `<div class="home-top">
       <p class="home-kicker">${t(lang, 'start.kicker')}</p>
-      <button type="button" class="lang-chip" data-act="lang-sheet" aria-expanded="${open ? 'true' : 'false'}" aria-label="${esc(t(lang, 'start.lang'))}">${lang === 'en' ? 'EN' : 'DE'} ▾</button>
+      ${chip}
     </div>`
   }
-  return `<header class="home-hero">
-    <img class="home-lqip" src="${art('home/keyart_1080_lqip.jpg')}" alt=""/>
+  const picture = `<img class="home-lqip" src="${art('home/keyart_1080_lqip.jpg')}" alt=""/>
     <img class="home-key" src="${art('home/keyart_1080.webp')}" alt="${esc(t(lang, 'start.lead'))}"/>
     <img class="home-logo" src="${art('home/logo_velunor_light.png')}" alt="Velunor"/>
-    <p class="home-hero-lead">${esc(t(lang, 'start.lead'))}</p>
-    <div class="home-particles" data-reduced="${reduced ? '1' : '0'}"></div>
-    <button type="button" class="lang-chip" data-act="lang-sheet" aria-expanded="${open ? 'true' : 'false'}" aria-label="${esc(t(lang, 'start.lang'))}">${lang === 'en' ? 'EN' : 'DE'} ▾</button>
-  </header>`
+    <div class="home-particles" data-reduced="${reduced ? '1' : '0'}"></div>`
+  if (!compact) {
+    return `<header class="home-hero">
+      ${picture}
+      <p class="home-hero-lead">${esc(t(lang, 'start.lead'))}</p>
+      ${chip}
+    </header>`
+  }
+  return `<div class="home-head">
+    <header class="home-hero">${picture}</header>
+    ${chip}
+  </div>
+  <p class="home-hero-lead">${esc(t(lang, 'start.lead'))}</p>`
 }
 
 export function loadingHtml(fraction: number, hint: string, failed: boolean, lang: Lang = 'de'): string {
@@ -1334,7 +1343,7 @@ export function onboardingHtml(name: string, look: AvatarLook, picked: string, l
   const thumb = !nameStep && picked ? `<img src="${art(`home/starter_${picked}.png`)}" alt=""/>` : ''
   return `<div id="stage" class="home${nameStep ? ' is-name' : ' is-starter'}" lang="${lang}">
     <div class="home-scroll">
-      ${homeTop(lang, langOpen, nameStep)}
+      ${homeTop(lang, langOpen, nameStep, false, nameStep)}
       ${nameStep ? nameStepHtml(name, look, lang, problem ? t(lang, `start.err.${problem}`) : '') : starterStepHtml(name, look, picked, lang)}
     </div>
     <div class="home-bar">

@@ -60,6 +60,20 @@ describe('portrait shell', () => {
     expect(t('de', 'nav.more')).toBe('Mehr')
   })
 
+  it('puts the chosen look on the chapter header and hides the boss card while fighting', () => {
+    const look = { skin: 2, hair: 3, color: 1 }
+    const save = beginAdventure('Mira', look, 'm01', 1_000)
+    expect(save.look).toEqual(look)
+    const road = gameHtml(save, 'adventure', 1_000, pc, dex, null, false, false, null)
+    const header = road.slice(road.indexOf('chapter-line'), road.indexOf('chapter-text'))
+    expect(header).toContain(`data-look="${look.skin},${look.hair},${look.color}"`)
+    expect(road).toContain('guard-card')
+    const fight = gameHtml(save, 'adventure', 1_000, pc, dex, null, false, false, null, save.step, undefined, { fighting: true })
+    const fightHead = fight.slice(fight.indexOf('chapter-line'), fight.indexOf('chapter-text'))
+    expect(fightHead).toContain(`data-look="${look.skin},${look.hair},${look.color}"`)
+    expect(fight).not.toContain('guard-card')
+  })
+
   it('stacks the adventure screen and keeps Mehr behind one tab', () => {
     const save = beginAdventure('Ada', { skin: 0, hair: 0, color: 0 }, 'm01', 1_000)
     save.step = 4

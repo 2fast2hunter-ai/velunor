@@ -468,6 +468,7 @@ textarea { width: 100%; box-sizing: border-box; background: #121a30; color: inhe
 .ground-shadow { position: absolute; left: 50%; bottom: -8px; width: 46%; height: 16px; transform: translateX(-50%); background: rgba(0,0,0,0.25); border-radius: 50%; }
 .combatant.ally { left: 28%; z-index: 3; }
 .combatant.foe { left: 72%; z-index: 2; }
+#foe-actor:has(#foe-sprite[hidden]) { opacity: 0; }
 .combatant img.sprite { height: 280px; width: auto; filter: drop-shadow(0 12px 10px rgba(0, 0, 0, 0.35)); }
 .combatant.ally img.sprite { transform: scaleX(-1); }
 .hp {
@@ -698,8 +699,19 @@ img.is-shiny { filter: drop-shadow(0 0 10px #f0c14a); }
   transform: translate(-50%, -50%);
   filter: drop-shadow(0 8px 12px rgba(6, 16, 32, 0.45));
 }
-.home.is-name .home-logo { top: 46%; width: 72%; }
+.home.is-name .home-logo { top: 50%; width: 78%; }
+.home-head { display: flex; align-items: flex-start; gap: 16px; margin: 0 0 8px; }
+.home-head .home-hero { flex: 1 1 auto; min-width: 0; height: 240px; margin: 0; }
+.home-head .lang-chip { position: static; flex: 0 0 auto; }
 .home-hero-lead {
+  position: static;
+  margin: 0 0 8px;
+  text-align: left;
+  font-size: 40px;
+  font-weight: 800;
+  color: #fff8e1;
+}
+.home.is-door .home-hero-lead {
   position: absolute;
   z-index: 2;
   left: 24px;
@@ -707,9 +719,6 @@ img.is-shiny { filter: drop-shadow(0 0 10px #f0c14a); }
   bottom: 18px;
   margin: 0;
   text-align: center;
-  font-size: 40px;
-  font-weight: 800;
-  color: #fff8e1;
   text-shadow: 0 2px 8px #102033;
 }
 .home-hero .lang-chip { position: absolute; z-index: 3; top: 16px; right: 16px; }
