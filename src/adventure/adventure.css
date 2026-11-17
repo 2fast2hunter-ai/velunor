@@ -13,6 +13,7 @@ html, body, #game {
 }
 
 button, input, select { font: inherit; color: inherit; }
+.ui-icon { width: 40px; height: 40px; object-fit: contain; vertical-align: middle; flex: 0 0 auto; }
 
 #fit {
   position: absolute;
@@ -790,6 +791,8 @@ img.is-shiny { filter: drop-shadow(0 0 10px #f0c14a); }
 .codex-grid .mon-card img { width: 96px; height: 96px; }
 .codex-grid .mon-card div, .hort-grid .mon-card div { font-size: calc(24px * var(--font-scale, 1)); line-height: calc(30px * var(--font-scale, 1)); max-width: 100%; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
 
+.region-bar { display: flex; align-items: center; gap: 12px; }
+.achieve { flex-direction: row; align-items: center; }
 .list-row {
   display: flex;
   flex-direction: column;
@@ -931,17 +934,7 @@ img.is-shiny { filter: drop-shadow(0 0 10px #f0c14a); }
   padding: 8px;
   box-sizing: border-box;
 }
-.shop-info::after {
-  content: "i";
-  width: 52px;
-  height: 52px;
-  border-radius: 50%;
-  background: rgba(8, 12, 24, 0.55);
-  display: grid;
-  place-items: center;
-  font-size: 32px;
-  line-height: 1;
-}
+.shop-info .ui-icon { width: 52px; height: 52px; }
 .shop-card h3 { margin: 4px 0 0; font-size: 30px; line-height: 1.15; overflow-wrap: normal; hyphens: manual; }
 .shop-card p, .shop-limit { margin: 0; font-size: 30px; line-height: 1.2; overflow-wrap: normal; hyphens: auto; }
 .shop-buy { margin-top: auto; width: 100%; border: 0; font-size: 30px; font-weight: 800; display: flex; align-items: center; justify-content: center; gap: 8px; padding: 0 8px; }

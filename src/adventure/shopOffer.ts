@@ -59,7 +59,11 @@ export const SHOP_ART = {
   fruit: {
     fang: 'shop/frucht_glueck.webp',
     goldfang: 'shop/frucht_goldfang.webp',
-    spuer: 'shop/frucht_spur.webp'
+    spuer: 'shop/frucht_spur.webp',
+    neugier: 'ui/fruit_neugier.png',
+    glanz: 'ui/fruit_glanz.png',
+    lern: 'ui/fruit_lern.png',
+    muenz: 'ui/fruit_muenz.png'
   },
   tabBar: 'shop/tab_bar_bg.webp',
   tabOn: 'shop/tab_active.webp',
