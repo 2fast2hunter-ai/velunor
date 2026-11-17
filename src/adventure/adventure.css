@@ -73,7 +73,7 @@ body.is-landscape-phone #turn { display: grid; }
   display: grid;
   grid-template-rows: auto minmax(0, 1fr) auto;
   margin-top: max(0px, calc(env(safe-area-inset-top, 0px) / var(--ui-scale, 1) - 210px));
-  margin-bottom: max(0px, calc(env(safe-area-inset-bottom, 0px) / var(--ui-scale, 1) - 210px));
+  margin-bottom: 0;
   padding-left: calc(env(safe-area-inset-left, 0px) / var(--ui-scale, 1));
   padding-right: calc(env(safe-area-inset-right, 0px) / var(--ui-scale, 1));
   box-sizing: border-box;
@@ -82,12 +82,14 @@ body.is-landscape-phone #turn { display: grid; }
 .anchor-top { display: grid; grid-template-rows: minmax(96px, calc(96px * var(--font-scale, 1))) 132px 120px; overflow: hidden; }
 .is-menu .anchor-top { grid-template-rows: minmax(96px, calc(96px * var(--font-scale, 1))); }
 .is-shop .anchor-top { display: none; }
-.is-shop .band { background: transparent; }
+.is-shop .safe { grid-template-rows: minmax(0, 1fr) auto; }
+.is-shop .band-top { background: transparent; }
+.band-bot { flex: 0 0 0; height: 0; min-height: 0; }
 .is-shop .shop-screen { flex: 1 1 auto; }
 .anchor-mid { overflow: hidden; }
 .is-menu .anchor-mid { overflow: hidden; display: flex; flex-direction: column; }
-.anchor-bot { display: grid; grid-template-rows: 148px max(132px, calc(16px + 34px * var(--font-scale, 1) * 3)) 132px 180px; }
-.is-menu .anchor-bot { grid-template-rows: 180px; }
+.anchor-bot { display: grid; grid-template-rows: 148px max(132px, calc(16px + 34px * var(--font-scale, 1) * 3)) 132px auto; }
+.is-menu .anchor-bot { grid-template-rows: auto; }
 .menu-scroll { flex: 1 1 auto; min-height: 0; overflow: auto; }
 
 .card {
@@ -583,9 +585,13 @@ img.is-shiny { filter: drop-shadow(0 0 10px #f0c14a); }
 .grip-pill { width: 84px; height: 10px; border-radius: 99px; background: #f0c14a; display: block; }
 
 .tabbar {
-  height: 180px;
+  height: auto;
+  min-height: 180px;
+  box-sizing: border-box;
   display: grid;
   grid-template-columns: repeat(5, minmax(0, 1fr));
+  align-items: stretch;
+  padding-bottom: calc(env(safe-area-inset-bottom, 0px) / var(--ui-scale, 1));
   background: #0c1428;
   border-top: 2px solid rgba(240, 193, 74, 0.35);
 }

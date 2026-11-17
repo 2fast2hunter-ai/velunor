@@ -1,3 +1,4 @@
+import { readFileSync } from 'node:fs'
 import { describe, expect, it } from 'vitest'
 import {
   BATTLE_H,
@@ -10,7 +11,8 @@ import {
   SHELL_W,
   TOUCH_MIN,
   fitScale,
-  phoneLandscape
+  phoneLandscape,
+  tabBarBottomGap
 } from './const'
 import { t } from './i18n'
 import { beginAdventure, loadAdventure } from './save'
@@ -47,6 +49,13 @@ describe('portrait shell', () => {
     expect(fitScale(360, 780)).toBeCloseTo(1 / 3)
     expect(fitScale(390, 844)).toBeCloseTo(844 / 2340)
     expect(fitScale(1920, 1080)).toBeCloseTo(1080 / 2340)
+    expect(tabBarBottomGap(360, 780)).toBeLessThan(1)
+    expect(tabBarBottomGap(390, 844)).toBeLessThan(1)
+    expect(tabBarBottomGap(430, 932)).toBeLessThan(1)
+    const css = readFileSync(new URL('./adventure.css', import.meta.url), 'utf8')
+    expect(css).toContain('padding-bottom: calc(env(safe-area-inset-bottom, 0px) / var(--ui-scale, 1))')
+    expect(css).toMatch(/\.band-bot\s*\{[^}]*height:\s*0/)
+    expect(readFileSync(new URL('../../index.html', import.meta.url), 'utf8')).toContain('viewport-fit=cover')
     expect(t('de', 'turn.please')).toBe('Bitte Handy drehen')
     expect(t('de', 'nav.more')).toBe('Mehr')
   })
