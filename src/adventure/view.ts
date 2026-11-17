@@ -27,6 +27,7 @@ import {
   type ChestTier
 } from './lootbox'
 import type { ChestGrant } from './chests'
+import { workshopCost } from './sources'
 import { fightsHere } from './origin'
 import { chapterById, gateBadge, placeLabel, regionById, regions, routeOf, type NodeKind } from './route'
 import { chapterUnlocked, dexCaughtCount, hereSightings, rarityName } from './sim'
@@ -637,6 +638,12 @@ function chestView(save: SaveV2, wheel: WheelPanel): string {
         <button type="button" data-act="chest-buy" data-tier="silber">${tr(save, 'chest.silber')} · ${tr(save, 'chest.buyGold')}</button>
         <button type="button" data-act="chest-marks" data-tier="gold">${tr(save, 'chest.gold')} · ${tr(save, 'chest.buyMarks')}</button>
         <button type="button" data-act="chest-marks" data-tier="sternen">${tr(save, 'chest.sternen')} · ${tr(save, 'chest.buyMarks')}</button>
+        <h3>Werkstatt</h3>
+        <p>Velunorstaub ${save.dust}</p>
+        ${poolFor(enteredRegions(save)).filter((id) => !Object.values(save.mons).some((mon) => mon.species === id)).slice(0, 6).map((id) => {
+          const sp = species(id)
+          return `<button type="button" data-act="craft" data-id="${id}">${esc(sp.name)} · ${workshopCost(sp.baseRarity)} Staub</button>`
+        }).join('')}
       </div>
     </div>
     <div class="menu-dock" data-dock="chests">${activityTabs(save, wheel)}</div>
@@ -1030,6 +1037,7 @@ function card(save: SaveV2, uid: string): string {
     <label class="switch"><input type="checkbox" data-field="keep" data-uid="${uid}" ${mon.keepDupes ? 'checked' : ''}/> ${tr(save, 'card.keep')}</label>
     <p>${tr(save, 'chest.star', { n: save.stars[sp.id] ?? 0 })} · ${save.shards[sp.id] ?? 0}</p>
     ${(save.stars[sp.id] ?? 0) < 5 ? `<button type="button" class="primary" data-act="star" data-id="${sp.id}">${tr(save, 'chest.starUp')} (${starCost(sp.baseRarity, (save.stars[sp.id] ?? 0) + 1)})</button>` : ''}
+    ${Object.values(save.mons).filter((row) => row.species === sp.id).length > 1 ? `<button type="button" data-act="melt" data-uid="${uid}">Einschmelzen</button>` : ''}
     </div>
     <button type="button" class="primary" data-act="close">${tr(save, 'codex.close')}</button>
   </div>`

@@ -1,6 +1,11 @@
 import lootboxJson from '../../data/lootbox.json'
 import { species } from '../data'
+import { fruitActive } from './shop'
 import {
+  dustValue,
+  enteredRegions,
+  poolFor,
+  shardValue,
   starCost,
   unlockShardCost,
   wildShardChance,
@@ -23,17 +28,28 @@ export function addChest(save: SaveV2, tier: ChestTier, count: number): number {
 }
 
 /** Bank play time. The ready pile stops at 4, and the clock pauses while it is full. */
+function roadInterval(save: SaveV2): number {
+  const cut = (save.chestTree?.pace ?? 0) * 10 * 60 * 1000
+  return Math.max(60_000, file.roadMs - cut)
+}
+
+function roadCap(save: SaveV2): number {
+  return file.roadReadyCap + (save.chestTree?.extraSlot ? 1 : 0)
+}
+
 export function bankRoad(save: SaveV2, ms: number): number {
   if (!Number.isFinite(ms) || ms <= 0) return 0
-  if (save.roadReady >= file.roadReadyCap) return 0
+  const cap = roadCap(save)
+  if (save.roadReady >= cap) return 0
   save.roadMs += ms
   let gained = 0
-  while (save.roadMs >= file.roadMs && save.roadReady < file.roadReadyCap) {
-    save.roadMs -= file.roadMs
+  const step = roadInterval(save)
+  while (save.roadMs >= step && save.roadReady < cap) {
+    save.roadMs -= step
     save.roadReady += 1
     gained += 1
   }
-  if (save.roadReady >= file.roadReadyCap) save.roadMs = 0
+  if (save.roadReady >= cap) save.roadMs = 0
   return gained
 }
 
@@ -101,7 +117,9 @@ export function buyChestForMarks(save: SaveV2, tier: 'gold' | 'sternen'): string
 
 export function rollWildShard(save: SaveV2, speciesId: string, rng: () => number, now: number): 'shard' | 'unlock' | null {
   const rarity = species(speciesId).baseRarity
-  if (rng() >= wildShardChance(rarity)) return null
+  let chance = wildShardChance(rarity) * (1 + 0.1 * (save.chestTree?.shard ?? 0))
+  if (fruitActive(save, 'spuer', now)) chance *= 1.5
+  if (rng() >= chance) return null
   const owned = Object.values(save.mons).some((mon) => mon.species === speciesId)
   save.shards[speciesId] = (save.shards[speciesId] ?? 0) + 1
   if (owned) return 'shard'
@@ -140,4 +158,46 @@ export function raiseStar(save: SaveV2, speciesId: string): string | null {
 
 export function debugStarChests(save: SaveV2): number {
   return addChest(save, 'sternen', 50)
+}
+
+export function workshopCost(rarity: number): number {
+  return file.workshopMult * dustValue(rarity)
+}
+
+export function meltDuplicate(save: SaveV2, uid: string): string | null {
+  const mon = save.mons[uid]
+  if (!mon) return 'Das Monster fehlt.'
+  const copies = Object.values(save.mons).filter((row) => row.species === mon.species)
+  if (copies.length < 2) return 'Das letzte Exemplar bleibt.'
+  const dust = dustValue(species(mon.species).baseRarity)
+  delete save.mons[uid]
+  save.team = save.team.filter((id) => id !== uid)
+  save.pc = save.pc.filter((id) => id !== uid)
+  save.hort = save.hort.filter((id) => id !== uid)
+  if (save.active === uid) save.active = save.team[0] ?? null
+  if (save.buddy === uid) save.buddy = null
+  save.dust += dust
+  save.shards[mon.species] = (save.shards[mon.species] ?? 0) + shardValue(species(mon.species).baseRarity)
+  return null
+}
+
+export function craftSpecies(save: SaveV2, speciesId: string, now: number): string | null {
+  if (!poolFor(enteredRegions(save)).includes(speciesId)) return 'Die Region ist noch zu.'
+  const rarity = species(speciesId).baseRarity
+  const cost = workshopCost(rarity)
+  if (save.dust < cost) return 'Zu wenig Velunorstaub.'
+  if (Object.values(save.mons).some((mon) => mon.species === speciesId)) return 'Die Art ist schon da.'
+  save.dust -= cost
+  const uid = takeId(save)
+  const mon = makeMon(speciesId, 1, now, 'werkstatt')
+  mon.stars = save.stars[speciesId] ?? 0
+  save.mons[uid] = mon
+  if (save.team.length < 6) save.team.push(uid)
+  else save.pc.push(uid)
+  const dex = save.dex[speciesId] ?? { seen: 0, caught: 0 }
+  dex.seen += 1
+  dex.caught += 1
+  save.dex[speciesId] = dex
+  grantCodexChests(save)
+  return null
 }

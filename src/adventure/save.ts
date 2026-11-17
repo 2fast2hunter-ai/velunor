@@ -1,7 +1,7 @@
 import { freshSeed, nextFloat } from '../rng'
 import { emptyBag } from './shop'
 import { SAVE_KEY_V1, SAVE_KEY_V2, SAVE_VERSION, START_GOLD, STARTER_LEVEL } from './const'
-import { chapterById, councilOf, findChapter, speciesKnown } from './route'
+import { chapterById, councilOf, findChapter, regions, speciesKnown } from './route'
 import { expToNext } from './stats'
 import { clampChestCount, emptyPity, enteredRegions, startChests, type ChestTier } from './lootbox'
 import { fontScale } from './touch'
@@ -92,6 +92,11 @@ export function blankSave(now: number): SaveV2 {
     chestDay: '',
     chestBought: { kiesel: 0, silber: 0 },
     codexChestAt: 0,
+    dust: 0,
+    chestLuck: 0,
+    chestThanks: true,
+    silverOpened: 0,
+    chestTree: { pace: 0, extraSlot: false, shard: 0, master: false },
     bag: emptyBag(),
     activeFruits: [],
     hortSlots: 1,
@@ -358,6 +363,36 @@ export function normalize(save: SaveV2, now: number): SaveV2 {
     silber: Math.max(0, Math.floor(Number(bought?.silber)) || 0)
   }
   save.codexChestAt = Math.max(0, Math.floor(Number(save.codexChestAt)) || 0)
+  save.dust = Math.max(0, Math.floor(Number(save.dust)) || 0)
+  save.chestLuck = save.chestLuck ? 1 : 0
+  save.silverOpened = Math.max(0, Math.floor(Number(save.silverOpened)) || 0)
+  const tree = save.chestTree
+  const pace = tree?.pace === 2 ? 2 : tree?.pace === 1 ? 1 : 0
+  const shardRank = tree?.shard === 2 ? 2 : tree?.shard === 1 ? 1 : 0
+  save.chestTree = { pace, extraSlot: Boolean(tree?.extraSlot), shard: shardRank, master: Boolean(tree?.master) }
+  if (seenVersion < 4) {
+    let silver = 0
+    let gold = 0
+    for (const region of regions) {
+      for (const chapter of region.chapters) {
+        const badge = chapter.guardian?.badge
+        if (!badge || !save.badges.includes(badge)) continue
+        if (chapter.council) gold += 1
+        else silver += 1
+      }
+    }
+    save.chests.silber = Math.min(99, save.chests.silber + silver)
+    save.chests.gold = Math.min(99, save.chests.gold + gold)
+    const bag = save.bag
+    if (bag?.fruits) {
+      const refund = (bag.fruits.fang ?? 0) * 4000 + (bag.fruits.goldfang ?? 0) * 15000
+      save.gold += refund
+      bag.fruits.fang = 0
+      bag.fruits.goldfang = 0
+    }
+    save.activeFruits = (save.activeFruits ?? []).filter((fruit) => fruit.id !== 'fang' && fruit.id !== 'goldfang')
+    save.chestThanks = true
+  } else save.chestThanks = save.chestThanks !== false
   save.regionsEntered = enteredRegions({
     regionsOpen: save.regionsOpen,
     region: save.region,

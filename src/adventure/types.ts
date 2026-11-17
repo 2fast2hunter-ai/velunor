@@ -127,6 +127,11 @@ export interface SaveV2 {
   chestBought: { kiesel: number; silber: number }
   /** Codex milestones already paid in gold chests. */
   codexChestAt: number
+  dust: number
+  chestLuck: number
+  chestThanks: boolean
+  silverOpened: number
+  chestTree: { pace: 0 | 1 | 2; extraSlot: boolean; shard: 0 | 1 | 2; master: boolean }
   bag: BagState
   activeFruits: ActiveFruit[]
   /** Unlocked hort places, 1 to 4. The same number of eggs can incubate. */
