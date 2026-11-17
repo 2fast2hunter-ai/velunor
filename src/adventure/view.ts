@@ -1,4 +1,4 @@
-import { monsters, rarityInfo, species, typeName } from '../data'
+import { monsters, rarityInfo, species, typeColor, typeName } from '../data'
 import type { TypeId } from '../types'
 import {
   ALLY_X,
@@ -15,6 +15,7 @@ import { fontFactor } from './touch'
 import { baseLine, dexPlaces, dexStatus, dexStatusLabel, listCodex, regionProgress, speciesNumber, type DexFilter } from './dex'
 import { goalName, goalTitle, rarityLabel, t, typeLabel, weatherLabel, whenLabel, type Lang } from './i18n'
 import { colorHex, colorId, skinHex } from './avatar'
+import { STARTER_ART, starterBars, strongTypes, typeList, weakTypes } from './starter'
 import { nameProblem } from './home'
 import { exportCode } from './save'
 import type { AvatarLook } from './types'
@@ -1243,7 +1244,8 @@ export function onboardingHtml(name: string, look: AvatarLook, picked: string, l
   const nextLabel = nameStep ? t(lang, 'start.next') : t(lang, 'start.go')
   const nextAct = nameStep ? 'next' : 'start'
   const nextOff = nameStep ? Boolean(problem) : !starterReady
-  return `<div id="stage" class="home" lang="${lang}">
+  const thumb = !nameStep && picked ? `<img src="${art(`home/starter_${picked}.png`)}" alt=""/>` : ''
+  return `<div id="stage" class="home${nameStep ? '' : ' is-starter'}" lang="${lang}">
     <div class="home-scroll">
       <div class="home-top">
         <p class="home-kicker">${t(lang, 'start.kicker')}</p>
@@ -1253,7 +1255,7 @@ export function onboardingHtml(name: string, look: AvatarLook, picked: string, l
     </div>
     <div class="home-bar">
       <p class="home-reason" id="home-reason" ${reason ? '' : 'hidden'}>${esc(reason)}</p>
-      <button type="button" class="primary" id="home-next" data-act="${nextAct}" ${nextOff ? 'disabled' : ''}>${esc(nextLabel)}</button>
+      <button type="button" class="primary" id="home-next" data-act="${nextAct}" ${nextOff ? 'disabled' : ''}>${thumb}${esc(nextLabel)}</button>
     </div>
     <div class="lang-sheet card" ${langOpen ? '' : 'hidden'}>
       <button type="button" data-act="lang" data-lang="de" class="${lang === 'de' ? 'primary' : ''}">Deutsch</button>
@@ -1290,16 +1292,57 @@ function nameStepHtml(name: string, look: AvatarLook, lang: Lang, error: string)
 }
 
 function starterStepHtml(name: string, look: AvatarLook, picked: string, lang: Lang): string {
-  const cards = STARTERS.map((starter) => {
-    const row = species(starter.id)
-    const on = picked === starter.id
-    return `<button type="button" class="starter-card ${on ? 'on' : ''}" data-act="pick" data-species="${starter.id}" aria-pressed="${on ? 'true' : 'false'}">
-      <img src="${monsterArt(starter.id, true)}" alt=""/>
-      <span><b>${esc(row.name)}</b><span>${esc(typeLabel(lang, row.type, typeName(row.type)))}</span></span>
-    </button>`
-  }).join('')
-  return `<button type="button" class="home-back" data-act="back">${esc(t(lang, 'start.back'))}</button>
+  const cards = STARTERS.map((starter, index) => starterCard(starter.id, index, picked, lang)).join('')
+  const dots = STARTERS.map((starter, index) => `<button type="button" class="starter-dot${index === 0 ? ' on' : ''}" data-act="starter-dot" data-index="${index}" aria-label="${esc(species(starter.id).name)}" aria-current="${index === 0 ? 'true' : 'false'}"><span></span></button>`).join('')
+  return `<div class="starter-head">
+      <button type="button" class="home-back" data-act="back">${esc(t(lang, 'start.back'))}</button>
+      <div class="home-you">${lookFace(look)}<b>${esc(name.trim())}</b></div>
+    </div>
     <h1>${t(lang, 'start.pickTitle')}</h1>
-    <div class="home-you">${lookFace(look)}<b>${esc(name.trim())}</b></div>
-    <div class="starter-list">${cards}</div>`
+    <div id="starter-scroller" class="starter-scroller" role="radiogroup" aria-label="${esc(t(lang, 'start.group'))}">${cards}</div>
+    <div class="starter-dots">${dots}</div>
+    <p class="starter-note">${esc(t(lang, 'start.equal'))}</p>
+    <div id="starter-fx" hidden></div>`
+}
+
+function starterCard(id: string, index: number, picked: string, lang: Lang): string {
+  const row = species(id)
+  const artSet = STARTER_ART[id]
+  const on = picked === id
+  const bars = starterBars(id)
+  const type = typeLabel(lang, row.type, typeName(row.type))
+  const role = t(lang, row.role === 'front' ? 'start.front' : 'start.backRole')
+  const strong = typeList(lang, strongTypes(row.type))
+  const weak = typeList(lang, weakTypes(row.type))
+  const skill = row.skill.name ?? ''
+  const pct = (value: number) => `${Math.round(value * 100)}%`
+  return `<article class="starter-card${on ? ' is-on' : ''}" role="radio" tabindex="0" data-species="${id}" data-index="${index}" aria-checked="${on ? 'true' : 'false'}" style="--type:${typeColor(row.type)}">
+    <img class="starter-frame" src="${art(artSet.frame)}" alt=""/>
+    ${on ? `<img class="starter-check" src="${art('home/check.png')}" alt=""/>` : ''}
+    <div class="starter-body">
+      <button type="button" class="starter-art" data-act="preview" data-species="${id}" aria-label="${esc(t(lang, 'start.preview', { name: row.name }))}">
+        <img src="${art(`home/starter_${id}.png`)}" alt=""/>
+      </button>
+      <div class="starter-copy">
+        <b class="starter-name">${esc(row.name)}</b>
+        <div class="starter-chips">
+          <span class="starter-chip"><img src="${art(artSet.type)}" alt=""/>${esc(type)}</span>
+          <span class="starter-chip"><img src="${art(artSet.role)}" alt=""/>${esc(role)}</span>
+        </div>
+        <p class="starter-blurb">${esc(row.blurb)}</p>
+        <div class="starter-bars">
+          ${bar(t(lang, 'start.hp'), bars.hp, pct(bars.hp))}
+          ${bar(t(lang, 'start.atk'), bars.atk, pct(bars.atk))}
+          ${bar(t(lang, 'start.tempo'), bars.spd, pct(bars.spd))}
+        </div>
+        <p class="starter-skill"><b>${esc(skill)}</b> ${esc(row.skill.description ?? '')}</p>
+        <p class="starter-match">${esc(t(lang, 'start.strong', { list: strong }))} · ${esc(t(lang, 'start.weak', { list: weak }))}</p>
+      </div>
+      <button type="button" class="starter-choose" data-act="pick" data-species="${id}">${esc(t(lang, on ? 'start.chosen' : 'start.choose', { name: row.name }))}</button>
+    </div>
+  </article>`
+}
+
+function bar(label: string, value: number, text: string): string {
+  return `<div class="starter-bar"><span>${esc(label)}</span><span class="starter-track" role="img" aria-label="${esc(label)} ${esc(text)}"><span style="width:${Math.round(value * 100)}%"></span></span></div>`
 }
