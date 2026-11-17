@@ -60,7 +60,7 @@ describe('chapters 4 to 8', () => {
   })
 
   it('opens chapter 4 only after the Funkenwappen', () => {
-    const save = beginAdventure('Ada', 'A', 'm01', 1)
+    const save = beginAdventure('Ada', { skin: 0, hair: 0, color: 0 }, 'm01', 1)
     expect(chapterUnlocked(save, 4)).toBe(false)
     save.badges.push('Funkenwappen')
     expect(chapterUnlocked(save, 4)).toBe(true)
@@ -76,8 +76,8 @@ describe('Hoher Rat', () => {
     expect(council?.members.map((member) => member.cap)).toEqual([60, 60, 60, 60, 60])
     expect(council?.rewardGold).toBe(25000)
     expect(council?.members[4].epithet).toBe('Großwächter')
-    expect(chapterCapNow(beginAdventure('Ada', 'A', 'm01', 1), chapterById(1, 4))).toBe(30)
-    const save = beginAdventure('Ada', 'A', 'm01', 1)
+    expect(chapterCapNow(beginAdventure('Ada', { skin: 0, hair: 0, color: 0 }, 'm01', 1), chapterById(1, 4))).toBe(30)
+    const save = beginAdventure('Ada', { skin: 0, hair: 0, color: 0 }, 'm01', 1)
     save.chapter = councilChapter().id
     save.step = 1
     expect(chapterCapNow(save, councilChapter())).toBe(60)
@@ -86,7 +86,7 @@ describe('Hoher Rat', () => {
   })
 
   it('returns a council loss to the court and keeps beaten members', () => {
-    const save = beginAdventure('Ada', 'A', 'm01', 1)
+    const save = beginAdventure('Ada', { skin: 0, hair: 0, color: 0 }, 'm01', 1)
     save.chapter = councilChapter().id
     save.step = 4
     save.councilBeaten = ['rat1', 'rat2', 'rat3']
@@ -101,7 +101,7 @@ describe('Hoher Rat', () => {
   })
 
   it('pays half gold on a repeat and 25000 G once the seal is new', () => {
-    const save = beginAdventure('Ada', 'A', 'm01', 1)
+    const save = beginAdventure('Ada', { skin: 0, hair: 0, color: 0 }, 'm01', 1)
     save.chapter = councilChapter().id
     save.step = 1
     save.gold = 0
@@ -128,7 +128,7 @@ describe('Hoher Rat', () => {
 
 describe('codex', () => {
   it('keeps four statuses, filters, and night-only places', () => {
-    const save = beginAdventure('Ada', 'A', 'm01', 1)
+    const save = beginAdventure('Ada', { skin: 0, hair: 0, color: 0 }, 'm01', 1)
     expect(listCodex(save, { q: '', type: '', rarity: '', shiny: '' })).toHaveLength(100)
     expect(dexStatus(save, 'm01')).toBe('owned')
     expect(dexStatus(save, 'm66')).toBe('missing')

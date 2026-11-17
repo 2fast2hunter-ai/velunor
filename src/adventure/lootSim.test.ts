@@ -41,7 +41,7 @@ describe('lootbox L4 and L5', () => {
       regionsOpen: [1]
     }))
     const loaded = loadAdventure(storage, 50)
-    expect(loaded?.saveVersion).toBe(4)
+    expect(loaded?.saveVersion).toBe(5)
     expect(loaded?.mons.u1.lvl).toBe(40)
     expect(loaded?.mons.u1.shiny).toBe(true)
     expect(loaded?.mons.u2.hp).toBe(3)
@@ -56,7 +56,7 @@ describe('lootbox L4 and L5', () => {
   })
 
   it('melts a spare copy into dust and crafts a missing species', () => {
-    const save = beginAdventure('Ada', 'A', 'm01', 1)
+    const save = beginAdventure('Ada', { skin: 0, hair: 0, color: 0 }, 'm01', 1)
     const spare = 'spare'
     save.mons[spare] = makeMon('m01', 1, 1, 'pc')
     save.pc.push(spare)

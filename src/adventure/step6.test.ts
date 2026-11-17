@@ -25,7 +25,7 @@ describe('achievements', () => {
   })
 
   it('pays gold and a title once when a goal is met', () => {
-    const save = beginAdventure('Ada', 'A', 'm01', 1)
+    const save = beginAdventure('Ada', { skin: 0, hair: 0, color: 0 }, 'm01', 1)
     save.stats.wins = 10
     const gold = save.gold
     const first = syncAchievements(save)
@@ -40,7 +40,7 @@ describe('achievements', () => {
   })
 
   it('keeps later goals closed until their content exists', () => {
-    const save = beginAdventure('Ada', 'A', 'm01', 1)
+    const save = beginAdventure('Ada', { skin: 0, hair: 0, color: 0 }, 'm01', 1)
     const closed = ['region-2', 'hort-4', 'type-dragon']
     for (const id of closed) expect(GOALS.find((goal) => goal.id === id)?.met(save)).toBe(false)
     save.hortSlots = 4

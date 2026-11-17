@@ -19,7 +19,7 @@ describe('shop offers', () => {
   })
 
   it('puts the daily chest quota on the card and reads a new day without writing the save', () => {
-    const save = beginAdventure('Ada', 'A', 'm01', 1)
+    const save = beginAdventure('Ada', { skin: 0, hair: 0, color: 0 }, 'm01', 1)
     const now = Date.parse('2026-11-17T12:00:00.000Z')
     save.gold = 1_000_000
     save.chestDay = '2026-11-16'
@@ -40,7 +40,7 @@ describe('shop offers', () => {
   })
 
   it('greys the button reason for a crest lock, a full store and a short balance', () => {
-    const save = beginAdventure('Ada', 'A', 'm01', 1)
+    const save = beginAdventure('Ada', { skin: 0, hair: 0, color: 0 }, 'm01', 1)
     save.gold = 1_000_000
     expect(shopOffers(save, 1).find((row) => row.id === 'crystal-l')?.reason).toBe('Ab Wappen 6')
     expect(shopOffers(save, 1).find((row) => row.id === 'crystal-xl')?.reason).toBe('Ab Wappen 8')
@@ -53,7 +53,7 @@ describe('shop offers', () => {
   })
 
   it('draws two cards a row and keeps the daily line on the chest, not a fourth tab', () => {
-    const save = beginAdventure('Ada', 'A', 'm01', 1)
+    const save = beginAdventure('Ada', { skin: 0, hair: 0, color: 0 }, 'm01', 1)
     const now = Date.parse('2026-11-17T12:00:00.000Z')
     save.gold = 20_000
     save.chestDay = '2026-11-17'

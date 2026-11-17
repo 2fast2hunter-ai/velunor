@@ -21,7 +21,7 @@ describe('options and awakening', () => {
   })
 
   it('queues an awakening when a level crosses 25', () => {
-    const save = beginAdventure('Ada', 'A', 'm01', 1)
+    const save = beginAdventure('Ada', { skin: 0, hair: 0, color: 0 }, 'm01', 1)
     const uid = save.team[0]
     save.mons[uid].lvl = 24
     save.mons[uid].exp = expToNext(24) - 1
@@ -32,7 +32,7 @@ describe('options and awakening', () => {
   })
 
   it('exports a code and rejects a broken one', () => {
-    const save = beginAdventure('Ada', 'A', 'm01', 1)
+    const save = beginAdventure('Ada', { skin: 0, hair: 0, color: 0 }, 'm01', 1)
     save.gold = 4321
     save.settings.lang = 'en'
     const code = exportCode(save)

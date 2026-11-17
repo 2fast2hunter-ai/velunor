@@ -1,0 +1,109 @@
+{
+  "anchor": 512,
+  "skin": [
+    "#ffe6d2",
+    "#f7cba6",
+    "#e2a77a",
+    "#c4855a",
+    "#8f5a3b",
+    "#5f3b27"
+  ],
+  "colors": [
+    {
+      "id": "sonne",
+      "hex": "#f3c24e"
+    },
+    {
+      "id": "koralle",
+      "hex": "#ff9f86"
+    },
+    {
+      "id": "rose",
+      "hex": "#f5a6c6"
+    },
+    {
+      "id": "minze",
+      "hex": "#7ee0c8"
+    },
+    {
+      "id": "himmel",
+      "hex": "#8ec8ff"
+    },
+    {
+      "id": "lavendel",
+      "hex": "#b9a4f5"
+    },
+    {
+      "id": "blatt",
+      "hex": "#a8d86c"
+    },
+    {
+      "id": "nuss",
+      "hex": "#c99b6c"
+    }
+  ],
+  "hair": [
+    {
+      "id": 0,
+      "name": "kurz",
+      "front": "hair_0.png",
+      "back": null
+    },
+    {
+      "id": 1,
+      "name": "lang",
+      "front": "hair_1.png",
+      "back": "hair_1_back.png"
+    },
+    {
+      "id": 2,
+      "name": "zopf",
+      "front": "hair_2.png",
+      "back": null
+    },
+    {
+      "id": 3,
+      "name": "locken",
+      "front": "hair_3.png",
+      "back": "hair_3_back.png"
+    },
+    {
+      "id": 4,
+      "name": "dutt",
+      "front": "hair_4.png",
+      "back": "hair_4_back.png"
+    },
+    {
+      "id": 5,
+      "name": "strubbel",
+      "front": "hair_5.png",
+      "back": null
+    },
+    {
+      "id": 6,
+      "name": "muetze",
+      "front": "hair_6.png",
+      "back": null
+    },
+    {
+      "id": 7,
+      "name": "kahl",
+      "front": "hair_7.png",
+      "back": null
+    }
+  ],
+  "background": "#2f4a6a",
+  "frame": "#fff6e0",
+  "legacy": {
+    "A": {
+      "skin": 1,
+      "hair": 0,
+      "color": 0
+    },
+    "B": {
+      "skin": 3,
+      "hair": 1,
+      "color": 3
+    }
+  }
+}

@@ -26,14 +26,14 @@ function memory(): StorageLike {
 }
 
 function openWheel() {
-  const save = beginAdventure('Ada', 'A', 'm01', 1)
+  const save = beginAdventure('Ada', { skin: 0, hair: 0, color: 0 }, 'm01', 1)
   save.badges.push('Kieselwappen', 'Wellenwappen', 'Funkenwappen')
   return save
 }
 
 describe('glücksrad', () => {
   it('stays shut until the third crest', () => {
-    const save = beginAdventure('Ada', 'A', 'm01', 1)
+    const save = beginAdventure('Ada', { skin: 0, hair: 0, color: 0 }, 'm01', 1)
     save.gold = 5000
     expect(wheelOpen(save)).toBe(false)
     expect(spinWheel(save, 1)).toBe('Das Glücksrad öffnet nach dem dritten Wappen.')

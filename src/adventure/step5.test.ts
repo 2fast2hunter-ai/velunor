@@ -26,7 +26,7 @@ function memory(): StorageLike {
 
 describe('hort places', () => {
   it('sells slot 2 for 50000 and holds slot 3 and 4 behind the councils', () => {
-    const save = beginAdventure('Ada', 'A', 'm01', 1)
+    const save = beginAdventure('Ada', { skin: 0, hair: 0, color: 0 }, 'm01', 1)
     expect(save.hortSlots).toBe(1)
     save.gold = 50_000
     expect(buyHortSlot(save)).toBeNull()
@@ -46,7 +46,7 @@ describe('hort places', () => {
   })
 
   it('keeps one monster in the team', () => {
-    const save = beginAdventure('Ada', 'A', 'm01', 1)
+    const save = beginAdventure('Ada', { skin: 0, hair: 0, color: 0 }, 'm01', 1)
     expect(moveToHort(save, save.team[0])).toMatch(/Team/)
     const extra = 'pc1'
     save.mons[extra] = makeMon('m01', 4, 2, 'r1c1')
@@ -59,7 +59,7 @@ describe('hort places', () => {
 
 describe('hort growth and eggs', () => {
   it('gives hort monsters 30 percent of the combat EP rate, including offline', () => {
-    const save = beginAdventure('Ada', 'A', 'm01', 1)
+    const save = beginAdventure('Ada', { skin: 0, hair: 0, color: 0 }, 'm01', 1)
     const guest = 'h1'
     save.mons[guest] = makeMon('m03', 5, 1, 'r1c1')
     save.hort = [guest]
@@ -71,7 +71,7 @@ describe('hort growth and eggs', () => {
   })
 
   it('lays an egg for two of the same type and hatches it at level 1', () => {
-    const save = beginAdventure('Ada', 'A', 'm02', 1_000)
+    const save = beginAdventure('Ada', { skin: 0, hair: 0, color: 0 }, 'm02', 1_000)
     save.hortSlots = 2
     save.mons.a = makeMon('m01', 3, 1, 'r1c1')
     save.mons.b = makeMon('m01', 4, 1, 'r1c1')
@@ -92,7 +92,7 @@ describe('hort growth and eggs', () => {
   })
 
   it('uses 1/10 when a parent shimmers and skips different types', () => {
-    const save = beginAdventure('Ada', 'A', 'm02', 1_000)
+    const save = beginAdventure('Ada', { skin: 0, hair: 0, color: 0 }, 'm02', 1_000)
     save.hortSlots = 2
     save.mons.a = makeMon('m01', 3, 1, 'r1c1', true)
     save.mons.b = makeMon('m01', 4, 1, 'r1c1')

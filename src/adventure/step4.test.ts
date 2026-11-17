@@ -46,7 +46,7 @@ describe('shop', () => {
     expect(FRUITS).toHaveLength(7)
     expect(sellValue(1000)).toBe(250)
     expect(sellValue(15000)).toBe(3750)
-    const save = beginAdventure('Ada', 'A', 'm01', 1)
+    const save = beginAdventure('Ada', { skin: 0, hair: 0, color: 0 }, 'm01', 1)
     expect(wappenCount(save)).toBe(0)
     expect(crystalUnlocked(save, 's')).toBe(true)
     expect(crystalUnlocked(save, 'm')).toBe(false)
@@ -66,7 +66,7 @@ describe('shop', () => {
   })
 
   it('gives crystal EP and stops at the cap', () => {
-    const save = beginAdventure('Ada', 'A', 'm01', 1)
+    const save = beginAdventure('Ada', { skin: 0, hair: 0, color: 0 }, 'm01', 1)
     save.gold = crystalPrice(save, 's')
     buyCrystal(save, 's')
     const uid = save.team[0]
@@ -83,7 +83,7 @@ describe('shop', () => {
   })
 
   it('resets a fruit hour instead of extending it', () => {
-    const save = beginAdventure('Ada', 'A', 'm01', 1)
+    const save = beginAdventure('Ada', { skin: 0, hair: 0, color: 0 }, 'm01', 1)
     save.bag.fruits.lern = 2
     expect(useFruit(save, 'lern', 1_000)).toBeNull()
     expect(save.activeFruits[0].until).toBe(1_000 + FRUIT_MS)
@@ -102,7 +102,7 @@ describe('fruit effects', () => {
     expect(catchChance(0, 1, 5, 1.5, 0.7)).toBe(0.7)
     expect(catchChance(0, 1, 5, 1.25, 0.6)).toBe(0.6)
     expect(catchChance(9, 1, 5, 1.5, 0.7)).toBeCloseTo(0.015 * 1.5)
-    const save = beginAdventure('Ada', 'A', 'm01', 1)
+    const save = beginAdventure('Ada', { skin: 0, hair: 0, color: 0 }, 'm01', 1)
     const uid = save.team[0]
     save.mons[uid].exp = 0
     awardCombatExp(save, 99, 10, 0, uid, { offline: false, trace: false }, 1_000)
@@ -119,7 +119,7 @@ describe('fruit effects', () => {
   })
 
   it('doubles the two rarest species and triples ones never caught', () => {
-    const save = beginAdventure('Ada', 'A', 'm01', 1)
+    const save = beginAdventure('Ada', { skin: 0, hair: 0, color: 0 }, 'm01', 1)
     const table = [
       { species: 'm66', weight: 40 },
       { species: 'm41', weight: 35 },
@@ -141,7 +141,7 @@ describe('fruit effects', () => {
     expect(FIND_FRUIT_CHANCE).toBe(0.3)
     expect(rollFindFruit(() => 0.3)).toBeNull()
     expect(rollFindFruit(() => 0)).toBeTruthy()
-    const save = beginAdventure('Ada', 'A', 'm01', 1)
+    const save = beginAdventure('Ada', { skin: 0, hair: 0, color: 0 }, 'm01', 1)
     const step = routeOf(1).findIndex((kind, index) => index > 0 && kind === 'find')
     save.step = step
     let seed = 1

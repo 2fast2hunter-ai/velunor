@@ -5,7 +5,8 @@ import { chapterById, councilOf, findChapter, regions, speciesKnown } from './ro
 import { expToNext } from './stats'
 import { clampChestCount, emptyPity, enteredRegions, startChests, type ChestTier } from './lootbox'
 import { fontScale } from './touch'
-import type { AdventureSettings, OwnedMon, SaveV2, StorageLike } from './types'
+import { readLook } from './avatar'
+import type { AdventureSettings, AvatarLook, OwnedMon, SaveV2, StorageLike } from './types'
 
 interface LegacyMon {
   uid?: string
@@ -48,7 +49,7 @@ export function blankSave(now: number): SaveV2 {
     v: 2,
     saveVersion: SAVE_VERSION,
     name: 'Abenteurer',
-    avatar: 'A',
+    look: { skin: 0, hair: 0, color: 0 },
     gold: START_GOLD,
     marks: 0,
     lastSeenAt: now,
@@ -123,11 +124,11 @@ export function makeMon(speciesId: string, level: number, now: number, where: st
   }
 }
 
-export function beginAdventure(name: string, avatar: 'A' | 'B', speciesId: string, now: number): SaveV2 {
+export function beginAdventure(name: string, look: AvatarLook, speciesId: string, now: number): SaveV2 {
   const save = blankSave(now)
   const clean = name.trim().slice(0, 24)
   save.name = clean || 'Abenteurer'
-  save.avatar = avatar === 'B' ? 'B' : 'A'
+  save.look = readLook(look, undefined)
   save.started = true
   save.rng = freshSeed()
   const uid = takeId(save)
@@ -234,7 +235,10 @@ export function normalize(save: SaveV2, now: number): SaveV2 {
   const seenVersion = Math.max(0, Math.floor(Number(save.saveVersion)) || 0)
   if (seenVersion < SAVE_VERSION) save.saveVersion = SAVE_VERSION
   save.name = (save.name || 'Abenteurer').toString().slice(0, 24)
-  save.avatar = save.avatar === 'B' ? 'B' : 'A'
+  const kept = save.avatar === 'A' || save.avatar === 'B' ? save.avatar : undefined
+  save.look = readLook(save.look, kept)
+  if (kept) save.avatar = kept
+  else delete save.avatar
   save.gold = Math.max(0, Math.floor(save.gold) || 0)
   save.marks = Math.max(0, Math.floor(save.marks) || 0)
   save.lastSeenAt = save.lastSeenAt || now
