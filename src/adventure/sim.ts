@@ -337,7 +337,8 @@ function foeSide(speciesId: string, level: number, shiny = false, scale: BossSca
     spd: stats.spd,
     skill: sp.skill,
     passive: sp.passive ?? null,
-    level
+    level,
+    boss: scale.hp !== 1 || scale.atk !== 1 || scale.def !== 1
   }
 }
 

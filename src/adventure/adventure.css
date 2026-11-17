@@ -414,6 +414,22 @@ textarea { width: 100%; box-sizing: border-box; background: #121a30; color: inhe
   border: 1px solid rgba(255, 255, 255, 0.2);
 }
 .hp span { display: block; height: 100%; width: 100%; background: linear-gradient(90deg, #e35d5d, #f0c14a); }
+.ult {
+  width: 180px; height: 10px; margin-top: 6px; border-radius: 99px;
+  background: rgba(8, 12, 24, 0.55);
+  box-shadow: inset 0 0 0 1px rgba(255, 255, 255, 0.18);
+  position: relative; overflow: hidden;
+}
+.ult::before {
+  content: ''; position: absolute; inset: 0 auto 0 0; width: calc(var(--n, 0) * 20%);
+  background: linear-gradient(90deg, #7e57c2, #ffd54f); border-radius: inherit;
+}
+.ult[data-n='1'] { --n: 1; } .ult[data-n='2'] { --n: 2; } .ult[data-n='3'] { --n: 3; }
+.ult[data-n='4'] { --n: 4; } .ult[data-n='5'] { --n: 5; }
+.ult.is-ready { animation: ult-pulse 0.7s ease-in-out infinite; }
+.ult.is-locked { opacity: 0.85; height: 22px; }
+.ult.is-locked::after { content: 'ab Lv 25'; position: absolute; inset: 0; text-align: center; font-size: 16px; line-height: 22px; color: #fff8e1; font-weight: 800; }
+@keyframes ult-pulse { 50% { filter: brightness(1.45); } }
 .combatant b { text-shadow: 0 2px 8px #000; margin-bottom: 4px; }
 
 .seal {
