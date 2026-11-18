@@ -42,6 +42,8 @@ export interface AuditState {
   badges: string[]
   chests: number
   shards: number
+  /** Sum of Meisterschafts-EP. Older audits omit it and count as 0. */
+  mastery?: number
   mons: AuditMon[]
   /** Species the opened regions can actually award. */
   speciesAllowed: string[]
@@ -104,6 +106,14 @@ export function allowedShards(elapsedMs: number): number {
   return Math.ceil(fightCeiling(elapsedMs) * PLAUSIBILITY_BUFFER)
 }
 
+/** One point per won bout, a boss bonus every few bouts, and a duplicate a minute. */
+export function allowedMastery(elapsedMs: number): number {
+  const fights = fightCeiling(elapsedMs)
+  const bosses = Math.ceil(fights / 6)
+  const dupes = Math.ceil(countedOffline(elapsedMs) / 60_000)
+  return Math.ceil((fights + bosses * 5 + dupes * 10) * PLAUSIBILITY_BUFFER)
+}
+
 /** New monsters have to fit in chests, shard crafts, eggs and the wheel. */
 export function allowedNewMons(elapsedMs: number): number {
   return allowedChests(elapsedMs) + Math.floor(allowedShards(elapsedMs) / 5) + Math.ceil(Math.max(0, elapsedMs) / 3_600_000) + 6
@@ -146,6 +156,7 @@ export function saveOwesCatchUp(lastSeenAt: number, now: number, welcomeMs: numb
 export function auditHasProgress(before: AuditState, after: AuditState): boolean {
   if (after.gold > before.gold || after.ep > before.ep) return true
   if (after.chests > before.chests || after.shards > before.shards) return true
+  if ((after.mastery ?? 0) > (before.mastery ?? 0)) return true
   if (after.region > before.region || after.chapter > before.chapter) return true
   if (after.badges.some((badge) => !before.badges.includes(badge))) return true
   const known = new Set(before.mons.map((mon) => mon.uid))
@@ -211,5 +222,9 @@ export function auditSync(before: AuditState | null, after: AuditState, elapsedM
     reasons.push('shards')
     flag = 2
   }
+  const masteryGain = (after.mastery ?? 0) - (before.mastery ?? 0)
+  const masteryFlag = gainFlag(masteryGain, allowedMastery(windowMs))
+  if (masteryFlag) reasons.push('mastery')
+  flag = bump(flag, masteryFlag)
   return { flag, reasons }
 }

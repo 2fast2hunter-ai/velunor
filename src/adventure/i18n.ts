@@ -239,6 +239,7 @@ const de: Record<string, string> = {
   'guide.10': 'Erfolge bringen Gold, einen Titel und einen Rahmen. Nach dem dritten Wappen öffnet das Glücksrad. Kein Echtgeld.',
   'guide.11': 'Bei Level 25 und 50 erwacht ein Monster: +15 % auf die Werte und +0,25 auf den Skill-Multiplikator, je Stufe.',
   'guide.12': 'Bis zu 8 Stunden Abwesenheit werden nachgerechnet. Der Begleiter bekommt mehr Kampf-EP.',
+  'guide.13': 'Jede Art sammelt Meisterschafts-EP. Fünf Sterne, und ein Rahmen von Bronze über Silber bis Gold.',
   'reset.title': 'Spielstand zurücksetzen?',
   'reset.body': 'Der Spielstand wird geleert. Der alte Speicher bleibt liegen.',
   'reset.yes': 'Ja, neu anfangen',
@@ -265,6 +266,11 @@ const de: Record<string, string> = {
   'card.caught': 'Erhalten {when} · {where}',
   'card.keep': 'Duplikate behalten',
   'card.awaken': 'Erwachen {n}/2',
+  'mastery.toast': '{name} erreicht Meisterschaftsstufe {level}.',
+  'mastery.ep': 'M-EP {have} / {need}',
+  'mastery.max': 'Meisterschaftsstufe 5',
+  'mastery.bonus': '+{pct} % HP, ATK, DEF',
+  'welcome.mastery': 'Meisterschaft: {names}',
   'awaken.title': 'Erwachen',
   'awaken.body': '{name} erreicht Lv {level}. Die Werte steigen um 15 %. Der Skill-Multiplikator steigt um 0,25.',
   'start.kicker': 'Velunor',
@@ -740,6 +746,7 @@ const en: Record<string, string> = {
   'guide.10': 'Achievements grant gold, a title, and a frame. After the third crest the wheel opens. No real money.',
   'guide.11': 'At level 25 and 50 a monster awakens: +15 % to its stats and +0.25 to its skill multiplier, once each.',
   'guide.12': 'Up to 8 hours away are caught up. The buddy gains more battle EP.',
+  'guide.13': 'Each species gathers mastery EP. Five stars, and a frame from bronze through silver to gold.',
   'reset.title': 'Reset the save?',
   'reset.body': 'The save is cleared. The old save is left in place.',
   'reset.yes': 'Yes, start over',
@@ -766,6 +773,11 @@ const en: Record<string, string> = {
   'card.caught': 'Obtained {when} · {where}',
   'card.keep': 'Keep duplicates',
   'card.awaken': 'Awakening {n}/2',
+  'mastery.toast': '{name} reaches mastery rank {level}.',
+  'mastery.ep': 'M-EP {have} / {need}',
+  'mastery.max': 'Mastery rank 5',
+  'mastery.bonus': '+{pct}% HP, ATK, DEF',
+  'welcome.mastery': 'Mastery: {names}',
   'awaken.title': 'Awakening',
   'awaken.body': '{name} reaches Lv {level}. Stats rise by 15 %. The skill multiplier rises by 0.25.',
   'start.kicker': 'Velunor',
@@ -1096,6 +1108,7 @@ const goalEn: Record<string, { name: string; title: string }> = {
 export function goalName(lang: Lang, id: string, german: string, typeName = ''): string {
   if (lang !== 'en') return german
   if (id.startsWith('type-')) return `All ${typeName} species`
+  if (id.startsWith('master-')) return german.replace(/^Meister der /, 'Master of ')
   if (id.startsWith('badge-')) return german
   return goalEn[id]?.name ?? german
 }

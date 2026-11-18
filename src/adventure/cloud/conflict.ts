@@ -63,6 +63,7 @@ export function saveFingerprint(save: SaveV2): string {
     marks: save.marks,
     shards: pairs(save.shards),
     stars: pairs(save.stars),
+    mastery: pairs(save.mastery),
     region: save.region,
     chapter: save.chapter,
     step: save.step,

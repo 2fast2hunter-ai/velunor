@@ -21,7 +21,18 @@ var BLOCKED = [
   "whore",
   "hitler"
 ];
-var ALLOWED = /* @__PURE__ */ new Set(["barsch", "marschall", "scunthorpe", "shitake"]);
+var ALLOWED = /* @__PURE__ */ new Set([
+  "barsch",
+  "marschall",
+  "scunthorpe",
+  "shitake",
+  "harsch",
+  "marsch",
+  "fackel",
+  "nazim",
+  "fukuda",
+  "yamashita"
+]);
 var LEET = {
   "0": "o",
   "1": "i",

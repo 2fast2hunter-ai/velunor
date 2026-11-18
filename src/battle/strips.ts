@@ -8,6 +8,12 @@ export const FX_MAX_MS = 700
 /** Floor after the tempo split, for the whole effect. */
 export const FX_MIN_MS = 150
 
+/** The number pool is empty until create() fills it. An empty reduce would throw. */
+export function oldestByBorn<T extends { born: number }>(rows: readonly T[]): T | undefined {
+  if (!rows.length) return undefined
+  return rows.reduce((oldest, row) => row.born < oldest.born ? row : oldest, rows[0])
+}
+
 /** A scene can update before create() has built the strip images. */
 export function hideStripImages(proj?: { setVisible(on: boolean): void } | null, hit?: { setVisible(on: boolean): void } | null): void {
   proj?.setVisible(false)

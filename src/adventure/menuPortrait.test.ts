@@ -170,9 +170,9 @@ describe('portrait menus', () => {
     raw.gold = 4321
     storage.setItem(SAVE_KEY_V2, JSON.stringify(raw))
     const loaded = loadAdventure(storage, 5_000)
-    expect(SAVE_VERSION).toBe(6)
+    expect(SAVE_VERSION).toBe(7)
     expect(loaded?.v).toBe(2)
-    expect(loaded?.saveVersion).toBe(6)
+    expect(loaded?.saveVersion).toBe(7)
     expect(loaded?.name).toBe('Ada')
     expect(loaded?.look).toEqual({ skin: 3, hair: 1, color: 3 })
     expect(loaded?.gold).toBe(4321)

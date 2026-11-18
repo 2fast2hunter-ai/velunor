@@ -53,7 +53,7 @@ import type { CloudView } from './cloud/types'
 import { CONSENT_KEY, DEVICE_KEY, QUEUE_KEY, REPLACE_SERVER_KEY, RESET_SERVER_KEY } from './cloud/config'
 import { isEventName, type AnalyticsEvent, type Consent } from './cloud/analytics'
 import { eventsForEncounter, eventsForLoot, starEvent, teamProfile } from './cloud/playEvents'
-import { equipFrame, equipTitle } from './achievements'
+import { equipFrame, equipTitle, syncAchievements } from './achievements'
 import { buyHortSlot, moveFromHort, moveToHort } from './hort'
 import { buyCrystal, buyFruit, sellCrystal, sellFruit, useCrystal, useFruit } from './shop'
 import { buyPrize, spinWheel, type Multiplier, type SymbolId } from './wheel'
@@ -75,6 +75,7 @@ import {
   type EncounterOutcome,
   type OfflineSummary
 } from './sim'
+import { pullMasteryUps, settleOfflineMastery, type MasteryUp } from './mastery'
 import type { AvatarLook, SaveV2 } from './types'
 import { PC_VIEW_FALLBACK, sheetShouldClose, virtualWindow } from './virtualList'
 import {
@@ -155,6 +156,8 @@ let accountUi = {
   statusNote: ''
 }
 let catchingUp = false
+let masteryNote = ''
+let masteryUntil = 0
 let saveReady = false
 let wipingAccount = false
 
@@ -1164,7 +1167,7 @@ function render(step = save?.step): void {
     mult: wheelMult,
     symbols: wheelSymbols,
     note: wheelNote
-  }, { mapOpen, moreOpen, pcScroll, filtersOpen, dexOpen, shopTab, shopHint: Date.now() < shopFlashUntil, fighting: animating, cloud: mergedCloud() }))
+  }, { mapOpen, moreOpen, pcScroll, filtersOpen, dexOpen, shopTab, shopHint: Date.now() < shopFlashUntil, fighting: animating, cloud: mergedCloud(), masteryNote: Date.now() < masteryUntil ? masteryNote : '' }))
   if (screen === 'team') {
     pcIds = visiblePc(save, pc)
     const view = document.getElementById('pc-viewport')
@@ -1413,9 +1416,22 @@ function loop(): void {
   play(outcome, save.settings.speed, () => finishPresent(outcome))
 }
 
+function showMastery(ups: MasteryUp[] | undefined): void {
+  const up = ups?.[ups.length - 1]
+  if (!up || !save) return
+  masteryNote = t(save.settings.lang, 'mastery.toast', { name: species(up.speciesId).name, level: up.level })
+  masteryUntil = Date.now() + 4200
+  window.setTimeout(() => {
+    if (Date.now() < masteryUntil) return
+    masteryNote = ''
+    render()
+  }, 4300)
+}
+
 function finishPresent(outcome: EncounterOutcome): void {
   animating = false
   if (pendingOutcome === outcome) pendingOutcome = null
+  showMastery(outcome.masteryUps)
   noteProgress()
   if (!save) return
   const fresh = outcome.catch
@@ -2029,6 +2045,7 @@ async function finishOffline(rawMs: number): Promise<void> {
   animating = true
   const summary: OfflineSummary = emptySummary()
   const levelLeft = new Map<string, number>()
+  const masteryBag = new Map<string, number>()
   const start = save.lastSeenAt || Date.now() - counted
   overlay = { kind: 'offline', done: 0, total }
   render()
@@ -2038,7 +2055,7 @@ async function finishOffline(rawMs: number): Promise<void> {
     if (away && save.settings.battery) { stopped = true; break }
     if (save.hold && !save.challengeNow) break
     const at = start + (i + 1) * BASE_ENCOUNTER_MS
-    resolveEncounter(save, at, { offline: true, trace: false, summary, levelLeft })
+    resolveEncounter(save, at, { offline: true, trace: false, summary, levelLeft, masteryBag })
     reached = at
     if ((i + 1) % OFFLINE_BLOCK === 0 || i + 1 === total) {
       overlay = { kind: 'offline', done: i + 1, total }
@@ -2049,6 +2066,8 @@ async function finishOffline(rawMs: number): Promise<void> {
       await new Promise((resolve) => window.setTimeout(resolve, 0))
     }
   }
+  summary.mastery = settleOfflineMastery(save, masteryBag)
+  syncAchievements(save)
   bankRoad(save, counted)
   save.roadAt = Date.now()
   save.lastSeenAt = stopped ? reached : Date.now()
@@ -2674,6 +2693,8 @@ function onClick(event: Event): void {
     const shardsBefore = { ...save.shards }
     const grants = takeChests(save, tier, act === 'chest-all' ? 10 : 1, Date.now())
     if (!grants.length) return
+    showMastery(pullMasteryUps())
+    syncAchievements(save)
     for (const event of eventsForLoot(tier, grants.length, shardsBefore, save.shards)) cloud?.track(event.event, event.props)
     overlay = act === 'chest-all' ? { kind: 'chest-summary', grants } : { kind: 'chest-reveal', grant: grants[0] }
     try { writeSave(localStorage, save) } catch { /* ignore */ }

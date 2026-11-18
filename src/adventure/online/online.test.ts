@@ -102,7 +102,7 @@ describe('player names', () => {
     for (const blocked of ['f4ck', 'fvck', 'phuck', 'fuk', 'fuuuck', 'shiiit', '\u0455hit', 'Hitler', 'Arschloch', 'fuckyou', 'Hitlerfan', 'Hurensohn1', 'sh1t', 'n4z1', 's h i t', 'hur3ns0hn', 'Hurensohn']) {
       expect(nameIssue(blocked), blocked).toBe('word')
     }
-    for (const allowed of ['Barsch', 'Marschall', 'Scunthorpe', 'Shitake']) {
+    for (const allowed of ['Barsch', 'Marschall', 'Scunthorpe', 'Shitake', 'Harsch', 'Marsch', 'Fackel', 'Nazim', 'Fukuda', 'Yamashita']) {
       expect(nameIssue(allowed), allowed).toBeNull()
     }
     const hidden = { name: 'Testling', tag: '5544', hidden: true, changedAt: 5_000 }

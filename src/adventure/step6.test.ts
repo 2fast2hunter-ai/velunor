@@ -15,10 +15,10 @@ function memory(): StorageLike {
 
 describe('achievements', () => {
   it('lists about 60 goals, including the published examples', () => {
-    expect(GOALS).toHaveLength(60)
+    expect(GOALS).toHaveLength(65)
     const ids = GOALS.map((goal) => goal.id)
-    expect(new Set(ids).size).toBe(60)
-    for (const id of ['win-10', 'win-100', 'win-1000', 'catch-10', 'catch-100', 'catch-500', 'egg-10', 'egg-50', 'shiny-1', 'shiny-10', 'region-1', 'region-2', 'badge-Kieselwappen', 'type-fire', 'hort-4']) {
+    expect(new Set(ids).size).toBe(65)
+    for (const id of ['win-10', 'win-100', 'win-1000', 'catch-10', 'catch-100', 'catch-500', 'egg-10', 'egg-50', 'shiny-1', 'shiny-10', 'region-1', 'region-2', 'badge-Kieselwappen', 'type-fire', 'hort-4', 'master-1']) {
       expect(ids).toContain(id)
     }
     expect(GOALS.every((goal) => goal.gold > 0 && goal.title && goal.frame)).toBe(true)

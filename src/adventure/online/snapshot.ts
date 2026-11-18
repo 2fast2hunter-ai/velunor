@@ -29,6 +29,7 @@ export function auditFromSave(save: SaveV2): AuditState {
     obtainedHow: obtainedHow(mon.caughtWhere)
   }))
   const shards = Object.values(save.shards ?? {}).reduce((sum, n) => sum + (Number(n) || 0), 0)
+  const mastery = Object.values(save.mastery ?? {}).reduce((sum, n) => sum + (Number(n) || 0), 0)
   const chests = (save.chests?.kiesel ?? 0) + (save.chests?.silber ?? 0) + (save.chests?.gold ?? 0) + (save.chests?.sternen ?? 0) + (save.roadReady ?? 0)
   return {
     at: save.lastSeenAt,
@@ -39,6 +40,7 @@ export function auditFromSave(save: SaveV2): AuditState {
     badges: [...(save.badges ?? [])],
     chests,
     shards,
+    mastery,
     mons,
     speciesAllowed: poolFor(enteredRegions(save))
   }
@@ -55,6 +57,7 @@ export function emptyAudit(at: number): AuditState {
     badges: [],
     chests: 0,
     shards: 0,
+    mastery: 0,
     mons: [],
     speciesAllowed: []
   }
