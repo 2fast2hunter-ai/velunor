@@ -12,6 +12,7 @@ import {
   type ChestTier
 } from './lootbox'
 import { makeMon, takeId } from './save'
+import { treeRoadCut, treeShardBonus } from './tree'
 import type { SaveV2 } from './types'
 
 const file = lootboxJson
@@ -28,9 +29,9 @@ export function addChest(save: SaveV2, tier: ChestTier, count: number): number {
 }
 
 /** Bank play time. The ready pile stops at 4, and the clock pauses while it is full. */
-function roadInterval(save: SaveV2): number {
+export function roadInterval(save: SaveV2): number {
   const cut = (save.chestTree?.pace ?? 0) * 10 * 60 * 1000
-  return Math.max(60_000, file.roadMs - cut)
+  return Math.max(60_000, Math.round((file.roadMs - cut) * (1 - treeRoadCut(save))))
 }
 
 function roadCap(save: SaveV2): number {
@@ -133,6 +134,7 @@ export function rollWildShard(save: SaveV2, speciesId: string, rng: () => number
   const rarity = species(speciesId).baseRarity
   let chance = wildShardChance(rarity) * (1 + 0.1 * (save.chestTree?.shard ?? 0))
   if (fruitActive(save, 'spuer', now)) chance *= 1.5
+  chance *= 1 + treeShardBonus(save)
   if (rng() >= chance) return null
   const owned = Object.values(save.mons).some((mon) => mon.species === speciesId)
   save.shards[speciesId] = (save.shards[speciesId] ?? 0) + 1

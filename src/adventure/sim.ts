@@ -2,7 +2,7 @@ import { rarityInfo, species, typeName } from '../data'
 import { nextFloat } from '../rng'
 import type { TypeId } from '../types'
 import type { FightSide, FightTrace } from './battle'
-import { fight1v1 } from './battle'
+import { fight1v1, type FightMods } from './battle'
 import { weatherAt } from './weather'
 import { orderMods, type OrderSeat } from './order'
 import { councilAssignment, guardianAssignment, type MechId } from './mech'
@@ -13,8 +13,6 @@ import {
   CATCH_BASE,
   CATCH_CAP,
   LOG_LIMIT,
-  OFFLINE_CAP_MS,
-  OFFLINE_EXP_FACTOR,
   RARITY_EXP,
   RETRY_WINS,
   SEAL_PITY_CAP,
@@ -52,6 +50,7 @@ import { battleRoster, fightsHere, ownsRegional, seatRegional } from './origin'
 import { makeMon, takeId } from './save'
 import { addExp, awakenCount, battleLevel, crossedAwaken, isAlive, monStats, realHp, speciesExp } from './stats'
 import { MASTERY_BOSS, MASTERY_WIN, addMastery, masteryLevel, pullMasteryUps, settleOfflineMastery, type MasteryUp } from './mastery'
+import { treeAtkBonus, treeCapMs, treeCritAdd, treeGuardHp, treeLastBreath, treeOfflineFactor, treeStrongType } from './tree'
 import { t } from './i18n'
 import type { SkillDef } from '../types'
 import type { OwnedMon, SaveV2 } from './types'
@@ -270,7 +269,7 @@ export function awardCombatExp(
     let share = base * (uid === fighter ? 1 : BENCH_EXP)
     if (save.buddy === uid) share *= 1 + BUDDY_BONUS
     share *= combatExpFactor(save, now)
-    if (opts.offline) share *= OFFLINE_EXP_FACTOR
+    if (opts.offline) share *= treeOfflineFactor(save)
     const before = mon.lvl
     const gained = addExp(mon, share, cap, null)
     spendBudget(opts, uid, gained.levels)
@@ -279,7 +278,7 @@ export function awardCombatExp(
     if (uid === fighter) fighterExp = Math.floor(share)
     if (!opts.offline && gained.levels > 0) log(save, now, line(save, 'say.level', { name: species(mon.species).name, level: mon.lvl }), false)
   }
-  const hortShare = base * HORT_EP_RATE * combatExpFactor(save, now) * (opts.offline ? OFFLINE_EXP_FACTOR : 1)
+  const hortShare = base * HORT_EP_RATE * combatExpFactor(save, now) * (opts.offline ? treeOfflineFactor(save) : 1)
   for (const uid of save.hort ?? []) {
     const mon = save.mons[uid]
     if (!mon) continue
@@ -306,20 +305,20 @@ function storeHp(mon: OwnedMon, battleHp: number, battleMax: number): void {
   mon.hp = Math.max(1, Math.min(real, Math.round(fraction * real)))
 }
 
-function sideFrom(mon: OwnedMon, cap: number, mods?: { defMul: number; atkMul: number; counter: boolean; anchor: boolean }, mastery = 0): FightSide {
+function sideFrom(mon: OwnedMon, cap: number, mods?: { defMul: number; atkMul: number; counter: boolean; anchor: boolean }, mastery = 0, bonus?: { atk?: number, hp?: number }): FightSide {
   const sp = species(mon.species)
   const level = battleLevel(mon.lvl, cap)
   const stats = monStats({ ...mon, lvl: level }, level, mastery)
   const real = realHp(mon)
   const fraction = real.max > 0 ? real.hp / real.max : 1
-  const maxHp = stats.hp
+  const maxHp = Math.max(1, Math.round(stats.hp * (1 + (bonus?.hp ?? 0))))
   return {
     speciesId: sp.id,
     name: sp.name,
     type: sp.type,
     maxHp,
     hp: Math.max(1, Math.round(maxHp * fraction)),
-    atk: Math.max(1, Math.round(stats.atk * (mods?.atkMul ?? 1))),
+    atk: Math.max(1, Math.round(stats.atk * (mods?.atkMul ?? 1) * (1 + (bonus?.atk ?? 0)))),
     def: Math.max(1, Math.round(stats.def * (mods?.defMul ?? 1))),
     spd: stats.spd,
     skill: awakenSkill(sp.skill, level),
@@ -509,6 +508,14 @@ export function applyCatch(save: SaveV2, speciesId: string, level: number, shiny
   return { species: speciesId, name, chance: 0, success: true, place: 'exp', shiny, level }
 }
 
+function fightMods(save: SaveV2, breath?: { left: number }): FightMods {
+  return {
+    critAdd: treeCritAdd(save),
+    strongType: treeStrongType(save),
+    breath
+  }
+}
+
 function fightOne(save: SaveV2, chapter: ChapterDef, speciesId: string, level: number, opts: ResolveOpts, now: number, shiny = false): { trace: FightTrace; fighter: string; exp: number } | null {
   const foe = foeSide(speciesId, level, shiny)
   const fighter = pickFighter(save, foe.type)
@@ -516,8 +523,8 @@ function fightOne(save: SaveV2, chapter: ChapterDef, speciesId: string, level: n
   save.active = fighter
   const allyMon = save.mons[fighter]
   const cap = chapterCapNow(save, chapter)
-  const ally = sideFrom(allyMon, cap, orderMods(seatsOf(save), fighter, foe.type, false), masteryLevel(save.mastery?.[allyMon.species] ?? 0))
-  const trace = fight1v1(ally, foe, rngOf(save), opts.trace, opts.offline ? null : weatherAt(now))
+  const ally = sideFrom(allyMon, cap, orderMods(seatsOf(save), fighter, foe.type, false), masteryLevel(save.mastery?.[allyMon.species] ?? 0), { atk: treeAtkBonus(save) })
+  const trace = fight1v1(ally, foe, rngOf(save), opts.trace, opts.offline ? null : weatherAt(now), fightMods(save))
   storeHp(allyMon, trace.allyHp, trace.allyMax)
   if (trace.win) {
     save.stats.wins += 1
@@ -665,6 +672,7 @@ function runGauntlet(
   mechs: MechId[] = []
 ): { traces: FightTrace[]; wins: number; lastFighter: string | null; wiped: boolean; exp: number } {
   const traces: FightTrace[] = []
+  const breath = treeLastBreath(save) ? { left: 1 } : undefined
   let index = 0
   let foeFraction = 1
   let wins = 0
@@ -689,7 +697,7 @@ function runGauntlet(
     const allyMon = save.mons[fighter]
     const cap = chapterCapNow(save, chapter)
     const foeType = species(foe.species).type
-    const trace = fight1v1(sideFrom(allyMon, cap, orderMods(seatsOf(save), fighter, foeType, enteredAfterKo), masteryLevel(save.mastery?.[allyMon.species] ?? 0)), foeSide(foe.species, foe.level, foe.shiny ?? false, scale, foeFraction, mechs), rngOf(save), opts.trace, opts.offline ? null : weatherAt(now))
+    const trace = fight1v1(sideFrom(allyMon, cap, orderMods(seatsOf(save), fighter, foeType, enteredAfterKo), masteryLevel(save.mastery?.[allyMon.species] ?? 0), { atk: treeAtkBonus(save), hp: treeGuardHp(save) }), foeSide(foe.species, foe.level, foe.shiny ?? false, scale, foeFraction, mechs), rngOf(save), opts.trace, opts.offline ? null : weatherAt(now), fightMods(save, breath))
     traces.push(trace)
     lastFighter = fighter
     if (opts.summary) opts.summary.fights += 1
@@ -959,7 +967,7 @@ export function resolveEncounter(save: SaveV2, now: number, opts: ResolveOpts): 
 }
 
 export function simulateOffline(save: SaveV2, rawMs: number, now: number): { summary: OfflineSummary; countedMs: number } {
-  const countedMs = Math.min(Math.max(0, rawMs), OFFLINE_CAP_MS)
+  const countedMs = Math.min(Math.max(0, rawMs), treeCapMs(save))
   bankRoad(save, countedMs)
   save.roadAt = now
   const count = Math.floor(countedMs / BASE_ENCOUNTER_MS)
@@ -972,7 +980,7 @@ export function simulateOffline(save: SaveV2, rawMs: number, now: number): { sum
     const at = start + (i + 1) * 2800
     resolveEncounter(save, at, { offline: true, trace: false, summary, levelLeft, masteryBag })
   }
-  summary.mastery = settleOfflineMastery(save, masteryBag)
+  summary.mastery = settleOfflineMastery(save, masteryBag, treeOfflineFactor(save))
   syncAchievements(save)
   save.lastSeenAt = now
   return { summary, countedMs }

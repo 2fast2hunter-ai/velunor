@@ -31,11 +31,12 @@ function reachLevel(region, chapter) {
 function encounters(elapsedMs) {
   return Math.max(1, Math.ceil(Math.max(0, elapsedMs) / SPEED3_MS));
 }
-function allowedGold(elapsedMs, region, chapter) {
+function allowedGold(elapsedMs, region, chapter, goldMult = 1) {
   const level = reachLevel(region, chapter);
   const per = TRAINER_GOLD_PER_LEVEL * TRAINER_PARTY * level * COIN_BONUS;
   const crest = (1e3 + 750 * level) * COIN_BONUS;
-  return Math.ceil((encounters(elapsedMs) * per + crest) * PLAUSIBILITY_BUFFER);
+  const mult = Math.max(1, Math.min(1.1, goldMult));
+  return Math.ceil((encounters(elapsedMs) * per + crest) * PLAUSIBILITY_BUFFER * mult);
 }
 function allowedEp(elapsedMs, region, chapter) {
   const level = reachLevel(region, chapter);
@@ -44,30 +45,31 @@ function allowedEp(elapsedMs, region, chapter) {
   const hort = 4 * 0.3 * LEARN_BONUS;
   return Math.ceil(encounters(elapsedMs) * base * (team + hort) * PLAUSIBILITY_BUFFER);
 }
-function countedOffline(elapsedMs) {
-  return Math.min(Math.max(0, elapsedMs), OFFLINE_CAP_MS);
+function countedOffline(elapsedMs, capMs = OFFLINE_CAP_MS) {
+  const cap = Math.min(12 * 60 * 60 * 1e3, Math.max(OFFLINE_CAP_MS, capMs));
+  return Math.min(Math.max(0, elapsedMs), cap);
 }
-function fightCeiling(elapsedMs) {
-  const offline = Math.floor(countedOffline(elapsedMs) / BASE_ENCOUNTER_MS);
+function fightCeiling(elapsedMs, capMs = OFFLINE_CAP_MS) {
+  const offline = Math.floor(countedOffline(elapsedMs, capMs) / BASE_ENCOUNTER_MS);
   const online = Math.ceil(Math.max(0, elapsedMs) / SPEED3_MS);
   return Math.max(offline, online, 1);
 }
-function allowedChests(elapsedMs) {
-  const road = Math.floor(countedOffline(elapsedMs) / 6e4) + 5;
+function allowedChests(elapsedMs, capMs = OFFLINE_CAP_MS) {
+  const road = Math.floor(countedOffline(elapsedMs, capMs) / 6e4) + 5;
   const shop = Math.max(1, Math.ceil(Math.max(elapsedMs, 1) / 864e5)) * 10;
-  return Math.min(99 * 4 + 5, Math.ceil((fightCeiling(elapsedMs) + road + shop) * PLAUSIBILITY_BUFFER));
+  return Math.min(99 * 4 + 5, Math.ceil((fightCeiling(elapsedMs, capMs) + road + shop) * PLAUSIBILITY_BUFFER));
 }
-function allowedShards(elapsedMs) {
-  return Math.ceil(fightCeiling(elapsedMs) * PLAUSIBILITY_BUFFER);
+function allowedShards(elapsedMs, capMs = OFFLINE_CAP_MS) {
+  return Math.ceil(fightCeiling(elapsedMs, capMs) * PLAUSIBILITY_BUFFER);
 }
-function allowedMastery(elapsedMs) {
-  const fights = fightCeiling(elapsedMs);
+function allowedMastery(elapsedMs, capMs = OFFLINE_CAP_MS) {
+  const fights = fightCeiling(elapsedMs, capMs);
   const bosses = Math.ceil(fights / 6);
-  const dupes = Math.ceil(countedOffline(elapsedMs) / 6e4);
+  const dupes = Math.ceil(countedOffline(elapsedMs, capMs) / 6e4);
   return Math.ceil((fights + bosses * 5 + dupes * 10) * PLAUSIBILITY_BUFFER);
 }
-function allowedNewMons(elapsedMs) {
-  return allowedChests(elapsedMs) + Math.floor(allowedShards(elapsedMs) / 5) + Math.ceil(Math.max(0, elapsedMs) / 36e5) + 6;
+function allowedNewMons(elapsedMs, capMs = OFFLINE_CAP_MS) {
+  return allowedChests(elapsedMs, capMs) + Math.floor(allowedShards(elapsedMs, capMs) / 5) + Math.ceil(Math.max(0, elapsedMs) / 36e5) + 6;
 }
 function crestsInOrder(badges) {
   const indexes = badges.map((badge) => CREST_ORDER.indexOf(badge)).filter((index) => index >= 0);
@@ -111,7 +113,9 @@ function auditSync(before, after, elapsedMs) {
   const chapter = Math.max(before.chapter, after.chapter);
   const goldGain = after.gold - before.gold;
   const windowMs = Math.max(0, elapsed);
-  const goldFlag = gainFlag(goldGain, allowedGold(windowMs, region, chapter));
+  const goldMult = Math.max(1, before.treeGold ?? 1, after.treeGold ?? 1);
+  const capMs = Math.max(OFFLINE_CAP_MS, before.treeCapMs ?? 0, after.treeCapMs ?? 0);
+  const goldFlag = gainFlag(goldGain, allowedGold(windowMs, region, chapter, goldMult));
   if (goldFlag) reasons.push("gold");
   flag = bump(flag, goldFlag);
   const epGain = after.ep - before.ep;
@@ -125,7 +129,7 @@ function auditSync(before, after, elapsedMs) {
   const known = new Set(before.mons.map((mon) => mon.uid));
   const fresh = after.mons.filter((mon) => !known.has(mon.uid));
   const allowed = new Set(after.speciesAllowed);
-  if (fresh.length > allowedNewMons(windowMs)) {
+  if (fresh.length > allowedNewMons(windowMs, capMs)) {
     reasons.push("monsters");
     flag = 2;
   }
@@ -140,17 +144,17 @@ function auditSync(before, after, elapsedMs) {
     }
   }
   const chestGain = after.chests - before.chests;
-  if (chestGain > allowedChests(windowMs)) {
+  if (chestGain > allowedChests(windowMs, capMs)) {
     reasons.push("chests");
     flag = 2;
   }
   const shardGain = after.shards - before.shards;
-  if (shardGain > allowedShards(windowMs)) {
+  if (shardGain > allowedShards(windowMs, capMs)) {
     reasons.push("shards");
     flag = 2;
   }
   const masteryGain = (after.mastery ?? 0) - (before.mastery ?? 0);
-  const masteryFlag = gainFlag(masteryGain, allowedMastery(windowMs));
+  const masteryFlag = gainFlag(masteryGain, allowedMastery(windowMs, capMs));
   if (masteryFlag) reasons.push("mastery");
   flag = bump(flag, masteryFlag);
   return { flag, reasons };
@@ -5265,6 +5269,92 @@ function masteryLevel(ep) {
   return level;
 }
 
+// src/adventure/tree.ts
+var NODE_COSTS = [2, 2, 4, 4, 6, 6, 8, 10];
+var CHEST_SHINY_BASE = 1 / 200;
+var HOUR_MS = 60 * 60 * 1e3;
+var TREE_CAP_MAX_MS = 12 * HOUR_MS;
+var CHEST = [
+  ["Splitter I", "Shards I", "Splitter aus wilden K\xE4mpfen +10 %.", "Wild-fight shards +10%."],
+  ["Splitter II", "Shards II", "Splitter aus wilden K\xE4mpfen +20 %.", "Wild-fight shards +20%."],
+  ["Splitter III", "Shards III", "Splitter aus wilden K\xE4mpfen +30 %.", "Wild-fight shards +30%."],
+  ["Schimmer I", "Shimmer I", "Schimmerchance aus Truhen +10 %, auf 1/200 gerechnet. Steht in den Truhen-Chancen.", "Chest shimmer +10% on a 1/200 base. Shown with the chest rates."],
+  ["Schimmer II", "Shimmer II", "Schimmerchance aus Truhen +20 %.", "Chest shimmer +20%."],
+  ["Doppelspur", "Duplicate trace", "Duplikate aus Truhen geben 25 % mehr Meisterschafts-EP.", "Chest duplicates grant 25% more mastery EP."],
+  ["K\xFCrzerer Weg", "Shorter road", "Wegtruhen brauchen 10 % weniger Zeit.", "Road chests need 10% less time."],
+  ["Siegelmeister", "Seal master", "Einmal am Tag eine zweite Ziehung, wenn die Truhe Seltenheit 6 oder h\xF6her trifft. Die bessere Ziehung bleibt.", "Once a day, a second draw when a chest hits rarity 6 or higher. The better draw stays."]
+];
+var FIGHT = [
+  ["Schlag I", "Strike I", "ATK +3 % in jedem Kampf.", "ATK +3% in every fight."],
+  ["Schlag II", "Strike II", "ATK +6 %.", "ATK +6%."],
+  ["Schlag III", "Strike III", "ATK +10 %.", "ATK +10%."],
+  ["Krit I", "Crit I", "Kritische Treffer +2 Prozentpunkte.", "Critical hits +2 percentage points."],
+  ["Krit II", "Crit II", "Kritische Treffer +5 Prozentpunkte.", "Critical hits +5 percentage points."],
+  ["Typvorteil", "Type edge", "Typvorteil steigt von 1,5 auf 1,6.", "Type advantage rises from 1.5 to 1.6."],
+  ["W\xE4chterhaut", "Warden hide", "Im W\xE4chter- und Ratskampf hat das eigene Team +10 % HP.", "In warden and council fights the team has +10% HP."],
+  ["Letzter Atem", "Last breath", "Einmal je W\xE4chter- oder Ratskampf \xFCberlebt ein Monster mit 1 HP.", "Once each warden or council fight, a monster survives at 1 HP."]
+];
+var TIME = [
+  ["Stunde I", "Hour I", "Offline-Deckel +1 Stunde, auf 9 Stunden.", "Offline cap +1 hour, to 9 hours."],
+  ["Stunde II", "Hour II", "Offline-Deckel +4 Stunden, auf 12 Stunden.", "Offline cap +4 hours, to 12 hours."],
+  ["Nachklang I", "Echo I", "Offline-EP von \xD70,5 auf \xD70,6.", "Offline EP from \xD70.5 to \xD70.6."],
+  ["Nachklang II", "Echo II", "Offline-EP auf \xD70,7.", "Offline EP to \xD70.7."],
+  ["M\xFCnze I", "Coin I", "Gold aus K\xE4mpfen und Funden +5 %.", "Gold from fights and finds +5%."],
+  ["M\xFCnze II", "Coin II", "Gold aus K\xE4mpfen und Funden +10 %.", "Gold from fights and finds +10%."],
+  ["Expedition", "Expedition", "Ein Expeditionsslot. Wirkt erst ab Schritt 11. Bis dahin ist der Knoten nur vorgemerkt.", "One expedition slot. It works from step 11. Until then the node is only reserved."],
+  ["Zeitweber", "Time weaver", "Fr\xFCchte halten 90 statt 60 Minuten.", "Fruits last 90 minutes instead of 60."]
+];
+function column(branch, rows) {
+  return rows.map((row, index) => ({
+    id: `${branch}-${index + 1}`,
+    branch,
+    index,
+    cost: NODE_COSTS[index],
+    nameDe: row[0],
+    nameEn: row[1],
+    textDe: row[2],
+    textEn: row[3]
+  }));
+}
+var TREE_NODES = [
+  ...column("chest", CHEST),
+  ...column("fight", FIGHT),
+  ...column("time", TIME)
+];
+var BY_ID = new Map(TREE_NODES.map((node) => [node.id, node]));
+function branchNodes(branch) {
+  return TREE_NODES.filter((node) => node.branch === branch);
+}
+function owned(save) {
+  return new Set(save.tree?.nodes ?? []);
+}
+function rank(save, branch) {
+  const set = owned(save);
+  let have = 0;
+  for (const node of branchNodes(branch)) {
+    if (!set.has(node.id)) break;
+    have += 1;
+  }
+  return have;
+}
+function treeCapMs(save) {
+  const have = rank(save, "time");
+  const hours = have >= 2 ? 12 : have >= 1 ? 9 : 8;
+  return Math.min(TREE_CAP_MAX_MS, hours * HOUR_MS);
+}
+function treeGoldMult(save) {
+  const have = rank(save, "time");
+  if (have >= 6) return 1.1;
+  if (have >= 5) return 1.05;
+  return 1;
+}
+function treeAudit(save) {
+  return {
+    treeGold: treeGoldMult(save),
+    treeCapMs: Math.max(OFFLINE_CAP_MS, treeCapMs(save))
+  };
+}
+
 // data/regions.json
 var regions_default = {
   regions: [
@@ -10003,6 +10093,7 @@ function auditFromSave(save) {
     shards,
     mastery,
     masteryRanks,
+    ...treeAudit(save),
     mons,
     speciesAllowed: poolFor(enteredRegions(save))
   };

@@ -1,5 +1,6 @@
 import { species } from '../../data'
 import { masteryLevel } from '../mastery'
+import { treeAudit } from '../tree'
 import { START_GOLD } from '../const'
 import { enteredRegions, poolFor } from '../lootbox'
 import { progressOf } from '../cloud/progress'
@@ -44,6 +45,7 @@ export function auditFromSave(save: SaveV2): AuditState {
     shards,
     mastery,
     masteryRanks,
+    ...treeAudit(save),
     mons,
     speciesAllowed: poolFor(enteredRegions(save))
   }
@@ -62,6 +64,8 @@ export function emptyAudit(at: number): AuditState {
     shards: 0,
     mastery: 0,
     masteryRanks: 0,
+    treeGold: 1,
+    treeCapMs: 8 * 60 * 60 * 1000,
     mons: [],
     speciesAllowed: []
   }

@@ -129,6 +129,8 @@ export interface SaveV2 {
   stars: Record<string, number>
   /** Meisterschafts-EP keyed by species id. Missing on older files; the loader fills {}. */
   mastery?: Record<string, number>
+  /** Mastery tree. Missing on older files; the loader fills an empty tree. */
+  tree?: { nodes: string[], resetDay: string, sealDay: string }
   /** Play time saved toward the next road chest. */
   roadMs: number
   /** Kiesel chests waiting on the road, at most 4. */
