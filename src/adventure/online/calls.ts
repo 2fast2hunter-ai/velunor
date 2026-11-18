@@ -71,11 +71,11 @@ export async function loadOwnLabel(): Promise<string | null> {
   return data.display
 }
 
-export async function loadRankPage(board: string): Promise<unknown | null> {
+export async function loadRankPage(board: string, friends = false): Promise<unknown | null> {
   try {
     const { data } = await supabaseClient().auth.getSession()
     if (!data.session) return { status: 'offline' }
-    const page = await supabaseClient().rpc('leaderboard_page', { p_board: board })
+    const page = await supabaseClient().rpc('leaderboard_page', { p_board: board, p_friends: friends })
     if (page.error) return { status: 'offline' }
     return page.data
   } catch {

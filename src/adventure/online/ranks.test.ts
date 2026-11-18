@@ -101,7 +101,7 @@ describe('leaderboards', () => {
     expect(parseRankPage({ status: 'offline' }).status).toBe('offline')
   })
 
-  it('shows the own row, six frames and no friends filter', () => {
+  it('shows the own row, six frames and the friends filter', () => {
     const save = beginAdventure('Ada', { skin: 0, hair: 0, color: 0 }, 'm01', 1_000)
     const html = gameHtml(save, 'ranks', 1_000, pc, dex, null, false, false, null, 1, undefined, {
       ranks: {
@@ -116,7 +116,8 @@ describe('leaderboards', () => {
     expect(html).toContain('is-me')
     expect(html).toContain('Spieler#1111')
     expect(html).toContain('rank-frame on')
-    expect(html).not.toContain('Freunde')
+    expect(html).toContain('data-act="rank-friends"')
+    expect(html).toContain('Freunde')
     expect(BOARDS).toHaveLength(6)
     const offline = gameHtml(save, 'ranks', 1_000, pc, dex, null, false, false, null)
     expect(offline).toContain('Dein Spielstand bleibt auf diesem Gerät')

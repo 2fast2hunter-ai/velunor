@@ -1723,3 +1723,11 @@ img.is-shiny { filter: drop-shadow(0 0 10px #f0c14a); }
 .arena-bench { display: flex; flex-wrap: wrap; gap: 8px; }
 .arena-replay { margin-top: 12px; padding: 16px; border-radius: 22px; background: #10182c; }
 .arena-pair { display: grid; grid-template-columns: 1fr; gap: 8px; }
+.friend-code { margin: 12px 0; padding: 18px; border-radius: 28px; background: #1c2744; text-align: center; }
+.friend-code b { display: block; margin-top: 8px; letter-spacing: 0.18em; font-size: 28px; }
+.friend-search { display: block; margin: 12px 0; }
+.friend-search input { width: 100%; margin-top: 6px; border: 0; border-radius: 18px; padding: 12px 14px; background: #10182c; color: inherit; }
+.friend-row, .beast-card { margin: 8px 0; padding: 14px; border-radius: 24px; background: #121a30; }
+.beast-art { width: 100%; height: auto; }
+.hp-beast { height: 22px; border-radius: 999px; background: #0c1224; overflow: hidden; }
+.hp-beast span { display: block; height: 100%; background: #7dcea0; }

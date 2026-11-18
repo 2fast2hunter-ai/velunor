@@ -209,6 +209,7 @@ export interface RankModel {
   around: RankLine[]
   honors: string[]
   excluded: boolean
+  friends?: boolean
 }
 
 export interface RankLine {

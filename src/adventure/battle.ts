@@ -293,6 +293,8 @@ export interface FightMods {
   foeStrongType?: number
   breath?: { left: number }
   foeBreath?: { left: number }
+  /** Caps the action loop. The arena and the road keep the normal limit. */
+  actionCap?: number
 }
 
 export function fight1v1(allySide: FightSide, foeSide: FightSide, rng: () => number, trace: boolean, weather: WeatherId | null = null, mods: FightMods | null = null): FightTrace {
@@ -587,7 +589,8 @@ export function fight1v1(allySide: FightSide, foeSide: FightSide, rng: () => num
   const allyFirst = ally.side.spd >= foe.side.spd
   let actions = 0
   let timeout = false
-  while (actions < ACTION_LIMIT && ally.hp > 0 && foe.hp > 0) {
+  const actionCap = Math.max(1, Math.min(120, mods?.actionCap ?? ACTION_LIMIT))
+  while (actions < actionCap && ally.hp > 0 && foe.hp > 0) {
     const turn = actions % 2 === 0 ? (allyFirst ? ally : foe) : (allyFirst ? foe : ally)
     const other = turn === ally ? foe : ally
     act(turn, other)

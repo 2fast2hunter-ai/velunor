@@ -93,14 +93,14 @@ function auditHasProgress(before, after) {
   const known = new Set(before.mons.map((mon) => mon.uid));
   return after.mons.some((mon) => !known.has(mon.uid));
 }
-function stickAudit(previousFlag, baseline, next, elapsedMs) {
-  const verdict = auditSync(baseline, next, elapsedMs);
+function stickAudit(previousFlag, baseline, next, elapsedMs, bonusGold = 0) {
+  const verdict = auditSync(baseline, next, elapsedMs, bonusGold);
   const flag = Math.max(previousFlag, verdict.flag);
   const progress = baseline ? auditHasProgress(baseline, next) : true;
   const advanceClock = previousFlag < 1 && verdict.flag < 1 && progress;
   return { flag, audit: advanceClock ? next : baseline, advanceClock, reasons: verdict.reasons };
 }
-function auditSync(before, after, elapsedMs) {
+function auditSync(before, after, elapsedMs, bonusGold = 0) {
   if (!before) return { flag: 0, reasons: [] };
   const reasons = [];
   let flag = 0;
@@ -115,7 +115,7 @@ function auditSync(before, after, elapsedMs) {
   const windowMs = Math.max(0, elapsed);
   const goldMult = Math.max(1, before.treeGold ?? 1, after.treeGold ?? 1);
   const capMs = Math.max(OFFLINE_CAP_MS, before.treeCapMs ?? 0, after.treeCapMs ?? 0);
-  const goldFlag = gainFlag(goldGain, allowedGold(windowMs, region, chapter, goldMult));
+  const goldFlag = gainFlag(goldGain, allowedGold(windowMs, region, chapter, goldMult) + Math.max(0, Math.floor(bonusGold)));
   if (goldFlag) reasons.push("gold");
   flag = bump(flag, goldFlag);
   const epGain = after.ep - before.ep;
@@ -10134,12 +10134,15 @@ Deno.serve(async (req) => {
   } catch {
     return json({ error: "save" }, 400);
   }
-  const profile = await db.from("profiles").select("last_audit, flag_level, audited_at, updated_at, audit_generation").eq("user_id", user.id).maybeSingle();
+  const profile = await db.from("profiles").select("last_audit, flag_level, audited_at, updated_at, audit_generation, bonus_gold").eq("user_id", user.id).maybeSingle();
   const before = profile.data?.last_audit ?? null;
   const previousFlag = profile.data?.flag_level === 2 ? 2 : profile.data?.flag_level === 1 ? 1 : 0;
   const auditedAt = Date.parse(String(profile.data?.audited_at ?? profile.data?.updated_at ?? ""));
   const elapsed = before && Number.isFinite(auditedAt) ? Date.now() - auditedAt : 0;
-  const stuck = stickAudit(previousFlag, before, after, elapsed);
+  const bonusNow = Number(profile.data?.bonus_gold) || 0;
+  after.bonusGold = bonusNow;
+  const bonusGold = Math.max(0, bonusNow - Number(before?.bonusGold ?? 0));
+  const stuck = stickAudit(previousFlag, before, after, elapsed, bonusGold);
   const nowIso = (/* @__PURE__ */ new Date()).toISOString();
   const generation = Number(profile.data?.audit_generation) || 0;
   if (!profile.data) {

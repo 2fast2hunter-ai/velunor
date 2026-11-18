@@ -16,12 +16,15 @@ Deno.serve(async (req) => {
   } catch {
     return json({ error: 'save' }, 400)
   }
-  const profile = await db.from('profiles').select('last_audit, flag_level, audited_at, updated_at, audit_generation').eq('user_id', user.id).maybeSingle()
+  const profile = await db.from('profiles').select('last_audit, flag_level, audited_at, updated_at, audit_generation, bonus_gold').eq('user_id', user.id).maybeSingle()
   const before = (profile.data?.last_audit ?? null) as AuditState | null
   const previousFlag = profile.data?.flag_level === 2 ? 2 : profile.data?.flag_level === 1 ? 1 : 0
   const auditedAt = Date.parse(String(profile.data?.audited_at ?? profile.data?.updated_at ?? ''))
   const elapsed = before && Number.isFinite(auditedAt) ? Date.now() - auditedAt : 0
-  const stuck = stickAudit(previousFlag, before, after, elapsed)
+  const bonusNow = Number(profile.data?.bonus_gold) || 0
+  after.bonusGold = bonusNow
+  const bonusGold = Math.max(0, bonusNow - Number(before?.bonusGold ?? 0))
+  const stuck = stickAudit(previousFlag, before, after, elapsed, bonusGold)
   const nowIso = new Date().toISOString()
   const generation = Number(profile.data?.audit_generation) || 0
   if (!profile.data) {
