@@ -68,9 +68,7 @@ jobs:
           distribution: temurin
           java-version: 21
       - name: Setup Android SDK
-        uses: android-actions/setup-android@v3
-      - name: Install Android 36
-        run: sdkmanager "platforms;android-36" "build-tools;36.0.0"
+        uses: android-actions/setup-android@v4
       - name: Install
         run: npm ci
       - name: Web bundle for the app
