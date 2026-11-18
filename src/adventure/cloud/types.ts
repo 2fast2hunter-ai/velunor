@@ -31,6 +31,7 @@ export interface CloudView {
   reportOpen?: boolean
   deleteStep?: 0 | 1 | 2
   onlineDown?: boolean
+  statusNote?: string
 }
 
 export interface CloudApi {
@@ -55,6 +56,8 @@ export interface CloudPorts {
   loadSave(): SaveV2 | null
   storeSave(save: SaveV2): void
   redirectTo(): string
+  /** True while offline earnings are not in the save yet. Uploads wait. */
+  deferUpload?(): boolean
   pendingReset(): boolean
   clearReset(): void
   pendingReplace(): boolean

@@ -1014,6 +1014,7 @@ function accountCard(save: SaveV2, cloud: CloudView): string {
     <label class="cloud-mail" for="player-target">${esc(tr(save, 'cloud.block'))}</label>
     <input id="player-target" maxlength="24" autocomplete="off" placeholder="${esc(tr(save, 'cloud.reportHint'))}" aria-label="${esc(tr(save, 'cloud.block'))}"/>
     <button type="button" class="cloud-block" data-act="block-player">${esc(tr(save, 'cloud.block'))}</button>
+    ${cloud.statusNote ? `<p class="cloud-notice" role="status">${esc(cloud.statusNote)}</p>` : ''}
     ${cloud.flagLevel === 2 ? `<p class="shadow-note" role="status">${esc(tr(save, 'cloud.shadow'))}</p>` : ''}
     ${cloud.onlineDown ? `<p class="offline-note">${esc(tr(save, 'cloud.unavailable'))}</p>` : ''}
     <p><button type="button" class="danger" data-act="delete-ask">${esc(tr(save, 'cloud.delete'))}</button></p>

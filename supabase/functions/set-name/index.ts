@@ -1,4 +1,4 @@
-import { nameChangeAllowed, nameIssue, pickTag, publicLabel } from '../../../src/adventure/online/name.ts'
+import { nameIssue, pickTag, planNameSave, publicLabel } from '../../../src/adventure/online/name.ts'
 import { admin, caller, cors, json } from '../_shared/admin.ts'
 
 Deno.serve(async (req) => {
@@ -10,11 +10,15 @@ Deno.serve(async (req) => {
   if (issue) return json({ error: issue }, 400)
   const name = String(body.name).trim()
   const db = admin()
-  const existing = await db.from('player_names').select('name, tag, changed_at').eq('user_id', user.id).maybeSingle()
+  const existing = await db.from('player_names').select('name, tag, hidden, changed_at').eq('user_id', user.id).maybeSingle()
   const row = existing.data
-  if (row && row.name !== name && !nameChangeAllowed(Date.parse(row.changed_at), Date.now())) {
-    return json({ error: 'wait' }, 400)
-  }
+  const plan = planNameSave(row ? {
+    name: String(row.name),
+    tag: String(row.tag),
+    hidden: Boolean(row.hidden),
+    changedAt: Date.parse(String(row.changed_at))
+  } : null, name, Date.now())
+  if (!plan.ok) return json({ error: plan.error }, 400)
   let tag = row?.tag ?? ''
   if (!row || row.name !== name) {
     const taken = await db.from('player_names').select('tag').eq('name', name).neq('user_id', user.id)
@@ -26,15 +30,14 @@ Deno.serve(async (req) => {
       tag = next
     }
   }
-  const display = publicLabel(name, tag, false)
-  const changed = !row || row.name !== name
+  const display = publicLabel(name, tag, plan.hidden)
   const { error } = await db.from('player_names').upsert({
     user_id: user.id,
     name,
     tag,
     display,
-    hidden: false,
-    changed_at: changed || !row?.changed_at ? new Date().toISOString() : row.changed_at
+    hidden: plan.hidden,
+    changed_at: new Date().toISOString()
   })
   if (error) return json({ error: 'taken' }, 409)
   return json({ label: display })
