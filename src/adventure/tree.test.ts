@@ -70,8 +70,8 @@ describe('mastery tree', () => {
     ;(save as { tree?: unknown }).tree = undefined
     save.mons[save.team[0]].lvl = 11
     normalize(save, 2_000)
-    expect(SAVE_VERSION).toBe(8)
-    expect(save.saveVersion).toBe(8)
+    expect(SAVE_VERSION).toBe(9)
+    expect(save.saveVersion).toBe(9)
     expect(save.tree?.nodes).toEqual([])
     expect(save.mons[save.team[0]].lvl).toBe(11)
     expect(treePointParts(save).earned).toBe(parts.earned)
@@ -147,7 +147,7 @@ describe('mastery tree', () => {
     expect(verdict.reasons).not.toEqual(expect.arrayContaining(['gold', 'ep', 'chests', 'shards']))
     const cheat = beginAdventure('Ada', { skin: 0, hair: 0, color: 0 }, 'm01', 1_000)
     const clean = auditFromSave(cheat)
-    cheat.gold *= 100
+    cheat.gold += 2_000_000
     expect(auditSync(clean, auditFromSave(cheat), 60_000).flag).toBe(2)
   })
 })

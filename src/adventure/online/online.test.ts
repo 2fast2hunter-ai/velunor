@@ -17,7 +17,7 @@ describe('sync check', () => {
     const start = 1_700_000_000_000
     const save = beginAdventure('Mira', { skin: 2, hair: 3, color: 1 }, 'm01', start)
     const before = auditFromSave(save)
-    save.gold *= 100
+    save.gold += 2_000_000
     save.lastSeenAt = start + 60_000
     expect(auditSync(before, auditFromSave(save)).flag).toBe(2)
     save.gold = before.gold
@@ -32,7 +32,7 @@ describe('sync check', () => {
     const start = 1_700_000_000_000
     const save = beginAdventure('Mira', { skin: 0, hair: 0, color: 0 }, 'm01', start)
     const clean = auditFromSave(save)
-    save.gold *= 100
+    save.gold += 2_000_000
     const cheated = auditFromSave(save)
     const first = stickAudit(0, clean, cheated, 60_000)
     expect(first.flag).toBe(2)

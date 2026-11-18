@@ -6,159 +6,78 @@ var SHELL_H = 2340;
 var SAFE_H = 1920;
 var SHELL_BAND = (SHELL_H - SAFE_H) / 2;
 
-// src/adventure/online/check.ts
-var PLAUSIBILITY_BUFFER = 1.2;
-var SPEED3_MS = 930;
-var COIN_BONUS = 1.25;
-var LEARN_BONUS = 1.25;
-var TRAINER_PARTY = 3;
-var TRAINER_GOLD_PER_LEVEL = 25;
-var OBTAINED_HOW = ["Truhe", "Splitter", "Ei", "Rad", "Tausch"];
-var CREST_ORDER = [
-  "Kieselwappen",
-  "Wellenwappen",
-  "Funkenwappen",
-  "Moorwappen",
-  "Felswappen",
-  "Sturmwappen",
-  "Frostwappen",
-  "Klingenwappen"
-];
-function reachLevel(region, chapter) {
-  const index = Math.max(1, (Math.max(1, Math.floor(region) || 1) - 1) * 8 + Math.max(1, Math.floor(chapter) || 1));
-  return 6 * index;
-}
-function encounters(elapsedMs) {
-  return Math.max(1, Math.ceil(Math.max(0, elapsedMs) / SPEED3_MS));
-}
-function allowedGold(elapsedMs, region, chapter, goldMult = 1) {
-  const level = reachLevel(region, chapter);
-  const per = TRAINER_GOLD_PER_LEVEL * TRAINER_PARTY * level * COIN_BONUS;
-  const crest = (1e3 + 750 * level) * COIN_BONUS;
-  const mult = Math.max(1, Math.min(1.1, goldMult));
-  return Math.ceil((encounters(elapsedMs) * per + crest) * PLAUSIBILITY_BUFFER * mult);
-}
-function allowedEp(elapsedMs, region, chapter) {
-  const level = reachLevel(region, chapter);
-  const base = 8 * level * (1 + 0.15 * 9);
-  const team = 1 * 1.3 * LEARN_BONUS + 5 * 0.5 * LEARN_BONUS;
-  const hort = 4 * 0.3 * LEARN_BONUS;
-  return Math.ceil(encounters(elapsedMs) * base * (team + hort) * PLAUSIBILITY_BUFFER);
-}
-function countedOffline(elapsedMs, capMs = OFFLINE_CAP_MS) {
-  const cap = Math.min(12 * 60 * 60 * 1e3, Math.max(OFFLINE_CAP_MS, capMs));
-  return Math.min(Math.max(0, elapsedMs), cap);
-}
-function fightCeiling(elapsedMs, capMs = OFFLINE_CAP_MS) {
-  const offline = Math.floor(countedOffline(elapsedMs, capMs) / BASE_ENCOUNTER_MS);
-  const online = Math.ceil(Math.max(0, elapsedMs) / SPEED3_MS);
-  return Math.max(offline, online, 1);
-}
-function allowedChests(elapsedMs, capMs = OFFLINE_CAP_MS) {
-  const road = Math.floor(countedOffline(elapsedMs, capMs) / 6e4) + 5;
-  const shop = Math.max(1, Math.ceil(Math.max(elapsedMs, 1) / 864e5)) * 10;
-  return Math.min(99 * 4 + 5, Math.ceil((fightCeiling(elapsedMs, capMs) + road + shop) * PLAUSIBILITY_BUFFER));
-}
-function allowedShards(elapsedMs, capMs = OFFLINE_CAP_MS) {
-  return Math.ceil(fightCeiling(elapsedMs, capMs) * PLAUSIBILITY_BUFFER);
-}
-function allowedMastery(elapsedMs, capMs = OFFLINE_CAP_MS) {
-  const fights = fightCeiling(elapsedMs, capMs);
-  const bosses = Math.ceil(fights / 6);
-  const dupes = Math.ceil(countedOffline(elapsedMs, capMs) / 6e4);
-  return Math.ceil((fights + bosses * 5 + dupes * 10) * PLAUSIBILITY_BUFFER);
-}
-function allowedNewMons(elapsedMs, capMs = OFFLINE_CAP_MS) {
-  return allowedChests(elapsedMs, capMs) + Math.floor(allowedShards(elapsedMs, capMs) / 5) + Math.ceil(Math.max(0, elapsedMs) / 36e5) + 6;
-}
-function crestsInOrder(badges) {
-  const indexes = badges.map((badge) => CREST_ORDER.indexOf(badge)).filter((index) => index >= 0);
-  const unique = [...new Set(indexes)].sort((a, b) => a - b);
-  return unique.every((index, place) => index === place);
-}
-function bump(flag, next) {
-  return next > flag ? next : flag;
-}
-function gainFlag(gain, allowed) {
-  if (!(gain > allowed)) return 0;
-  if (gain > allowed * 2) return 2;
-  return 1;
-}
-function auditHasProgress(before, after) {
-  if (after.gold > before.gold || after.ep > before.ep) return true;
-  if (after.chests > before.chests || after.shards > before.shards) return true;
-  if ((after.mastery ?? 0) > (before.mastery ?? 0)) return true;
-  if (after.region > before.region || after.chapter > before.chapter) return true;
-  if (after.badges.some((badge) => !before.badges.includes(badge))) return true;
-  const known = new Set(before.mons.map((mon) => mon.uid));
-  return after.mons.some((mon) => !known.has(mon.uid));
-}
-function stickAudit(previousFlag, baseline, next, elapsedMs, bonusGold = 0) {
-  const verdict = auditSync(baseline, next, elapsedMs, bonusGold);
-  const flag = Math.max(previousFlag, verdict.flag);
-  const progress = baseline ? auditHasProgress(baseline, next) : true;
-  const advanceClock = previousFlag < 1 && verdict.flag < 1 && progress;
-  return { flag, audit: advanceClock ? next : baseline, advanceClock, reasons: verdict.reasons };
-}
-function auditSync(before, after, elapsedMs, bonusGold = 0) {
-  if (!before) return { flag: 0, reasons: [] };
-  const reasons = [];
-  let flag = 0;
-  const elapsed = elapsedMs ?? after.at - before.at;
-  if (elapsedMs == null && elapsed < 0) {
-    reasons.push("clock");
-    flag = 2;
+// data/types.json
+var types_default = {
+  activeTypes: ["fire", "water", "plant", "earth", "wind", "ice", "lightning", "metal", "fighting", "beast", "light", "shadow", "ghost", "psychic", "sound", "dragon"],
+  multipliers: { strong: 1.5, weak: 0.75, neutral: 1 },
+  mutualStrong: [["light", "shadow"]],
+  names: {
+    fire: "Feuer",
+    water: "Wasser",
+    plant: "Pflanze",
+    earth: "Erde",
+    wind: "Wind",
+    ice: "Eis",
+    lightning: "Blitz",
+    poison: "Gift",
+    metal: "Metall",
+    stone: "Stein",
+    light: "Licht",
+    shadow: "Schatten",
+    ghost: "Geist",
+    dragon: "Drache",
+    insect: "Insekt",
+    beast: "Bestie",
+    fighting: "Kampf",
+    psychic: "Psycho",
+    sound: "Klang",
+    crystal: "Kristall"
+  },
+  colors: {
+    fire: "#ff7043",
+    water: "#42a5f5",
+    plant: "#66bb6a",
+    earth: "#a1887f",
+    wind: "#80deea",
+    ice: "#b3e5fc",
+    lightning: "#ffee58",
+    poison: "#8e24aa",
+    metal: "#b0bec5",
+    stone: "#8d6e63",
+    light: "#fff8e1",
+    shadow: "#5e35b1",
+    ghost: "#ce93d8",
+    dragon: "#ef5350",
+    insect: "#9ccc65",
+    beast: "#ff8a65",
+    fighting: "#e53935",
+    psychic: "#f06292",
+    sound: "#4dd0e1",
+    crystal: "#e1bee7"
+  },
+  strongAgainst: {
+    fire: ["plant", "ice", "insect"],
+    water: ["earth", "stone"],
+    plant: ["water", "light"],
+    earth: ["fire", "lightning", "poison"],
+    wind: ["plant", "insect", "fighting"],
+    ice: ["wind", "dragon", "beast"],
+    lightning: ["water", "wind", "metal"],
+    poison: ["plant", "beast", "crystal"],
+    metal: ["ice", "stone", "crystal"],
+    stone: ["fire", "wind", "ice"],
+    light: ["shadow", "ghost", "dragon"],
+    shadow: ["psychic", "ghost", "light"],
+    ghost: ["psychic", "sound"],
+    dragon: ["dragon", "sound"],
+    insect: ["psychic", "shadow", "poison"],
+    beast: ["insect", "sound"],
+    fighting: ["stone", "metal", "beast"],
+    psychic: ["fighting", "poison"],
+    sound: ["crystal", "metal"],
+    crystal: ["light", "lightning", "earth"]
   }
-  const region = Math.max(before.region, after.region);
-  const chapter = Math.max(before.chapter, after.chapter);
-  const goldGain = after.gold - before.gold;
-  const windowMs = Math.max(0, elapsed);
-  const goldMult = Math.max(1, before.treeGold ?? 1, after.treeGold ?? 1);
-  const capMs = Math.max(OFFLINE_CAP_MS, before.treeCapMs ?? 0, after.treeCapMs ?? 0);
-  const goldFlag = gainFlag(goldGain, allowedGold(windowMs, region, chapter, goldMult) + Math.max(0, Math.floor(bonusGold)));
-  if (goldFlag) reasons.push("gold");
-  flag = bump(flag, goldFlag);
-  const epGain = after.ep - before.ep;
-  const epFlag = gainFlag(epGain, allowedEp(windowMs, region, chapter));
-  if (epFlag) reasons.push("ep");
-  flag = bump(flag, epFlag);
-  if (!crestsInOrder(after.badges)) {
-    reasons.push("crests");
-    flag = 2;
-  }
-  const known = new Set(before.mons.map((mon) => mon.uid));
-  const fresh = after.mons.filter((mon) => !known.has(mon.uid));
-  const allowed = new Set(after.speciesAllowed);
-  if (fresh.length > allowedNewMons(windowMs, capMs)) {
-    reasons.push("monsters");
-    flag = 2;
-  }
-  for (const mon of fresh) {
-    if (!OBTAINED_HOW.includes(mon.obtainedHow)) {
-      reasons.push("source");
-      flag = 2;
-    }
-    if (allowed.size && !allowed.has(mon.species)) {
-      reasons.push("region");
-      flag = 2;
-    }
-  }
-  const chestGain = after.chests - before.chests;
-  if (chestGain > allowedChests(windowMs, capMs)) {
-    reasons.push("chests");
-    flag = 2;
-  }
-  const shardGain = after.shards - before.shards;
-  if (shardGain > allowedShards(windowMs, capMs)) {
-    reasons.push("shards");
-    flag = 2;
-  }
-  const masteryGain = (after.mastery ?? 0) - (before.mastery ?? 0);
-  const masteryFlag = gainFlag(masteryGain, allowedMastery(windowMs, capMs));
-  if (masteryFlag) reasons.push("mastery");
-  flag = bump(flag, masteryFlag);
-  return { flag, reasons };
-}
+};
 
 // data/rarities.json
 var rarities_default = {
@@ -5247,6 +5166,7 @@ var stages_default = {
 };
 
 // src/data.ts
+var typesCfg = types_default;
 var rarities = rarities_default.levels;
 var ascensionCosts = rarities_default.ascension;
 var monsters = monsters_default;
@@ -5259,100 +5179,8 @@ function species(id) {
   if (!found) throw new Error(`Unknown species ${id}`);
   return found;
 }
-
-// src/adventure/mastery.ts
-var MASTERY_STEPS = [1e3, 4e3, 12e3, 3e4, 6e4];
-function masteryLevel(ep) {
-  const points = Math.max(0, Math.floor(ep) || 0);
-  let level = 0;
-  for (const step of MASTERY_STEPS) if (points >= step) level += 1;
-  return level;
-}
-
-// src/adventure/tree.ts
-var NODE_COSTS = [2, 2, 4, 4, 6, 6, 8, 10];
-var CHEST_SHINY_BASE = 1 / 200;
-var HOUR_MS = 60 * 60 * 1e3;
-var TREE_CAP_MAX_MS = 12 * HOUR_MS;
-var CHEST = [
-  ["Splitter I", "Shards I", "Splitter aus wilden K\xE4mpfen +10 %.", "Wild-fight shards +10%."],
-  ["Splitter II", "Shards II", "Splitter aus wilden K\xE4mpfen +20 %.", "Wild-fight shards +20%."],
-  ["Splitter III", "Shards III", "Splitter aus wilden K\xE4mpfen +30 %.", "Wild-fight shards +30%."],
-  ["Schimmer I", "Shimmer I", "Schimmerchance aus Truhen +10 %, auf 1/200 gerechnet. Steht in den Truhen-Chancen.", "Chest shimmer +10% on a 1/200 base. Shown with the chest rates."],
-  ["Schimmer II", "Shimmer II", "Schimmerchance aus Truhen +20 %.", "Chest shimmer +20%."],
-  ["Doppelspur", "Duplicate trace", "Duplikate aus Truhen geben 25 % mehr Meisterschafts-EP.", "Chest duplicates grant 25% more mastery EP."],
-  ["K\xFCrzerer Weg", "Shorter road", "Wegtruhen brauchen 10 % weniger Zeit.", "Road chests need 10% less time."],
-  ["Siegelmeister", "Seal master", "Einmal am Tag eine zweite Ziehung, wenn die Truhe Seltenheit 6 oder h\xF6her trifft. Die bessere Ziehung bleibt.", "Once a day, a second draw when a chest hits rarity 6 or higher. The better draw stays."]
-];
-var FIGHT = [
-  ["Schlag I", "Strike I", "ATK +3 % in jedem Kampf.", "ATK +3% in every fight."],
-  ["Schlag II", "Strike II", "ATK +6 %.", "ATK +6%."],
-  ["Schlag III", "Strike III", "ATK +10 %.", "ATK +10%."],
-  ["Krit I", "Crit I", "Kritische Treffer +2 Prozentpunkte.", "Critical hits +2 percentage points."],
-  ["Krit II", "Crit II", "Kritische Treffer +5 Prozentpunkte.", "Critical hits +5 percentage points."],
-  ["Typvorteil", "Type edge", "Typvorteil steigt von 1,5 auf 1,6.", "Type advantage rises from 1.5 to 1.6."],
-  ["W\xE4chterhaut", "Warden hide", "Im W\xE4chter- und Ratskampf hat das eigene Team +10 % HP.", "In warden and council fights the team has +10% HP."],
-  ["Letzter Atem", "Last breath", "Einmal je W\xE4chter- oder Ratskampf \xFCberlebt ein Monster mit 1 HP.", "Once each warden or council fight, a monster survives at 1 HP."]
-];
-var TIME = [
-  ["Stunde I", "Hour I", "Offline-Deckel +1 Stunde, auf 9 Stunden.", "Offline cap +1 hour, to 9 hours."],
-  ["Stunde II", "Hour II", "Offline-Deckel +4 Stunden, auf 12 Stunden.", "Offline cap +4 hours, to 12 hours."],
-  ["Nachklang I", "Echo I", "Offline-EP von \xD70,5 auf \xD70,6.", "Offline EP from \xD70.5 to \xD70.6."],
-  ["Nachklang II", "Echo II", "Offline-EP auf \xD70,7.", "Offline EP to \xD70.7."],
-  ["M\xFCnze I", "Coin I", "Gold aus K\xE4mpfen und Funden +5 %.", "Gold from fights and finds +5%."],
-  ["M\xFCnze II", "Coin II", "Gold aus K\xE4mpfen und Funden +10 %.", "Gold from fights and finds +10%."],
-  ["Expedition", "Expedition", "Ein Expeditionsslot. Wirkt erst ab Schritt 11. Bis dahin ist der Knoten nur vorgemerkt.", "One expedition slot. It works from step 11. Until then the node is only reserved."],
-  ["Zeitweber", "Time weaver", "Fr\xFCchte halten 90 statt 60 Minuten.", "Fruits last 90 minutes instead of 60."]
-];
-function column(branch, rows) {
-  return rows.map((row, index) => ({
-    id: `${branch}-${index + 1}`,
-    branch,
-    index,
-    cost: NODE_COSTS[index],
-    nameDe: row[0],
-    nameEn: row[1],
-    textDe: row[2],
-    textEn: row[3]
-  }));
-}
-var TREE_NODES = [
-  ...column("chest", CHEST),
-  ...column("fight", FIGHT),
-  ...column("time", TIME)
-];
-var BY_ID = new Map(TREE_NODES.map((node) => [node.id, node]));
-function branchNodes(branch) {
-  return TREE_NODES.filter((node) => node.branch === branch);
-}
-function owned(save) {
-  return new Set(save.tree?.nodes ?? []);
-}
-function rank(save, branch) {
-  const set = owned(save);
-  let have = 0;
-  for (const node of branchNodes(branch)) {
-    if (!set.has(node.id)) break;
-    have += 1;
-  }
-  return have;
-}
-function treeCapMs(save) {
-  const have = rank(save, "time");
-  const hours = have >= 2 ? 12 : have >= 1 ? 9 : 8;
-  return Math.min(TREE_CAP_MAX_MS, hours * HOUR_MS);
-}
-function treeGoldMult(save) {
-  const have = rank(save, "time");
-  if (have >= 6) return 1.1;
-  if (have >= 5) return 1.05;
-  return 1;
-}
-function treeAudit(save) {
-  return {
-    treeGold: treeGoldMult(save),
-    treeCapMs: Math.max(OFFLINE_CAP_MS, treeCapMs(save))
-  };
+function typeName(id) {
+  return typesCfg.names[id];
 }
 
 // data/regions.json
@@ -9997,13 +9825,6 @@ var regions_default = {
 // src/adventure/route.ts
 var regions = regions_default.regions;
 
-// src/adventure/stats.ts
-var EXP_FACTOR = 12;
-var EXP_EXPONENT = 2.45;
-function expToNext(level) {
-  return Math.round(EXP_FACTOR * Math.pow(level, EXP_EXPONENT));
-}
-
 // src/adventure/lootbox.ts
 function speciesInRegion(regionId) {
   const region = regions.find((entry) => entry.id === regionId);
@@ -10013,12 +9834,12 @@ function speciesInRegion(regionId) {
 function collectSpecies(region) {
   const ids = /* @__PURE__ */ new Set();
   for (const chapter of region.chapters) {
-    for (const row of chapter.day) ids.add(row.species);
-    for (const row of chapter.night) ids.add(row.species);
-    for (const row of chapter.weather ?? []) ids.add(row.species);
-    for (const row of chapter.guardian.team) ids.add(row.species);
+    for (const row2 of chapter.day) ids.add(row2.species);
+    for (const row2 of chapter.night) ids.add(row2.species);
+    for (const row2 of chapter.weather ?? []) ids.add(row2.species);
+    for (const row2 of chapter.guardian.team) ids.add(row2.species);
     for (const member of chapter.council?.members ?? []) {
-      for (const row of member.team) ids.add(row.species);
+      for (const row2 of member.team) ids.add(row2.species);
     }
   }
   return [...ids].sort();
@@ -10038,9 +9859,452 @@ function poolFor(unlockedRegions) {
   return [...ids].sort();
 }
 
+// src/adventure/mastery.ts
+var MASTERY_STEPS = [1e3, 4e3, 12e3, 3e4, 6e4];
+function masteryLevel(ep) {
+  const points = Math.max(0, Math.floor(ep) || 0);
+  let level2 = 0;
+  for (const step of MASTERY_STEPS) if (points >= step) level2 += 1;
+  return level2;
+}
+
+// src/adventure/stats.ts
+var EXP_FACTOR = 12;
+var EXP_EXPONENT = 2.45;
+function expToNext(level2) {
+  return Math.round(EXP_FACTOR * Math.pow(level2, EXP_EXPONENT));
+}
+
+// src/adventure/tree.ts
+var NODE_COSTS = [2, 2, 4, 4, 6, 6, 8, 10];
+var CHEST_SHINY_BASE = 1 / 200;
+var HOUR_MS = 60 * 60 * 1e3;
+var TREE_CAP_MAX_MS = 12 * HOUR_MS;
+var CHEST = [
+  ["Splitter I", "Shards I", "Splitter aus wilden K\xE4mpfen +10 %.", "Wild-fight shards +10%."],
+  ["Splitter II", "Shards II", "Splitter aus wilden K\xE4mpfen +20 %.", "Wild-fight shards +20%."],
+  ["Splitter III", "Shards III", "Splitter aus wilden K\xE4mpfen +30 %.", "Wild-fight shards +30%."],
+  ["Schimmer I", "Shimmer I", "Schimmerchance aus Truhen +10 %, auf 1/200 gerechnet. Steht in den Truhen-Chancen.", "Chest shimmer +10% on a 1/200 base. Shown with the chest rates."],
+  ["Schimmer II", "Shimmer II", "Schimmerchance aus Truhen +20 %.", "Chest shimmer +20%."],
+  ["Doppelspur", "Duplicate trace", "Duplikate aus Truhen geben 25 % mehr Meisterschafts-EP.", "Chest duplicates grant 25% more mastery EP."],
+  ["K\xFCrzerer Weg", "Shorter road", "Wegtruhen brauchen 10 % weniger Zeit.", "Road chests need 10% less time."],
+  ["Siegelmeister", "Seal master", "Einmal am Tag eine zweite Ziehung, wenn die Truhe Seltenheit 6 oder h\xF6her trifft. Die bessere Ziehung bleibt.", "Once a day, a second draw when a chest hits rarity 6 or higher. The better draw stays."]
+];
+var FIGHT = [
+  ["Schlag I", "Strike I", "ATK +3 % in jedem Kampf.", "ATK +3% in every fight."],
+  ["Schlag II", "Strike II", "ATK +6 %.", "ATK +6%."],
+  ["Schlag III", "Strike III", "ATK +10 %.", "ATK +10%."],
+  ["Krit I", "Crit I", "Kritische Treffer +2 Prozentpunkte.", "Critical hits +2 percentage points."],
+  ["Krit II", "Crit II", "Kritische Treffer +5 Prozentpunkte.", "Critical hits +5 percentage points."],
+  ["Typvorteil", "Type edge", "Typvorteil steigt von 1,5 auf 1,6.", "Type advantage rises from 1.5 to 1.6."],
+  ["W\xE4chterhaut", "Warden hide", "Im W\xE4chter- und Ratskampf hat das eigene Team +10 % HP.", "In warden and council fights the team has +10% HP."],
+  ["Letzter Atem", "Last breath", "Einmal je W\xE4chter- oder Ratskampf \xFCberlebt ein Monster mit 1 HP.", "Once each warden or council fight, a monster survives at 1 HP."]
+];
+var TIME = [
+  ["Stunde I", "Hour I", "Offline-Deckel +1 Stunde, auf 9 Stunden.", "Offline cap +1 hour, to 9 hours."],
+  ["Stunde II", "Hour II", "Offline-Deckel +4 Stunden, auf 12 Stunden.", "Offline cap +4 hours, to 12 hours."],
+  ["Nachklang I", "Echo I", "Offline-EP von \xD70,5 auf \xD70,6.", "Offline EP from \xD70.5 to \xD70.6."],
+  ["Nachklang II", "Echo II", "Offline-EP auf \xD70,7.", "Offline EP to \xD70.7."],
+  ["M\xFCnze I", "Coin I", "Gold aus K\xE4mpfen und Funden +5 %.", "Gold from fights and finds +5%."],
+  ["M\xFCnze II", "Coin II", "Gold aus K\xE4mpfen und Funden +10 %.", "Gold from fights and finds +10%."],
+  ["Expedition", "Expedition", "Ein weiterer Expeditionsslot, zus\xE4tzlich zu den drei festen.", "One more expedition slot, on top of the three fixed ones."],
+  ["Zeitweber", "Time weaver", "Fr\xFCchte halten 90 statt 60 Minuten.", "Fruits last 90 minutes instead of 60."]
+];
+function column(branch, rows) {
+  return rows.map((row2, index) => ({
+    id: `${branch}-${index + 1}`,
+    branch,
+    index,
+    cost: NODE_COSTS[index],
+    nameDe: row2[0],
+    nameEn: row2[1],
+    textDe: row2[2],
+    textEn: row2[3]
+  }));
+}
+var TREE_NODES = [
+  ...column("chest", CHEST),
+  ...column("fight", FIGHT),
+  ...column("time", TIME)
+];
+var BY_ID = new Map(TREE_NODES.map((node) => [node.id, node]));
+function branchNodes(branch) {
+  return TREE_NODES.filter((node) => node.branch === branch);
+}
+function owned(save) {
+  return new Set(save.tree?.nodes ?? []);
+}
+function rank(save, branch) {
+  const set = owned(save);
+  let have = 0;
+  for (const node of branchNodes(branch)) {
+    if (!set.has(node.id)) break;
+    have += 1;
+  }
+  return have;
+}
+function treeCapMs(save) {
+  const have = rank(save, "time");
+  const hours = have >= 2 ? 12 : have >= 1 ? 9 : 8;
+  return Math.min(TREE_CAP_MAX_MS, hours * HOUR_MS);
+}
+function treeGoldMult(save) {
+  const have = rank(save, "time");
+  if (have >= 6) return 1.1;
+  if (have >= 5) return 1.05;
+  return 1;
+}
+function treeAudit(save) {
+  return {
+    treeGold: treeGoldMult(save),
+    treeCapMs: Math.max(OFFLINE_CAP_MS, treeCapMs(save))
+  };
+}
+
+// src/adventure/arena.ts
+var ATTACK_REGEN_MS = 4 * 60 * 60 * 1e3;
+var SEASON_ANCHOR = Date.parse("2026-11-16T03:00:00.000Z");
+function berlinParts(date) {
+  const fmt = new Intl.DateTimeFormat("en-US", {
+    timeZone: "Europe/Berlin",
+    hourCycle: "h23",
+    year: "numeric",
+    month: "2-digit",
+    day: "2-digit",
+    hour: "2-digit"
+  });
+  const bag = {};
+  for (const part of fmt.formatToParts(date)) bag[part.type] = part.value;
+  return { year: Number(bag.year), month: Number(bag.month), day: Number(bag.day), hour: Number(bag.hour) };
+}
+function offsetMs(date) {
+  const fmt = new Intl.DateTimeFormat("en-US", {
+    timeZone: "Europe/Berlin",
+    hourCycle: "h23",
+    year: "numeric",
+    month: "2-digit",
+    day: "2-digit",
+    hour: "2-digit",
+    minute: "2-digit",
+    second: "2-digit"
+  });
+  const bag = {};
+  for (const part of fmt.formatToParts(date)) bag[part.type] = part.value;
+  const asUtc = Date.UTC(Number(bag.year), Number(bag.month) - 1, Number(bag.day), Number(bag.hour), Number(bag.minute), Number(bag.second));
+  return asUtc - date.getTime();
+}
+function berlinWall(year, month, day, hour) {
+  const utc = new Date(Date.UTC(year, month - 1, day, hour, 0, 0));
+  const first = new Date(utc.getTime() - offsetMs(utc));
+  return new Date(utc.getTime() - offsetMs(first));
+}
+function lastDailyReset(now) {
+  const local = berlinParts(now);
+  const back = local.hour < 4 ? 1 : 0;
+  return berlinWall(local.year, local.month, local.day - back, 4);
+}
+
+// src/adventure/dex.ts
+function regionRoster(regionId) {
+  const region = regions.find((entry) => entry.id === regionId);
+  if (!region) return [];
+  const ids = /* @__PURE__ */ new Set();
+  for (const chapter of region.chapters) {
+    if (chapter.council || chapter.special) continue;
+    for (const row2 of [...chapter.day, ...chapter.night, ...chapter.weather ?? []]) ids.add(row2.species);
+  }
+  return [...ids];
+}
+
+// src/adventure/achievements.ts
+var WAPPEN = [
+  ["Kieselwappen", "Kieseltr\xE4ger", "stone"],
+  ["Wellenwappen", "Wellenl\xE4ufer", "tide"],
+  ["Funkenwappen", "Funkenh\xFCter", "spark"],
+  ["Moorwappen", "Moorw\xE4chter", "veil"],
+  ["Felswappen", "Felssetzer", "stone"],
+  ["Sturmwappen", "Sturmrufer", "night"],
+  ["Frostwappen", "Frostmark", "frost"],
+  ["Klingenwappen", "Klingentr\xE4ger", "ember"]
+];
+function caughtCount(save) {
+  return Object.values(save.dex).filter((entry) => entry.caught > 0).length;
+}
+function seenCount(save) {
+  return Object.values(save.dex).filter((entry) => entry.seen > 0).length;
+}
+function regionDone(save, regionId) {
+  const roster = regionRoster(regionId);
+  return roster.length > 0 && roster.every((id) => (save.dex[id]?.caught ?? 0) > 0);
+}
+function typeDone(save, type) {
+  const all = monsters.filter((mon) => mon.type === type);
+  return all.length > 0 && all.every((mon) => (save.dex[mon.id]?.caught ?? 0) > 0);
+}
+function atLeast(read, need) {
+  return (save) => read(save) >= need;
+}
+var wins = (save) => save.stats.wins;
+var catches = (save) => save.stats.catches;
+var dupes = (save) => save.stats.dupes;
+var eggs = (save) => save.stats.eggs;
+var shinies = (save) => save.stats.shinies;
+var level = (save) => Math.max(0, ...Object.values(save.mons).map((mon) => mon.lvl));
+function row(id, name, title, frame, gold, met) {
+  return { id, name, title, frame, gold, met };
+}
+var typeGoals = Object.keys(typesCfg.names).map((type) => row(
+  `type-${type}`,
+  `Alle ${typeName(type)}-Arten`,
+  `Kenner der ${typeName(type)}`,
+  "leaf",
+  8e3,
+  (save) => typeDone(save, type)
+));
+var GOALS = [
+  row("win-10", "10 Siege", "Wegbereiter", "gold", 500, atLeast(wins, 10)),
+  row("win-100", "100 Siege", "Hundertk\xE4mper", "night", 4e3, atLeast(wins, 100)),
+  row("win-1000", "1.000 Siege", "Tausendk\xE4mper", "ember", 25e3, atLeast(wins, 1e3)),
+  row("catch-10", "10 F\xE4nge", "F\xE4nger", "tide", 500, atLeast(catches, 10)),
+  row("catch-100", "100 F\xE4nge", "Bannmeister", "tide", 4e3, atLeast(catches, 100)),
+  row("catch-500", "500 F\xE4nge", "Siegelh\xFCter", "gold", 2e4, atLeast(catches, 500)),
+  row("dupe-10", "10 Duplikate", "Sammler", "plain", 400, atLeast(dupes, 10)),
+  row("dupe-100", "100 Duplikate", "Archivar", "plain", 3e3, atLeast(dupes, 100)),
+  row("dupe-1000", "1.000 Duplikate", "H\xFCter der Arten", "gold", 15e3, atLeast(dupes, 1e3)),
+  ...WAPPEN.map(([badge, title, frame]) => row(`badge-${badge}`, badge, title, frame, 2e3, (save) => save.badges.includes(badge))),
+  row("badge-Ratsiegel", "Ratsiegel", "Ratsmitglied", "gold", 1e4, (save) => save.badges.includes("Ratsiegel")),
+  row("region-1", "Gr\xFCnmark komplett", "Markgraf", "leaf", 2e4, (save) => regionDone(save, 1)),
+  row("region-2", "Frostk\xFCste komplett", "K\xFCstenw\xE4chter", "frost", 5e4, (save) => regionDone(save, 2)),
+  ...regions.filter((region) => !region.placeholder).map((region) => row(
+    `master-${region.id}`,
+    `Meister der ${region.name}`,
+    `Meister der ${region.name}`,
+    "gold",
+    5e3,
+    (save) => regionRoster(region.id).filter((id) => masteryLevel(save.mastery?.[id] ?? 0) >= 5).length >= 5
+  )),
+  ...typeGoals,
+  row("egg-1", "Erstes Ei", "Brutpfleger", "plain", 500, atLeast(eggs, 1)),
+  row("egg-10", "10 Eier", "Nester", "leaf", 3e3, atLeast(eggs, 10)),
+  row("egg-50", "50 Eier", "Hortmeister", "gold", 15e3, atLeast(eggs, 50)),
+  row("shiny-1", "Erster Schimmer", "Glanzsucher", "spark", 2e3, atLeast(shinies, 1)),
+  row("shiny-10", "10 Schimmer", "Lichttr\xE4ger", "spark", 25e3, atLeast(shinies, 10)),
+  row("level-10", "Ein Monster auf Lv 10", "Lehrling", "plain", 400, atLeast(level, 10)),
+  row("level-25", "Ein Monster auf Lv 25", "Erfahrener", "night", 2500, atLeast(level, 25)),
+  row("level-50", "Ein Monster auf Lv 50", "Veteran", "ember", 12e3, atLeast(level, 50)),
+  row("dex-10", "10 Arten im Kodex", "Kodexanw\xE4rter", "plain", 800, atLeast(caughtCount, 10)),
+  row("dex-25", "25 Arten im Kodex", "Kodexschreiber", "leaf", 2500, atLeast(caughtCount, 25)),
+  row("dex-50", "50 Arten im Kodex", "Kodexh\xFCter", "night", 8e3, atLeast(caughtCount, 50)),
+  row("dex-100", "100 Arten im Kodex", "Kodexmeister", "gold", 4e4, atLeast(caughtCount, 100)),
+  row("seen-100", "100 Arten gesichtet", "Sp\xE4her des Kodex", "veil", 1e4, atLeast(seenCount, 100)),
+  row("hort-2", "Hortplatz 2", "Hortbauer", "leaf", 1500, (save) => save.hortSlots >= 2),
+  row("hort-3", "Hortplatz 3", "Hortvogt", "stone", 8e3, (save) => save.hortSlots >= 3),
+  row("hort-4", "Hortplatz 4", "Hortf\xFCrst", "gold", 2e4, (save) => save.hortSlots >= 4),
+  row("team-6", "Team aus 6", "Sechserzug", "tide", 1e3, (save) => save.team.length >= 6),
+  row("fruit-10", "10 Fr\xFCchte gegessen", "Fruchtkenner", "leaf", 3e3, (save) => save.stats.fruitsUsed >= 10),
+  row("crystal-10", "10 Kristalle gegeben", "Kristallhand", "spark", 3e3, (save) => save.stats.crystalsUsed >= 10),
+  row("hort-guest", "Ein Monster im Hort", "Hortgast", "plain", 300, (save) => save.hort.length >= 1)
+];
+
+// src/adventure/shop.ts
+var FRUIT_MS = 60 * 60 * 1e3;
+var FRUITS = [
+  { id: "fang", name: "Gl\xFCcksfrucht", price: 4e3, effect: "N\xE4chste Truhe: +1 Pp auf Seltenheit ab 5" },
+  { id: "goldfang", name: "Goldfangfrucht", price: 15e3, effect: "Wird in Gold erstattet" },
+  { id: "spuer", name: "Spurfrucht", price: 8e3, effect: "Spur-Chance +50 %" },
+  { id: "neugier", name: "Neugierfrucht", price: 1e4, effect: "Noch nicht erhaltene Arten \xD73" },
+  { id: "glanz", name: "Glanzfrucht", price: 25e3, effect: "Schimmer-Chance \xD72" },
+  { id: "lern", name: "Lernfrucht", price: 6e3, effect: "Kampf-EP +25 %" },
+  { id: "muenz", name: "M\xFCnzfrucht", price: 6e3, effect: "Gold +25 %" }
+];
+var FRUIT_IDS = FRUITS.map((fruit) => fruit.id);
+
+// src/adventure/expedition.ts
+var ROAD_STEPS = 20;
+var WILD_STEPS = 13;
+var WILD_INTERVAL_MS = 2800;
+var WILD_GOLD_PER_LEVEL = 4;
+var HOUR_MS2 = 60 * 60 * 1e3;
+var EGG_READY_MS = 4 * HOUR_MS2;
+var TIER_GOLD = { bronze: 1, silber: 1.25, gold: 1.5 };
+function wildGold30(level2) {
+  const encounters2 = 30 * 60 * 1e3 / WILD_INTERVAL_MS;
+  const wild = encounters2 * (WILD_STEPS / ROAD_STEPS);
+  return Math.round(wild * WILD_GOLD_PER_LEVEL * Math.max(1, level2));
+}
+function expeditionGold(level2, hours, tier) {
+  return Math.round(wildGold30(level2) * Math.max(0, hours) * TIER_GOLD[tier]);
+}
+
+// src/adventure/online/check.ts
+var PLAUSIBILITY_BUFFER = 1.2;
+var SPEED3_MS = 930;
+var COIN_BONUS = 1.25;
+var LEARN_BONUS = 1.25;
+var TRAINER_PARTY = 3;
+var TRAINER_GOLD_PER_LEVEL = 25;
+var OBTAINED_HOW = ["Truhe", "Splitter", "Ei", "Rad", "Tausch"];
+var CREST_ORDER = [
+  "Kieselwappen",
+  "Wellenwappen",
+  "Funkenwappen",
+  "Moorwappen",
+  "Felswappen",
+  "Sturmwappen",
+  "Frostwappen",
+  "Klingenwappen"
+];
+function reachLevel(region, chapter) {
+  const index = Math.max(1, (Math.max(1, Math.floor(region) || 1) - 1) * 8 + Math.max(1, Math.floor(chapter) || 1));
+  return 6 * index;
+}
+function encounters(elapsedMs) {
+  return Math.max(1, Math.ceil(Math.max(0, elapsedMs) / SPEED3_MS));
+}
+function allowedGold(elapsedMs, region, chapter, goldMult = 1) {
+  const level2 = reachLevel(region, chapter);
+  const per = TRAINER_GOLD_PER_LEVEL * TRAINER_PARTY * level2 * COIN_BONUS;
+  const crest = (1e3 + 750 * level2) * COIN_BONUS;
+  const mult = Math.max(1, Math.min(1.1, goldMult));
+  return Math.ceil((encounters(elapsedMs) * per + crest) * PLAUSIBILITY_BUFFER * mult);
+}
+function allowedEp(elapsedMs, region, chapter) {
+  const level2 = reachLevel(region, chapter);
+  const base = 8 * level2 * (1 + 0.15 * 9);
+  const team = 1 * 1.3 * LEARN_BONUS + 5 * 0.5 * LEARN_BONUS;
+  const hort = 4 * 0.3 * LEARN_BONUS;
+  return Math.ceil(encounters(elapsedMs) * base * (team + hort) * PLAUSIBILITY_BUFFER);
+}
+function countedOffline(elapsedMs, capMs = OFFLINE_CAP_MS) {
+  const cap = Math.min(12 * 60 * 60 * 1e3, Math.max(OFFLINE_CAP_MS, capMs));
+  return Math.min(Math.max(0, elapsedMs), cap);
+}
+function fightCeiling(elapsedMs, capMs = OFFLINE_CAP_MS) {
+  const offline = Math.floor(countedOffline(elapsedMs, capMs) / BASE_ENCOUNTER_MS);
+  const online = Math.ceil(Math.max(0, elapsedMs) / SPEED3_MS);
+  return Math.max(offline, online, 1);
+}
+function allowedChests(elapsedMs, capMs = OFFLINE_CAP_MS) {
+  const road = Math.floor(countedOffline(elapsedMs, capMs) / 6e4) + 5;
+  const shop = Math.max(1, Math.ceil(Math.max(elapsedMs, 1) / 864e5)) * 10;
+  return Math.min(99 * 4 + 5, Math.ceil((fightCeiling(elapsedMs, capMs) + road + shop) * PLAUSIBILITY_BUFFER));
+}
+function allowedShards(elapsedMs, capMs = OFFLINE_CAP_MS) {
+  return Math.ceil(fightCeiling(elapsedMs, capMs) * PLAUSIBILITY_BUFFER);
+}
+function allowedMastery(elapsedMs, capMs = OFFLINE_CAP_MS) {
+  const fights = fightCeiling(elapsedMs, capMs);
+  const bosses = Math.ceil(fights / 6);
+  const dupes2 = Math.ceil(countedOffline(elapsedMs, capMs) / 6e4);
+  return Math.ceil((fights + bosses * 5 + dupes2 * 10) * PLAUSIBILITY_BUFFER);
+}
+function allowedNewMons(elapsedMs, capMs = OFFLINE_CAP_MS) {
+  return allowedChests(elapsedMs, capMs) + Math.floor(allowedShards(elapsedMs, capMs) / 5) + Math.ceil(Math.max(0, elapsedMs) / 36e5) + 6;
+}
+function crestsInOrder(badges) {
+  const indexes = badges.map((badge) => CREST_ORDER.indexOf(badge)).filter((index) => index >= 0);
+  const unique = [...new Set(indexes)].sort((a, b) => a - b);
+  return unique.every((index, place) => index === place);
+}
+function bump(flag, next) {
+  return next > flag ? next : flag;
+}
+function gainFlag(gain, allowed) {
+  if (!(gain > allowed)) return 0;
+  if (gain > allowed * 2) return 2;
+  return 1;
+}
+function auditHasProgress(before, after) {
+  if (after.gold > before.gold || after.ep > before.ep) return true;
+  if (after.chests > before.chests || after.shards > before.shards) return true;
+  if ((after.mastery ?? 0) > (before.mastery ?? 0)) return true;
+  if (after.region > before.region || after.chapter > before.chapter) return true;
+  if (after.badges.some((badge) => !before.badges.includes(badge))) return true;
+  const known = new Set(before.mons.map((mon) => mon.uid));
+  return after.mons.some((mon) => !known.has(mon.uid));
+}
+function stickAudit(previousFlag, baseline, next, elapsedMs, bonusGold = 0) {
+  const verdict = auditSync(baseline, next, elapsedMs, bonusGold);
+  const flag = Math.max(previousFlag, verdict.flag);
+  const progress = baseline ? auditHasProgress(baseline, next) : true;
+  const advanceClock = previousFlag < 1 && verdict.flag < 1 && progress;
+  return { flag, audit: advanceClock ? next : baseline, advanceClock, reasons: verdict.reasons };
+}
+function expeditionGoldCap(region, chapter) {
+  return expeditionGold(reachLevel(region, chapter), 1 + 4 + 8, "gold");
+}
+function auditSync(before, after, elapsedMs, bonusGold = 0, nowMs = Date.now()) {
+  if (!before) return { flag: 0, reasons: [] };
+  const reasons = [];
+  let flag = 0;
+  const elapsed = elapsedMs ?? after.at - before.at;
+  if (elapsedMs == null && elapsed < 0) {
+    reasons.push("clock");
+    flag = 2;
+  }
+  const region = Math.max(before.region, after.region);
+  const chapter = Math.max(before.chapter, after.chapter);
+  const goldGain = after.gold - before.gold;
+  const windowMs = Math.max(0, elapsed);
+  const goldMult = Math.max(1, before.treeGold ?? 1, after.treeGold ?? 1);
+  const capMs = Math.max(OFFLINE_CAP_MS, before.treeCapMs ?? 0, after.treeCapMs ?? 0);
+  const fightRoom = allowedGold(windowMs, region, chapter, goldMult) + Math.max(0, Math.floor(bonusGold));
+  const day = lastDailyReset(new Date(nowMs)).toISOString();
+  const dayCap = expeditionGoldCap(region, chapter);
+  const expeditionRoom = before.expeditionDay === day && typeof before.expeditionGoldLeft === "number" ? Math.max(0, Math.min(dayCap, before.expeditionGoldLeft)) : dayCap;
+  const goldFlag = gainFlag(goldGain, fightRoom + expeditionRoom);
+  if (goldFlag) reasons.push("gold");
+  flag = bump(flag, goldFlag);
+  const epGain = after.ep - before.ep;
+  const epFlag = gainFlag(epGain, allowedEp(windowMs, region, chapter));
+  if (epFlag) reasons.push("ep");
+  flag = bump(flag, epFlag);
+  if (!crestsInOrder(after.badges)) {
+    reasons.push("crests");
+    flag = 2;
+  }
+  const known = new Set(before.mons.map((mon) => mon.uid));
+  const fresh = after.mons.filter((mon) => !known.has(mon.uid));
+  const allowed = new Set(after.speciesAllowed);
+  if (fresh.length > allowedNewMons(windowMs, capMs)) {
+    reasons.push("monsters");
+    flag = 2;
+  }
+  for (const mon of fresh) {
+    if (!OBTAINED_HOW.includes(mon.obtainedHow)) {
+      reasons.push("source");
+      flag = 2;
+    }
+    if (allowed.size && !allowed.has(mon.species)) {
+      reasons.push("region");
+      flag = 2;
+    }
+  }
+  const chestGain = after.chests - before.chests;
+  if (chestGain > allowedChests(windowMs, capMs)) {
+    reasons.push("chests");
+    flag = 2;
+  }
+  const shardGain = after.shards - before.shards;
+  if (shardGain > allowedShards(windowMs, capMs)) {
+    reasons.push("shards");
+    flag = 2;
+  }
+  const masteryGain = (after.mastery ?? 0) - (before.mastery ?? 0);
+  const masteryFlag = gainFlag(masteryGain, allowedMastery(windowMs, capMs));
+  if (masteryFlag) reasons.push("mastery");
+  flag = bump(flag, masteryFlag);
+  if (flag === 0) {
+    const extra = Math.max(0, goldGain - fightRoom);
+    after.expeditionDay = day;
+    after.expeditionGoldLeft = Math.max(0, expeditionRoom - extra);
+  }
+  return { flag, reasons };
+}
+
 // src/adventure/cloud/progress.ts
-function investedExp(level, exp) {
-  const lvl = Math.max(1, Math.min(999, Math.floor(level) || 1));
+function investedExp(level2, exp) {
+  const lvl = Math.max(1, Math.min(999, Math.floor(level2) || 1));
   let sum = Math.max(0, Math.floor(exp) || 0);
   for (let i = 1; i < lvl; i++) sum += expToNext(i);
   return sum;

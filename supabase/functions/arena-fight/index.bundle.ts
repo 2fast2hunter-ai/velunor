@@ -10566,7 +10566,7 @@ var TIME = [
   ["Nachklang II", "Echo II", "Offline-EP auf \xD70,7.", "Offline EP to \xD70.7."],
   ["M\xFCnze I", "Coin I", "Gold aus K\xE4mpfen und Funden +5 %.", "Gold from fights and finds +5%."],
   ["M\xFCnze II", "Coin II", "Gold aus K\xE4mpfen und Funden +10 %.", "Gold from fights and finds +10%."],
-  ["Expedition", "Expedition", "Ein Expeditionsslot. Wirkt erst ab Schritt 11. Bis dahin ist der Knoten nur vorgemerkt.", "One expedition slot. It works from step 11. Until then the node is only reserved."],
+  ["Expedition", "Expedition", "Ein weiterer Expeditionsslot, zus\xE4tzlich zu den drei festen.", "One more expedition slot, on top of the three fixed ones."],
   ["Zeitweber", "Time weaver", "Fr\xFCchte halten 90 statt 60 Minuten.", "Fruits last 90 minutes instead of 60."]
 ];
 function column(branch, rows) {

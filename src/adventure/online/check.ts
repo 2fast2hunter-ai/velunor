@@ -1,4 +1,6 @@
 import { BASE_ENCOUNTER_MS, OFFLINE_CAP_MS } from '../const'
+import { lastDailyReset } from '../arena'
+import { expeditionGold } from '../expedition'
 
 /** Server plausibility for one sync. Numbers follow the live fight and the loot tables. */
 
@@ -52,6 +54,10 @@ export interface AuditState {
   treeCapMs?: number
   /** Gold the server has already granted as gifts and co-op rewards. */
   bonusGold?: number
+  /** Berlin day whose expedition gold allowance is stored below. */
+  expeditionDay?: string
+  /** Expedition gold still allowed on that day. Missing means the full day. */
+  expeditionGoldLeft?: number
   mons: AuditMon[]
   /** Species the opened regions can actually award. */
   speciesAllowed: string[]
@@ -181,7 +187,11 @@ export function stickAudit(previousFlag: 0 | 1 | 2, baseline: AuditState | null,
   return { flag, audit: advanceClock ? next : baseline, advanceClock, reasons: verdict.reasons }
 }
 
-export function auditSync(before: AuditState | null, after: AuditState, elapsedMs?: number, bonusGold = 0): AuditResult {
+export function expeditionGoldCap(region: number, chapter: number): number {
+  return expeditionGold(reachLevel(region, chapter), 1 + 4 + 8, 'gold')
+}
+
+export function auditSync(before: AuditState | null, after: AuditState, elapsedMs?: number, bonusGold = 0, nowMs = Date.now()): AuditResult {
   if (!before) return { flag: 0, reasons: [] }
   const reasons: string[] = []
   let flag: 0 | 1 | 2 = 0
@@ -196,7 +206,13 @@ export function auditSync(before: AuditState | null, after: AuditState, elapsedM
   const windowMs = Math.max(0, elapsed)
   const goldMult = Math.max(1, before.treeGold ?? 1, after.treeGold ?? 1)
   const capMs = Math.max(OFFLINE_CAP_MS, before.treeCapMs ?? 0, after.treeCapMs ?? 0)
-  const goldFlag = gainFlag(goldGain, allowedGold(windowMs, region, chapter, goldMult) + Math.max(0, Math.floor(bonusGold)))
+  const fightRoom = allowedGold(windowMs, region, chapter, goldMult) + Math.max(0, Math.floor(bonusGold))
+  const day = lastDailyReset(new Date(nowMs)).toISOString()
+  const dayCap = expeditionGoldCap(region, chapter)
+  const expeditionRoom = before.expeditionDay === day && typeof before.expeditionGoldLeft === 'number'
+    ? Math.max(0, Math.min(dayCap, before.expeditionGoldLeft))
+    : dayCap
+  const goldFlag = gainFlag(goldGain, fightRoom + expeditionRoom)
   if (goldFlag) reasons.push('gold')
   flag = bump(flag, goldFlag)
   const epGain = after.ep - before.ep
@@ -238,5 +254,10 @@ export function auditSync(before: AuditState | null, after: AuditState, elapsedM
   const masteryFlag = gainFlag(masteryGain, allowedMastery(windowMs, capMs))
   if (masteryFlag) reasons.push('mastery')
   flag = bump(flag, masteryFlag)
+  if (flag === 0) {
+    const extra = Math.max(0, goldGain - fightRoom)
+    after.expeditionDay = day
+    after.expeditionGoldLeft = Math.max(0, expeditionRoom - extra)
+  }
   return { flag, reasons }
 }

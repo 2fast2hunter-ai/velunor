@@ -7,6 +7,7 @@ import {
   pickOpponents,
   teamFromRegister
 } from '../../../src/adventure/arena.ts'
+import { expeditionBusy } from '../../../src/adventure/expedition.ts'
 import type { SaveV2 } from '../../../src/adventure/types.ts'
 
 function labelOf(row: { hidden?: boolean, display?: string, name?: string, tag?: string } | null): string {
@@ -59,7 +60,9 @@ Deno.serve(async (req) => {
     if (rows.length !== 6) return json({ error: 'team' }, 400)
     const saved = await db.from('saves').select('save_json').eq('user_id', user.id).maybeSingle()
     if (!saved.data?.save_json) return json({ error: 'team' }, 400)
-    const team = teamFromRegister(rows, saved.data.save_json as SaveV2)
+    const adventure = saved.data.save_json as SaveV2
+    if (uids.some((uid) => expeditionBusy(adventure, uid))) return json({ error: 'team' }, 400)
+    const team = teamFromRegister(rows, adventure)
     if (!team) return json({ error: 'team' }, 400)
     await db.from('arena_profiles').update({ defense: team }).eq('user_id', user.id)
     return json({ ok: true, species: team.fighters.map((fighter) => fighter.speciesId) })

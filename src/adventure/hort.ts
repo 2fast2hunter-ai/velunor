@@ -1,4 +1,5 @@
 import { syncAchievements } from './achievements'
+import { expeditionBusy } from './expedition'
 import { t } from './i18n'
 import { species } from '../data'
 import { makeMon, takeId } from './save'
@@ -44,6 +45,7 @@ export function moveToHort(save: SaveV2, uid: string): string | null {
   if (save.hort.length >= save.hortSlots) return say(save, 'err.hortFull')
   const inTeam = save.team.includes(uid)
   if (!inTeam && !save.pc.includes(uid)) return say(save, 'err.hortReach')
+  if (expeditionBusy(save, uid)) return say(save, 'err.expedition')
   if (inTeam && save.team.length <= 1) return say(save, 'err.keepOne')
   if (inTeam) {
     save.team = save.team.filter((id) => id !== uid)
