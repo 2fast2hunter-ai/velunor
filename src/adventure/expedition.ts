@@ -81,8 +81,8 @@ export function expeditionGold(level: number, hours: number, tier: ExpeditionTie
   return Math.round(wildGold30(level) * Math.max(0, hours) * TIER_GOLD[tier])
 }
 
-export function expeditionSlots(save: SaveV2): number {
-  return EXPEDITION_SLOTS + treeExpeditionSlots(save)
+export function expeditionSlots(save: SaveV2, guildLevel = 0): number {
+  return EXPEDITION_SLOTS + treeExpeditionSlots(save) + (guildLevel >= 5 ? 1 : 0)
 }
 
 export function expeditionBusy(save: SaveV2, uid: string): boolean {
@@ -127,7 +127,7 @@ export function rollQuests(dayKey: string, seed: number): ExpeditionQuest[] {
 }
 
 function emptyState(seed: number): ExpeditionState {
-  return { seed, day: '', quests: [], runs: [], marks: 0, marksDay: '', notes: [] }
+  return { seed, day: '', quests: [], runs: [], marks: 0, marksDay: '', notes: [], goldDone: 0 }
 }
 
 function cleanState(raw: ExpeditionState | undefined, seed: number): ExpeditionState {
@@ -138,6 +138,7 @@ function cleanState(raw: ExpeditionState | undefined, seed: number): ExpeditionS
   state.marks = Math.max(0, Math.floor(Number(raw.marks)) || 0)
   state.marksDay = typeof raw.marksDay === 'string' ? raw.marksDay : ''
   state.notes = Array.isArray(raw.notes) ? raw.notes.filter((line) => typeof line === 'string').slice(0, 8) : []
+  state.goldDone = Math.max(0, Math.floor(Number(raw.goldDone)) || 0)
   state.quests = Array.isArray(raw.quests) ? raw.quests.flatMap((quest): ExpeditionQuest[] => {
     if (!quest || typeof quest.id !== 'string' || !PLACES[quest.type as TypeId]) return []
     const hours: 1 | 4 | 8 = quest.hours === 4 || quest.hours === 8 ? quest.hours : 1
@@ -282,6 +283,7 @@ export function settleExpeditions(save: SaveV2, now: number): ExpeditionReport[]
         egg = false
       }
     }
+    if (tier === 'gold') state.goldDone = (state.goldDone ?? 0) + 1
     const report: ExpeditionReport = { ...loot, place: run.place, marks, ep, egg }
     reports.push(report)
     const line = t(save.settings.lang, 'expedition.back', {

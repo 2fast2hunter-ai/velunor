@@ -67,7 +67,7 @@ export function blankSave(now: number): SaveV2 {
     mons: {},
     dex: {},
     settings: settingsFrom(undefined, false),
-    stats: { wins: 0, catches: 0, dupes: 0, eggs: 0, shinies: 0, fruitsUsed: 0, crystalsUsed: 0 },
+    stats: { wins: 0, catches: 0, dupes: 0, eggs: 0, shinies: 0, fruitsUsed: 0, crystalsUsed: 0, chestsOpened: 0 },
     rng: freshSeed(),
     nextId: 1,
     started: false,
@@ -307,7 +307,8 @@ export function normalize(save: SaveV2, now: number): SaveV2 {
     eggs: save.stats?.eggs ?? 0,
     shinies: save.stats?.shinies ?? shinyHeld,
     fruitsUsed: save.stats?.fruitsUsed ?? 0,
-    crystalsUsed: save.stats?.crystalsUsed ?? 0
+    crystalsUsed: save.stats?.crystalsUsed ?? 0,
+    chestsOpened: Math.max(0, Math.floor(Number(save.stats?.chestsOpened)) || 0)
   }
   if (!save.rng) save.rng = freshSeed()
   if (!save.nextId) {

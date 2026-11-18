@@ -1751,3 +1751,6 @@ img.is-shiny { filter: drop-shadow(0 0 10px #f0c14a); }
   .trade-escrow svg { animation: trade-slide 1.6s ease-in-out infinite; }
 }
 @keyframes trade-slide { 0%, 100% { transform: translateY(0); } 50% { transform: translateY(6px); } }
+.guild-board { display: flex; flex-direction: column; gap: 12px; align-items: flex-start; }
+.guild-emblem { width: 120px; height: 140px; }
+.guild-phrases { display: flex; flex-wrap: wrap; gap: 8px; }

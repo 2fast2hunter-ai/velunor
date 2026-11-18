@@ -45,15 +45,19 @@ function collapseRepeats(letters: string, keep: number): string {
   return letters.replace(/(.)\1+/g, (run, ch: string) => ch.repeat(Math.min(keep, run.length)))
 }
 
-export function nameIssue(raw: string): 'short' | 'long' | 'chars' | 'word' | null {
+export function bannedWord(raw: string): boolean {
+  const letters = nameLetters(raw)
+  const forms = [collapseRepeats(letters, 2), collapseRepeats(letters, 1)]
+  if (forms.some((form) => ALLOWED.has(form))) return false
+  return forms.some((form) => BLOCKED.some((word) => form.includes(word)))
+}
+
+export function nameIssue(raw: string, max = NAME_MAX): 'short' | 'long' | 'chars' | 'word' | null {
   const name = raw.trim()
   if (name.length < NAME_MIN) return 'short'
-  if (name.length > NAME_MAX) return 'long'
+  if (name.length > max) return 'long'
   if (!/^[\p{L}\p{N} ]+$/u.test(name)) return 'chars'
-  const letters = nameLetters(name)
-  const forms = [collapseRepeats(letters, 2), collapseRepeats(letters, 1)]
-  if (forms.some((form) => ALLOWED.has(form))) return null
-  if (forms.some((form) => BLOCKED.some((word) => form.includes(word)))) return 'word'
+  if (bannedWord(name)) return 'word'
   return null
 }
 

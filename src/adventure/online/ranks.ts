@@ -1,6 +1,6 @@
 /** Leaderboard rules. The SQL migration uses the same weeks, cutoffs and titles. */
 
-export const BOARDS = ['codex', 'progress', 'week', 'shimmer', 'mastery', 'arena'] as const
+export const BOARDS = ['codex', 'progress', 'week', 'shimmer', 'mastery', 'arena', 'guild'] as const
 export type BoardId = (typeof BOARDS)[number]
 
 export const CRESTS = [
@@ -31,7 +31,8 @@ export const BOARD_TITLES: Record<BoardId, string> = {
   week: 'Wochenkranz',
   shimmer: 'Schimmerreif',
   mastery: 'Meisterkrone',
-  arena: 'Arenakern'
+  arena: 'Arenakern',
+  guild: 'Gildenbanner'
 }
 
 export const RANK_FRAMES = [

@@ -88,7 +88,9 @@ Deno.serve(async (req) => {
     const label = name.data?.hidden ? `Spieler#${name.data.tag}` : (name.data?.display || 'Spieler')
     await db.from('arena_logs').insert({
       defender: defenderId,
+      attacker: user.id,
       attacker_label: label,
+      attacker_win: replay.win,
       practice: false,
       win: !replay.win,
       delta: defenseDelta,

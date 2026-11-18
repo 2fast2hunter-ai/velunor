@@ -65,7 +65,7 @@ import type { OfflineSummary } from './sim'
 import type { SaveV2 } from './types'
 import { PC_VIEW_FALLBACK, virtualWindow } from './virtualList'
 
-export type Screen = 'adventure' | 'progress' | 'team' | 'codex' | 'activities' | 'shop' | 'achievements' | 'ranks' | 'tree' | 'arena' | 'social' | 'expedition' | 'trade' | 'options' | 'guide'
+export type Screen = 'adventure' | 'progress' | 'team' | 'codex' | 'activities' | 'shop' | 'achievements' | 'ranks' | 'tree' | 'arena' | 'social' | 'expedition' | 'trade' | 'guild' | 'options' | 'guide'
 
 export interface WheelPanel {
   tab: 'hort' | 'wheel' | 'chests'
@@ -123,6 +123,16 @@ export interface ShellFlags {
   social?: SocialPanel
   expeditionPick?: string
   trade?: TradePanel
+  guild?: GuildPanel
+}
+
+export interface GuildPanel {
+  status: 'offline' | 'ready' | 'loading'
+  name: string
+  tag: string
+  level: number
+  points: number
+  note: string
 }
 
 export interface TradeCard {
@@ -329,7 +339,7 @@ const TAB_ICONS: Record<string, string> = {
 }
 
 function tabbar(save: SaveV2, screen: Screen, moreOpen: boolean): string {
-  const moreScreens: Screen[] = ['shop', 'achievements', 'ranks', 'tree', 'arena', 'social', 'expedition', 'trade', 'options', 'guide']
+  const moreScreens: Screen[] = ['shop', 'achievements', 'ranks', 'tree', 'arena', 'social', 'expedition', 'trade', 'guild', 'options', 'guide']
   const tabs: { id: string; label: string; active: boolean; act: string; screen?: Screen }[] = [
     { id: 'adventure', label: 'nav.adventure', active: screen === 'adventure', act: 'screen', screen: 'adventure' },
     { id: 'team', label: 'nav.team', active: screen === 'team', act: 'screen', screen: 'team' },
@@ -365,6 +375,7 @@ function moreSheet(save: SaveV2, open: boolean): string {
     ${socialBtn}
     <button type="button" data-act="screen" data-screen="expedition"><svg class="ui-icon" viewBox="0 0 24 24" aria-hidden="true"><path fill="currentColor" d="M4 16c3-6 6-6 8-2s5-4 8-2v6H4z"/><circle cx="16" cy="7" r="2.4" fill="currentColor"/></svg>${tr(save, 'nav.expedition')}</button>
     <button type="button" data-act="screen" data-screen="trade"><svg class="ui-icon" viewBox="0 0 24 24" aria-hidden="true"><rect x="4" y="6" width="7" height="12" rx="2" fill="currentColor"/><rect x="13" y="6" width="7" height="12" rx="2" fill="currentColor" opacity=".7"/></svg>${tr(save, 'nav.trade')}</button>
+    <button type="button" data-act="screen" data-screen="guild"><svg class="ui-icon" viewBox="0 0 24 24" aria-hidden="true"><path fill="currentColor" d="M12 3l7 4v5c0 4.5-3 7.5-7 9-4-1.5-7-4.5-7-9V7z"/></svg>${tr(save, 'nav.guild')}</button>
     ${items.slice(2).map(([id, icon, label]) => `<button type="button" data-act="screen" data-screen="${id}">${ui(icon)}${tr(save, label)}</button>`).join('')}
   </div>`
 }
@@ -1524,9 +1535,9 @@ function tierMark(tier: 'bronze' | 'silber' | 'gold', on: boolean): string {
   return `<svg class="tier-mark${on ? ' on' : ''}" data-art="expedition/tier-${tier}" viewBox="0 0 48 48" aria-hidden="true"><circle cx="24" cy="24" r="18" fill="${fill}"/><circle cx="24" cy="24" r="7" fill="#fff8"/></svg>`
 }
 
-function expeditionScreen(save: SaveV2, now: number, pick: string | undefined): string {
+function expeditionScreen(save: SaveV2, now: number, pick: string | undefined, guildLevel = 0): string {
   const state = save.expeditions
-  const slots = expeditionSlots(save)
+  const slots = expeditionSlots(save, guildLevel)
   const used = state?.runs.length ?? 0
   const chosen = state?.quests.find((quest) => quest.id === pick) ?? state?.quests[0]
   const marks = tierMark('bronze', false) + tierMark('silber', false) + tierMark('gold', false)
@@ -1597,14 +1608,46 @@ function tradeScreen(save: SaveV2, panel: TradePanel | undefined): string {
   </div></div></div>`
 }
 
+function guildEmblem(): string {
+  return `<svg class="guild-emblem" viewBox="0 0 120 140" role="img" aria-label="Wappen">
+    <path data-art="guild/shape-shield" d="M60 8l44 18v36c0 28-18 46-44 58C34 108 16 90 16 62V26z" fill="#7dcea0"/>
+    <path data-art="guild/symbol-leaf" d="M60 46c16 8 22 24 18 40-16-4-28-16-32-32 6-6 10-8 14-8z" fill="#1c2744"/>
+    <circle data-art="guild/color-moss" cx="78" cy="58" r="6" fill="#f0c14a"/>
+  </svg>`
+}
+
+function guildScreen(save: SaveV2, panel: GuildPanel | undefined): string {
+  const view = panel ?? { status: 'offline' as const, name: '', tag: '', level: 1, points: 0, note: '' }
+  if (view.status !== 'ready') {
+    return `<div class="menu-screen"><div class="menu-scroll"><div class="card panel"><h2>Offline</h2><p class="muted">${tr(save, 'guild.offline')}</p></div></div></div>`
+  }
+  return `<div class="menu-screen"><div class="menu-scroll"><div class="card panel guild-board">
+    <h2>${tr(save, 'nav.guild')}</h2>
+    ${guildEmblem()}
+    <h3>${esc(view.name || tr(save, 'guild.found'))} ${view.tag ? `· ${esc(view.tag)}` : ''}</h3>
+    <p>${tr(save, 'guild.level', { n: view.level })} · ${tr(save, 'guild.points', { n: view.points })}</p>
+    <p class="muted">${tr(save, 'guild.lead')}</p>
+    <div class="guild-phrases">
+      <button type="button" data-act="guild-phrase" data-id="hallo">${tr(save, 'guild.phrase')}</button>
+      <button type="button" data-act="guild-phrase" data-id="danke">Danke</button>
+      <button type="button" data-act="guild-phrase" data-id="los">Los</button>
+    </div>
+    <button type="button" class="primary" data-act="guild-found">${tr(save, 'guild.found')}</button>
+    <button type="button" data-act="guild-join">${tr(save, 'guild.join')}</button>
+    <button type="button" data-act="guild-leave">${tr(save, 'guild.leave')}</button>
+    ${view.note ? `<p class="muted">${esc(view.note)}</p>` : ''}
+  </div></div></div>`
+}
+
 function center(save: SaveV2, screen: Screen, now: number, pc: PcQuery, dex: CodexQuery, selected: string | null, debug: boolean, wheel: WheelPanel, shell: ShellFlags): string {
   if (screen === 'progress') return `<div class="menu-screen"><div class="menu-scroll">${progress(save)}</div></div>`
   if (screen === 'ranks') return ranksScreen(save, shell.ranks)
   if (screen === 'tree') return treeScreen(save, shell.treePick, now)
   if (screen === 'arena') return arenaScreen(save, shell.arena)
   if (screen === 'social') return socialScreen(save, shell.social)
-  if (screen === 'expedition') return expeditionScreen(save, now, shell.expeditionPick)
+  if (screen === 'expedition') return expeditionScreen(save, now, shell.expeditionPick, shell.guild?.level ?? 0)
   if (screen === 'trade') return tradeScreen(save, shell.trade)
+  if (screen === 'guild') return guildScreen(save, shell.guild)
   if (screen === 'team') return team(save, pc, selected, shell)
   if (screen === 'codex') return codex(save, dex, shell)
   if (screen === 'activities') return activitiesView(save, now, selected, wheel)
