@@ -1,0 +1,103 @@
+name: Release builds
+
+# Runs only when a version tag is pushed. This file does not push a tag.
+# No signing keys, no Actions secrets, no store upload.
+on:
+  push:
+    tags:
+      - 'v*'
+
+permissions:
+  contents: read
+
+concurrency:
+  group: release-${{ github.ref }}
+  cancel-in-progress: true
+
+jobs:
+  android:
+    name: Android debug APK and unsigned AAB
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+      - name: Setup Node
+        uses: actions/setup-node@v4
+        with:
+          node-version: 22
+          cache: npm
+      - name: Setup Java
+        uses: actions/setup-java@v4
+        with:
+          distribution: temurin
+          java-version: 21
+      - name: Setup Android SDK
+        uses: android-actions/setup-android@v4
+      - name: Install
+        run: npm ci
+      - name: Web bundle for the app
+        run: npm run build
+        env:
+          CAPACITOR: '1'
+          VITE_SUPABASE_URL: ${{ vars.VITE_SUPABASE_URL }}
+          VITE_SUPABASE_KEY: ${{ vars.VITE_SUPABASE_KEY }}
+      - name: Sync Android
+        run: npx cap sync android
+      - name: Debug APK and unsigned bundle
+        working-directory: android
+        run: chmod +x gradlew && ./gradlew assembleDebug bundleRelease --no-daemon
+      - name: Upload APK
+        uses: actions/upload-artifact@v4
+        with:
+          name: velunor-debug-apk
+          path: android/app/build/outputs/apk/debug/app-debug.apk
+          if-no-files-found: error
+      - name: Upload unsigned AAB
+        uses: actions/upload-artifact@v4
+        with:
+          name: velunor-unsigned-aab
+          path: android/app/build/outputs/bundle/release/*.aab
+          if-no-files-found: error
+
+  ios:
+    name: iOS simulator
+    runs-on: macos-latest
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+      - name: Setup Node
+        uses: actions/setup-node@v4
+        with:
+          node-version: 22
+          cache: npm
+      - name: Install
+        run: npm ci
+      - name: Web bundle for the app
+        run: npm run build
+        env:
+          CAPACITOR: '1'
+          VITE_SUPABASE_URL: ${{ vars.VITE_SUPABASE_URL }}
+          VITE_SUPABASE_KEY: ${{ vars.VITE_SUPABASE_KEY }}
+      - name: Sync iOS
+        run: npx cap sync ios
+      - name: Simulator build without signing
+        working-directory: ios/App
+        run: >
+          xcodebuild
+          -project App.xcodeproj
+          -scheme App
+          -configuration Debug
+          -sdk iphonesimulator
+          -destination 'generic/platform=iOS Simulator'
+          -derivedDataPath build
+          CODE_SIGNING_ALLOWED=NO
+          CODE_SIGNING_REQUIRED=NO
+          CODE_SIGN_IDENTITY=
+          DEVELOPMENT_TEAM=
+          build
+      - name: Upload simulator app
+        uses: actions/upload-artifact@v4
+        with:
+          name: velunor-ios-simulator
+          path: ios/App/build/Build/Products/Debug-iphonesimulator/App.app
+          if-no-files-found: error
