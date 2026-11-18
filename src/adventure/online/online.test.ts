@@ -52,6 +52,26 @@ describe('sync check', () => {
     expect(saveOwesCatchUp(start, start + 1000, WELCOME_AFTER_MS)).toBe(false)
   })
 
+  it('stays at flag 0 for 8 minutes, 1 hour and 8 hours, even after an early sync of the old save', () => {
+    for (const minutes of [8, 60, 8 * 60]) {
+      const ms = minutes * 60 * 1000
+      const start = 1_700_000_000_000
+      const save = beginAdventure('Mira', { skin: 0, hair: 0, color: 0 }, 'm01', start)
+      const baseline = auditFromSave(save)
+      const early = stickAudit(0, baseline, auditFromSave(save), ms)
+      expect(early.flag, `${minutes} early`).toBe(0)
+      expect(early.advanceClock, `${minutes} early`).toBe(false)
+      expect(early.audit).toEqual(baseline)
+      simulateOffline(save, ms, start + ms)
+      const earnedSnap = auditFromSave(save)
+      const earned = stickAudit(early.flag, early.audit, earnedSnap, ms)
+      expect(earned.flag, `${minutes} earned`).toBe(0)
+      expect(earned.reasons, `${minutes} earned`).not.toEqual(expect.arrayContaining(['chests', 'shards', 'gold', 'ep']))
+      const rushed = stickAudit(0, baseline, earnedSnap, 2_000)
+      expect(rushed.flag, `${minutes} rushed`).toBe(2)
+    }
+  })
+
   it('rejects a clock turned back and a crest taken out of order', () => {
     const save = beginAdventure('Mira', { skin: 0, hair: 0, color: 0 }, 'm01', 5_000)
     const before = auditFromSave(save)
@@ -79,7 +99,7 @@ describe('player names', () => {
     expect(pickTag(['0001'], () => 0.00021)?.length).toBe(4)
     expect(publicLabel('Mira', '1234', false)).toBe('Mira#1234')
     expect(publicLabel('Mira', '1234', true)).toBe('Spieler#1234')
-    for (const blocked of ['f4ck', 'fvck', 'phuck', 'fuk', 'fuuuck', 'shiiit', '\u0455hit', 'Hitler']) {
+    for (const blocked of ['f4ck', 'fvck', 'phuck', 'fuk', 'fuuuck', 'shiiit', '\u0455hit', 'Hitler', 'Arschloch', 'fuckyou', 'Hitlerfan', 'Hurensohn1', 'sh1t', 'n4z1', 's h i t', 'hur3ns0hn', 'Hurensohn']) {
       expect(nameIssue(blocked), blocked).toBe('word')
     }
     for (const allowed of ['Barsch', 'Marschall', 'Scunthorpe', 'Shitake']) {

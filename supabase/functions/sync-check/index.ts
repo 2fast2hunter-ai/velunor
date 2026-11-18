@@ -16,33 +16,36 @@ Deno.serve(async (req) => {
   } catch {
     return json({ error: 'save' }, 400)
   }
-  const profile = await db.from('profiles').select('last_audit, flag_level, audited_at, updated_at').eq('user_id', user.id).maybeSingle()
+  const profile = await db.from('profiles').select('last_audit, flag_level, audited_at, updated_at, audit_generation').eq('user_id', user.id).maybeSingle()
   const before = (profile.data?.last_audit ?? null) as AuditState | null
   const previousFlag = profile.data?.flag_level === 2 ? 2 : profile.data?.flag_level === 1 ? 1 : 0
   const auditedAt = Date.parse(String(profile.data?.audited_at ?? profile.data?.updated_at ?? ''))
   const elapsed = before && Number.isFinite(auditedAt) ? Date.now() - auditedAt : 0
   const stuck = stickAudit(previousFlag, before, after, elapsed)
   const nowIso = new Date().toISOString()
+  const generation = Number(profile.data?.audit_generation) || 0
   if (!profile.data) {
     await db.from('profiles').insert({
       user_id: user.id,
       flag_level: stuck.flag,
       last_audit: stuck.audit,
       audited_at: nowIso,
+      audit_generation: stuck.advanceClock ? 1 : 0,
       updated_at: nowIso
     })
-  } else if (stuck.audit === before) {
+  } else if (!stuck.advanceClock) {
     await db.from('profiles').update({ flag_level: stuck.flag, updated_at: nowIso }).eq('user_id', user.id)
   } else {
     await db.from('profiles').update({
       flag_level: stuck.flag,
       last_audit: stuck.audit,
       audited_at: nowIso,
+      audit_generation: generation + 1,
       updated_at: nowIso
     }).eq('user_id', user.id)
   }
   const known = new Set((before?.mons ?? []).map((mon) => mon.uid))
-  const fresh = stuck.audit === before ? [] : after.mons.filter((mon) => !known.has(mon.uid) && ['Truhe', 'Splitter', 'Ei', 'Rad', 'Tausch'].includes(mon.obtainedHow))
+  const fresh = stuck.advanceClock ? after.mons.filter((mon) => !known.has(mon.uid) && ['Truhe', 'Splitter', 'Ei', 'Rad', 'Tausch'].includes(mon.obtainedHow)) : []
   if (fresh.length) {
     await db.from('monsters_owned').upsert(fresh.map((mon) => ({
       uid: mon.uid,

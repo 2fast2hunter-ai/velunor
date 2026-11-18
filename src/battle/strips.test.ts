@@ -1,9 +1,16 @@
 import { describe, expect, it } from 'vitest'
 import { FxPool } from './fxPool'
 import { particleBudget, POOL_SIZE, typeFx } from './typeFx'
-import { battleStripTypes, effectTiming, FX_MAX_MS, FX_MIN_MS, FX_POOL_MAX, hitBurstLook, hitStrip, projStrip, stripFrame } from './strips'
+import { battleStripTypes, effectTiming, FX_MAX_MS, FX_MIN_MS, FX_POOL_MAX, hideStripImages, hitBurstLook, hitStrip, projStrip, stripFrame } from './strips'
 
 describe('type strips', () => {
+  it('hides strip images only after they exist', () => {
+    expect(() => hideStripImages(undefined, undefined)).not.toThrow()
+    let hidden = 0
+    hideStripImages({ setVisible: () => { hidden += 1 } }, null)
+    expect(hidden).toBe(1)
+  })
+
   it('has a projectile and a hit burst for every type', () => {
     expect(battleStripTypes()).toHaveLength(20)
     for (const type of battleStripTypes()) {

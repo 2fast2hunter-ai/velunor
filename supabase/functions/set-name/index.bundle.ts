@@ -2,7 +2,7 @@
 var NAME_MIN = 3;
 var NAME_MAX = 16;
 var NAME_CHANGE_MS = 7 * 24 * 60 * 60 * 1e3;
-var BLOCKED = /* @__PURE__ */ new Set([
+var BLOCKED = [
   "arsch",
   "fotze",
   "hurensohn",
@@ -20,7 +20,8 @@ var BLOCKED = /* @__PURE__ */ new Set([
   "retard",
   "whore",
   "hitler"
-]);
+];
+var ALLOWED = /* @__PURE__ */ new Set(["barsch", "marschall", "scunthorpe", "shitake"]);
 var LEET = {
   "0": "o",
   "1": "i",
@@ -69,7 +70,8 @@ function nameIssue(raw) {
   if (!/^[\p{L}\p{N} ]+$/u.test(name)) return "chars";
   const letters = nameLetters(name);
   const forms = [collapseRepeats(letters, 2), collapseRepeats(letters, 1)];
-  if (forms.some((form) => BLOCKED.has(form))) return "word";
+  if (forms.some((form) => ALLOWED.has(form))) return null;
+  if (forms.some((form) => BLOCKED.some((word) => form.includes(word)))) return "word";
   return null;
 }
 function planNameSave(existing, nextName, now) {

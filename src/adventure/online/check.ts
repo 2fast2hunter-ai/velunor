@@ -1,3 +1,5 @@
+import { BASE_ENCOUNTER_MS, OFFLINE_CAP_MS } from '../const'
+
 /** Server plausibility for one sync. Numbers follow the live fight and the loot tables. */
 
 export const PLAUSIBILITY_BUFFER = 1.2
@@ -76,14 +78,30 @@ export function allowedEp(elapsedMs: number, region: number, chapter: number): n
   return Math.ceil(encounters(elapsedMs) * base * (team + hort) * PLAUSIBILITY_BUFFER)
 }
 
-/** Chests a clock can explain: a road chest a minute, the daily shop, and the ready pile. */
-export function allowedChests(elapsedMs: number): number {
-  const days = Math.max(1, Math.ceil(Math.max(0, elapsedMs) / 86_400_000))
-  return Math.min(99 * 4, Math.floor(Math.max(0, elapsedMs) / 60_000) + days * 10 + 8)
+function countedOffline(elapsedMs: number): number {
+  return Math.min(Math.max(0, elapsedMs), OFFLINE_CAP_MS)
 }
 
+/** Fights the offline catch-up can finish, capped at 8 h, or the faster online tempo. */
+function fightCeiling(elapsedMs: number): number {
+  const offline = Math.floor(countedOffline(elapsedMs) / BASE_ENCOUNTER_MS)
+  const online = Math.ceil(Math.max(0, elapsedMs) / SPEED3_MS)
+  return Math.max(offline, online, 1)
+}
+
+/**
+ * One chest per fight covers finds and trainer drops, plus the road pile and the shop.
+ * Storage stops at 99 of each of the four tiers.
+ */
+export function allowedChests(elapsedMs: number): number {
+  const road = Math.floor(countedOffline(elapsedMs) / 60_000) + 5
+  const shop = Math.max(1, Math.ceil(Math.max(elapsedMs, 1) / 86_400_000)) * 10
+  return Math.min(99 * 4 + 5, Math.ceil((fightCeiling(elapsedMs) + road + shop) * PLAUSIBILITY_BUFFER))
+}
+
+/** One shard per fight. Offline catch-up and speed ×3 both fit, then the 1.2 buffer. */
 export function allowedShards(elapsedMs: number): number {
-  return encounters(elapsedMs)
+  return Math.ceil(fightCeiling(elapsedMs) * PLAUSIBILITY_BUFFER)
 }
 
 /** New monsters have to fit in chests, shard crafts, eggs and the wheel. */
@@ -124,11 +142,22 @@ export function saveOwesCatchUp(lastSeenAt: number, now: number, welcomeMs: numb
  * Flag 2 and flag 1 stick. A flagged row keeps the last clean baseline,
  * so the next sync is still judged against that baseline.
  */
-export function stickAudit(previousFlag: 0 | 1 | 2, baseline: AuditState | null, next: AuditState, elapsedMs: number): { flag: 0 | 1 | 2, audit: AuditState | null, reasons: string[] } {
+/** Gold, EP, chests, shards, crests, region or a new monster. A newer timestamp alone is not progress. */
+export function auditHasProgress(before: AuditState, after: AuditState): boolean {
+  if (after.gold > before.gold || after.ep > before.ep) return true
+  if (after.chests > before.chests || after.shards > before.shards) return true
+  if (after.region > before.region || after.chapter > before.chapter) return true
+  if (after.badges.some((badge) => !before.badges.includes(badge))) return true
+  const known = new Set(before.mons.map((mon) => mon.uid))
+  return after.mons.some((mon) => !known.has(mon.uid))
+}
+
+export function stickAudit(previousFlag: 0 | 1 | 2, baseline: AuditState | null, next: AuditState, elapsedMs: number): { flag: 0 | 1 | 2, audit: AuditState | null, advanceClock: boolean, reasons: string[] } {
   const verdict = auditSync(baseline, next, elapsedMs)
   const flag = Math.max(previousFlag, verdict.flag) as 0 | 1 | 2
-  const keep = previousFlag >= 1 || verdict.flag >= 1
-  return { flag, audit: keep ? baseline : next, reasons: verdict.reasons }
+  const progress = baseline ? auditHasProgress(baseline, next) : true
+  const advanceClock = previousFlag < 1 && verdict.flag < 1 && progress
+  return { flag, audit: advanceClock ? next : baseline, advanceClock, reasons: verdict.reasons }
 }
 
 export function auditSync(before: AuditState | null, after: AuditState, elapsedMs?: number): AuditResult {

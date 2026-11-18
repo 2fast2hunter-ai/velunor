@@ -4,10 +4,13 @@ export const NAME_MIN = 3
 export const NAME_MAX = 16
 export const NAME_CHANGE_MS = 7 * 24 * 60 * 60 * 1000
 
-const BLOCKED = new Set([
+const BLOCKED = [
   'arsch', 'fotze', 'hurensohn', 'missgeburt', 'nazi', 'neger', 'nigger',
   'faggot', 'fuck', 'fuk', 'fack', 'shit', 'bitch', 'cunt', 'retard', 'whore', 'hitler'
-])
+]
+
+/** Whole names that merely contain a blocked piece and are still allowed. */
+const ALLOWED = new Set(['barsch', 'marschall', 'scunthorpe', 'shitake'])
 
 const LEET: Record<string, string> = {
   '0': 'o', '1': 'i', '3': 'e', '4': 'a', '5': 's', '7': 't', '@': 'a', '$': 's'
@@ -46,7 +49,8 @@ export function nameIssue(raw: string): 'short' | 'long' | 'chars' | 'word' | nu
   if (!/^[\p{L}\p{N} ]+$/u.test(name)) return 'chars'
   const letters = nameLetters(name)
   const forms = [collapseRepeats(letters, 2), collapseRepeats(letters, 1)]
-  if (forms.some((form) => BLOCKED.has(form))) return 'word'
+  if (forms.some((form) => ALLOWED.has(form))) return null
+  if (forms.some((form) => BLOCKED.some((word) => form.includes(word)))) return 'word'
   return null
 }
 
