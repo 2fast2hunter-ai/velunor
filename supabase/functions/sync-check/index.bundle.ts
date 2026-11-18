@@ -59,23 +59,30 @@ function gainFlag(gain, allowed) {
   if (gain > allowed * 2) return 2;
   return 1;
 }
-function auditSync(before, after) {
+function stickAudit(previousFlag, baseline, next, elapsedMs) {
+  const verdict = auditSync(baseline, next, elapsedMs);
+  const flag = Math.max(previousFlag, verdict.flag);
+  const keep = previousFlag >= 1 || verdict.flag >= 1;
+  return { flag, audit: keep ? baseline : next, reasons: verdict.reasons };
+}
+function auditSync(before, after, elapsedMs) {
   if (!before) return { flag: 0, reasons: [] };
   const reasons = [];
   let flag = 0;
-  const elapsed = after.at - before.at;
-  if (elapsed < 0) {
+  const elapsed = elapsedMs ?? after.at - before.at;
+  if (elapsedMs == null && elapsed < 0) {
     reasons.push("clock");
     flag = 2;
   }
   const region = Math.max(before.region, after.region);
   const chapter = Math.max(before.chapter, after.chapter);
   const goldGain = after.gold - before.gold;
-  const goldFlag = gainFlag(goldGain, allowedGold(Math.max(0, elapsed), region, chapter));
+  const windowMs = Math.max(0, elapsed);
+  const goldFlag = gainFlag(goldGain, allowedGold(windowMs, region, chapter));
   if (goldFlag) reasons.push("gold");
   flag = bump(flag, goldFlag);
   const epGain = after.ep - before.ep;
-  const epFlag = gainFlag(epGain, allowedEp(Math.max(0, elapsed), region, chapter));
+  const epFlag = gainFlag(epGain, allowedEp(windowMs, region, chapter));
   if (epFlag) reasons.push("ep");
   flag = bump(flag, epFlag);
   if (!crestsInOrder(after.badges)) {
@@ -85,7 +92,7 @@ function auditSync(before, after) {
   const known = new Set(before.mons.map((mon) => mon.uid));
   const fresh = after.mons.filter((mon) => !known.has(mon.uid));
   const allowed = new Set(after.speciesAllowed);
-  if (fresh.length > allowedNewMons(Math.max(0, elapsed))) {
+  if (fresh.length > allowedNewMons(windowMs)) {
     reasons.push("monsters");
     flag = 2;
   }
@@ -100,12 +107,12 @@ function auditSync(before, after) {
     }
   }
   const chestGain = after.chests - before.chests;
-  if (chestGain > allowedChests(Math.max(0, elapsed))) {
+  if (chestGain > allowedChests(windowMs)) {
     reasons.push("chests");
     flag = 2;
   }
   const shardGain = after.shards - before.shards;
-  if (shardGain > allowedShards(Math.max(0, elapsed))) {
+  if (shardGain > allowedShards(windowMs)) {
     reasons.push("shards");
     flag = 2;
   }
@@ -9993,17 +10000,33 @@ Deno.serve(async (req) => {
   } catch {
     return json({ error: "save" }, 400);
   }
-  const profile = await db.from("profiles").select("last_audit").eq("user_id", user.id).maybeSingle();
+  const profile = await db.from("profiles").select("last_audit, flag_level, audited_at, updated_at").eq("user_id", user.id).maybeSingle();
   const before = profile.data?.last_audit ?? null;
-  const verdict = auditSync(before, after);
-  await db.from("profiles").upsert({
-    user_id: user.id,
-    flag_level: verdict.flag,
-    last_audit: after,
-    updated_at: (/* @__PURE__ */ new Date()).toISOString()
-  });
+  const previousFlag = profile.data?.flag_level === 2 ? 2 : profile.data?.flag_level === 1 ? 1 : 0;
+  const auditedAt = Date.parse(String(profile.data?.audited_at ?? profile.data?.updated_at ?? ""));
+  const elapsed = before && Number.isFinite(auditedAt) ? Date.now() - auditedAt : 0;
+  const stuck = stickAudit(previousFlag, before, after, elapsed);
+  const nowIso = (/* @__PURE__ */ new Date()).toISOString();
+  if (!profile.data) {
+    await db.from("profiles").insert({
+      user_id: user.id,
+      flag_level: stuck.flag,
+      last_audit: stuck.audit,
+      audited_at: nowIso,
+      updated_at: nowIso
+    });
+  } else if (stuck.audit === before) {
+    await db.from("profiles").update({ flag_level: stuck.flag, updated_at: nowIso }).eq("user_id", user.id);
+  } else {
+    await db.from("profiles").update({
+      flag_level: stuck.flag,
+      last_audit: stuck.audit,
+      audited_at: nowIso,
+      updated_at: nowIso
+    }).eq("user_id", user.id);
+  }
   const known = new Set((before?.mons ?? []).map((mon) => mon.uid));
-  const fresh = after.mons.filter((mon) => !known.has(mon.uid) && ["Truhe", "Splitter", "Ei", "Rad", "Tausch"].includes(mon.obtainedHow));
+  const fresh = stuck.audit === before ? [] : after.mons.filter((mon) => !known.has(mon.uid) && ["Truhe", "Splitter", "Ei", "Rad", "Tausch"].includes(mon.obtainedHow));
   if (fresh.length) {
     await db.from("monsters_owned").upsert(fresh.map((mon) => ({
       uid: mon.uid,
@@ -10018,5 +10041,5 @@ Deno.serve(async (req) => {
       trade_count: 0
     })), { onConflict: "owner,uid" });
   }
-  return json(verdict);
+  return json({ flag: stuck.flag, reasons: stuck.reasons });
 });

@@ -2,7 +2,7 @@
 var NAME_MIN = 3;
 var NAME_MAX = 16;
 var NAME_CHANGE_MS = 7 * 24 * 60 * 60 * 1e3;
-var BLOCKED = [
+var BLOCKED = /* @__PURE__ */ new Set([
   "arsch",
   "fotze",
   "hurensohn",
@@ -12,12 +12,15 @@ var BLOCKED = [
   "nigger",
   "faggot",
   "fuck",
+  "fuk",
+  "fack",
   "shit",
   "bitch",
   "cunt",
   "retard",
-  "whore"
-];
+  "whore",
+  "hitler"
+]);
 var LEET = {
   "0": "o",
   "1": "i",
@@ -28,20 +31,50 @@ var LEET = {
   "@": "a",
   "$": "s"
 };
-function foldName(raw) {
+var HOMO = {
+  "\u0430": "a",
+  "\u0410": "a",
+  "\u0435": "e",
+  "\u0415": "e",
+  "\u043E": "o",
+  "\u041E": "o",
+  "\u0440": "p",
+  "\u0420": "p",
+  "\u0441": "c",
+  "\u0421": "c",
+  "\u0443": "y",
+  "\u0423": "y",
+  "\u0445": "x",
+  "\u0425": "x",
+  "\u0456": "i",
+  "\u0406": "i",
+  "\u0455": "s",
+  "\u0405": "s",
+  "\u03BF": "o",
+  "\u039F": "o",
+  "\u03BD": "v"
+};
+function nameLetters(raw) {
   const lower = raw.toLowerCase().normalize("NFKD").replace(/\p{M}/gu, "");
-  const swapped = [...lower].map((ch) => LEET[ch] ?? ch).join("").replace(/ä/g, "a").replace(/ö/g, "o").replace(/ü/g, "u").replace(/ß/g, "ss");
-  const letters = swapped.replace(/[^a-z]/g, "");
-  return letters.replace(/(.)\1{2,}/g, "$1$1");
+  const swapped = [...lower].map((ch) => HOMO[ch] ?? LEET[ch] ?? ch).join("").replace(/ä/g, "a").replace(/ö/g, "o").replace(/ü/g, "u").replace(/ß/g, "ss").replace(/ph/g, "f").replace(/v/g, "u");
+  return swapped.replace(/[^a-z]/g, "");
+}
+function collapseRepeats(letters, keep) {
+  return letters.replace(/(.)\1+/g, (run, ch) => ch.repeat(Math.min(keep, run.length)));
 }
 function nameIssue(raw) {
   const name = raw.trim();
   if (name.length < NAME_MIN) return "short";
   if (name.length > NAME_MAX) return "long";
   if (!/^[\p{L}\p{N} ]+$/u.test(name)) return "chars";
-  const folded = foldName(name);
-  if (BLOCKED.some((word) => folded.includes(foldName(word)))) return "word";
+  const letters = nameLetters(name);
+  const forms = [collapseRepeats(letters, 2), collapseRepeats(letters, 1)];
+  if (forms.some((form) => BLOCKED.has(form))) return "word";
   return null;
+}
+function planNameSave(existing, nextName, now) {
+  if (existing && !nameChangeAllowed(existing.changedAt, now)) return { ok: false, error: "wait" };
+  return { ok: true, hidden: Boolean(existing?.hidden), same: existing?.name === nextName.trim() };
 }
 function nameChangeAllowed(changedAt, now) {
   if (changedAt == null || !(changedAt > 0)) return true;
@@ -94,11 +127,15 @@ Deno.serve(async (req) => {
   if (issue) return json({ error: issue }, 400);
   const name = String(body.name).trim();
   const db = admin();
-  const existing = await db.from("player_names").select("name, tag, changed_at").eq("user_id", user.id).maybeSingle();
+  const existing = await db.from("player_names").select("name, tag, hidden, changed_at").eq("user_id", user.id).maybeSingle();
   const row = existing.data;
-  if (row && row.name !== name && !nameChangeAllowed(Date.parse(row.changed_at), Date.now())) {
-    return json({ error: "wait" }, 400);
-  }
+  const plan = planNameSave(row ? {
+    name: String(row.name),
+    tag: String(row.tag),
+    hidden: Boolean(row.hidden),
+    changedAt: Date.parse(String(row.changed_at))
+  } : null, name, Date.now());
+  if (!plan.ok) return json({ error: plan.error }, 400);
   let tag = row?.tag ?? "";
   if (!row || row.name !== name) {
     const taken = await db.from("player_names").select("tag").eq("name", name).neq("user_id", user.id);
@@ -110,15 +147,14 @@ Deno.serve(async (req) => {
       tag = next;
     }
   }
-  const display = publicLabel(name, tag, false);
-  const changed = !row || row.name !== name;
+  const display = publicLabel(name, tag, plan.hidden);
   const { error } = await db.from("player_names").upsert({
     user_id: user.id,
     name,
     tag,
     display,
-    hidden: false,
-    changed_at: changed || !row?.changed_at ? (/* @__PURE__ */ new Date()).toISOString() : row.changed_at
+    hidden: plan.hidden,
+    changed_at: (/* @__PURE__ */ new Date()).toISOString()
   });
   if (error) return json({ error: "taken" }, 409);
   return json({ label: display });

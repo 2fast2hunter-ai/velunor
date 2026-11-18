@@ -111,23 +111,44 @@ function gainFlag(gain: number, allowed: number): 0 | 1 | 2 {
  * Compare a new save with the last accepted one.
  * The first upload (no previous row) is the baseline and stays at flag 0.
  */
-export function auditSync(before: AuditState | null, after: AuditState): AuditResult {
+/** While offline catch-up is still owed, the save must not be uploaded. */
+export function mayUploadSave(catchingUp: boolean): boolean {
+  return !catchingUp
+}
+
+export function saveOwesCatchUp(lastSeenAt: number, now: number, welcomeMs: number): boolean {
+  return now - lastSeenAt >= welcomeMs
+}
+
+/**
+ * Flag 2 and flag 1 stick. A flagged row keeps the last clean baseline,
+ * so the next sync is still judged against that baseline.
+ */
+export function stickAudit(previousFlag: 0 | 1 | 2, baseline: AuditState | null, next: AuditState, elapsedMs: number): { flag: 0 | 1 | 2, audit: AuditState | null, reasons: string[] } {
+  const verdict = auditSync(baseline, next, elapsedMs)
+  const flag = Math.max(previousFlag, verdict.flag) as 0 | 1 | 2
+  const keep = previousFlag >= 1 || verdict.flag >= 1
+  return { flag, audit: keep ? baseline : next, reasons: verdict.reasons }
+}
+
+export function auditSync(before: AuditState | null, after: AuditState, elapsedMs?: number): AuditResult {
   if (!before) return { flag: 0, reasons: [] }
   const reasons: string[] = []
   let flag: 0 | 1 | 2 = 0
-  const elapsed = after.at - before.at
-  if (elapsed < 0) {
+  const elapsed = elapsedMs ?? (after.at - before.at)
+  if (elapsedMs == null && elapsed < 0) {
     reasons.push('clock')
     flag = 2
   }
   const region = Math.max(before.region, after.region)
   const chapter = Math.max(before.chapter, after.chapter)
   const goldGain = after.gold - before.gold
-  const goldFlag = gainFlag(goldGain, allowedGold(Math.max(0, elapsed), region, chapter))
+  const windowMs = Math.max(0, elapsed)
+  const goldFlag = gainFlag(goldGain, allowedGold(windowMs, region, chapter))
   if (goldFlag) reasons.push('gold')
   flag = bump(flag, goldFlag)
   const epGain = after.ep - before.ep
-  const epFlag = gainFlag(epGain, allowedEp(Math.max(0, elapsed), region, chapter))
+  const epFlag = gainFlag(epGain, allowedEp(windowMs, region, chapter))
   if (epFlag) reasons.push('ep')
   flag = bump(flag, epFlag)
   if (!crestsInOrder(after.badges)) {
@@ -137,7 +158,7 @@ export function auditSync(before: AuditState | null, after: AuditState): AuditRe
   const known = new Set(before.mons.map((mon) => mon.uid))
   const fresh = after.mons.filter((mon) => !known.has(mon.uid))
   const allowed = new Set(after.speciesAllowed)
-  if (fresh.length > allowedNewMons(Math.max(0, elapsed))) {
+  if (fresh.length > allowedNewMons(windowMs)) {
     reasons.push('monsters')
     flag = 2
   }
@@ -152,12 +173,12 @@ export function auditSync(before: AuditState | null, after: AuditState): AuditRe
     }
   }
   const chestGain = after.chests - before.chests
-  if (chestGain > allowedChests(Math.max(0, elapsed))) {
+  if (chestGain > allowedChests(windowMs)) {
     reasons.push('chests')
     flag = 2
   }
   const shardGain = after.shards - before.shards
-  if (shardGain > allowedShards(Math.max(0, elapsed))) {
+  if (shardGain > allowedShards(windowMs)) {
     reasons.push('shards')
     flag = 2
   }

@@ -4,22 +4,39 @@ export const NAME_MIN = 3
 export const NAME_MAX = 16
 export const NAME_CHANGE_MS = 7 * 24 * 60 * 60 * 1000
 
-const BLOCKED = [
+const BLOCKED = new Set([
   'arsch', 'fotze', 'hurensohn', 'missgeburt', 'nazi', 'neger', 'nigger',
-  'faggot', 'fuck', 'shit', 'bitch', 'cunt', 'retard', 'whore'
-]
+  'faggot', 'fuck', 'fuk', 'fack', 'shit', 'bitch', 'cunt', 'retard', 'whore', 'hitler'
+])
 
 const LEET: Record<string, string> = {
   '0': 'o', '1': 'i', '3': 'e', '4': 'a', '5': 's', '7': 't', '@': 'a', '$': 's'
 }
 
-/** Lower case, leetspeak, then only letters, with long repeats folded. */
+/** Letters that look like Latin. Cyrillic and Greek lookalikes become the Latin letter. */
+const HOMO: Record<string, string> = {
+  '\u0430': 'a', '\u0410': 'a', '\u0435': 'e', '\u0415': 'e', '\u043e': 'o', '\u041e': 'o',
+  '\u0440': 'p', '\u0420': 'p', '\u0441': 'c', '\u0421': 'c', '\u0443': 'y', '\u0423': 'y',
+  '\u0445': 'x', '\u0425': 'x', '\u0456': 'i', '\u0406': 'i', '\u0455': 's', '\u0405': 's',
+  '\u03bf': 'o', '\u039f': 'o', '\u03bd': 'v'
+}
+
+/** Lower case, leetspeak, then only letters, with long repeats folded to two. */
 export function foldName(raw: string): string {
+  return collapseRepeats(nameLetters(raw), 2)
+}
+
+function nameLetters(raw: string): string {
   const lower = raw.toLowerCase().normalize('NFKD').replace(/\p{M}/gu, '')
-  const swapped = [...lower].map((ch) => LEET[ch] ?? ch).join('')
+  const swapped = [...lower].map((ch) => HOMO[ch] ?? LEET[ch] ?? ch).join('')
     .replace(/ä/g, 'a').replace(/ö/g, 'o').replace(/ü/g, 'u').replace(/ß/g, 'ss')
-  const letters = swapped.replace(/[^a-z]/g, '')
-  return letters.replace(/(.)\1{2,}/g, '$1$1')
+    .replace(/ph/g, 'f')
+    .replace(/v/g, 'u')
+  return swapped.replace(/[^a-z]/g, '')
+}
+
+function collapseRepeats(letters: string, keep: number): string {
+  return letters.replace(/(.)\1+/g, (run, ch: string) => ch.repeat(Math.min(keep, run.length)))
 }
 
 export function nameIssue(raw: string): 'short' | 'long' | 'chars' | 'word' | null {
@@ -27,9 +44,28 @@ export function nameIssue(raw: string): 'short' | 'long' | 'chars' | 'word' | nu
   if (name.length < NAME_MIN) return 'short'
   if (name.length > NAME_MAX) return 'long'
   if (!/^[\p{L}\p{N} ]+$/u.test(name)) return 'chars'
-  const folded = foldName(name)
-  if (BLOCKED.some((word) => folded.includes(foldName(word)))) return 'word'
+  const letters = nameLetters(name)
+  const forms = [collapseRepeats(letters, 2), collapseRepeats(letters, 1)]
+  if (forms.some((form) => BLOCKED.has(form))) return 'word'
   return null
+}
+
+export interface StoredName {
+  name: string
+  tag: string
+  hidden: boolean
+  changedAt: number
+}
+
+/**
+ * A hidden name stays hidden. Saving again, even the same letters, still waits out the 7 days.
+ * The first save has no previous row and is allowed.
+ */
+export function planNameSave(existing: StoredName | null, nextName: string, now: number):
+  | { ok: false, error: 'wait' }
+  | { ok: true, hidden: boolean, same: boolean } {
+  if (existing && !nameChangeAllowed(existing.changedAt, now)) return { ok: false, error: 'wait' }
+  return { ok: true, hidden: Boolean(existing?.hidden), same: existing?.name === nextName.trim() }
 }
 
 export function nameChangeAllowed(changedAt: number | null, now: number): boolean {

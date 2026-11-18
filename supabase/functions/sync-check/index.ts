@@ -1,4 +1,4 @@
-import { auditSync, type AuditState } from '../../../src/adventure/online/check.ts'
+import { stickAudit, type AuditState } from '../../../src/adventure/online/check.ts'
 import { auditFromSave } from '../../../src/adventure/online/snapshot.ts'
 import type { SaveV2 } from '../../../src/adventure/types.ts'
 import { admin, caller, cors, json } from '../_shared/admin.ts'
@@ -16,17 +16,33 @@ Deno.serve(async (req) => {
   } catch {
     return json({ error: 'save' }, 400)
   }
-  const profile = await db.from('profiles').select('last_audit').eq('user_id', user.id).maybeSingle()
+  const profile = await db.from('profiles').select('last_audit, flag_level, audited_at, updated_at').eq('user_id', user.id).maybeSingle()
   const before = (profile.data?.last_audit ?? null) as AuditState | null
-  const verdict = auditSync(before, after)
-  await db.from('profiles').upsert({
-    user_id: user.id,
-    flag_level: verdict.flag,
-    last_audit: after,
-    updated_at: new Date().toISOString()
-  })
+  const previousFlag = profile.data?.flag_level === 2 ? 2 : profile.data?.flag_level === 1 ? 1 : 0
+  const auditedAt = Date.parse(String(profile.data?.audited_at ?? profile.data?.updated_at ?? ''))
+  const elapsed = before && Number.isFinite(auditedAt) ? Date.now() - auditedAt : 0
+  const stuck = stickAudit(previousFlag, before, after, elapsed)
+  const nowIso = new Date().toISOString()
+  if (!profile.data) {
+    await db.from('profiles').insert({
+      user_id: user.id,
+      flag_level: stuck.flag,
+      last_audit: stuck.audit,
+      audited_at: nowIso,
+      updated_at: nowIso
+    })
+  } else if (stuck.audit === before) {
+    await db.from('profiles').update({ flag_level: stuck.flag, updated_at: nowIso }).eq('user_id', user.id)
+  } else {
+    await db.from('profiles').update({
+      flag_level: stuck.flag,
+      last_audit: stuck.audit,
+      audited_at: nowIso,
+      updated_at: nowIso
+    }).eq('user_id', user.id)
+  }
   const known = new Set((before?.mons ?? []).map((mon) => mon.uid))
-  const fresh = after.mons.filter((mon) => !known.has(mon.uid) && ['Truhe', 'Splitter', 'Ei', 'Rad', 'Tausch'].includes(mon.obtainedHow))
+  const fresh = stuck.audit === before ? [] : after.mons.filter((mon) => !known.has(mon.uid) && ['Truhe', 'Splitter', 'Ei', 'Rad', 'Tausch'].includes(mon.obtainedHow))
   if (fresh.length) {
     await db.from('monsters_owned').upsert(fresh.map((mon) => ({
       uid: mon.uid,
@@ -41,5 +57,5 @@ Deno.serve(async (req) => {
       trade_count: 0
     })), { onConflict: 'owner,uid' })
   }
-  return json(verdict)
+  return json({ flag: stuck.flag, reasons: stuck.reasons })
 })

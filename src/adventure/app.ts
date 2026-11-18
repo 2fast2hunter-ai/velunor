@@ -44,8 +44,9 @@ import { nameProblem, pickLook, pickName } from './home'
 import { inspectSave, nextDoor, resumeSave, type Door } from './continue'
 import { FIRST_ENTRANCE_MS, HOME_ASSETS, loadFraction, mountHomeParticles } from './homeBoot'
 import { beginAdventure, loadAdventure, writeSave } from './save'
-import { browserCloudApi, supabaseClient, watchAuth } from './cloud/supabaseApi'
-import { callOnline, sendBlockRow, sendReportRow } from './online/calls'
+import { browserCloudApi, watchAuth } from './cloud/supabaseApi'
+import { callOnline, clearVelunorKeys, loadOwnLabel, sendBlockRow, sendReportRow } from './online/calls'
+import { saveOwesCatchUp } from './online/check'
 import { nameIssue } from './online/name'
 import { createCloud, type CloudController } from './cloud/session'
 import type { CloudView } from './cloud/types'
@@ -150,8 +151,11 @@ let accountUi = {
   nameOpen: false,
   reportOpen: false,
   deleteStep: 0 as 0 | 1 | 2,
-  onlineDown: false
+  onlineDown: false,
+  statusNote: ''
 }
+let catchingUp = false
+let wipingAccount = false
 
 function mergedCloud(): CloudView {
   return {
@@ -162,8 +166,14 @@ function mergedCloud(): CloudView {
     nameOpen: accountUi.nameOpen,
     reportOpen: accountUi.reportOpen,
     deleteStep: accountUi.deleteStep,
-    onlineDown: accountUi.onlineDown
+    onlineDown: accountUi.onlineDown,
+    statusNote: accountUi.statusNote
   }
+}
+
+function cloudInputBusy(): boolean {
+  const active = document.activeElement
+  return active instanceof HTMLInputElement && Boolean(active.closest('#cloud-layer, .cloud-card'))
 }
 let lastInput = Date.now()
 let timer = 0
@@ -265,6 +275,7 @@ function refreshCloud(): void {
     return
   }
   paintCloudChip()
+  if (cloudInputBusy()) return
   if (cloudReplaced && save && !animating) {
     cloudReplaced = false
     render()
@@ -338,6 +349,7 @@ function attachCloud(): void {
     },
     pendingReset: () => localStorage.getItem(RESET_SERVER_KEY) === '1',
     clearReset: () => { localStorage.removeItem(RESET_SERVER_KEY) },
+    deferUpload: () => catchingUp || Boolean(save && saveOwesCatchUp(save.lastSeenAt, Date.now(), WELCOME_AFTER_MS)) || Boolean(!save && keptSave && saveOwesCatchUp(keptSave.lastSeenAt, Date.now(), WELCOME_AFTER_MS)),
     pendingReplace: () => localStorage.getItem(REPLACE_SERVER_KEY) === '1',
     clearReplace: () => { localStorage.removeItem(REPLACE_SERVER_KEY) },
     onView(view) {
@@ -380,6 +392,10 @@ export function bootAdventure(): void {
   draftLang = storedLang === 'en' || storedLang === 'de' ? storedLang : (navigator.language.toLowerCase().startsWith('en') ? 'en' : 'de')
   document.documentElement.lang = draftLang
   window.addEventListener('pagehide', () => {
+    if (wipingAccount || !save) {
+      void cloud?.pause()
+      return
+    }
     if (save) {
       const paused = batteryPause(save.settings.battery, currentPresence())
       if (!paused && Date.now() - lastTick < encounterMs(save.settings.speed) * 2) save.lastSeenAt = Date.now()
@@ -1967,7 +1983,18 @@ function paintSeal(seal: HTMLImageElement, t: number, k: number, caught: boolean
 
 async function runOffline(rawMs: number): Promise<void> {
   if (!save) return
+  catchingUp = true
   window.clearTimeout(timer)
+  try {
+  await finishOffline(rawMs)
+  } finally {
+    catchingUp = false
+    void cloud?.sync('online')
+  }
+}
+
+async function finishOffline(rawMs: number): Promise<void> {
+  if (!save) return
   const counted = Math.min(Math.max(0, rawMs), OFFLINE_CAP_MS)
   const total = Math.floor(counted / BASE_ENCOUNTER_MS)
   if (total < OFFLINE_BLOCK && rawMs < WELCOME_AFTER_MS) {
@@ -2024,6 +2051,23 @@ async function runOffline(rawMs: number): Promise<void> {
   if (!overlay) kick()
 }
 
+async function refreshOwnLabel(): Promise<void> {
+  const label = await loadOwnLabel()
+  if (!label || label === accountUi.playerLabel) return
+  accountUi.playerLabel = label
+  localStorage.setItem('velunor_player_label', label)
+  if (save && screen === 'options' && !cloudInputBusy()) render()
+}
+
+function nameServerKey(code: string): string {
+  if (code === 'wait') return 'cloud.nameWait'
+  if (code === 'taken') return 'cloud.nameTaken'
+  if (code === 'short') return 'cloud.nameShort'
+  if (code === 'long') return 'cloud.nameLong'
+  if (code === 'chars') return 'cloud.nameChars'
+  return 'cloud.nameWord'
+}
+
 function nameErrorKey(issue: ReturnType<typeof nameIssue>): string {
   if (issue === 'short') return 'cloud.nameShort'
   if (issue === 'long') return 'cloud.nameLong'
@@ -2046,8 +2090,11 @@ async function savePlayerName(): Promise<void> {
   const result = await callOnline('set-name', { name: raw.trim() })
   if (!result.ok) {
     accountUi.onlineDown = result.missing
-    accountUi.nameError = t(activeLang(), result.missing ? 'cloud.unavailable' : result.error === 'wait' ? 'cloud.nameWait' : result.error === 'taken' ? 'cloud.nameTaken' : 'cloud.nameWord')
+    accountUi.nameError = t(activeLang(), result.missing ? 'cloud.unavailable' : nameServerKey(result.error))
+    accountUi.nameOpen = true
     mountCloudLayer()
+    const again = document.getElementById('player-name')
+    if (again instanceof HTMLInputElement) again.value = raw
     return
   }
   accountUi.playerLabel = String(result.data.label ?? '')
@@ -2070,6 +2117,7 @@ async function sendReport(reason: string): Promise<void> {
   const result = await sendReportRow(target, reason)
   accountUi.reportOpen = false
   accountUi.onlineDown = !result.ok && result.missing
+  accountUi.statusNote = result.ok ? t(activeLang(), 'cloud.reported') : ''
   accountUi.nameError = result.ok ? '' : t(activeLang(), result.missing ? 'cloud.unavailable' : 'cloud.nameWord')
   if (save && screen === 'options') render()
   else mountCloudLayer()
@@ -2081,7 +2129,8 @@ async function sendBlock(): Promise<void> {
   if (!target) return
   const result = await sendBlockRow(target)
   accountUi.onlineDown = !result.ok && result.missing
-  accountUi.nameError = result.ok ? t(activeLang(), 'cloud.blocked') : t(activeLang(), 'cloud.unavailable')
+  accountUi.statusNote = result.ok ? t(activeLang(), 'cloud.blocked') : ''
+  accountUi.nameError = result.ok ? '' : t(activeLang(), result.missing ? 'cloud.unavailable' : 'cloud.nameWord')
   if (save) render()
 }
 
@@ -2094,11 +2143,10 @@ async function deleteAccount(): Promise<void> {
     if (save) render()
     return
   }
-  try { await supabaseClient().auth.signOut() } catch { /* a new visit signs in again */ }
-  localStorage.removeItem(SAVE_KEY_V2)
-  localStorage.removeItem(SAVE_BACKUP)
-  localStorage.removeItem('velunor_flag')
-  localStorage.removeItem('velunor_player_label')
+  wipingAccount = true
+  save = null
+  keptSave = null
+  for (const key of clearVelunorKeys(Object.keys(localStorage))) localStorage.removeItem(key)
   window.location.reload()
 }
 
@@ -2313,6 +2361,7 @@ function onClick(event: Event): void {
     moreOpen = false
     mapOpen = false
     render()
+    if (screen === 'options') void refreshOwnLabel()
     kick()
     return
   }
@@ -2735,6 +2784,7 @@ function onInput(event: Event): void {
 function syncField(target: EventTarget | null): void {
   if (!save || !(target instanceof HTMLInputElement || target instanceof HTMLSelectElement)) return
   const field = target.dataset.field
+  if (!field || field === 'q' || field === 'name') return
   if (field === 'loop') setLoop(save, target instanceof HTMLInputElement ? target.checked : save.loop)
   if (field === 'auto' && target instanceof HTMLInputElement) save.settings.autoSwitch = target.checked
   if (field === 'card' && target instanceof HTMLInputElement) save.settings.catchCard = target.checked
@@ -2758,7 +2808,7 @@ function syncField(target: EventTarget | null): void {
   if (field === 'dex-type') dex.type = target.value
   if (field === 'dex-rarity') dex.rarity = target.value
   if (field === 'dex-shiny') dex.shiny = target.value
-  if (field !== 'q' && field !== 'name') render()
+  render()
   if (field === 'loop') kick()
 }
 

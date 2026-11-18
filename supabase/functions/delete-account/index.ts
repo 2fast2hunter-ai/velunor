@@ -5,9 +5,7 @@ Deno.serve(async (req) => {
   const user = await caller(req)
   if (!user) return json({ error: 'auth' }, 401)
   const db = admin()
-  const named = await db.from('player_names').select('tag').eq('user_id', user.id).maybeSingle()
-  const tag = named.data?.tag ?? '0000'
-  await db.from('reports').update({ reporter: null, target_label: `Spieler#${tag}` }).eq('reporter', user.id)
+  await db.from('reports').update({ reporter: null }).eq('reporter', user.id)
   await db.from('monsters_owned').delete().eq('owner', user.id)
   await db.from('blocks').delete().eq('owner', user.id)
   await db.from('player_names').delete().eq('user_id', user.id)

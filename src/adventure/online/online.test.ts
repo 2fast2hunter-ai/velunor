@@ -5,8 +5,10 @@ import { describe, expect, it } from 'vitest'
 import { fitScale } from '../const'
 import { beginAdventure } from '../save'
 import { simulateOffline } from '../sim'
-import { auditSync } from './check'
-import { foldName, nameChangeAllowed, nameIssue, pickTag, publicLabel, NAME_CHANGE_MS } from './name'
+import { auditSync, mayUploadSave, saveOwesCatchUp, stickAudit } from './check'
+import { WELCOME_AFTER_MS } from '../const'
+import { clearVelunorKeys, functionFailure } from './calls'
+import { foldName, nameChangeAllowed, nameIssue, pickTag, planNameSave, publicLabel, NAME_CHANGE_MS } from './name'
 import { hiddenByReports, reportReason } from './report'
 import { auditFromSave } from './snapshot'
 
@@ -24,6 +26,30 @@ describe('sync check', () => {
     const prior = auditFromSave(honest)
     simulateOffline(honest, 8 * 60 * 60 * 1000, start + 8 * 60 * 60 * 1000)
     expect(auditSync(prior, auditFromSave(honest)).flag).toBe(0)
+  })
+
+  it('keeps flag 2 and the clean baseline, and judges earnings by the given window', () => {
+    const start = 1_700_000_000_000
+    const save = beginAdventure('Mira', { skin: 0, hair: 0, color: 0 }, 'm01', start)
+    const clean = auditFromSave(save)
+    save.gold *= 100
+    const cheated = auditFromSave(save)
+    const first = stickAudit(0, clean, cheated, 60_000)
+    expect(first.flag).toBe(2)
+    expect(first.audit).toEqual(clean)
+    const again = stickAudit(first.flag, first.audit, cheated, 60_000)
+    expect(again.flag).toBe(2)
+    expect(again.audit).toEqual(clean)
+    const honest = beginAdventure('Mira', { skin: 0, hair: 0, color: 0 }, 'm01', start)
+    const prior = auditFromSave(honest)
+    simulateOffline(honest, 8 * 60 * 60 * 1000, start + 8 * 60 * 60 * 1000)
+    const earned = auditFromSave(honest)
+    expect(auditSync(prior, earned, 8 * 60 * 60 * 1000).flag).toBe(0)
+    expect(auditSync(prior, earned, 1000).flag).toBe(2)
+    expect(mayUploadSave(true)).toBe(false)
+    expect(mayUploadSave(false)).toBe(true)
+    expect(saveOwesCatchUp(start, start + WELCOME_AFTER_MS, WELCOME_AFTER_MS)).toBe(true)
+    expect(saveOwesCatchUp(start, start + 1000, WELCOME_AFTER_MS)).toBe(false)
   })
 
   it('rejects a clock turned back and a crest taken out of order', () => {
@@ -53,6 +79,33 @@ describe('player names', () => {
     expect(pickTag(['0001'], () => 0.00021)?.length).toBe(4)
     expect(publicLabel('Mira', '1234', false)).toBe('Mira#1234')
     expect(publicLabel('Mira', '1234', true)).toBe('Spieler#1234')
+    for (const blocked of ['f4ck', 'fvck', 'phuck', 'fuk', 'fuuuck', 'shiiit', '\u0455hit', 'Hitler']) {
+      expect(nameIssue(blocked), blocked).toBe('word')
+    }
+    for (const allowed of ['Barsch', 'Marschall', 'Scunthorpe', 'Shitake']) {
+      expect(nameIssue(allowed), allowed).toBeNull()
+    }
+    const hidden = { name: 'Testling', tag: '5544', hidden: true, changedAt: 5_000 }
+    expect(planNameSave(hidden, 'Testling', 5_000 + 1000)).toEqual({ ok: false, error: 'wait' })
+    expect(planNameSave(hidden, 'Testling', 5_000 + NAME_CHANGE_MS)).toEqual({ ok: true, hidden: true, same: true })
+    expect(planNameSave(null, 'Mira', 5_000)).toEqual({ ok: true, hidden: false, same: false })
+  })
+})
+
+describe('account cleanup', () => {
+  it('reads a function error body and clears every local velunor key', async () => {
+    const failure = await functionFailure({
+      message: 'Edge Function returned a non-2xx status code',
+      context: { json: async () => ({ error: 'wait' }) }
+    })
+    expect(failure).toEqual({ missing: false, error: 'wait' })
+    expect(await functionFailure({ message: 'Failed to send a request to the Edge Function' })).toEqual({
+      missing: true,
+      error: 'Failed to send a request to the Edge Function'
+    })
+    expect(clearVelunorKeys(['velunor_v2', 'velunor_flag', 'sb-abc-auth-token', 'other'])).toEqual([
+      'velunor_v2', 'velunor_flag', 'sb-abc-auth-token'
+    ])
   })
 })
 
