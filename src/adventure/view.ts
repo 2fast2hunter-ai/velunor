@@ -33,6 +33,7 @@ import {
 } from './lootbox'
 import type { ChestGrant } from './chests'
 import { expeditionBusy, expeditionSlots, expeditionTier } from './expedition'
+import { tradedOnly } from './trade'
 import { workshopCost } from './sources'
 import {
   SHOP_ART,
@@ -64,7 +65,7 @@ import type { OfflineSummary } from './sim'
 import type { SaveV2 } from './types'
 import { PC_VIEW_FALLBACK, virtualWindow } from './virtualList'
 
-export type Screen = 'adventure' | 'progress' | 'team' | 'codex' | 'activities' | 'shop' | 'achievements' | 'ranks' | 'tree' | 'arena' | 'social' | 'expedition' | 'options' | 'guide'
+export type Screen = 'adventure' | 'progress' | 'team' | 'codex' | 'activities' | 'shop' | 'achievements' | 'ranks' | 'tree' | 'arena' | 'social' | 'expedition' | 'trade' | 'options' | 'guide'
 
 export interface WheelPanel {
   tab: 'hort' | 'wheel' | 'chests'
@@ -121,6 +122,28 @@ export interface ShellFlags {
   arena?: ArenaPanel
   social?: SocialPanel
   expeditionPick?: string
+  trade?: TradePanel
+}
+
+export interface TradeCard {
+  uid: string
+  name: string
+  rarity: number
+  shiny: boolean
+  level: number
+  reason: string
+}
+
+export interface TradePanel {
+  status: 'offline' | 'ready' | 'loading'
+  note: string
+  mine: TradeCard | null
+  theirs: TradeCard | null
+  lockMs: number
+  phase: 'pick' | 'offered' | 'locked' | 'done'
+  offerId?: string
+  ownUid?: string
+  host?: boolean
 }
 
 export interface SocialFriend {
@@ -306,7 +329,7 @@ const TAB_ICONS: Record<string, string> = {
 }
 
 function tabbar(save: SaveV2, screen: Screen, moreOpen: boolean): string {
-  const moreScreens: Screen[] = ['shop', 'achievements', 'ranks', 'tree', 'arena', 'social', 'expedition', 'options', 'guide']
+  const moreScreens: Screen[] = ['shop', 'achievements', 'ranks', 'tree', 'arena', 'social', 'expedition', 'trade', 'options', 'guide']
   const tabs: { id: string; label: string; active: boolean; act: string; screen?: Screen }[] = [
     { id: 'adventure', label: 'nav.adventure', active: screen === 'adventure', act: 'screen', screen: 'adventure' },
     { id: 'team', label: 'nav.team', active: screen === 'team', act: 'screen', screen: 'team' },
@@ -341,6 +364,7 @@ function moreSheet(save: SaveV2, open: boolean): string {
     ${arenaBtn}
     ${socialBtn}
     <button type="button" data-act="screen" data-screen="expedition"><svg class="ui-icon" viewBox="0 0 24 24" aria-hidden="true"><path fill="currentColor" d="M4 16c3-6 6-6 8-2s5-4 8-2v6H4z"/><circle cx="16" cy="7" r="2.4" fill="currentColor"/></svg>${tr(save, 'nav.expedition')}</button>
+    <button type="button" data-act="screen" data-screen="trade"><svg class="ui-icon" viewBox="0 0 24 24" aria-hidden="true"><rect x="4" y="6" width="7" height="12" rx="2" fill="currentColor"/><rect x="13" y="6" width="7" height="12" rx="2" fill="currentColor" opacity=".7"/></svg>${tr(save, 'nav.trade')}</button>
     ${items.slice(2).map(([id, icon, label]) => `<button type="button" data-act="screen" data-screen="${id}">${ui(icon)}${tr(save, label)}</button>`).join('')}
   </div>`
 }
@@ -766,7 +790,7 @@ function codex(save: SaveV2, filter: CodexQuery, shell: ShellFlags): string {
     return `<button type="button" class="mon-card" data-act="dex" data-species="${mon.id}">
       ${face}
       <div>${hidden ? tr(save, 'codex.no', { n: speciesNumber(mon.id) }) : esc(mon.name)}</div>
-      <div class="muted">${dexStatusLabel(status)}</div>
+      <div class="muted">${dexStatusLabel(status)}${tradedOnly(save, mon.id) ? ` <svg class="trade-mark" data-art="codex/traded" viewBox="0 0 24 24" aria-label="${esc(tr(save, 'trade.traded'))}"><circle cx="12" cy="12" r="9" fill="#f0c14a"/><path d="M7 12h10M13 8l4 4-4 4" fill="none" stroke="#243044" stroke-width="2" stroke-linecap="round"/></svg>` : ''}</div>
     </button>`
   }).join('')
   return `<div class="menu-screen">
@@ -1077,7 +1101,7 @@ function accountCard(save: SaveV2, cloud: CloudView): string {
   const secure = offline
     ? `<p class="offline-note">${esc(tr(save, 'cloud.offlineArea'))}</p>`
     : `<p class="muted">${tr(save, 'cloud.secureNote')}</p>
-      ${cloud.email ? `<p>${esc(tr(save, 'cloud.linked', { email: cloud.email }))}</p>` : ''}
+      ${cloud.email ? `<p>${esc(tr(save, 'cloud.linked'))}</p>` : ''}
       <label class="cloud-mail">${esc(tr(save, 'cloud.secure'))}
         <input id="account-email" type="email" autocomplete="email" inputmode="email" placeholder="name@example.com"/>
       </label>
@@ -1540,6 +1564,39 @@ function expeditionScreen(save: SaveV2, now: number, pick: string | undefined): 
   </div></div></div>`
 }
 
+function tradeCard(card: TradeCard | null, save: SaveV2): string {
+  if (!card) return `<article class="trade-card empty"><p class="muted">${tr(save, 'trade.pick')}</p></article>`
+  return `<article class="trade-card">
+    <b>${esc(card.name)}</b>
+    <p>${tr(save, 'trade.rarity', { n: card.rarity })} · ${tr(save, 'trade.level', { n: card.level })}${card.shiny ? ` · ${tr(save, 'trade.shiny')}` : ''}</p>
+    ${card.reason ? `<p class="trade-lock"><svg data-art="trade/lock" viewBox="0 0 32 32" aria-hidden="true"><rect x="8" y="14" width="16" height="12" rx="4" fill="#f0c14a"/><path d="M11 14v-3a5 5 0 0 1 10 0v3" fill="none" stroke="#243044" stroke-width="2"/></svg> ${esc(card.reason)}</p>` : ''}
+  </article>`
+}
+
+function tradeScreen(save: SaveV2, panel: TradePanel | undefined): string {
+  const view = panel ?? { status: 'offline' as const, note: '', mine: null, theirs: null, lockMs: 0, phase: 'pick' as const }
+  if (view.status !== 'ready') {
+    return `<div class="menu-screen"><div class="menu-scroll"><div class="card panel"><h2>Offline</h2><p class="muted">${tr(save, 'trade.offline')}</p></div></div></div>`
+  }
+  const seconds = Math.max(0, Math.ceil(view.lockMs / 1000))
+  return `<div class="menu-screen"><div class="menu-scroll"><div class="card panel trade-board">
+    <h2>${tr(save, 'nav.trade')}</h2>
+    <p class="muted">${tr(save, 'trade.lead')}</p>
+    ${tradeCard(view.theirs, save)}
+    <div class="trade-escrow" data-art="trade/escrow">
+      <svg viewBox="0 0 160 48" aria-hidden="true"><rect x="58" y="8" width="44" height="32" rx="16" fill="#1c2744"/><circle cx="40" cy="24" r="10" fill="#f0c14a"/><circle cx="120" cy="24" r="10" fill="#9ad7ff"/></svg>
+      ${view.phase === 'locked' ? `<p><svg data-art="trade/lock" viewBox="0 0 32 32" aria-hidden="true"><rect x="8" y="14" width="16" height="12" rx="4" fill="#f0c14a"/><path d="M11 14v-3a5 5 0 0 1 10 0v3" fill="none" stroke="#243044" stroke-width="2"/></svg> ${tr(save, 'trade.wait', { n: seconds })}</p>` : ''}
+    </div>
+    ${tradeCard(view.mine, save)}
+    <label class="friend-search">${tr(save, 'trade.code')}<input id="trade-code" maxlength="8"/></label>
+    <button type="button" class="primary" data-act="trade-offer">${tr(save, 'trade.offer')}</button>
+    <button type="button" data-act="trade-lock">${tr(save, 'trade.accept')}</button>
+    <button type="button" data-act="trade-confirm">${tr(save, 'trade.confirm')}</button>
+    <button type="button" data-act="trade-cancel">${tr(save, 'trade.cancel')}</button>
+    ${view.note ? `<p class="muted">${esc(view.note)}</p>` : ''}
+  </div></div></div>`
+}
+
 function center(save: SaveV2, screen: Screen, now: number, pc: PcQuery, dex: CodexQuery, selected: string | null, debug: boolean, wheel: WheelPanel, shell: ShellFlags): string {
   if (screen === 'progress') return `<div class="menu-screen"><div class="menu-scroll">${progress(save)}</div></div>`
   if (screen === 'ranks') return ranksScreen(save, shell.ranks)
@@ -1547,6 +1604,7 @@ function center(save: SaveV2, screen: Screen, now: number, pc: PcQuery, dex: Cod
   if (screen === 'arena') return arenaScreen(save, shell.arena)
   if (screen === 'social') return socialScreen(save, shell.social)
   if (screen === 'expedition') return expeditionScreen(save, now, shell.expeditionPick)
+  if (screen === 'trade') return tradeScreen(save, shell.trade)
   if (screen === 'team') return team(save, pc, selected, shell)
   if (screen === 'codex') return codex(save, dex, shell)
   if (screen === 'activities') return activitiesView(save, now, selected, wheel)

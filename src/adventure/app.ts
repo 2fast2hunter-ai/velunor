@@ -42,12 +42,12 @@ import { chooseLook, paintLooks } from './avatar'
 import { nameProblem, pickLook, pickName } from './home'
 import { inspectSave, nextDoor, resumeSave, type Door } from './continue'
 import { FIRST_ENTRANCE_MS, HOME_ASSETS, loadFraction, mountHomeParticles } from './homeBoot'
-import { beginAdventure, loadAdventure, writeSave } from './save'
+import { beginAdventure, loadAdventure, makeMon, writeSave } from './save'
 import { browserCloudApi, watchAuth } from './cloud/supabaseApi'
 import { callOnline, claimRankRewards, clearVelunorKeys, loadOwnLabel, loadRankPage, sendBlockRow, sendReportRow } from './online/calls'
 import { isBoard, parseRankPage, RANK_FRAMES, type BoardId, type RankModel } from './online/ranks'
 import { buyNode, respecTree, treeCapMs } from './tree'
-import type { ArenaPanel, SocialPanel } from './view'
+import type { ArenaPanel, SocialPanel, TradePanel } from './view'
 import { saveOwesCatchUp } from './online/check'
 import { nameIssue } from './online/name'
 import { createCloud, type CloudController } from './cloud/session'
@@ -170,6 +170,7 @@ let arenaTimer = 0
 let arenaPanel: ArenaPanel = { status: 'offline', note: '', rating: 1000, league: 'Kiesel', attacks: 0, slots: [], suggestions: [], logs: [], frames: [], replay: null }
 let socialPanel: SocialPanel = { status: 'offline', code: '', friends: [], requests: [], note: '' }
 let expeditionPick = ''
+let tradePanel: TradePanel = { status: 'offline', note: '', mine: null, theirs: null, lockMs: 0, phase: 'pick' }
 let saveReady = false
 let wipingAccount = false
 
@@ -1190,7 +1191,7 @@ function render(step = save?.step): void {
     mult: wheelMult,
     symbols: wheelSymbols,
     note: wheelNote
-  }, { mapOpen, moreOpen, pcScroll, filtersOpen, dexOpen, shopTab, shopHint: Date.now() < shopFlashUntil, fighting: animating, cloud: mergedCloud(), masteryNote: Date.now() < masteryUntil ? masteryNote : '', ranks: { ...rankView, board: rankBoard, excluded: mergedCloud().flagLevel === 2 }, treePick, arena: arenaPanel, social: socialPanel, expeditionPick }))
+  }, { mapOpen, moreOpen, pcScroll, filtersOpen, dexOpen, shopTab, shopHint: Date.now() < shopFlashUntil, fighting: animating, cloud: mergedCloud(), masteryNote: Date.now() < masteryUntil ? masteryNote : '', ranks: { ...rankView, board: rankBoard, excluded: mergedCloud().flagLevel === 2 }, treePick, arena: arenaPanel, social: socialPanel, expeditionPick, trade: tradePanel }))
   if (screen === 'team') {
     pcIds = visiblePc(save, pc)
     const view = document.getElementById('pc-viewport')
@@ -1507,6 +1508,79 @@ function grantServerGift(gold: number, fruit: number, marks: number, eggs: strin
     if (speciesId) save.eggs.push({ species: speciesId, shiny: true, readyAt })
   }
   try { writeSave(localStorage, save) } catch { /* the server already marked the grant claimed */ }
+}
+
+function tradeText(code: string): string {
+  if (!code || !save) return ''
+  const key = `trade.reason.${code}`
+  const text = t(save.settings.lang, key)
+  return text === key ? code : text
+}
+
+async function refreshTrade(): Promise<void> {
+  tradePanel = { ...tradePanel, status: 'loading' }
+  render()
+  const state = await callOnline('trade', { action: 'state' })
+  if (!state.ok || !save) {
+    tradePanel = { ...tradePanel, status: 'offline', note: '' }
+    render()
+    return
+  }
+  const rows = Array.isArray(state.data.monsters) ? state.data.monsters : []
+  const offers = Array.isArray(state.data.offers) ? state.data.offers : []
+  const offer = offers[0] as { id?: string, host?: boolean, hostUid?: string, guestUid?: string, status?: string, lockAt?: string } | undefined
+  const ownUid = offer ? (offer.host ? offer.hostUid : offer.guestUid) : rows.find((row) => row && !(row as { reason?: string }).reason)?.uid
+  const own = rows.find((row) => (row as { uid?: string }).uid === ownUid) as { uid?: string, species?: string, rarity?: number, shiny?: boolean, level?: number, reason?: string } | undefined
+  const lockAt = Date.parse(String(offer?.lockAt ?? ''))
+  const phase = offer?.status === 'locked' ? 'locked' : offer ? 'offered' : 'pick'
+  tradePanel = {
+    status: 'ready',
+    note: tradeText(String(state.data.ready ?? '')),
+    mine: own?.species ? { uid: String(own.uid), name: (() => { try { return species(String(own.species)).name } catch { return String(own.species) } })(), rarity: Number(own.rarity) || 0, shiny: Boolean(own.shiny), level: Number(own.level) || 1, reason: tradeText(String(own.reason ?? '')) } : null,
+    theirs: null,
+    lockMs: Number.isFinite(lockAt) ? Math.max(0, lockAt + 5000 - Date.now()) : 0,
+    phase,
+    offerId: offer?.id,
+    ownUid: typeof ownUid === 'string' ? ownUid : undefined,
+    host: offer?.host === true
+  }
+  render()
+}
+
+async function tradeAction(act: string): Promise<void> {
+  if (!save) return
+  const code = (document.getElementById('trade-code') as HTMLInputElement | null)?.value ?? ''
+  const action = act === 'trade-offer' ? 'offer' : act === 'trade-lock' ? 'lock' : act === 'trade-confirm' ? 'confirm' : 'cancel'
+  const result = await callOnline('trade', {
+    action,
+    code,
+    offer: tradePanel.offerId ?? '',
+    mine: tradePanel.ownUid ?? tradePanel.mine?.uid ?? '',
+    theirs: tradePanel.theirs?.uid ?? ''
+  })
+  if (!result.ok) tradePanel = { ...tradePanel, note: tradeText(result.error) }
+  if (result.data.done && tradePanel.ownUid) {
+    const host = tradePanel.host === true
+    const received = String((host ? result.data.host_uid : result.data.guest_uid) ?? '')
+    const speciesId = String((host ? result.data.host_species : result.data.guest_species) ?? '')
+    const level = Math.max(1, Math.floor(Number(host ? result.data.host_level : result.data.guest_level)) || 1)
+    const shiny = Boolean(host ? result.data.host_shiny : result.data.guest_shiny)
+    const gone = tradePanel.ownUid
+    if (received && speciesId && save.mons[gone]) {
+      delete save.mons[gone]
+      save.team = save.team.filter((id) => id !== gone)
+      save.pc = save.pc.filter((id) => id !== gone)
+      save.hort = save.hort.filter((id) => id !== gone)
+      save.mons[received] = makeMon(speciesId, level, Date.now(), 'tausch', shiny)
+      save.pc.push(received)
+      const entry = save.dex[speciesId] ?? { seen: 0, caught: 0 }
+      entry.seen += 1
+      entry.caught = Math.max(1, entry.caught)
+      save.dex[speciesId] = entry
+      try { writeSave(localStorage, save) } catch { /* the server already swapped the row */ }
+    }
+  }
+  await refreshTrade()
 }
 
 async function refreshSocial(): Promise<void> {
@@ -2674,7 +2748,12 @@ function onClick(event: Event): void {
     if (screen === 'ranks') void refreshRanks()
     if (screen === 'arena') void refreshArena()
     if (screen === 'social') void refreshSocial()
+    if (screen === 'trade') void refreshTrade()
     kick()
+    return
+  }
+  if (act === 'trade-offer' || act === 'trade-lock' || act === 'trade-confirm' || act === 'trade-cancel') {
+    void tradeAction(act)
     return
   }
   if (act === 'expedition-quest') {
