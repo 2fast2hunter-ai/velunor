@@ -47,7 +47,7 @@ import { browserCloudApi, watchAuth } from './cloud/supabaseApi'
 import { callOnline, claimRankRewards, clearVelunorKeys, loadOwnLabel, loadRankPage, sendBlockRow, sendReportRow } from './online/calls'
 import { isBoard, parseRankPage, RANK_FRAMES, type BoardId, type RankModel } from './online/ranks'
 import { buyNode, respecTree, treeCapMs } from './tree'
-import type { ArenaPanel } from './view'
+import type { ArenaPanel, SocialPanel } from './view'
 import { saveOwesCatchUp } from './online/check'
 import { nameIssue } from './online/name'
 import { createCloud, type CloudController } from './cloud/session'
@@ -56,7 +56,7 @@ import { CONSENT_KEY, DEVICE_KEY, QUEUE_KEY, REPLACE_SERVER_KEY, RESET_SERVER_KE
 import { isEventName, type AnalyticsEvent, type Consent } from './cloud/analytics'
 import { eventsForEncounter, eventsForLoot, starEvent, teamProfile } from './cloud/playEvents'
 import { equipFrame, equipTitle, syncAchievements } from './achievements'
-import { buyHortSlot, moveFromHort, moveToHort } from './hort'
+import { HATCH_MS, buyHortSlot, moveFromHort, moveToHort } from './hort'
 import { buyCrystal, buyFruit, sellCrystal, sellFruit, useCrystal, useFruit } from './shop'
 import { buyPrize, spinWheel, type Multiplier, type SymbolId } from './wheel'
 import { chapterCapNow } from './dex'
@@ -161,11 +161,13 @@ let catchingUp = false
 let masteryNote = ''
 let masteryUntil = 0
 let rankBoard: BoardId = 'codex'
+let rankFriends = false
 let rankToken = 0
 let rankView: RankModel = { board: 'codex', status: 'offline', top: [], around: [], honors: [], excluded: false }
 let treePick = 'chest-1'
 let arenaTimer = 0
 let arenaPanel: ArenaPanel = { status: 'offline', note: '', rating: 1000, league: 'Kiesel', attacks: 0, slots: [], suggestions: [], logs: [], frames: [], replay: null }
+let socialPanel: SocialPanel = { status: 'offline', code: '', friends: [], requests: [], note: '' }
 let saveReady = false
 let wipingAccount = false
 
@@ -1175,7 +1177,7 @@ function render(step = save?.step): void {
     mult: wheelMult,
     symbols: wheelSymbols,
     note: wheelNote
-  }, { mapOpen, moreOpen, pcScroll, filtersOpen, dexOpen, shopTab, shopHint: Date.now() < shopFlashUntil, fighting: animating, cloud: mergedCloud(), masteryNote: Date.now() < masteryUntil ? masteryNote : '', ranks: { ...rankView, board: rankBoard, excluded: mergedCloud().flagLevel === 2 }, treePick, arena: arenaPanel }))
+  }, { mapOpen, moreOpen, pcScroll, filtersOpen, dexOpen, shopTab, shopHint: Date.now() < shopFlashUntil, fighting: animating, cloud: mergedCloud(), masteryNote: Date.now() < masteryUntil ? masteryNote : '', ranks: { ...rankView, board: rankBoard, excluded: mergedCloud().flagLevel === 2 }, treePick, arena: arenaPanel, social: socialPanel }))
   if (screen === 'team') {
     pcIds = visiblePc(save, pc)
     const view = document.getElementById('pc-viewport')
@@ -1462,6 +1464,111 @@ async function refreshArena(): Promise<void> {
   render()
 }
 
+function asFriends(value: unknown): SocialPanel['friends'] {
+  if (!Array.isArray(value)) return []
+  return value.flatMap((row) => {
+    if (!row || typeof row !== 'object') return []
+    const item = row as Record<string, unknown>
+    if (typeof item.code !== 'string' || typeof item.label !== 'string') return []
+    return [{
+      code: item.code,
+      label: item.label,
+      region: Math.floor(Number(item.region)) || 1,
+      crests: Math.floor(Number(item.crests)) || 0,
+      codex: Math.floor(Number(item.codex)) || 0,
+      favorite: typeof item.favorite === 'string' ? item.favorite : '',
+      presence: typeof item.presence === 'string' ? item.presence : 'offline',
+      incoming: Boolean(item.incoming)
+    }]
+  })
+}
+
+function grantServerGift(gold: number, fruit: number, marks: number, eggs: string[]): void {
+  if (!save) return
+  save.gold += Math.max(0, Math.floor(gold))
+  save.bag.fruits.fang += Math.max(0, Math.floor(fruit))
+  save.marks += Math.max(0, Math.floor(marks))
+  const readyAt = Date.now() + HATCH_MS
+  for (const speciesId of eggs) {
+    if (speciesId) save.eggs.push({ species: speciesId, shiny: true, readyAt })
+  }
+  try { writeSave(localStorage, save) } catch { /* the server already marked the grant claimed */ }
+}
+
+async function refreshSocial(): Promise<void> {
+  socialPanel = { ...socialPanel, status: 'loading' }
+  render()
+  const friends = await callOnline('friends', { action: 'state' })
+  const beast = await callOnline('coop-boss', { action: 'state' })
+  if (!friends.ok || !beast.ok) {
+    socialPanel = { ...socialPanel, status: 'offline', note: '' }
+    render()
+    return
+  }
+  socialPanel = {
+    status: 'ready',
+    code: typeof friends.data.code === 'string' ? friends.data.code : '',
+    friends: asFriends(friends.data.friends),
+    requests: asFriends(friends.data.requests),
+    note: '',
+    showOnline: friends.data.showOnline !== false,
+    gifts: Math.floor(Number(friends.data.gifts)) || 0,
+    beast: typeof beast.data.beast === 'string' ? beast.data.beast : 'weltenwurm',
+    beastName: typeof beast.data.name === 'string' ? beast.data.name : '',
+    level: Math.floor(Number(beast.data.level)) || 1,
+    hp: Math.floor(Number(beast.data.hp)) || 0,
+    hpMax: Math.floor(Number(beast.data.hpMax)) || 1,
+    attempts: Math.floor(Number(beast.data.attempts)) || 0,
+    members: Array.isArray(beast.data.members) ? beast.data.members.filter((name): name is string => typeof name === 'string') : [],
+    eggChance: Number(beast.data.eggChance) || 0.02
+  }
+  render()
+}
+
+async function socialAction(act: string, code: string | null): Promise<void> {
+  const current = save
+  if (!current) return
+  if (act === 'friend-ask') {
+    const query = (document.getElementById('friend-query') as HTMLInputElement | null)?.value ?? ''
+    const result = await callOnline('friends', { action: 'request', query })
+    socialPanel = { ...socialPanel, note: result.ok ? '' : t(current.settings.lang, 'social.noFriends') }
+    await refreshSocial()
+    return
+  }
+  if (act === 'friend-online') {
+    const box = document.querySelector('[data-act="friend-online"]') as HTMLInputElement | null
+    await callOnline('friends', { action: 'privacy', showOnline: box?.checked !== false })
+    return
+  }
+  const named: Record<string, string> = {
+    'friend-accept': 'accept',
+    'friend-decline': 'decline',
+    'friend-remove': 'remove',
+    'friend-gift': 'gift',
+    'friend-invite': 'invite'
+  }
+  if (named[act] && code) {
+    const target = named[act] === 'invite' ? 'coop-boss' : 'friends'
+    const result = await callOnline(target, { action: named[act], code })
+    socialPanel = { ...socialPanel, note: result.ok ? '' : String(result.error || '') }
+    await refreshSocial()
+    return
+  }
+  if (act === 'friend-claim' || act === 'coop-claim') {
+    const result = await callOnline(act === 'friend-claim' ? 'friends' : 'coop-boss', { action: 'claim' })
+    const eggs = Array.isArray(result.data.eggs) ? result.data.eggs.filter((id): id is string => typeof id === 'string') : []
+    grantServerGift(Number(result.data.gold) || 0, Number(result.data.fruit) || 0, Number(result.data.marks) || 0, eggs)
+    await refreshSocial()
+    return
+  }
+  if (act === 'coop-attempt') {
+    const roster = [...current.team, ...Object.keys(current.mons)].filter((uid, index, all) => current.mons[uid] && all.indexOf(uid) === index).slice(0, 6)
+    const result = await callOnline('coop-boss', { action: 'attempt', uids: roster })
+    socialPanel = { ...socialPanel, note: result.ok ? '' : t(current.settings.lang, 'social.noFriends') }
+    await refreshSocial()
+  }
+}
+
 async function arenaAction(act: string, index: string | null): Promise<void> {
   if (!save) return
   if (act === 'arena-save') {
@@ -1536,7 +1643,7 @@ async function refreshRanks(): Promise<void> {
   const token = ++rankToken
   rankView = { ...rankView, board: rankBoard, status: 'loading' }
   render()
-  const page = parseRankPage(await loadRankPage(rankBoard), save?.settings.lang === 'en' ? 'en' : 'de')
+  const page = parseRankPage(await loadRankPage(rankBoard, rankFriends), save?.settings.lang === 'en' ? 'en' : 'de')
   if (token !== rankToken || !save) return
   if (page.status === 'ready') {
     const reward = await claimRankRewards()
@@ -1558,12 +1665,13 @@ async function refreshRanks(): Promise<void> {
       ...page,
       board: rankBoard,
       excluded: mergedCloud().flagLevel === 2,
-      honors: [...new Set([...page.honors, ...earned])]
+      honors: [...new Set([...page.honors, ...earned])],
+      friends: rankFriends
     }
     render()
     return
   }
-  rankView = { ...page, board: rankBoard, excluded: mergedCloud().flagLevel === 2 }
+  rankView = { ...page, board: rankBoard, excluded: mergedCloud().flagLevel === 2, friends: rankFriends }
   render()
 }
 
@@ -2551,6 +2659,7 @@ function onClick(event: Event): void {
     if (screen === 'options') void refreshOwnLabel()
     if (screen === 'ranks') void refreshRanks()
     if (screen === 'arena') void refreshArena()
+    if (screen === 'social') void refreshSocial()
     kick()
     return
   }
@@ -2565,6 +2674,10 @@ function onClick(event: Event): void {
     const index = Number(node.getAttribute('data-index'))
     arenaPanel = { ...arenaPanel, slots: arenaPanel.slots.filter((_, place) => place !== index) }
     render()
+    return
+  }
+  if (act === 'friend-ask' || act === 'friend-accept' || act === 'friend-decline' || act === 'friend-remove' || act === 'friend-gift' || act === 'friend-invite' || act === 'friend-claim' || act === 'friend-online' || act === 'coop-attempt' || act === 'coop-claim') {
+    void socialAction(act, node.getAttribute('data-code'))
     return
   }
   if (act === 'arena-save' || act === 'arena-suggest' || act === 'arena-fight') {
@@ -2584,6 +2697,11 @@ function onClick(event: Event): void {
     if (reason) save.log.push({ t: Date.now(), text: reason })
     else try { writeSave(localStorage, save) } catch { /* keep the local tree */ }
     render()
+    return
+  }
+  if (act === 'rank-friends') {
+    rankFriends = !rankFriends
+    void refreshRanks()
     return
   }
   if (act === 'rank-board') {

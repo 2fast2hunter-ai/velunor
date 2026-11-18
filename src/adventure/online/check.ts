@@ -50,6 +50,8 @@ export interface AuditState {
   treeGold?: number
   /** Offline cap in ms from the mastery tree. Older audits omit it and count as 8 h. */
   treeCapMs?: number
+  /** Gold the server has already granted as gifts and co-op rewards. */
+  bonusGold?: number
   mons: AuditMon[]
   /** Species the opened regions can actually award. */
   speciesAllowed: string[]
@@ -171,15 +173,15 @@ export function auditHasProgress(before: AuditState, after: AuditState): boolean
   return after.mons.some((mon) => !known.has(mon.uid))
 }
 
-export function stickAudit(previousFlag: 0 | 1 | 2, baseline: AuditState | null, next: AuditState, elapsedMs: number): { flag: 0 | 1 | 2, audit: AuditState | null, advanceClock: boolean, reasons: string[] } {
-  const verdict = auditSync(baseline, next, elapsedMs)
+export function stickAudit(previousFlag: 0 | 1 | 2, baseline: AuditState | null, next: AuditState, elapsedMs: number, bonusGold = 0): { flag: 0 | 1 | 2, audit: AuditState | null, advanceClock: boolean, reasons: string[] } {
+  const verdict = auditSync(baseline, next, elapsedMs, bonusGold)
   const flag = Math.max(previousFlag, verdict.flag) as 0 | 1 | 2
   const progress = baseline ? auditHasProgress(baseline, next) : true
   const advanceClock = previousFlag < 1 && verdict.flag < 1 && progress
   return { flag, audit: advanceClock ? next : baseline, advanceClock, reasons: verdict.reasons }
 }
 
-export function auditSync(before: AuditState | null, after: AuditState, elapsedMs?: number): AuditResult {
+export function auditSync(before: AuditState | null, after: AuditState, elapsedMs?: number, bonusGold = 0): AuditResult {
   if (!before) return { flag: 0, reasons: [] }
   const reasons: string[] = []
   let flag: 0 | 1 | 2 = 0
@@ -194,7 +196,7 @@ export function auditSync(before: AuditState | null, after: AuditState, elapsedM
   const windowMs = Math.max(0, elapsed)
   const goldMult = Math.max(1, before.treeGold ?? 1, after.treeGold ?? 1)
   const capMs = Math.max(OFFLINE_CAP_MS, before.treeCapMs ?? 0, after.treeCapMs ?? 0)
-  const goldFlag = gainFlag(goldGain, allowedGold(windowMs, region, chapter, goldMult))
+  const goldFlag = gainFlag(goldGain, allowedGold(windowMs, region, chapter, goldMult) + Math.max(0, Math.floor(bonusGold)))
   if (goldFlag) reasons.push('gold')
   flag = bump(flag, goldFlag)
   const epGain = after.ep - before.ep

@@ -10501,7 +10501,8 @@ function fight1v1(allySide, foeSide, rng, trace, weather = null, mods = null) {
   const allyFirst = ally.side.spd >= foe.side.spd;
   let actions = 0;
   let timeout = false;
-  while (actions < ACTION_LIMIT && ally.hp > 0 && foe.hp > 0) {
+  const actionCap = Math.max(1, Math.min(120, mods?.actionCap ?? ACTION_LIMIT));
+  while (actions < actionCap && ally.hp > 0 && foe.hp > 0) {
     const turn = actions % 2 === 0 ? allyFirst ? ally : foe : allyFirst ? foe : ally;
     const other = turn === ally ? foe : ally;
     act(turn, other);

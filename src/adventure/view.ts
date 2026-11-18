@@ -63,7 +63,7 @@ import type { OfflineSummary } from './sim'
 import type { SaveV2 } from './types'
 import { PC_VIEW_FALLBACK, virtualWindow } from './virtualList'
 
-export type Screen = 'adventure' | 'progress' | 'team' | 'codex' | 'activities' | 'shop' | 'achievements' | 'ranks' | 'tree' | 'arena' | 'options' | 'guide'
+export type Screen = 'adventure' | 'progress' | 'team' | 'codex' | 'activities' | 'shop' | 'achievements' | 'ranks' | 'tree' | 'arena' | 'social' | 'options' | 'guide'
 
 export interface WheelPanel {
   tab: 'hort' | 'wheel' | 'chests'
@@ -118,6 +118,36 @@ export interface ShellFlags {
   ranks?: RankModel
   treePick?: string
   arena?: ArenaPanel
+  social?: SocialPanel
+}
+
+export interface SocialFriend {
+  code: string
+  label: string
+  region: number
+  crests: number
+  codex: number
+  favorite: string
+  presence: string
+  incoming?: boolean
+}
+
+export interface SocialPanel {
+  status: 'offline' | 'ready' | 'loading'
+  code: string
+  friends: SocialFriend[]
+  requests: SocialFriend[]
+  note: string
+  showOnline?: boolean
+  gifts?: number
+  beast?: string
+  beastName?: string
+  level?: number
+  hp?: number
+  hpMax?: number
+  attempts?: number
+  members?: string[]
+  eggChance?: number
 }
 
 export interface ArenaCardView {
@@ -300,12 +330,14 @@ function moreSheet(save: SaveV2, open: boolean): string {
   const ranks = `<button type="button" data-act="screen" data-screen="ranks"><svg class="ui-icon" viewBox="0 0 24 24" aria-hidden="true"><path fill="currentColor" d="M4 20V9h4v11H4zm6 0V4h4v16h-4zm6 0v-7h4v7h-4z"/></svg>${tr(save, 'nav.ranks')}</button>`
   const treeBtn = `<button type="button" data-act="screen" data-screen="tree"><svg class="ui-icon" viewBox="0 0 24 24" aria-hidden="true"><path fill="none" stroke="currentColor" stroke-width="2" d="M12 22V8M7 22V12M17 22V12M12 8l-5 4M12 8l5 4"/></svg>${tr(save, 'nav.tree')}</button>`
   const arenaBtn = `<button type="button" data-act="screen" data-screen="arena"><svg class="ui-icon" viewBox="0 0 24 24" aria-hidden="true"><circle cx="12" cy="12" r="8" fill="none" stroke="currentColor" stroke-width="2"/><path fill="currentColor" d="M12 6l1.6 3.4L17 11l-3.4 1.6L12 16l-1.6-3.4L7 11l3.4-1.6z"/></svg>${tr(save, 'nav.arena')}</button>`
+  const socialBtn = `<button type="button" data-act="screen" data-screen="social"><svg class="ui-icon" viewBox="0 0 24 24" aria-hidden="true"><circle cx="8" cy="9" r="3" fill="currentColor"/><circle cx="16" cy="9" r="3" fill="currentColor"/><path fill="currentColor" d="M3 19c.4-3 2.4-4.5 5-4.5s4.6 1.5 5 4.5H3zm8 0c.3-2 1.6-3.4 3.5-4 1.2.6 2.2 1.6 2.5 4H11z"/></svg>${tr(save, 'nav.friends')}</button>`
   return `<div class="more-sheet card" ${open ? '' : 'hidden'}>
     <div class="more-who">${lookFace(save.look)}<b>${esc(save.name)}</b></div>
     ${items.slice(0, 2).map(([id, icon, label]) => `<button type="button" data-act="screen" data-screen="${id}">${ui(icon)}${tr(save, label)}</button>`).join('')}
     ${ranks}
     ${treeBtn}
     ${arenaBtn}
+    ${socialBtn}
     ${items.slice(2).map(([id, icon, label]) => `<button type="button" data-act="screen" data-screen="${id}">${ui(icon)}${tr(save, label)}</button>`).join('')}
   </div>`
 }
@@ -1257,6 +1289,7 @@ function ranksScreen(save: SaveV2, model: RankModel | undefined): string {
       <div class="card panel">
         <h2>${tr(save, 'nav.ranks')}</h2>
         <div class="rank-tabs">${tabs}</div>
+        <button type="button" data-act="rank-friends" class="${model?.friends ? 'on' : ''}">${tr(save, 'ranks.friends')}</button>
         ${body}
         <h2>${tr(save, 'ranks.frames')}</h2>
         <div class="rank-frames">${frames}</div>
@@ -1366,11 +1399,95 @@ function treeScreen(save: SaveV2, pick: string | undefined, now: number): string
   </div>`
 }
 
+function beastArt(id: string): string {
+  if (id === 'himmelswal') {
+    return `<svg class="beast-art" data-art="beasts/himmelswal" viewBox="0 0 240 140" role="img" aria-label="Himmelswal">
+      <ellipse cx="128" cy="78" rx="78" ry="36" fill="#d7ecf7"/>
+      <ellipse cx="118" cy="86" rx="62" ry="22" fill="#f7fbfe"/>
+      <path d="M40 78c18-28 46-36 70-28" fill="none" stroke="#8fb8d4" stroke-width="10" stroke-linecap="round"/>
+      <circle cx="168" cy="68" r="6" fill="#243044"/>
+      <path d="M196 70c16 8 22 18 18 28" fill="none" stroke="#9fd0ea" stroke-width="8" stroke-linecap="round"/>
+      <path d="M150 108c10 16 28 18 42 8" fill="none" stroke="#b7d7ea" stroke-width="8" stroke-linecap="round"/>
+    </svg>`
+  }
+  return `<svg class="beast-art" data-art="beasts/weltenwurm" viewBox="0 0 240 140" role="img" aria-label="Weltenwurm">
+    <path d="M28 92c24-36 48-20 64-36s28-8 40 10 34 18 52-4 28 8 28 22-20 28-46 16-40 8-58 20-48 6-80-28z" fill="#c9844a"/>
+    <circle cx="46" cy="78" r="16" fill="#e0b07a"/>
+    <circle cx="40" cy="74" r="3" fill="#243044"/>
+    <path d="M34 64c6-12 16-12 20-2" fill="none" stroke="#8d5a32" stroke-width="4" stroke-linecap="round"/>
+    <circle cx="108" cy="70" r="7" fill="#d7a36a"/>
+    <circle cx="154" cy="78" r="7" fill="#d7a36a"/>
+  </svg>`
+}
+
+function friendName(id: string): string {
+  if (!id) return '—'
+  try { return species(id).name } catch { return '—' }
+}
+
+function presenceWord(save: SaveV2, value: string): string {
+  if (value === 'online') return tr(save, 'social.online')
+  if (value === 'heute') return tr(save, 'social.today')
+  if (value === 'verborgen') return tr(save, 'social.hidden')
+  return tr(save, 'social.away')
+}
+
+function socialScreen(save: SaveV2, panel: SocialPanel | undefined): string {
+  const view = panel ?? { status: 'offline' as const, code: '', friends: [], requests: [], note: '' }
+  if (view.status === 'loading') {
+    return `<div class="menu-screen"><div class="menu-scroll"><div class="card panel"><h2>${tr(save, 'nav.friends')}</h2><p class="muted">${tr(save, 'social.loading')}</p></div></div></div>`
+  }
+  if (view.status !== 'ready') {
+    return `<div class="menu-screen"><div class="menu-scroll"><div class="card panel"><h2>Offline</h2><p class="muted">${tr(save, 'social.offlineNote')}</p></div></div></div>`
+  }
+  const friends = view.friends.map((friend) => `<article class="friend-row">
+    <b>${esc(friend.label)}</b>
+    <p>${esc(tr(save, 'social.progress', { region: friend.region, crests: friend.crests, codex: friend.codex }))}</p>
+    <p class="muted">${tr(save, 'social.favorite')}: ${esc(friendName(friend.favorite))} · ${esc(presenceWord(save, friend.presence))}</p>
+    <button type="button" data-act="friend-gift" data-code="${esc(friend.code)}">${tr(save, 'social.gift')}</button>
+    <button type="button" data-act="friend-invite" data-code="${esc(friend.code)}">${tr(save, 'social.invite')}</button>
+    <button type="button" data-act="friend-remove" data-code="${esc(friend.code)}">${tr(save, 'social.remove')}</button>
+  </article>`).join('')
+  const requests = view.requests.map((request) => `<article class="friend-row">
+    <b>${esc(request.label)}</b>
+    ${request.incoming ? `<button type="button" data-act="friend-accept" data-code="${esc(request.code)}">${tr(save, 'social.accept')}</button><button type="button" data-act="friend-decline" data-code="${esc(request.code)}">${tr(save, 'social.decline')}</button>` : `<p class="muted">${tr(save, 'social.pending')}</p>`}
+  </article>`).join('')
+  const hpMax = Math.max(1, view.hpMax ?? 1)
+  const hpWidth = Math.max(0, Math.min(100, Math.round(((view.hp ?? 0) / hpMax) * 100)))
+  return `<div class="menu-screen"><div class="menu-scroll"><div class="card panel">
+    <h2>${tr(save, 'nav.friends')}</h2>
+    <article class="friend-code" data-art="friends/code">
+      <p>${tr(save, 'social.code')}</p>
+      <b>${esc(view.code)}</b>
+    </article>
+    <label class="friend-search">${tr(save, 'social.search')}<input id="friend-query" maxlength="24" /></label>
+    <button type="button" class="primary" data-act="friend-ask">${tr(save, 'social.ask')}</button>
+    <button type="button" data-act="friend-claim">${tr(save, 'social.claim')} ${view.gifts ? `· ${view.gifts} G` : ''}</button>
+    <label class="switch"><input type="checkbox" data-act="friend-online" ${view.showOnline === false ? '' : 'checked'}/> ${tr(save, 'social.privacy')}</label>
+    <h3>${tr(save, 'social.requests')}</h3>
+    ${requests || `<p class="muted">${tr(save, 'social.noRequests')}</p>`}
+    <h3>${tr(save, 'nav.friends')}</h3>
+    ${friends || `<p class="muted">${tr(save, 'social.noFriends')}</p>`}
+    <article class="beast-card" data-art="beasts/screen">
+      ${beastArt(view.beast ?? 'weltenwurm')}
+      <h3>${esc(view.beastName || tr(save, 'social.beast'))}</h3>
+      <p>${tr(save, 'social.level', { n: view.level ?? 1 })} · ${tr(save, 'social.attempts', { n: Math.max(0, 3 - (view.attempts ?? 0)) })}</p>
+      <div class="hp-beast"><span style="width:${hpWidth}%"></span></div>
+      <p class="muted">${tr(save, 'social.chance', { n: Math.round((view.eggChance ?? 0.02) * 100) })}</p>
+      <p>${(view.members ?? []).map((name) => esc(name)).join(' · ')}</p>
+      <button type="button" class="primary" data-act="coop-attempt">${tr(save, 'social.fight')}</button>
+      <button type="button" data-act="coop-claim">${tr(save, 'social.claim')}</button>
+    </article>
+    ${view.note ? `<p class="muted">${esc(view.note)}</p>` : ''}
+  </div></div></div>`
+}
+
 function center(save: SaveV2, screen: Screen, now: number, pc: PcQuery, dex: CodexQuery, selected: string | null, debug: boolean, wheel: WheelPanel, shell: ShellFlags): string {
   if (screen === 'progress') return `<div class="menu-screen"><div class="menu-scroll">${progress(save)}</div></div>`
   if (screen === 'ranks') return ranksScreen(save, shell.ranks)
   if (screen === 'tree') return treeScreen(save, shell.treePick, now)
   if (screen === 'arena') return arenaScreen(save, shell.arena)
+  if (screen === 'social') return socialScreen(save, shell.social)
   if (screen === 'team') return team(save, pc, selected, shell)
   if (screen === 'codex') return codex(save, dex, shell)
   if (screen === 'activities') return activitiesView(save, now, selected, wheel)
