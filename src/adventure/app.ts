@@ -43,7 +43,13 @@ import { chooseLook, paintLooks } from './avatar'
 import { nameProblem, pickLook, pickName } from './home'
 import { inspectSave, nextDoor, resumeSave, type Door } from './continue'
 import { FIRST_ENTRANCE_MS, HOME_ASSETS, loadFraction, mountHomeParticles } from './homeBoot'
-import { beginAdventure, exportCode, importCode, writeSave } from './save'
+import { beginAdventure, loadAdventure, writeSave } from './save'
+import { browserCloudApi, watchAuth } from './cloud/supabaseApi'
+import { createCloud, type CloudController } from './cloud/session'
+import type { CloudView } from './cloud/types'
+import { CONSENT_KEY, DEVICE_KEY, QUEUE_KEY, REPLACE_SERVER_KEY, RESET_SERVER_KEY } from './cloud/config'
+import { isEventName, type AnalyticsEvent, type Consent } from './cloud/analytics'
+import { eventsForEncounter, eventsForLoot, starEvent, teamProfile } from './cloud/playEvents'
 import { equipFrame, equipTitle } from './achievements'
 import { buyHortSlot, moveFromHort, moveToHort } from './hort'
 import { buyCrystal, buyFruit, sellCrystal, sellFruit, useCrystal, useFruit } from './shop'
@@ -86,6 +92,7 @@ import {
 import {
   art,
   brokenHtml,
+  cloudLayerHtml,
   continueHtml,
   loadingHtml,
   gameHtml,
@@ -121,7 +128,19 @@ let door: Door = 'create'
 let keptSave: SaveV2 | null = null
 let doorBackup = false
 let draftLang: Lang = 'de'
-let pendingImport: SaveV2 | null = null
+let cloud: CloudController | null = null
+let cloudReady = false
+let cloudLanded = false
+let cloudReplaced = false
+let tutorialNoted = 0
+let cloudView: CloudView = {
+  status: 'offline',
+  consent: 'unset',
+  email: '',
+  notice: '',
+  askConsent: false,
+  conflict: null
+}
 let lastInput = Date.now()
 let timer = 0
 let animating = false
@@ -155,6 +174,161 @@ let ignoreClick = false
 
 const debug = debugAllowed(import.meta.env.DEV, window.location.search)
 
+function readConsent(): Consent {
+  const value = localStorage.getItem(CONSENT_KEY)
+  return value === 'yes' || value === 'no' ? value : 'unset'
+}
+
+function readQueue(): AnalyticsEvent[] {
+  try {
+    const raw = JSON.parse(localStorage.getItem(QUEUE_KEY) ?? '[]') as AnalyticsEvent[]
+    if (!Array.isArray(raw)) return []
+    return raw.filter((event) => Boolean(event) && isEventName(event.event) && event.props && typeof event.props === 'object')
+  } catch {
+    return []
+  }
+}
+
+function deviceId(): string {
+  const current = localStorage.getItem(DEVICE_KEY)
+  if (current && /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i.test(current)) return current
+  const id = crypto.randomUUID()
+  localStorage.setItem(DEVICE_KEY, id)
+  return id
+}
+
+function activeLang(): Lang {
+  if (save?.settings.lang === 'en' || keptSave?.settings.lang === 'en') return 'en'
+  if (save || keptSave) return 'de'
+  return draftLang
+}
+
+function cloudBlocks(): boolean {
+  return cloudView.askConsent || cloudView.conflict !== null
+}
+
+function noteTutorial(step: number): void {
+  if (step <= tutorialNoted) return
+  tutorialNoted = step
+  cloud?.track('tutorial_step', { step })
+}
+
+function mountCloudLayer(): void {
+  document.getElementById('cloud-layer')?.remove()
+  if (!cloudReady) return
+  const host = document.getElementById('fit')
+  if (!host) return
+  const html = cloudLayerHtml(cloudView, activeLang())
+  if (html) host.insertAdjacentHTML('beforeend', html)
+}
+
+function paintCloudChip(): void {
+  const chip = document.querySelector('.cloud-chip')
+  if (chip instanceof HTMLElement) {
+    chip.setAttribute('data-cloud', cloudView.status)
+    const key = cloudView.status === 'online' ? 'cloud.online' : cloudView.status === 'sync' ? 'cloud.sync' : 'cloud.offline'
+    chip.setAttribute('aria-label', t(activeLang(), key))
+  }
+  const mark = document.querySelector('.cloud-mark')
+  if (mark instanceof HTMLElement) mark.setAttribute('data-cloud', cloudView.status)
+}
+
+function refreshCloud(): void {
+  if (!cloudReady) return
+  if (cloudLanded && !save?.started) {
+    cloudLanded = false
+    showDoor(nextDoor('create', 'open-ready'))
+    return
+  }
+  paintCloudChip()
+  if (cloudReplaced && save && !animating) {
+    cloudReplaced = false
+    render()
+    return
+  }
+  if (save && screen === 'options' && !animating) {
+    render()
+    return
+  }
+  mountCloudLayer()
+}
+
+function trackedEncounter(now: number, trace: boolean): EncounterOutcome {
+  if (!save) throw new Error('no save')
+  const region = save.region
+  const chapter = save.chapter
+  const before = { ...save.shards }
+  const profile = teamProfile(save)
+  const outcome = resolveEncounter(save, now, { offline: false, trace })
+  for (const event of eventsForEncounter({
+    outcome,
+    region,
+    chapter,
+    teamLevel: profile.teamLevel,
+    rarityAvg: profile.rarityAvg,
+    shardsBefore: before,
+    shardsAfter: save.shards
+  })) cloud?.track(event.event, event.props)
+  return outcome
+}
+
+function attachCloud(): void {
+  const consent = readConsent()
+  cloudView = { ...cloudView, consent, askConsent: consent === 'unset' }
+  const existing = loadAdventure(localStorage, Date.now())
+  cloud = createCloud(browserCloudApi(), {
+    now: () => Date.now(),
+    online: () => navigator.onLine,
+    deviceId,
+    consent: readConsent,
+    setConsent(value) {
+      localStorage.setItem(CONSENT_KEY, value)
+    },
+    queue: readQueue,
+    setQueue(events) {
+      localStorage.setItem(QUEUE_KEY, JSON.stringify(events))
+    },
+    loadSave() {
+      if (save?.started) return save
+      if (keptSave?.started) return keptSave
+      return loadAdventure(localStorage, Date.now())
+    },
+    storeSave(next) {
+      const playing = Boolean(save?.started)
+      try { writeSave(localStorage, next) } catch { /* the memory copy still applies */ }
+      if (playing) {
+        save = next
+        keptSave = next
+        cloudReplaced = true
+        return
+      }
+      save = null
+      keptSave = next
+      cloudLanded = true
+    },
+    redirectTo() {
+      const url = new URL(import.meta.env.BASE_URL || '/', window.location.origin)
+      url.hash = ''
+      url.search = ''
+      return url.href
+    },
+    pendingReset: () => localStorage.getItem(RESET_SERVER_KEY) === '1',
+    clearReset: () => { localStorage.removeItem(RESET_SERVER_KEY) },
+    pendingReplace: () => localStorage.getItem(REPLACE_SERVER_KEY) === '1',
+    clearReplace: () => { localStorage.removeItem(REPLACE_SERVER_KEY) },
+    onView(view) {
+      cloudView = view
+      refreshCloud()
+    }
+  })
+  const minutes = existing ? Math.max(0, Math.round((Date.now() - existing.lastSeenAt) / 60000)) : 0
+  cloud.noteSession(minutes)
+  watchAuth(() => { void cloud?.sync('start') })
+  window.setInterval(() => { void cloud?.sync('interval') }, 5 * 60 * 1000)
+  window.setInterval(() => { void cloud?.flush() }, 60 * 1000)
+  void cloud.start()
+}
+
 export function bootAdventure(): void {
   const root = document.getElementById('game')
   if (!root) return
@@ -178,11 +352,15 @@ export function bootAdventure(): void {
   draftLang = storedLang === 'en' || storedLang === 'de' ? storedLang : (navigator.language.toLowerCase().startsWith('en') ? 'en' : 'de')
   document.documentElement.lang = draftLang
   window.addEventListener('pagehide', () => {
-    if (!save) return
-    const paused = batteryPause(save.settings.battery, currentPresence())
-    if (!paused && Date.now() - lastTick < encounterMs(save.settings.speed) * 2) save.lastSeenAt = Date.now()
-    writeSave(localStorage, save)
+    if (save) {
+      const paused = batteryPause(save.settings.battery, currentPresence())
+      if (!paused && Date.now() - lastTick < encounterMs(save.settings.speed) * 2) save.lastSeenAt = Date.now()
+      writeSave(localStorage, save)
+    }
+    void cloud?.pause()
   })
+  window.addEventListener('online', () => { void cloud?.sync('start') })
+  window.addEventListener('offline', () => { cloud?.markOffline() })
   document.addEventListener('visibilitychange', onPresence)
   document.addEventListener('freeze', () => {
     screenLocked = true
@@ -242,6 +420,7 @@ export function bootAdventure(): void {
     return
   }
   paint(loadingHtml(0, t(draftLang, 'boot.hint1'), false, draftLang))
+  attachCloud()
   void openFrontDoor()
 }
 
@@ -631,17 +810,19 @@ function openFrontDoor(): Promise<void> {
     window.clearInterval(bootTimer)
     if (failed >= 3) {
       paint(loadingHtml(loadFraction(Math.max(0, done - failed), HOME_ASSETS.length), t(draftLang, 'boot.fail'), true, draftLang))
-      return
+    } else if (!cloudLanded) {
+      const skipLegacy = localStorage.getItem(RESET_FLAG) === '1' && !localStorage.getItem(SAVE_KEY_V2)
+      const gate = skipLegacy ? { kind: 'empty' as const, save: null, backup: false } : inspectSave(localStorage, Date.now())
+      if (gate.kind === 'ready' && gate.save) {
+        keptSave = gate.save
+        showDoor(nextDoor('create', 'open-ready'))
+      } else if (gate.kind === 'broken') {
+        doorBackup = gate.backup
+        showDoor(nextDoor('create', 'open-broken'))
+      } else showOnboarding()
     }
-    const skipLegacy = localStorage.getItem(RESET_FLAG) === '1' && !localStorage.getItem(SAVE_KEY_V2)
-    const gate = skipLegacy ? { kind: 'empty' as const, save: null, backup: false } : inspectSave(localStorage, Date.now())
-    if (gate.kind === 'ready' && gate.save) {
-      keptSave = gate.save
-      showDoor(nextDoor('create', 'open-ready'))
-    } else if (gate.kind === 'broken') {
-      doorBackup = gate.backup
-      showDoor(nextDoor('create', 'open-broken'))
-    } else showOnboarding()
+    cloudReady = true
+    refreshCloud()
   })
 }
 
@@ -718,6 +899,7 @@ function showOnboarding(): void {
     draftLook = pickLook(Math.random)
   }
   document.documentElement.lang = draftLang
+  noteTutorial(draftStep === 'starter' ? 2 : 1)
   paint(onboardingHtml(draftName, draftLook, draftPick, draftLang, draftStep, draftLangOpen))
   if (draftStep === 'starter') {
     bindStarterScroller()
@@ -866,7 +1048,12 @@ function playStarterPreview(node: HTMLElement, speciesId: string): void {
 async function start(next: SaveV2, intro = false): Promise<void> {
   save = next
   localStorage.removeItem(RESET_FLAG)
+  if (intro) {
+    localStorage.setItem(REPLACE_SERVER_KEY, '1')
+    noteTutorial(3)
+  }
   try { writeSave(localStorage, save) } catch { /* ignore */ }
+  if (intro) void cloud?.sync('online')
   screen = 'adventure'
   noteProgress()
   render()
@@ -890,7 +1077,7 @@ function render(step = save?.step): void {
     mult: wheelMult,
     symbols: wheelSymbols,
     note: wheelNote
-  }, { mapOpen, moreOpen, pcScroll, filtersOpen, dexOpen, shopTab, shopHint: Date.now() < shopFlashUntil, fighting: animating }))
+  }, { mapOpen, moreOpen, pcScroll, filtersOpen, dexOpen, shopTab, shopHint: Date.now() < shopFlashUntil, fighting: animating, cloud: cloudView }))
   if (screen === 'team') {
     pcIds = visiblePc(save, pc)
     const view = document.getElementById('pc-viewport')
@@ -913,6 +1100,7 @@ function paint(html: string): void {
   const host = document.getElementById('fit')
   if (!host) return
   host.innerHTML = html
+  mountCloudLayer()
   fit()
   paintLooks(host, art)
   const dust = host.querySelector('.home-particles')
@@ -1028,6 +1216,7 @@ function currentPresence(): Presence {
 }
 
 function onPresence(): void {
+  if (document.hidden) void cloud?.pause()
   if (!save?.started) return
   const pause = batteryPause(save.settings.battery, currentPresence())
   if (pause) {
@@ -1071,7 +1260,7 @@ function buzz(kind: HapticKind): void {
 
 function loop(): void {
   powerCheck()
-  if (!save?.started || animating || overlay || (save.hold && !save.challengeNow)) return
+  if (!save?.started || animating || overlay || cloudBlocks() || (save.hold && !save.challengeNow)) return
   const dur = encounterMs(save.settings.speed)
   const now = Date.now()
   bankRoad(save, Math.max(0, now - (save.roadAt || now)))
@@ -1111,7 +1300,7 @@ function loop(): void {
   noteProgress()
   let outcome: EncounterOutcome
   try {
-    outcome = resolveEncounter(save, now, { offline: false, trace: true })
+    outcome = trackedEncounter(now, true)
   } catch (err) {
     console.error(err)
     animating = false
@@ -1791,6 +1980,15 @@ function onClick(event: Event): void {
   const node = target.closest('[data-act]')
   if (!node) return
   const act = node.getAttribute('data-act')
+  if (act === 'consent') {
+    cloud?.setConsent(node.getAttribute('data-consent') === 'yes' ? 'yes' : 'no')
+    if (save) kick()
+    return
+  }
+  if (act === 'conflict-a' || act === 'conflict-b') {
+    void cloud?.choose(act === 'conflict-a' ? 'A' : 'B').then(() => { if (save) kick() })
+    return
+  }
   if (act === 'combo') {
     if (save && save.settings.speed !== 1) return
     const tip = document.getElementById('combo-tip')
@@ -1930,7 +2128,9 @@ function onClick(event: Event): void {
     return
   }
   if (act === 'screen') {
-    screen = (node.getAttribute('data-screen') as Screen) || 'adventure'
+    const next = (node.getAttribute('data-screen') as Screen) || 'adventure'
+    if (next !== screen) cloud?.track('tab_open', { tab: next })
+    screen = next
     overlay = null
     moreOpen = false
     mapOpen = false
@@ -1941,6 +2141,16 @@ function onClick(event: Event): void {
   if (act === 'map') {
     mapOpen = !mapOpen
     if (mapOpen) moreOpen = false
+    render()
+    return
+  }
+  if (act === 'account') {
+    if (screen !== 'options') cloud?.track('tab_open', { tab: 'options' })
+    screen = 'options'
+    overlay = null
+    moreOpen = false
+    mapOpen = false
+    void cloud?.sync('online')
     render()
     return
   }
@@ -2190,8 +2400,14 @@ function onClick(event: Event): void {
     return
   }
   if (act === 'star') {
-    const reason = raiseStar(save, node.getAttribute('data-id') ?? '')
+    const speciesId = node.getAttribute('data-id') ?? ''
+    const before = save.stars[speciesId] ?? 0
+    const reason = raiseStar(save, speciesId)
     if (reason) save.log.push({ t: Date.now(), text: reason })
+    else {
+      const event = starEvent(speciesId, before + 1)
+      if (event) cloud?.track(event.event, event.props)
+    }
     try { writeSave(localStorage, save) } catch { /* ignore */ }
     render()
     return
@@ -2210,8 +2426,10 @@ function onClick(event: Event): void {
       render()
       return
     }
+    const shardsBefore = { ...save.shards }
     const grants = takeChests(save, tier, act === 'chest-all' ? 10 : 1, Date.now())
     if (!grants.length) return
+    for (const event of eventsForLoot(tier, grants.length, shardsBefore, save.shards)) cloud?.track(event.event, event.props)
     overlay = act === 'chest-all' ? { kind: 'chest-summary', grants } : { kind: 'chest-reveal', grant: grants[0] }
     try { writeSave(localStorage, save) } catch { /* ignore */ }
     render()
@@ -2273,39 +2491,14 @@ function onClick(event: Event): void {
     render()
     return
   }
-  if (act === 'copy-code') {
-    const code = exportCode(save)
-    const box = document.getElementById('export-code')
-    if (box instanceof HTMLTextAreaElement) {
-      box.value = code
-      box.focus()
-      box.select()
-    }
-    navigator.clipboard?.writeText(code).catch(() => {})
+  if (act === 'sync-now') {
+    void cloud?.sync('online')
     return
   }
-  if (act === 'import-ask') {
-    const box = document.getElementById('import-code')
-    const loaded = importCode(box instanceof HTMLTextAreaElement ? box.value : '', Date.now())
-    if (!loaded) {
-      save.log.push({ t: Date.now(), text: t(save.settings.lang, 'import.bad') })
-      if (save.log.length > 50) save.log.splice(0, save.log.length - 50)
-      render()
-      return
-    }
-    pendingImport = loaded
-    overlay = { kind: 'confirm-import' }
-    render()
-    return
-  }
-  if (act === 'import-yes' && pendingImport) {
-    save = pendingImport
-    pendingImport = null
-    overlay = null
-    screen = 'adventure'
-    try { writeSave(localStorage, save) } catch { /* ignore */ }
-    render()
-    kick()
+  if (act === 'link-email') {
+    const field = document.getElementById('account-email')
+    const email = field instanceof HTMLInputElement ? field.value : ''
+    void cloud?.linkEmail(email)
     return
   }
   if (act === 'reset') {
@@ -2316,6 +2509,8 @@ function onClick(event: Event): void {
   if (act === 'reset-yes') {
     localStorage.removeItem(SAVE_KEY_V2)
     localStorage.setItem(RESET_FLAG, '1')
+    localStorage.setItem(RESET_SERVER_KEY, '1')
+    localStorage.removeItem(REPLACE_SERVER_KEY)
     window.location.reload()
   }
 }
@@ -2479,6 +2674,7 @@ function onPointerUp(event: PointerEvent): void {
   const next = nextTab(screen, dir, true)
   if (!next || next === screen) return
   ignoreClick = true
+  cloud?.track('tab_open', { tab: next })
   screen = next
   sideOpen = false
   render()

@@ -162,7 +162,7 @@ describe('portrait shell', () => {
     const loaded = loadAdventure(storage, 50)
     expect(loaded?.v).toBe(2)
     expect(loaded?.saveVersion).toBe(SAVE_VERSION)
-    expect(SAVE_VERSION).toBe(5)
+    expect(SAVE_VERSION).toBe(6)
     expect(loaded?.name).toBe('Ada')
     expect(loaded?.avatar).toBe('B')
     expect(loaded?.look).toEqual({ skin: 3, hair: 1, color: 3 })

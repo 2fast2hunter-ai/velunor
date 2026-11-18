@@ -71,7 +71,7 @@ export interface AvatarLook {
 
 export interface SaveV2 {
   v: 2
-  /** Portrait-step counter. 5 = built avatar. Missing on older files; the loader fills it. */
+  /** Portrait-step counter. 6 = anonymous account and server save. Missing on older files; the loader fills it. */
   saveVersion: number
   name: string
   look: AvatarLook

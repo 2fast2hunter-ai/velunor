@@ -106,8 +106,13 @@ describe('portrait menus', () => {
 
     const options = gameHtml(save, 'options', 1_000, pcQuery, dex, null, false, false, null)
     const optDock = options.split('data-dock="options"')[1] ?? ''
-    expect(optDock).toContain('data-act="import-ask"')
-    expect(options.indexOf('id="import-code"')).toBeLessThan(options.indexOf('data-dock="options"'))
+    expect(optDock).toContain('data-act="sync-now"')
+    expect(optDock).not.toContain('import-ask')
+    expect(options).not.toContain('id="import-code"')
+    expect(options).not.toContain('id="export-code"')
+    expect(options).toContain('Konto sichern')
+    expect(options).toContain('Offline, nicht verfügbar')
+    expect(options.indexOf('Konto sichern')).toBeLessThan(options.indexOf('data-dock="options"'))
 
     const css = readFileSync(new URL('./adventure.css', import.meta.url), 'utf8')
     expect(css).toMatch(/\.team-grid\s*\{[^}]*repeat\(3,\s*minmax\(0,\s*1fr\)\)/)
@@ -165,9 +170,9 @@ describe('portrait menus', () => {
     raw.gold = 4321
     storage.setItem(SAVE_KEY_V2, JSON.stringify(raw))
     const loaded = loadAdventure(storage, 5_000)
-    expect(SAVE_VERSION).toBe(5)
+    expect(SAVE_VERSION).toBe(6)
     expect(loaded?.v).toBe(2)
-    expect(loaded?.saveVersion).toBe(5)
+    expect(loaded?.saveVersion).toBe(6)
     expect(loaded?.name).toBe('Ada')
     expect(loaded?.look).toEqual({ skin: 3, hair: 1, color: 3 })
     expect(loaded?.gold).toBe(4321)

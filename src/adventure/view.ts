@@ -18,7 +18,7 @@ import { colorHex, colorId, skinHex } from './avatar'
 import { agoParts, continueFacts } from './continue'
 import { STARTER_ART, starterBars, strongTypes, typeList, weakTypes } from './starter'
 import { nameProblem } from './home'
-import { exportCode } from './save'
+import type { CloudView } from './cloud/types'
 import type { AvatarLook } from './types'
 import {
   CHEST_TIERS,
@@ -86,7 +86,6 @@ export type Overlay =
   | { kind: 'welcome'; summary: OfflineSummary; countedMs: number; rawMs: number }
   | { kind: 'card'; uid: string }
   | { kind: 'confirm-reset' }
-  | { kind: 'confirm-import' }
   | { kind: 'awaken'; uid: string; level: 25 | 50 }
   | { kind: 'offline'; done: number; total: number }
   | { kind: 'log' }
@@ -111,6 +110,7 @@ export interface ShellFlags {
   dexOpen?: boolean
   shopTab?: ShopTab
   shopHint?: boolean
+  cloud?: CloudView
 }
 
 const base = (): string => import.meta.env.BASE_URL || '/'
@@ -167,7 +167,43 @@ function clockLabel(save: SaveV2, now: number): { time: string; part: string } {
   }
 }
 
-function header(save: SaveV2, now: number): string {
+const QUIET_CLOUD: CloudView = {
+  status: 'offline',
+  consent: 'unset',
+  email: '',
+  notice: '',
+  askConsent: false,
+  conflict: null
+}
+
+function cloudState(shell: ShellFlags): CloudView {
+  return shell.cloud ?? QUIET_CLOUD
+}
+
+function cloudStatusKey(status: CloudView['status']): string {
+  if (status === 'online') return 'cloud.online'
+  if (status === 'sync') return 'cloud.sync'
+  return 'cloud.offline'
+}
+
+function cloudGlyph(kind: 'online' | 'offline' | 'sync'): string {
+  if (kind === 'sync') {
+    return '<svg viewBox="0 0 24 24" aria-hidden="true"><path fill="currentColor" d="M12 5V2L7 7l5 5V8a4 4 0 1 1-3.9 4.8l-1.9.6A6 6 0 1 0 12 5z"/></svg>'
+  }
+  const slash = kind === 'offline' ? '<path fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" d="M5 19L19 5"/>' : ''
+  return `<svg viewBox="0 0 24 24" aria-hidden="true"><path fill="currentColor" d="M7 18h10.2a3.8 3.8 0 0 0 .5-7.6A6 6 0 0 0 6.2 8.2 4.2 4.2 0 0 0 7 18z"/>${slash}</svg>`
+}
+
+function cloudChip(save: SaveV2, cloud: CloudView): string {
+  const label = tr(save, cloudStatusKey(cloud.status))
+  return `<button type="button" class="cloud-chip" data-act="account" data-cloud="${cloud.status}" aria-label="${esc(label)}">
+    <span data-icon="online">${cloudGlyph('online')}</span>
+    <span data-icon="offline">${cloudGlyph('offline')}</span>
+    <span data-icon="sync">${cloudGlyph('sync')}</span>
+  </button>`
+}
+
+function header(save: SaveV2, now: number, cloud: CloudView): string {
   const caught = dexCaughtCount(save)
   const clock = clockLabel(save, now)
   const weather = weatherForecast(now)[0]
@@ -176,6 +212,7 @@ function header(save: SaveV2, now: number): string {
     <div class="hud-dex">${ui('codexCount')}${tr(save, 'nav.codexCount', { n: caught })}</div>
     <div class="hud-clock">${ui('clock')}${esc(clock.time)} · ${esc(clock.part)}</div>
     <div class="hud-wx"><span class="wx">${weatherIcon(weather.weather)}</span> ${esc(weatherLabel(L(save), weather.weather))}</div>
+    ${cloudChip(save, cloud)}
   </header>`
 }
 
@@ -932,10 +969,63 @@ function achievementsView(save: SaveV2): string {
   </div>`
 }
 
-function options(save: SaveV2, debug: boolean): string {
+function cloudNotice(save: SaveV2, cloud: CloudView): string {
+  const key = cloud.notice === 'offline'
+    ? 'cloud.offlineArea'
+    : cloud.notice === 'sent'
+      ? 'cloud.sent'
+      : cloud.notice === 'email-bad'
+        ? 'cloud.emailBad'
+        : cloud.notice === 'link-fail'
+          ? 'cloud.linkFail'
+          : cloud.notice === 'auth-off'
+            ? 'cloud.authOff'
+            : cloud.notice === 'write-fail'
+              ? 'cloud.writeFail'
+              : cloud.notice === 'unreadable'
+                ? 'cloud.unreadable'
+                : ''
+  return key ? `<p class="cloud-notice">${esc(tr(save, key))}</p>` : ''
+}
+
+function accountCard(save: SaveV2, cloud: CloudView): string {
+  const offline = cloud.status !== 'online' && cloud.status !== 'sync'
+  const secure = offline
+    ? `<p class="offline-note">${esc(tr(save, 'cloud.offlineArea'))}</p>`
+    : `<p class="muted">${tr(save, 'cloud.secureNote')}</p>
+      ${cloud.email ? `<p>${esc(tr(save, 'cloud.linked', { email: cloud.email }))}</p>` : ''}
+      <label class="cloud-mail">${esc(tr(save, 'cloud.secure'))}
+        <input id="account-email" type="email" autocomplete="email" inputmode="email" placeholder="name@example.com"/>
+      </label>
+      <button type="button" class="primary" data-act="link-email">${esc(tr(save, 'cloud.send'))}</button>`
+  const yes = cloud.consent === 'yes' ? 'primary' : ''
+  const no = cloud.consent === 'no' ? 'primary' : ''
+  return `<div class="card panel cloud-card" data-cloud="${cloud.status}">
+    <h2><span class="cloud-mark" data-cloud="${cloud.status}" aria-hidden="true"><span data-icon="online">${cloudGlyph('online')}</span><span data-icon="offline">${cloudGlyph('offline')}</span><span data-icon="sync">${cloudGlyph('sync')}</span></span> ${esc(tr(save, 'cloud.account'))}</h2>
+    <p class="cloud-state">${esc(tr(save, cloudStatusKey(cloud.status)))}</p>
+    <p class="muted">${tr(save, 'cloud.anon')}</p>
+    <h2>${esc(tr(save, 'cloud.secure'))}</h2>
+    ${secure}
+    <div class="row-actions later-row">
+      <button type="button" disabled aria-disabled="true" title="${esc(tr(save, 'cloud.later'))}">${esc(tr(save, 'cloud.google'))}</button>
+      <button type="button" disabled aria-disabled="true" title="${esc(tr(save, 'cloud.later'))}">${esc(tr(save, 'cloud.apple'))}</button>
+    </div>
+    <p class="muted">${tr(save, 'cloud.later')}</p>
+    <h2>${esc(tr(save, 'cloud.stats'))}</h2>
+    <div class="row-actions">
+      <button type="button" class="${yes}" data-act="consent" data-consent="yes">${esc(tr(save, 'cloud.yes'))}</button>
+      <button type="button" class="${no}" data-act="consent" data-consent="no">${esc(tr(save, 'cloud.no'))}</button>
+    </div>
+    ${cloudNotice(save, cloud)}
+  </div>`
+}
+
+function options(save: SaveV2, debug: boolean, shell: ShellFlags): string {
+  const cloud = cloudState(shell)
   const power = (minutes: 0 | 2 | 5, key: string) => `<button type="button" data-act="power" data-min="${minutes}" class="${save.settings.powerSave === minutes ? 'primary' : ''}">${tr(save, key)}</button>`
   return `<div class="menu-screen">
     <div class="menu-scroll">
+      ${accountCard(save, cloud)}
       <div class="card panel">
     <h2>${tr(save, 'opt.title')}</h2>
     <div class="row-actions">
@@ -968,19 +1058,49 @@ function options(save: SaveV2, debug: boolean): string {
       <span>${ui('optPower')}${tr(save, 'opt.power')}</span>
       ${power(0, 'opt.powerOff')}${power(2, 'opt.power2')}${power(5, 'opt.power5')}
     </div>
-    <h2>${tr(save, 'opt.export')}</h2>
-    <textarea id="export-code" readonly rows="3">${esc(exportCode(save))}</textarea>
-    <p><button data-act="copy-code">${ui('copy')}${tr(save, 'opt.copy')}</button></p>
-    <h2>${tr(save, 'opt.import')}</h2>
-    <textarea id="import-code" rows="3"></textarea>
     ${debug ? `<div class="card" style="padding:12px;margin-top:12px"><b>${tr(save, 'opt.debug')}</b><p class="muted">${tr(save, 'opt.debugNote')}</p><input id="debug-hours" type="number" min="0" step="0.1" value="10"/> <button type="button" class="primary" data-act="jump">${tr(save, 'opt.jump')}</button> <button type="button" data-act="debug-stars">${tr(save, 'chest.debug')}</button></div>` : ''}
     <p><button type="button" class="ghost" data-act="reset">${ui('reset')}${tr(save, 'opt.reset')}</button></p>
       </div>
     </div>
     <div class="menu-dock" data-dock="options">
-      <button type="button" class="primary dock-primary" data-act="import-ask">${ui('importCode')}${tr(save, 'opt.importBtn')}</button>
+      <button type="button" class="primary dock-primary" data-act="sync-now">${esc(tr(save, 'cloud.syncNow'))}</button>
     </div>
   </div>`
+}
+
+function previewLine(lang: Lang, preview: NonNullable<CloudView['conflict']>['local']): string {
+  const locale = lang === 'en' ? 'en' : 'de-DE'
+  return `<p>${esc(t(lang, 'cloud.preview', {
+    crests: preview.crests,
+    codex: preview.codex,
+    ep: preview.ep.toLocaleString(locale),
+    gold: preview.gold.toLocaleString(locale)
+  }))}</p><p class="muted">${esc(t(lang, 'cloud.place', { region: preview.region, chapter: preview.chapter, step: preview.step }))}</p>`
+}
+
+/** Consent and the two-device choice. Neither button is preselected. */
+export function cloudLayerHtml(cloud: CloudView, lang: Lang): string {
+  if (cloud.conflict) {
+    return `<div id="cloud-layer" class="overlay overlay-sheet"><div class="sheet" role="dialog" aria-labelledby="conflict-title">${grab()}
+      <h2 id="conflict-title">${esc(t(lang, 'cloud.conflictTitle'))}</h2>
+      <p>${esc(t(lang, 'cloud.conflictBody'))}</p>
+      <article class="cloud-preview"><b>${esc(t(lang, 'cloud.deviceA'))}</b> · ${esc(t(lang, 'cloud.thisDevice'))}${previewLine(lang, cloud.conflict.local)}</article>
+      <article class="cloud-preview"><b>${esc(t(lang, 'cloud.deviceB'))}</b> · ${esc(t(lang, 'cloud.otherDevice'))}${previewLine(lang, cloud.conflict.remote)}</article>
+      <div class="choice-row">
+        <button type="button" data-act="conflict-a">${esc(t(lang, 'cloud.deviceA'))}</button>
+        <button type="button" data-act="conflict-b">${esc(t(lang, 'cloud.deviceB'))}</button>
+      </div>
+    </div></div>`
+  }
+  if (!cloud.askConsent) return ''
+  return `<div id="cloud-layer" class="overlay overlay-sheet"><div class="sheet" role="dialog" aria-labelledby="consent-q">${grab()}
+    <h2 id="consent-q">${esc(t(lang, 'cloud.consentQ'))}</h2>
+    <p class="muted">${esc(t(lang, 'cloud.consentNote'))}</p>
+    <div class="choice-row">
+      <button type="button" data-act="consent" data-consent="yes">${esc(t(lang, 'cloud.yes'))}</button>
+      <button type="button" data-act="consent" data-consent="no">${esc(t(lang, 'cloud.no'))}</button>
+    </div>
+  </div></div>`
 }
 
 function guide(save: SaveV2): string {
@@ -1000,7 +1120,7 @@ function center(save: SaveV2, screen: Screen, now: number, pc: PcQuery, dex: Cod
   if (screen === 'activities') return activitiesView(save, now, selected, wheel)
   if (screen === 'shop') return shop(save, now, shell.shopTab ?? 'chests', shell.shopHint === true)
   if (screen === 'achievements') return achievementsView(save)
-  if (screen === 'options') return options(save, debug)
+  if (screen === 'options') return options(save, debug, shell)
   return guide(save)
 }
 
@@ -1022,7 +1142,7 @@ export function gameHtml(save: SaveV2, screen: Screen, now: number, pc: PcQuery,
     <div class="band band-top"></div>
     <div class="safe">
       <div class="anchor anchor-top">
-        ${screen === 'shop' ? '' : header(save, now)}
+        ${screen === 'shop' ? '' : header(save, now, cloudState(shell))}
         ${adventure ? chapterLine(save, step, mapOpen) : ''}
         ${adventure ? path(save, step) : ''}
       </div>
@@ -1115,9 +1235,6 @@ function overlayHtml(save: SaveV2, overlay: Overlay): string {
   }
   if (overlay.kind === 'confirm-reset') {
     return `<div class="sheet" data-sheet="swipe">${grab()}<h2>${tr(save, 'reset.title')}</h2><p>${tr(save, 'reset.body')}</p><button class="primary" data-act="reset-yes">${tr(save, 'reset.yes')}</button> <button class="ghost" data-act="close">${tr(save, 'reset.no')}</button></div>`
-  }
-  if (overlay.kind === 'confirm-import') {
-    return `<div class="sheet" data-sheet="swipe">${grab()}<h2>${tr(save, 'import.title')}</h2><p>${tr(save, 'import.body')}</p><button class="primary" data-act="import-yes">${tr(save, 'import.yes')}</button> <button class="ghost" data-act="close">${tr(save, 'reset.no')}</button></div>`
   }
   if (overlay.kind === 'awaken') {
     const mon = save.mons[overlay.uid]

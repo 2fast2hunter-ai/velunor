@@ -1545,3 +1545,78 @@ img.is-shiny { filter: drop-shadow(0 0 10px #f0c14a); }
 #stage.reduce-motion .chest-ring,
 #stage.reduce-motion .chest-seal { animation: none; }
 @keyframes chest-spin { to { transform: rotate(360deg); } }
+
+.hud { position: relative; }
+.hud-dex, .hud-wx { padding-right: 84px; }
+.cloud-chip, .cloud-mark {
+  color: #d5def2;
+  border: 0;
+  border-radius: 18px;
+  background: #1b2744;
+  display: grid;
+  place-items: center;
+}
+.cloud-chip {
+  position: absolute;
+  right: 12px;
+  top: 8px;
+  width: 72px;
+  height: 72px;
+  padding: 0;
+  z-index: 2;
+  cursor: pointer;
+}
+.cloud-mark {
+  width: 56px;
+  height: 56px;
+  display: inline-grid;
+  vertical-align: middle;
+  margin-right: 8px;
+}
+.cloud-chip [data-icon], .cloud-mark [data-icon] { display: none; }
+.cloud-chip[data-cloud="online"] [data-icon="online"],
+.cloud-mark[data-cloud="online"] [data-icon="online"],
+.cloud-chip[data-cloud="offline"] [data-icon="offline"],
+.cloud-mark[data-cloud="offline"] [data-icon="offline"],
+.cloud-chip[data-cloud="sync"] [data-icon="sync"],
+.cloud-mark[data-cloud="sync"] [data-icon="sync"] { display: grid; }
+.cloud-chip svg, .cloud-mark svg { width: 40px; height: 40px; }
+.cloud-chip[data-cloud="online"], .cloud-mark[data-cloud="online"] { color: #7dcea0; }
+.cloud-chip[data-cloud="offline"], .cloud-mark[data-cloud="offline"] { color: #9aa6c2; }
+.cloud-chip[data-cloud="sync"], .cloud-mark[data-cloud="sync"] { color: #f0c14a; }
+#stage.reduce-motion .cloud-chip[data-cloud="sync"] svg { animation: none; }
+.cloud-chip[data-cloud="sync"] svg { animation: cloud-spin 1s linear infinite; }
+@keyframes cloud-spin { to { transform: rotate(360deg); } }
+.cloud-card .offline-note, .cloud-notice {
+  margin: 12px 0;
+  padding: 16px 18px;
+  border-radius: 18px;
+  background: #121a30;
+  color: #ffd54f;
+  font-weight: 800;
+}
+.cloud-mail { display: flex; flex-direction: column; gap: 8px; margin: 12px 0; }
+.cloud-mail input { min-height: 88px; padding: 12px 16px; background: #121a30; border: 1px solid #31456f; }
+.cloud-card > .primary { min-height: 132px; width: 100%; margin-top: 8px; }
+.later-row button:disabled { opacity: 0.45; cursor: not-allowed; }
+.is-menu .row-actions button.primary {
+  background: #f0c14a;
+  color: #2a2110;
+}
+.choice-row { display: flex; gap: 16px; }
+.choice-row button {
+  flex: 1;
+  min-height: 132px;
+  min-width: 132px;
+  border: 0;
+  border-radius: 18px;
+  background: #1b2744;
+  font-weight: 800;
+  cursor: pointer;
+}
+.cloud-preview {
+  margin: 12px 0;
+  padding: 16px 18px;
+  border-radius: 22px;
+  background: #121a30;
+}
