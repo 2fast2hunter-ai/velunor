@@ -168,6 +168,24 @@ export interface SaveV2 {
    * An empty array means the player turned both off.
    */
   synergy?: string[]
+  /** Research tower. Missing on older files; the loader fills an empty tower. */
+  research?: ResearchSave
+}
+
+export type ResearchLineId = 'gold' | 'ep' | 'offline' | 'expedition' | 'egg' | 'shard'
+
+export interface ResearchJobState {
+  line: ResearchLineId
+  level: number
+  startedAt: number
+  readyAt: number
+}
+
+export interface ResearchSave {
+  ranks: Record<ResearchLineId, number>
+  job: ResearchJobState | null
+  /** Remainder toward the next bonus wild shard. Kept in [0, 1). */
+  shardBank: number
 }
 
 export interface ExpeditionQuest {

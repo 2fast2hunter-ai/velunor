@@ -6,6 +6,7 @@ import { expToNext } from './stats'
 import { clampChestCount, emptyPity, enteredRegions, startChests, type ChestTier } from './lootbox'
 import { fontScale } from './touch'
 import { settleExpeditions } from './expedition'
+import { normalizeResearch } from './research'
 import { normalizeTreeNodes } from './tree'
 import { SYNERGY_CAP, synergyKnown } from './synergyIds'
 import { readLook } from './avatar'
@@ -238,6 +239,7 @@ export function normalize(save: SaveV2, now: number): SaveV2 {
   // 3 adds swipe, vibration, font scale and battery mode.
   // 6 adds the anonymous account. 7 adds mastery. 8 adds the mastery tree, empty until a node is bought.
   // 9 adds expeditions. Older files get an empty board and keep every monster.
+  // 10 adds the research tower. Older files get an empty tower and keep every monster.
   // Older files keep every stored value. Missing setting fields take the defaults.
   const seenVersion = Math.max(0, Math.floor(Number(save.saveVersion)) || 0)
   if (seenVersion < SAVE_VERSION) save.saveVersion = SAVE_VERSION
@@ -457,6 +459,7 @@ export function normalize(save: SaveV2, now: number): SaveV2 {
     : []
   settleExpeditions(save, now)
   if ('synergy' in save) save.synergy = readSynergy(save.synergy)
+  normalizeResearch(save, now)
   return save
 }
 

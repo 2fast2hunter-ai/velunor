@@ -1,4 +1,5 @@
 import { syncAchievements } from './achievements'
+import { scaleHatch } from './research'
 import { expeditionBusy } from './expedition'
 import { t } from './i18n'
 import { species } from '../data'
@@ -115,7 +116,7 @@ export function advanceHort(save: SaveV2, now: number, rng: () => number): void 
       const speciesId = rng() < 0.5 ? monA.species : monB.species
       const chance = monA.shiny || monB.shiny ? SHINY_PARENT_RATE : SHINY_HORT_RATE
       const shiny = rollShiny(rng, chance)
-      save.eggs.push({ species: speciesId, shiny, readyAt: save.lastBreedAt + HATCH_MS })
+      save.eggs.push({ species: speciesId, shiny, readyAt: save.lastBreedAt + scaleHatch(HATCH_MS, save) })
     }
     hatch(save, now)
   }

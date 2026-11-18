@@ -54,10 +54,10 @@ export const NAV_H = 180
 export const BATTLE_H = 980
 export const TOUCH_MIN = 132
 /**
- * Bumped once per portrait step. 1 = shell, 2 = portrait menus, 3 = touch polish, 4 = lootbox workshop, 5 = built avatar, 6 = anonymous account and server save, 7 = species mastery, 8 = mastery tree, 9 = expeditions.
+ * Bumped once per portrait step. 1 = shell, 2 = portrait menus, 3 = touch polish, 4 = lootbox workshop, 5 = built avatar, 6 = anonymous account and server save, 7 = species mastery, 8 = mastery tree, 9 = expeditions, 10 = research tower.
  * Files written before this field load as 0 and keep every stored value.
  */
-export const SAVE_VERSION = 9
+export const SAVE_VERSION = 10
 
 export const SCENE_FILES = {
   wiese: { webp: 'backgrounds/bg_gm_wiese_p.webp', jpg: 'backgrounds/bg_gm_wiese_p.jpg' },

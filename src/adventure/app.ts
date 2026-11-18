@@ -47,7 +47,8 @@ import { beginAdventure, loadAdventure, makeMon, writeSave } from './save'
 import { browserCloudApi, watchAuth } from './cloud/supabaseApi'
 import { callOnline, claimRankRewards, clearVelunorKeys, loadOwnLabel, loadRankPage, sendBlockRow, sendReportRow } from './online/calls'
 import { isBoard, parseRankPage, RANK_FRAMES, type BoardId, type RankModel } from './online/ranks'
-import { buyNode, respecTree, treeCapMs } from './tree'
+import { offlineCapMs, settleResearch, startResearch, RESEARCH_LINES, type ResearchLine } from './research'
+import { buyNode, respecTree } from './tree'
 import type { ArenaPanel, ChatPanel, GuildPanel, SocialPanel, TradePanel } from './view'
 import { saveOwesCatchUp } from './online/check'
 import { nameIssue } from './online/name'
@@ -346,9 +347,9 @@ function attachCloud(): void {
     },
     loadSave() {
       if (!saveReady || catchingUp) return null
-      if (save?.started) return save
-      if (keptSave?.started) return keptSave
-      return null
+      const live = save?.started ? save : keptSave?.started ? keptSave : null
+      if (live) settleResearch(live, Date.now())
+      return live
     },
     storeSave(next) {
       const playing = Boolean(save?.started)
@@ -1176,6 +1177,7 @@ async function start(next: SaveV2, intro = false): Promise<void> {
 function pumpExpeditions(now = Date.now()): void {
   if (!save) return
   settleExpeditions(save, now)
+  settleResearch(save, now)
   const notes = takeExpeditionNotes(save)
   if (!notes.length) return
   masteryNote = notes.join(' · ')
@@ -2440,7 +2442,7 @@ async function runOffline(rawMs: number): Promise<void> {
 
 async function finishOffline(rawMs: number): Promise<void> {
   if (!save) return
-  const counted = Math.min(Math.max(0, rawMs), treeCapMs(save))
+  const counted = Math.min(Math.max(0, rawMs), offlineCapMs(save))
   const total = Math.floor(counted / BASE_ENCOUNTER_MS)
   if (total < OFFLINE_BLOCK && rawMs < WELCOME_AFTER_MS) {
     const quiet = simulateOffline(save, rawMs, Date.now())
@@ -2891,6 +2893,17 @@ function onClick(event: Event): void {
       : respecTree(save, Date.now())
     if (reason) save.log.push({ t: Date.now(), text: reason })
     else try { writeSave(localStorage, save) } catch { /* keep the local tree */ }
+    render()
+    return
+  }
+  if (act === 'research-start') {
+    if (!save) return
+    const line = node.getAttribute('data-id') ?? ''
+    if (!RESEARCH_LINES.includes(line as ResearchLine)) return
+    const problem = startResearch(save, line as ResearchLine, Date.now())
+    if (problem) masteryNote = t(save.settings.lang, `research.err.${problem}`)
+    else try { writeSave(localStorage, save) } catch { /* the job is already on the save */ }
+    masteryUntil = Date.now() + 4200
     render()
     return
   }

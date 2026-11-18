@@ -3,6 +3,7 @@ import { RARITY_EXP } from './const'
 import { t } from './i18n'
 import { chapterById, type ChapterDef, type Spawn } from './route'
 import { addExp, crossedAwaken, expToNext } from './stats'
+import { researchEpMult, researchGoldMult } from './research'
 import { treeFruitMs, treeGoldMult } from './tree'
 import { species } from '../data'
 import type { CrystalId, FruitId, SaveV2 } from './types'
@@ -134,12 +135,13 @@ export function catchMods(save: SaveV2, at: number): { mult: number; cap: number
 }
 
 export function combatExpFactor(save: SaveV2, at: number): number {
-  return fruitActive(save, 'lern', at) ? 1.25 : 1
+  const fruit = fruitActive(save, 'lern', at) ? 1.25 : 1
+  return fruit * researchEpMult(save)
 }
 
 export function goldFactor(save: SaveV2, at: number): number {
   const fruit = fruitActive(save, 'muenz', at) ? 1.25 : 1
-  return fruit * treeGoldMult(save)
+  return fruit * treeGoldMult(save) * researchGoldMult(save)
 }
 
 export function grantGold(save: SaveV2, amount: number, at: number): number {
