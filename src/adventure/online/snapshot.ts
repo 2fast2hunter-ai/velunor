@@ -1,4 +1,5 @@
 import { species } from '../../data'
+import { masteryLevel } from '../mastery'
 import { START_GOLD } from '../const'
 import { enteredRegions, poolFor } from '../lootbox'
 import { progressOf } from '../cloud/progress'
@@ -30,6 +31,7 @@ export function auditFromSave(save: SaveV2): AuditState {
   }))
   const shards = Object.values(save.shards ?? {}).reduce((sum, n) => sum + (Number(n) || 0), 0)
   const mastery = Object.values(save.mastery ?? {}).reduce((sum, n) => sum + (Number(n) || 0), 0)
+  const masteryRanks = Object.values(save.mastery ?? {}).reduce((sum, n) => sum + masteryLevel(Number(n) || 0), 0)
   const chests = (save.chests?.kiesel ?? 0) + (save.chests?.silber ?? 0) + (save.chests?.gold ?? 0) + (save.chests?.sternen ?? 0) + (save.roadReady ?? 0)
   return {
     at: save.lastSeenAt,
@@ -41,6 +43,7 @@ export function auditFromSave(save: SaveV2): AuditState {
     chests,
     shards,
     mastery,
+    masteryRanks,
     mons,
     speciesAllowed: poolFor(enteredRegions(save))
   }
@@ -58,6 +61,7 @@ export function emptyAudit(at: number): AuditState {
     chests: 0,
     shards: 0,
     mastery: 0,
+    masteryRanks: 0,
     mons: [],
     speciesAllowed: []
   }

@@ -71,6 +71,31 @@ export async function loadOwnLabel(): Promise<string | null> {
   return data.display
 }
 
+export async function loadRankPage(board: string): Promise<unknown | null> {
+  try {
+    const { data } = await supabaseClient().auth.getSession()
+    if (!data.session) return { status: 'offline' }
+    const page = await supabaseClient().rpc('leaderboard_page', { p_board: board })
+    if (page.error) return { status: 'offline' }
+    return page.data
+  } catch {
+    return { status: 'offline' }
+  }
+}
+
+export async function claimRankRewards(): Promise<{ marks: number, titles: string[] }> {
+  try {
+    const { data } = await supabaseClient().auth.getSession()
+    if (!data.session) return { marks: 0, titles: [] }
+    const claimed = await supabaseClient().rpc('claim_rank_rewards')
+    const body = claimed.data && typeof claimed.data === 'object' ? claimed.data as { marks?: unknown, titles?: unknown } : {}
+    const titles = Array.isArray(body.titles) ? body.titles.filter((item): item is string => typeof item === 'string') : []
+    return { marks: Math.max(0, Math.floor(Number(body.marks)) || 0), titles }
+  } catch {
+    return { marks: 0, titles: [] }
+  }
+}
+
 export async function sendBlockRow(target: string): Promise<OnlineCall> {
   const id = await userId()
   if (!id) return { ok: false, missing: true, error: 'offline', data: {} }

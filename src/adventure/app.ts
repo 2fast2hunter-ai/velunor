@@ -45,7 +45,8 @@ import { inspectSave, nextDoor, resumeSave, type Door } from './continue'
 import { FIRST_ENTRANCE_MS, HOME_ASSETS, loadFraction, mountHomeParticles } from './homeBoot'
 import { beginAdventure, loadAdventure, writeSave } from './save'
 import { browserCloudApi, watchAuth } from './cloud/supabaseApi'
-import { callOnline, clearVelunorKeys, loadOwnLabel, sendBlockRow, sendReportRow } from './online/calls'
+import { callOnline, claimRankRewards, clearVelunorKeys, loadOwnLabel, loadRankPage, sendBlockRow, sendReportRow } from './online/calls'
+import { isBoard, parseRankPage, RANK_FRAMES, type BoardId, type RankModel } from './online/ranks'
 import { saveOwesCatchUp } from './online/check'
 import { nameIssue } from './online/name'
 import { createCloud, type CloudController } from './cloud/session'
@@ -158,6 +159,9 @@ let accountUi = {
 let catchingUp = false
 let masteryNote = ''
 let masteryUntil = 0
+let rankBoard: BoardId = 'codex'
+let rankToken = 0
+let rankView: RankModel = { board: 'codex', status: 'offline', top: [], around: [], honors: [], excluded: false }
 let saveReady = false
 let wipingAccount = false
 
@@ -1167,7 +1171,7 @@ function render(step = save?.step): void {
     mult: wheelMult,
     symbols: wheelSymbols,
     note: wheelNote
-  }, { mapOpen, moreOpen, pcScroll, filtersOpen, dexOpen, shopTab, shopHint: Date.now() < shopFlashUntil, fighting: animating, cloud: mergedCloud(), masteryNote: Date.now() < masteryUntil ? masteryNote : '' }))
+  }, { mapOpen, moreOpen, pcScroll, filtersOpen, dexOpen, shopTab, shopHint: Date.now() < shopFlashUntil, fighting: animating, cloud: mergedCloud(), masteryNote: Date.now() < masteryUntil ? masteryNote : '', ranks: { ...rankView, board: rankBoard, excluded: mergedCloud().flagLevel === 2 } }))
   if (screen === 'team') {
     pcIds = visiblePc(save, pc)
     const view = document.getElementById('pc-viewport')
@@ -1414,6 +1418,41 @@ function loop(): void {
   }
   render(outcome.step)
   play(outcome, save.settings.speed, () => finishPresent(outcome))
+}
+
+async function refreshRanks(): Promise<void> {
+  const token = ++rankToken
+  rankView = { ...rankView, board: rankBoard, status: 'loading' }
+  render()
+  const page = parseRankPage(await loadRankPage(rankBoard), save?.settings.lang === 'en' ? 'en' : 'de')
+  if (token !== rankToken || !save) return
+  if (page.status === 'ready') {
+    const reward = await claimRankRewards()
+    if (token !== rankToken || !save) return
+    if (reward.marks > 0) {
+      save.marks += reward.marks
+      try { writeSave(localStorage, save) } catch { /* the server already marked the reward claimed */ }
+      const titles = reward.titles.length ? ` · ${reward.titles.join(', ')}` : ''
+      masteryNote = t(save.settings.lang, 'ranks.reward', { marks: reward.marks.toLocaleString(save.settings.lang === 'en' ? 'en' : 'de-DE'), titles })
+      masteryUntil = Date.now() + 4200
+      window.setTimeout(() => {
+        if (Date.now() < masteryUntil) return
+        masteryNote = ''
+        render()
+      }, 4300)
+    }
+    const earned = RANK_FRAMES.filter((frame) => reward.titles.includes(frame.title)).map((frame) => frame.id)
+    rankView = {
+      ...page,
+      board: rankBoard,
+      excluded: mergedCloud().flagLevel === 2,
+      honors: [...new Set([...page.honors, ...earned])]
+    }
+    render()
+    return
+  }
+  rankView = { ...page, board: rankBoard, excluded: mergedCloud().flagLevel === 2 }
+  render()
 }
 
 function showMastery(ups: MasteryUp[] | undefined): void {
@@ -2398,7 +2437,15 @@ function onClick(event: Event): void {
     mapOpen = false
     render()
     if (screen === 'options') void refreshOwnLabel()
+    if (screen === 'ranks') void refreshRanks()
     kick()
+    return
+  }
+  if (act === 'rank-board') {
+    const next = node.getAttribute('data-board') ?? ''
+    if (!isBoard(next)) return
+    rankBoard = next
+    void refreshRanks()
     return
   }
   if (act === 'map') {
