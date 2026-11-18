@@ -63,7 +63,7 @@ import type { OfflineSummary } from './sim'
 import type { SaveV2 } from './types'
 import { PC_VIEW_FALLBACK, virtualWindow } from './virtualList'
 
-export type Screen = 'adventure' | 'progress' | 'team' | 'codex' | 'activities' | 'shop' | 'achievements' | 'ranks' | 'tree' | 'options' | 'guide'
+export type Screen = 'adventure' | 'progress' | 'team' | 'codex' | 'activities' | 'shop' | 'achievements' | 'ranks' | 'tree' | 'arena' | 'options' | 'guide'
 
 export interface WheelPanel {
   tab: 'hort' | 'wheel' | 'chests'
@@ -117,6 +117,29 @@ export interface ShellFlags {
   masteryNote?: string
   ranks?: RankModel
   treePick?: string
+  arena?: ArenaPanel
+}
+
+export interface ArenaCardView {
+  index: number
+  practice: boolean
+  label: string
+  rating: number
+  league: string
+  species: string[]
+}
+
+export interface ArenaPanel {
+  status: 'offline' | 'locked' | 'ready' | 'loading'
+  note: string
+  rating: number
+  league: string
+  attacks: number
+  slots: string[]
+  suggestions: ArenaCardView[]
+  logs: { label: string, win: boolean, delta: number }[]
+  frames: string[]
+  replay: { label: string, win: boolean, step: number, bouts: { allyName: string, foeName: string, allyHp: number, allyMax: number, foeHp: number, foeMax: number, win: boolean }[] } | null
 }
 
 const base = (): string => import.meta.env.BASE_URL || '/'
@@ -251,7 +274,7 @@ const TAB_ICONS: Record<string, string> = {
 }
 
 function tabbar(save: SaveV2, screen: Screen, moreOpen: boolean): string {
-  const moreScreens: Screen[] = ['shop', 'achievements', 'ranks', 'tree', 'options', 'guide']
+  const moreScreens: Screen[] = ['shop', 'achievements', 'ranks', 'tree', 'arena', 'options', 'guide']
   const tabs: { id: string; label: string; active: boolean; act: string; screen?: Screen }[] = [
     { id: 'adventure', label: 'nav.adventure', active: screen === 'adventure', act: 'screen', screen: 'adventure' },
     { id: 'team', label: 'nav.team', active: screen === 'team', act: 'screen', screen: 'team' },
@@ -276,11 +299,13 @@ function moreSheet(save: SaveV2, open: boolean): string {
   ]
   const ranks = `<button type="button" data-act="screen" data-screen="ranks"><svg class="ui-icon" viewBox="0 0 24 24" aria-hidden="true"><path fill="currentColor" d="M4 20V9h4v11H4zm6 0V4h4v16h-4zm6 0v-7h4v7h-4z"/></svg>${tr(save, 'nav.ranks')}</button>`
   const treeBtn = `<button type="button" data-act="screen" data-screen="tree"><svg class="ui-icon" viewBox="0 0 24 24" aria-hidden="true"><path fill="none" stroke="currentColor" stroke-width="2" d="M12 22V8M7 22V12M17 22V12M12 8l-5 4M12 8l5 4"/></svg>${tr(save, 'nav.tree')}</button>`
+  const arenaBtn = `<button type="button" data-act="screen" data-screen="arena"><svg class="ui-icon" viewBox="0 0 24 24" aria-hidden="true"><circle cx="12" cy="12" r="8" fill="none" stroke="currentColor" stroke-width="2"/><path fill="currentColor" d="M12 6l1.6 3.4L17 11l-3.4 1.6L12 16l-1.6-3.4L7 11l3.4-1.6z"/></svg>${tr(save, 'nav.arena')}</button>`
   return `<div class="more-sheet card" ${open ? '' : 'hidden'}>
     <div class="more-who">${lookFace(save.look)}<b>${esc(save.name)}</b></div>
     ${items.slice(0, 2).map(([id, icon, label]) => `<button type="button" data-act="screen" data-screen="${id}">${ui(icon)}${tr(save, label)}</button>`).join('')}
     ${ranks}
     ${treeBtn}
+    ${arenaBtn}
     ${items.slice(2).map(([id, icon, label]) => `<button type="button" data-act="screen" data-screen="${id}">${ui(icon)}${tr(save, label)}</button>`).join('')}
   </div>`
 }
@@ -1255,6 +1280,58 @@ function treeGlyph(branch: BranchId, index: number, on: boolean): string {
   return `<svg class="tree-glyph" viewBox="0 0 64 64" aria-hidden="true"><g fill="${on ? color : 'none'}" stroke="${color}" stroke-width="3">${shapes[index] ?? shapes[0]}</g></svg>`
 }
 
+function leagueBadge(id: string, on: boolean): string {
+  const tones: Record<string, string> = { kiesel: '#c8b48a', bronze: '#b87333', silber: '#d5dee8', gold: '#f0c14a', kristall: '#9ad7ff', meister: '#e6d6ff' }
+  const color = tones[id] ?? '#f0c14a'
+  return `<svg class="league-badge ${on ? 'on' : ''}" viewBox="0 0 64 64" aria-hidden="true"><circle cx="32" cy="28" r="16" fill="${on ? color : 'none'}" stroke="${color}" stroke-width="3"/><path d="M22 42h20l-4 14h-12z" fill="${color}"/></svg>`
+}
+
+function arenaScreen(save: SaveV2, panel: ArenaPanel | undefined): string {
+  const view = panel ?? { status: 'offline' as const, note: '', rating: 1000, league: 'Kiesel', attacks: 0, slots: [], suggestions: [], logs: [], frames: [], replay: null }
+  const badges = ['kiesel', 'bronze', 'silber', 'gold', 'kristall', 'meister'].map((id) => `<div class="league-item">${leagueBadge(id, view.frames.includes(id) || view.league.toLowerCase().includes(id === 'meister' ? 'meister' : id))}<span>${esc(tr(save, `arena.league.${id}`))}</span></div>`).join('')
+  if (view.status === 'loading') {
+    return `<div class="menu-screen"><div class="menu-scroll"><div class="card panel"><h2>${tr(save, 'nav.arena')}</h2><p class="muted">${tr(save, 'arena.loading')}</p></div></div></div>`
+  }
+  if (view.status !== 'ready' && view.status !== 'locked') {
+    return `<div class="menu-screen"><div class="menu-scroll"><div class="card panel"><h2>${tr(save, 'nav.arena')}</h2><p class="muted">${tr(save, 'arena.offline')}</p></div></div></div>`
+  }
+  const slots = Array.from({ length: 6 }, (_, index) => {
+    const uid = view.slots[index]
+    const mon = uid ? save.mons[uid] : undefined
+    return `<button type="button" class="arena-slot" data-act="arena-clear" data-index="${index}">${mon ? portrait(mon.species) : ''}<span>${mon ? esc(species(mon.species).name) : index + 1}</span></button>`
+  }).join('')
+  const bench = Object.keys(save.mons).slice(0, 18).map((uid) => `<button type="button" data-act="arena-pick" data-uid="${uid}">${esc(species(save.mons[uid].species).name)}</button>`).join('')
+  const cards = view.suggestions.map((card) => `<article class="arena-card">
+    <b>${esc(card.label)}</b>
+    <p>${esc(card.league)} · ${card.rating}</p>
+    <button type="button" class="primary" data-act="arena-fight" data-index="${card.index}">${tr(save, 'arena.fight')}</button>
+  </article>`).join('')
+  const bout = view.replay?.bouts[view.replay.step]
+  const replay = view.replay && bout ? `<article class="arena-replay">
+    <h3>${esc(view.replay.label)} · ${tr(save, view.replay.win ? 'arena.win' : 'arena.loss')}</h3>
+    <div class="arena-pair"><div><b>${esc(bout.foeName)}</b><div class="bar-exp"><span style="width:${Math.round(bout.foeHp / Math.max(1, bout.foeMax) * 100)}%"></span></div></div>
+    <div><b>${esc(bout.allyName)}</b><div class="bar-exp"><span style="width:${Math.round(bout.allyHp / Math.max(1, bout.allyMax) * 100)}%"></span></div></div></div>
+    <p class="muted">${view.replay.step + 1} / ${view.replay.bouts.length}</p>
+  </article>` : ''
+  const logs = view.logs.map((line) => `<p>${esc(line.label)} · ${tr(save, line.win ? 'arena.held' : 'arena.fell')} · ${line.delta}</p>`).join('')
+  return `<div class="menu-screen"><div class="menu-scroll"><div class="card panel">
+    <h2>${tr(save, 'nav.arena')}</h2>
+    <p>${esc(view.league)} · ${view.rating} · ${tr(save, 'arena.attacks', { n: view.attacks })}</p>
+    ${view.status === 'locked' ? `<p class="muted">${tr(save, 'arena.locked')}</p>` : ''}
+    <div class="league-row">${badges}</div>
+    <h3>${tr(save, 'arena.defense')}</h3>
+    <div class="arena-slots">${slots}</div>
+    <div class="arena-bench">${bench}</div>
+    <button type="button" class="primary" data-act="arena-save">${tr(save, 'arena.save')}</button>
+    <button type="button" data-act="arena-suggest">${tr(save, 'arena.suggest')}</button>
+    <div class="arena-cards">${cards}</div>
+    ${replay}
+    <h3>${tr(save, 'arena.log')}</h3>
+    ${logs || `<p class="muted">${tr(save, 'arena.noLog')}</p>`}
+    ${view.note ? `<p class="muted">${esc(view.note)}</p>` : ''}
+  </div></div></div>`
+}
+
 function treeScreen(save: SaveV2, pick: string | undefined, now: number): string {
   const lang = L(save)
   const parts = treePointParts(save)
@@ -1293,6 +1370,7 @@ function center(save: SaveV2, screen: Screen, now: number, pc: PcQuery, dex: Cod
   if (screen === 'progress') return `<div class="menu-screen"><div class="menu-scroll">${progress(save)}</div></div>`
   if (screen === 'ranks') return ranksScreen(save, shell.ranks)
   if (screen === 'tree') return treeScreen(save, shell.treePick, now)
+  if (screen === 'arena') return arenaScreen(save, shell.arena)
   if (screen === 'team') return team(save, pc, selected, shell)
   if (screen === 'codex') return codex(save, dex, shell)
   if (screen === 'activities') return activitiesView(save, now, selected, wheel)
