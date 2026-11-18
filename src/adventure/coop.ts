@@ -1,4 +1,5 @@
 import { fight1v1, type FightSide } from './battle'
+import { activeSynergies, purityOf, scaleSide, synergyMods } from './synergy'
 import { boardWeek } from './online/ranks'
 import { mulberry32 } from '../rng'
 import type { ArenaFighter } from './arena'
@@ -107,11 +108,13 @@ function sideFrom(fighter: ArenaFighter): FightSide {
   }
 }
 
-/** Sixty actions of the shared fight, split across the six monsters. */
-export function coopDamage(fighters: readonly ArenaFighter[], beastType: TypeId, seed: number): number {
+/** Sixty actions of the shared fight, split across the six monsters. `picked == null` keeps the two strongest. */
+export function coopDamage(fighters: readonly ArenaFighter[], beastType: TypeId, seed: number, picked?: readonly string[] | null): number {
   if (!fighters.length) return 0
   const rng = mulberry32(seed >>> 0 || 1)
   const each = Math.max(1, Math.floor(COOP_ACTIONS / fighters.length))
+  const types = fighters.map((fighter) => fighter.type)
+  const mods = synergyMods(activeSynergies(types, picked ?? null), false)
   let total = 0
   for (const fighter of fighters) {
     const foe: FightSide = {
@@ -127,7 +130,14 @@ export function coopDamage(fighters: readonly ArenaFighter[], beastType: TypeId,
       passive: null,
       level: 100
     }
-    const trace = fight1v1(sideFrom(fighter), foe, rng, false, null, { actionCap: each })
+    const trace = fight1v1(scaleSide(sideFrom(fighter), mods, purityOf(types, fighter.type)), foe, rng, false, null, {
+      actionCap: each,
+      critAdd: mods.critAdd,
+      dodge: mods.dodge,
+      statusDur: mods.statusDur,
+      cooldown: mods.cooldown,
+      foeSpd: mods.foeSpd
+    })
     total += Math.max(0, trace.foeMax - trace.foeHp)
   }
   return total

@@ -217,8 +217,7 @@ function skillUsable(unit: Actor, foe: Actor): boolean {
   return true
 }
 
-function applyStatus(target: Actor, effect: Extract<SkillEffect, { kind: 'status' }>, caster: Actor): void {
-  const duration = effect.duration
+function applyStatus(target: Actor, effect: Extract<SkillEffect, { kind: 'status' }>, caster: Actor, duration = effect.duration): void {
   const value = effect.value ?? 0
   if (effect.status === 'burn') {
     const burnDmg = Math.max(0, Math.floor(atkOf(caster) * (value || combat.burnAtkFraction)))
@@ -295,9 +294,32 @@ export interface FightMods {
   foeBreath?: { left: number }
   /** Caps the action loop. The arena and the road keep the normal limit. */
   actionCap?: number
+  /** Chance that a hit on the ally deals no damage. */
+  dodge?: number
+  /** Chance that a hit on the foe deals no damage. */
+  foeDodge?: number
+  /** Multiplier for statuses the ally applies. 1.1 lasts 10% longer. */
+  statusDur?: number
+  /** Multiplier for statuses the foe applies. */
+  foeStatusDur?: number
+  /** Multiplier for the ally's skill cooldown. 0.9 is −10%. */
+  cooldown?: number
+  /** Multiplier for the foe's skill cooldown. */
+  foeCooldown?: number
+  /** Multiplier applied to the ally's speed once, before the first action. */
+  allySpd?: number
+  /** Multiplier applied to the foe's speed once, before the first action. */
+  foeSpd?: number
 }
 
-export function fight1v1(allySide: FightSide, foeSide: FightSide, rng: () => number, trace: boolean, weather: WeatherId | null = null, mods: FightMods | null = null): FightTrace {
+function withSpd(side: FightSide, mul: number | undefined): FightSide {
+  if (mul == null || mul === 1) return side
+  return { ...side, spd: Math.max(1, Math.round(side.spd * mul)) }
+}
+
+export function fight1v1(allyIn: FightSide, foeIn: FightSide, rng: () => number, trace: boolean, weather: WeatherId | null = null, mods: FightMods | null = null): FightTrace {
+  const allySide = withSpd(allyIn, mods?.allySpd)
+  const foeSide = withSpd(foeIn, mods?.foeSpd)
   const ally = makeActor(allySide)
   const foe = makeActor(foeSide)
   const frames: FightFrame[] = []
@@ -399,6 +421,8 @@ export function fight1v1(allySide: FightSide, foeSide: FightSide, rng: () => num
     let dmg = rawDamage(atkOf(attacker) * (extra?.atkScale ?? 1), defOf(target, pierce), skillMult * blow * (rage ? RAGE_MULT : 1), tMult * wMult, crit, variance)
     if (attacker.mark?.id === 'schock') dmg = Math.floor(dmg * AILMENTS.schock.damage)
     if (!extra?.unavoidable && attacker.mark?.id === 'spreu' && rng() < AILMENTS.spreu.miss) dmg = 0
+    const dodge = target === ally ? (mods?.dodge ?? 0) : (mods?.foeDodge ?? 0)
+    if (!extra?.unavoidable && dodge > 0 && rng() < dodge) dmg = 0
     const landed = dmg > 0
     if (landed && hasMech(target, 'panzerung') && target.armorCrits < ARMOR_CRITS) dmg = Math.max(1, Math.floor(dmg * (1 - ARMOR_CUT)))
     if (boosted) attacker.impulseLeft -= 1
@@ -489,11 +513,13 @@ export function fight1v1(allySide: FightSide, foeSide: FightSide, rng: () => num
         if (hadDamage && !own && !damaged.ok) continue
         if (victim.hp <= 0) continue
         if (rng() >= effect.chance) continue
-        applyStatus(victim, effect, unit)
+        const durMul = unit === ally ? (mods?.statusDur ?? 1) : (mods?.foeStatusDur ?? 1)
+        applyStatus(victim, effect, unit, durMul === 1 ? effect.duration : effect.duration * durMul)
         if (trace) pending.push({ from: unit === ally ? 'ally' : 'foe', amount: 0, crit: false, type: unit.side.type, band: 'neutral', ko: false, kind: 'status' })
       }
     }
-    unit.cd = skill.cooldown
+    const cdMul = unit === ally ? (mods?.cooldown ?? 1) : (mods?.foeCooldown ?? 1)
+    unit.cd = cdMul === 1 || skill.cooldown <= 0 ? skill.cooldown : Math.max(1, Math.floor(skill.cooldown * cdMul))
     push(`${unit.side.name} setzt ${skill.name ?? 'eine Fähigkeit'} ein.`)
     if (hadDamage) noteBossAttack(unit, other)
   }

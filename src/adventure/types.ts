@@ -163,6 +163,11 @@ export interface SaveV2 {
   pendingAwaken: { uid: string; level: 25 | 50 }[]
   /** PC expeditions. Missing on older files; the loader fills an empty board. */
   expeditions?: ExpeditionState
+  /**
+   * Chosen synergy ids, at most two. Missing means the two strongest on the team.
+   * An empty array means the player turned both off.
+   */
+  synergy?: string[]
 }
 
 export interface ExpeditionQuest {

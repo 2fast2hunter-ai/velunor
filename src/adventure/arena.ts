@@ -3,6 +3,7 @@ import { mulberry32 } from '../rng'
 import { fight1v1, type FightMods, type FightSide } from './battle'
 import { masteryLevel } from './mastery'
 import { monStats } from './stats'
+import { activeSynergies, purityOf, scaleSide, synergyMods } from './synergy'
 import { treeAtkBonus, treeCritAdd, treeGuardHp, treeLastBreath, treeStrongType } from './tree'
 import type { SaveV2 } from './types'
 import type { SkillDef, SpeciesPassive, TypeId } from '../types'
@@ -46,13 +47,13 @@ export interface ArenaFighter {
   shiny: boolean
 }
 
-/** Synergy stays null until step 15. The field is part of the snapshot on purpose. */
+/** null keeps the two strongest. An array is the player's choice and holds at most two ids. */
 export interface ArenaTeam {
   fighters: ArenaFighter[]
   critAdd: number
   strongType: number
   breath: boolean
-  synergy: null
+  synergy: readonly string[] | null
 }
 
 export interface ArenaBout {
@@ -256,7 +257,7 @@ export function bakeTeam(fighters: ArenaFighter[], save: SaveV2 | null): ArenaTe
     critAdd: save ? treeCritAdd(save) : 0,
     strongType: save ? treeStrongType(save) : 1.5,
     breath: save ? treeLastBreath(save) : false,
-    synergy: null
+    synergy: save?.synergy == null ? null : save.synergy.slice(0, 2)
   }
 }
 
@@ -306,13 +307,25 @@ export function arenaMatch(attack: ArenaTeam, defense: ArenaTeam, seed: number):
   const rng = mulberry32(seed >>> 0 || 1)
   const allyBreath = { left: attack.breath ? 1 : 0 }
   const foeBreath = { left: defense.breath ? 1 : 0 }
+  const allyTypes = attack.fighters.map((fighter) => fighter.type)
+  const foeTypes = defense.fighters.map((fighter) => fighter.type)
+  const allyMods = synergyMods(activeSynergies(allyTypes, attack.synergy), false)
+  const foeMods = synergyMods(activeSynergies(foeTypes, defense.synergy), false)
   const mods: FightMods = {
-    critAdd: attack.critAdd,
-    foeCritAdd: defense.critAdd,
+    critAdd: attack.critAdd + allyMods.critAdd,
+    foeCritAdd: defense.critAdd + foeMods.critAdd,
     strongType: attack.strongType,
     foeStrongType: defense.strongType,
     breath: allyBreath,
-    foeBreath
+    foeBreath,
+    dodge: allyMods.dodge,
+    foeDodge: foeMods.dodge,
+    statusDur: allyMods.statusDur,
+    foeStatusDur: foeMods.statusDur,
+    cooldown: allyMods.cooldown,
+    foeCooldown: foeMods.cooldown,
+    allySpd: foeMods.foeSpd,
+    foeSpd: allyMods.foeSpd
   }
   let ai = 0
   let di = 0
@@ -324,7 +337,9 @@ export function arenaMatch(attack: ArenaTeam, defense: ArenaTeam, seed: number):
   while (ai < attack.fighters.length && di < defense.fighters.length && allyKos < 6 && foeKos < 6 && bouts.length < 12) {
     const ally = attack.fighters[ai]
     const foe = defense.fighters[di]
-    const trace = fight1v1(toSide(ally, allyFrac), toSide(foe, foeFrac), rng, false, null, mods)
+    const allySide = scaleSide(toSide(ally, allyFrac), allyMods, purityOf(allyTypes, ally.type))
+    const foeSide = scaleSide(toSide(foe, foeFrac), foeMods, purityOf(foeTypes, foe.type))
+    const trace = fight1v1(allySide, foeSide, rng, false, null, mods)
     bouts.push({
       allySpecies: ally.speciesId,
       foeSpecies: foe.speciesId,

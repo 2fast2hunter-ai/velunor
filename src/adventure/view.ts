@@ -53,7 +53,7 @@ import { HORT_PRICES, hortOffer } from './hort'
 import { fruitDef, fruitMinutes } from './shop'
 import { teamWeatherMarks, weatherArrow, weatherForecast, weatherName, WEATHER_SHIFTS, type WeatherId } from './weather'
 import { typeArrow } from './order'
-import { activeCombos } from './combo'
+import { activeSynergies, purityOf, SYNERGIES } from './synergy'
 import { councilAssignment, guardianAssignment, mechIcon, mechName, mechTip, type MechId } from './mech'
 import { ultName, ultPattern } from './ult'
 import { FACES, MULTIPLIERS, PRIZES, faceById, spinCost, wheelOpen, type Multiplier, type SymbolId } from './wheel'
@@ -493,13 +493,13 @@ function teamDock(save: SaveV2): string {
       <span class="bar"><span style="width:${fainted ? 0 : (bar.hp / bar.max) * 100}%"></span></span>
     </button>`
   }).join('')
-  const combos = activeCombos(save.team.flatMap((uid) => {
+  const combos = activeSynergies(save.team.flatMap((uid) => {
     const mon = save.mons[uid]
     return mon ? [species(mon.species).type] : []
-  }))
-  const comboName = combos.map((row) => row.name).join(', ')
+  }), save.synergy)
+  const comboName = combos.map((row) => tr(save, `synergy.${row.id}`)).join(', ')
   const combo = combos.length
-    ? `<span class="combo-slot"><button type="button" class="combo-mark" data-act="combo" data-tip="${esc(comboName)}" aria-label="${esc(comboName)}"><img src="${art('battle/combo_synergy_64.png')}" alt=""/></button><p class="combo-tip" id="combo-tip" hidden></p></span>`
+    ? `<span class="combo-slot"><button type="button" class="combo-mark" data-act="combo" data-tip="${esc(comboName)}" aria-label="${esc(comboName)}">${combos.map((row) => synergyGlyph(row.id)).join('')}</button><p class="combo-tip" id="combo-tip" hidden></p></span>`
     : ''
   const speeds = ([1, 2, 3] as const).map((speed) => {
     const iconId = speed === 1 ? 'speed1' : speed === 2 ? 'speed2' : 'speed3'
@@ -742,6 +742,59 @@ function shinyOptions(save: SaveV2, current: string, have: boolean): string {
     <option value="0" ${current === '0' ? 'selected' : ''}>${tr(save, 'team.shinyOff')}</option>`
 }
 
+function synergyGlyph(id: string): string {
+  const artId = `synergy/${id}`
+  const body: Record<string, string> = {
+    gewitter: '<ellipse cx="28" cy="30" rx="16" ry="10" fill="#7eb6ff"/><ellipse cx="40" cy="28" rx="12" ry="9" fill="#d6e8ff"/><path d="M34 36l-8 14h8l-4 10 16-18h-9l7-6z" fill="#f0c14a"/>',
+    flaechenbrand: '<path d="M32 8c8 10 14 16 14 28a14 14 0 0 1-28 0c0-8 4-12 8-16 2 6 6 8 6 8s2-10 0-20z" fill="#e86a33"/><path d="M32 28c4 4 6 8 4 14a6 6 0 0 1-8 0c-2-6 0-10 4-14z" fill="#f0c14a"/>',
+    wurzelgrund: '<path d="M10 42h44" stroke="#8d6a43" stroke-width="4" stroke-linecap="round"/><path d="M32 42c-2 8-10 10-16 8M32 42c2 8 10 10 16 8M32 42V18" fill="none" stroke="#3d8f5a" stroke-width="4" stroke-linecap="round"/>',
+    polarstrom: '<path d="M32 8v48M12 20l40 24M12 44l40-24" stroke="#9fd7ff" stroke-width="4" stroke-linecap="round"/><circle cx="32" cy="32" r="6" fill="#e8f6ff"/>',
+    bollwerk: '<path d="M32 8l18 8v16c0 12-8 20-18 24C22 52 14 44 14 32V16z" fill="#9aa7b8"/><path d="M32 20v22" stroke="#f0c14a" stroke-width="4" stroke-linecap="round"/>',
+    prisma: '<path d="M32 8l20 40H12z" fill="#d7c4ff"/><path d="M32 8l8 40H24z" fill="#fff6"/>',
+    zwielicht: '<path d="M42 12a18 18 0 1 0 0 40 14 14 0 1 1 0-40z" fill="#6d5a9a"/>',
+    rudelkraft: '<path d="M16 50l10-30M32 50l8-34M48 50l-4-24" stroke="#e07a5f" stroke-width="5" stroke-linecap="round"/>',
+    schwarmgift: '<circle cx="22" cy="26" r="7" fill="#7dce6a"/><circle cx="42" cy="22" r="5" fill="#b07cc6"/><circle cx="34" cy="42" r="8" fill="#5e8f4a"/>',
+    resonanz: '<path d="M16 24c8 6 8 12 0 18M30 16c12 10 12 22 0 32M44 24c8 6 8 12 0 18" fill="none" stroke="#c4b5fd" stroke-width="4" stroke-linecap="round"/>',
+    glutschwinge: '<path d="M10 42c12-20 24-26 44-24-10 8-12 16-8 28-14-2-24-2-36-4z" fill="#e25b3a"/><path d="M20 36c10-6 18-8 26-6" fill="none" stroke="#f0c14a" stroke-width="3" stroke-linecap="round"/>',
+    sturmlied: '<path d="M14 42c8-18 18-18 18-4s-10 8-4 16 18 4 22-8" fill="none" stroke="#7ec8c3" stroke-width="4" stroke-linecap="round"/><circle cx="48" cy="20" r="5" fill="#f0c14a"/>'
+  }
+  return `<svg class="synergy-svg" data-art="${artId}" viewBox="0 0 64 64" aria-hidden="true">${body[id] ?? ''}</svg>`
+}
+
+function synergyBoard(save: SaveV2): string {
+  const types = save.team.flatMap((uid) => {
+    const mon = save.mons[uid]
+    return mon ? [species(mon.species).type] : []
+  })
+  const active = new Set(activeSynergies(types, save.synergy).map((row) => row.id))
+  const present = new Set(SYNERGIES.filter((row) => types.includes(row.types[0]) && types.includes(row.types[1])).map((row) => row.id))
+  const buttons = SYNERGIES.map((row) => {
+    const on = active.has(row.id)
+    const open = present.has(row.id)
+    const name = tr(save, `synergy.${row.id}`)
+    const line = tr(save, `synergy.${row.id}.line`)
+    return `<button type="button" class="synergy-pick${on ? ' on' : ''}" data-act="synergy" data-id="${row.id}" data-art="synergy/${row.id}" aria-pressed="${on ? 'true' : 'false'}" ${open ? '' : 'disabled'}>
+      ${synergyGlyph(row.id)}
+      <b>${esc(name)}</b>
+      <span>${esc(line)}</span>
+    </button>`
+  }).join('')
+  const counts = new Map<TypeId, number>()
+  for (const type of types) counts.set(type, (counts.get(type) ?? 0) + 1)
+  const purity = [...counts].flatMap(([type, count]) => {
+    const bonus = purityOf(types, type)
+    if (bonus <= 0) return []
+    return [tr(save, 'synergy.purity', { count, type: typeLabel(L(save), type, typeName(type)), pct: Math.round(bonus * 100) })]
+  }).join(' · ')
+  return `<section class="synergy-board" data-art="synergy/board">
+    <h3>${tr(save, 'synergy.title')}</h3>
+    <p class="synergy-note">${tr(save, 'synergy.note')}</p>
+    <div class="synergy-grid">${buttons}</div>
+    <button type="button" class="synergy-auto${save.synergy == null ? ' on' : ''}" data-act="synergy-auto">${tr(save, 'synergy.auto')}</button>
+    ${purity ? `<p class="synergy-purity">${esc(purity)}</p>` : ''}
+  </section>`
+}
+
 function team(save: SaveV2, query: PcQuery, selected: string | null, shell: ShellFlags): string {
   const list = visiblePc(save, query)
   const viewH = shell.pcView && shell.pcView > 0 ? shell.pcView : PC_VIEW_FALLBACK
@@ -767,6 +820,7 @@ function team(save: SaveV2, query: PcQuery, selected: string | null, shell: Shel
       <p class="muted">${tr(save, 'team.note')}</p>
       <div class="team-grid" id="team-grid" data-cols="3">${roster}</div>
     </div>
+    ${synergyBoard(save)}
     <h2 class="pc-label">${tr(save, 'team.pc')} · ${list.length}</h2>
     <div id="pc-viewport" class="vlist" data-cols="4" data-count="${list.length}" data-start="${win.start}" data-end="${win.end}">${body}</div>
     <div class="menu-dock" data-dock="team">
