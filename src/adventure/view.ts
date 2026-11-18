@@ -112,6 +112,7 @@ export type Overlay =
   | { kind: 'shop-confirm'; offerId: string }
   | { kind: 'shop-info'; offerId: string }
   | { kind: 'wallet'; id: 'gold' | 'marks' }
+  | { kind: 'quit' }
 
 export interface ShellFlags {
   mapOpen?: boolean
@@ -1988,6 +1989,9 @@ function overlayHtml(save: SaveV2, overlay: Overlay): string {
   if (overlay.kind === 'offline') {
     const pct = overlay.total ? Math.round((overlay.done / overlay.total) * 100) : 0
     return `<div class="sheet"><h2>${tr(save, 'offline.title')}</h2><div class="progress-track"><span style="width:${pct}%"></span></div><p>${overlay.done.toLocaleString(L(save) === 'en' ? 'en' : 'de-DE')} / ${overlay.total.toLocaleString(L(save) === 'en' ? 'en' : 'de-DE')}</p></div>`
+  }
+  if (overlay.kind === 'quit') {
+    return `<div class="sheet" data-sheet="swipe">${grab()}<h2>${tr(save, 'shell.quitTitle')}</h2><p>${tr(save, 'shell.quitBody')}</p><button class="primary" data-act="quit-yes">${tr(save, 'shell.quitYes')}</button> <button class="ghost" data-act="close">${tr(save, 'shell.quitNo')}</button></div>`
   }
   if (overlay.kind === 'confirm-reset') {
     return `<div class="sheet" data-sheet="swipe">${grab()}<h2>${tr(save, 'reset.title')}</h2><p>${tr(save, 'reset.body')}</p><button class="primary" data-act="reset-yes">${tr(save, 'reset.yes')}</button> <button class="ghost" data-act="close">${tr(save, 'reset.no')}</button></div>`

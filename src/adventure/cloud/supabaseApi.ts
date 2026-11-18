@@ -6,8 +6,16 @@ import type { ProgressScore } from './progress'
 import type { AuditState } from '../online/check'
 import type { CloudApi } from './types'
 import type { AnalyticsEvent } from './analytics'
+import type { StorageLike } from '../types'
 
 let client: SupabaseClient | null = null
+let authStorage: StorageLike | null = null
+
+/** Native builds keep the session in Preferences. The web keeps the default localStorage. */
+export function bindAuthStorage(storage: StorageLike): void {
+  if (client) return
+  authStorage = storage
+}
 
 export function supabaseClient(): SupabaseClient {
   if (!client) {
@@ -16,7 +24,14 @@ export function supabaseClient(): SupabaseClient {
         persistSession: true,
         autoRefreshToken: true,
         detectSessionInUrl: true,
-        flowType: 'implicit'
+        flowType: 'implicit',
+        storage: authStorage
+          ? {
+            getItem: (key) => authStorage?.getItem(key) ?? null,
+            setItem: (key, value) => authStorage?.setItem(key, value),
+            removeItem: (key) => authStorage?.removeItem(key)
+          }
+          : undefined
       }
     })
   }
