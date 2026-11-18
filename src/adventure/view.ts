@@ -292,7 +292,7 @@ function path(save: SaveV2, here: number): string {
   return pathNodes(cells, false)
 }
 
-function battle(save: SaveV2, now: number, fighting = false): string {
+function battle(save: SaveV2, now: number, fighting = false, shadow = false): string {
   const chapter = chapterById(save.region, save.chapter)
   const scene = SCENE_FILES[chapter.scene]
   const active = save.active && save.mons[save.active] ? save.active : save.team[0]
@@ -348,6 +348,7 @@ function battle(save: SaveV2, now: number, fighting = false): string {
       ${bossAhead(save) ? `<p class="wx-preview">${esc(weatherPreview(save, now))}</p>` : ''}
     </div>
     ${sealed ? '' : `<div class="guard-dock">${fighting ? '' : guardCard(save)}<button type="button" class="primary challenge-fab" data-act="challenge">${ui('challenge')}${tr(save, chapter.council || chapter.foyer ? 'battle.resume' : 'battle.challenge')}</button></div>`}
+    ${shadow ? `<p class="shadow-note shadow-battle" role="status">${esc(tr(save, 'cloud.shadow'))}</p>` : ''}
   </div>`
 }
 
@@ -1004,6 +1005,18 @@ function accountCard(save: SaveV2, cloud: CloudView): string {
     <h2><span class="cloud-mark" data-cloud="${cloud.status}" aria-hidden="true"><span data-icon="online">${cloudGlyph('online')}</span><span data-icon="offline">${cloudGlyph('offline')}</span><span data-icon="sync">${cloudGlyph('sync')}</span></span> ${esc(tr(save, 'cloud.account'))}</h2>
     <p class="cloud-state">${esc(tr(save, cloudStatusKey(cloud.status)))}</p>
     <p class="muted">${tr(save, 'cloud.anon')}</p>
+    <h2>${esc(tr(save, 'cloud.nameTitle'))}</h2>
+    <p>${esc(cloud.playerLabel || tr(save, 'cloud.nameNone'))}</p>
+    <div class="row-actions">
+      <button type="button" data-act="name-open">${esc(tr(save, 'cloud.nameBtn'))}</button>
+      <button type="button" data-act="report-open">${esc(tr(save, 'cloud.report'))}</button>
+    </div>
+    <label class="cloud-mail" for="player-target">${esc(tr(save, 'cloud.block'))}</label>
+    <input id="player-target" maxlength="24" autocomplete="off" placeholder="${esc(tr(save, 'cloud.reportHint'))}" aria-label="${esc(tr(save, 'cloud.block'))}"/>
+    <button type="button" class="cloud-block" data-act="block-player">${esc(tr(save, 'cloud.block'))}</button>
+    ${cloud.flagLevel === 2 ? `<p class="shadow-note" role="status">${esc(tr(save, 'cloud.shadow'))}</p>` : ''}
+    ${cloud.onlineDown ? `<p class="offline-note">${esc(tr(save, 'cloud.unavailable'))}</p>` : ''}
+    <p><button type="button" class="danger" data-act="delete-ask">${esc(tr(save, 'cloud.delete'))}</button></p>
     <h2>${esc(tr(save, 'cloud.secure'))}</h2>
     ${secure}
     <div class="row-actions later-row">
@@ -1078,8 +1091,46 @@ function previewLine(lang: Lang, preview: NonNullable<CloudView['conflict']>['lo
   }))}</p><p class="muted">${esc(t(lang, 'cloud.place', { region: preview.region, chapter: preview.chapter, step: preview.step }))}</p>`
 }
 
-/** Consent and the two-device choice. Neither button is preselected. */
+function sheetButtons(lang: Lang, yesAct: string, yesKey: string, noAct: string): string {
+  return `<div class="choice-row">
+    <button type="button" data-act="${noAct}">${esc(t(lang, 'cloud.cancel'))}</button>
+    <button type="button" class="primary" data-act="${yesAct}">${esc(t(lang, yesKey))}</button>
+  </div>`
+}
+
+/** Consent, name, report, deletion and the two-device choice. Neither answer is preselected. */
 export function cloudLayerHtml(cloud: CloudView, lang: Lang): string {
+  if (cloud.deleteStep === 1 || cloud.deleteStep === 2) {
+    const finalStep = cloud.deleteStep === 2
+    return `<div id="cloud-layer" class="overlay overlay-sheet"><div class="sheet" role="dialog" aria-labelledby="delete-title">${grab()}
+      <h2 id="delete-title">${esc(t(lang, finalStep ? 'cloud.deleteFinal' : 'cloud.deleteTitle'))}</h2>
+      <p>${esc(t(lang, finalStep ? 'cloud.deleteFinalBody' : 'cloud.deleteBody'))}</p>
+      ${sheetButtons(lang, finalStep ? 'delete-yes' : 'delete-next', finalStep ? 'cloud.deleteYes' : 'cloud.deleteNext', 'delete-no')}
+    </div></div>`
+  }
+  if (cloud.reportOpen) {
+    const reasons = (['beleidigend', 'unangemessen', 'betrug', 'sonstiges'] as const).map((reason) =>
+      `<button type="button" data-act="report-send" data-reason="${reason}">${esc(t(lang, `cloud.reason.${reason}`))}</button>`
+    ).join('')
+    return `<div id="cloud-layer" class="overlay overlay-sheet"><div class="sheet" role="dialog" aria-labelledby="report-title">${grab()}
+      <h2 id="report-title">${esc(t(lang, 'cloud.reportTitle'))}</h2>
+      <label class="cloud-mail">${esc(t(lang, 'cloud.reportHint'))}
+        <input id="report-target" maxlength="24" autocomplete="off" placeholder="${esc(t(lang, 'cloud.reportHint'))}"/>
+      </label>
+      <div class="row-actions">${reasons}</div>
+      <div class="choice-row"><button type="button" data-act="report-close">${esc(t(lang, 'cloud.cancel'))}</button></div>
+    </div></div>`
+  }
+  if (cloud.nameOpen) {
+    return `<div id="cloud-layer" class="overlay overlay-sheet"><div class="sheet" role="dialog" aria-labelledby="name-title">${grab()}
+      <h2 id="name-title">${esc(t(lang, 'cloud.nameTitle'))}</h2>
+      <label class="cloud-mail">${esc(t(lang, 'cloud.nameTitle'))}
+        <input id="player-name" maxlength="16" autocomplete="nickname" value=""/>
+      </label>
+      <p class="name-error" id="name-error" role="alert">${esc(cloud.nameError ?? '')}</p>
+      ${sheetButtons(lang, 'name-save', 'cloud.nameSave', 'name-close')}
+    </div></div>`
+  }
   if (cloud.conflict) {
     return `<div id="cloud-layer" class="overlay overlay-sheet"><div class="sheet" role="dialog" aria-labelledby="conflict-title">${grab()}
       <h2 id="conflict-title">${esc(t(lang, 'cloud.conflictTitle'))}</h2>
@@ -1146,7 +1197,7 @@ export function gameHtml(save: SaveV2, screen: Screen, now: number, pc: PcQuery,
         ${adventure ? chapterLine(save, step, mapOpen) : ''}
         ${adventure ? path(save, step) : ''}
       </div>
-      <div class="anchor anchor-mid">${adventure ? battle(save, now, shell.fighting) : center(save, screen, now, pc, dex, selected, debug, wheel, shell)}</div>
+      <div class="anchor anchor-mid">${adventure ? battle(save, now, shell.fighting, cloudState(shell).flagLevel === 2) : center(save, screen, now, pc, dex, selected, debug, wheel, shell)}</div>
       <div class="anchor anchor-bot">
         ${adventure ? teamDock(save) : ''}
         ${adventure ? logBox(save) : ''}

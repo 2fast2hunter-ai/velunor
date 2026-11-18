@@ -1,0 +1,165 @@
+/** Server plausibility for one sync. Numbers follow the live fight and the loot tables. */
+
+export const PLAUSIBILITY_BUFFER = 1.2
+export const SPEED3_MS = 930
+export const COIN_BONUS = 1.25
+export const LEARN_BONUS = 1.25
+export const TRAINER_PARTY = 3
+export const TRAINER_GOLD_PER_LEVEL = 25
+export const START_GOLD = 3000
+export const OBTAINED_HOW = ['Truhe', 'Splitter', 'Ei', 'Rad', 'Tausch'] as const
+export type ObtainedHow = (typeof OBTAINED_HOW)[number]
+
+export const CREST_ORDER = [
+  'Kieselwappen',
+  'Wellenwappen',
+  'Funkenwappen',
+  'Moorwappen',
+  'Felswappen',
+  'Sturmwappen',
+  'Frostwappen',
+  'Klingenwappen'
+] as const
+
+export interface AuditMon {
+  uid: string
+  species: string
+  level: number
+  rarity: number
+  schimmer: boolean
+  obtainedAt: number
+  obtainedHow: string
+}
+
+export interface AuditState {
+  at: number
+  gold: number
+  ep: number
+  region: number
+  chapter: number
+  badges: string[]
+  chests: number
+  shards: number
+  mons: AuditMon[]
+  /** Species the opened regions can actually award. */
+  speciesAllowed: string[]
+}
+
+export interface AuditResult {
+  flag: 0 | 1 | 2
+  reasons: string[]
+}
+
+export function reachLevel(region: number, chapter: number): number {
+  const index = Math.max(1, (Math.max(1, Math.floor(region) || 1) - 1) * 8 + Math.max(1, Math.floor(chapter) || 1))
+  return 6 * index
+}
+
+function encounters(elapsedMs: number): number {
+  return Math.max(1, Math.ceil(Math.max(0, elapsedMs) / SPEED3_MS))
+}
+
+/** Highest gold the clock allows: speed ×3, coin fruit, a full trainer party, then the 1.2 buffer. */
+export function allowedGold(elapsedMs: number, region: number, chapter: number): number {
+  const level = reachLevel(region, chapter)
+  const per = TRAINER_GOLD_PER_LEVEL * TRAINER_PARTY * level * COIN_BONUS
+  const crest = (1000 + 750 * level) * COIN_BONUS
+  return Math.ceil((encounters(elapsedMs) * per + crest) * PLAUSIBILITY_BUFFER)
+}
+
+/** Highest EP: speed ×3, learn fruit, buddy, full bench, four hort guests, rarity 9, then the 1.2 buffer. */
+export function allowedEp(elapsedMs: number, region: number, chapter: number): number {
+  const level = reachLevel(region, chapter)
+  const base = 8 * level * (1 + 0.15 * 9)
+  const team = 1 * 1.3 * LEARN_BONUS + 5 * 0.5 * LEARN_BONUS
+  const hort = 4 * 0.3 * LEARN_BONUS
+  return Math.ceil(encounters(elapsedMs) * base * (team + hort) * PLAUSIBILITY_BUFFER)
+}
+
+/** Chests a clock can explain: a road chest a minute, the daily shop, and the ready pile. */
+export function allowedChests(elapsedMs: number): number {
+  const days = Math.max(1, Math.ceil(Math.max(0, elapsedMs) / 86_400_000))
+  return Math.min(99 * 4, Math.floor(Math.max(0, elapsedMs) / 60_000) + days * 10 + 8)
+}
+
+export function allowedShards(elapsedMs: number): number {
+  return encounters(elapsedMs)
+}
+
+/** New monsters have to fit in chests, shard crafts, eggs and the wheel. */
+export function allowedNewMons(elapsedMs: number): number {
+  return allowedChests(elapsedMs) + Math.floor(allowedShards(elapsedMs) / 5) + Math.ceil(Math.max(0, elapsedMs) / 3_600_000) + 6
+}
+
+export function crestsInOrder(badges: readonly string[]): boolean {
+  const indexes = badges.map((badge) => CREST_ORDER.indexOf(badge as (typeof CREST_ORDER)[number])).filter((index) => index >= 0)
+  const unique = [...new Set(indexes)].sort((a, b) => a - b)
+  return unique.every((index, place) => index === place)
+}
+
+function bump(flag: 0 | 1 | 2, next: 0 | 1 | 2): 0 | 1 | 2 {
+  return next > flag ? next : flag
+}
+
+function gainFlag(gain: number, allowed: number): 0 | 1 | 2 {
+  if (!(gain > allowed)) return 0
+  if (gain > allowed * 2) return 2
+  return 1
+}
+
+/**
+ * Compare a new save with the last accepted one.
+ * The first upload (no previous row) is the baseline and stays at flag 0.
+ */
+export function auditSync(before: AuditState | null, after: AuditState): AuditResult {
+  if (!before) return { flag: 0, reasons: [] }
+  const reasons: string[] = []
+  let flag: 0 | 1 | 2 = 0
+  const elapsed = after.at - before.at
+  if (elapsed < 0) {
+    reasons.push('clock')
+    flag = 2
+  }
+  const region = Math.max(before.region, after.region)
+  const chapter = Math.max(before.chapter, after.chapter)
+  const goldGain = after.gold - before.gold
+  const goldFlag = gainFlag(goldGain, allowedGold(Math.max(0, elapsed), region, chapter))
+  if (goldFlag) reasons.push('gold')
+  flag = bump(flag, goldFlag)
+  const epGain = after.ep - before.ep
+  const epFlag = gainFlag(epGain, allowedEp(Math.max(0, elapsed), region, chapter))
+  if (epFlag) reasons.push('ep')
+  flag = bump(flag, epFlag)
+  if (!crestsInOrder(after.badges)) {
+    reasons.push('crests')
+    flag = 2
+  }
+  const known = new Set(before.mons.map((mon) => mon.uid))
+  const fresh = after.mons.filter((mon) => !known.has(mon.uid))
+  const allowed = new Set(after.speciesAllowed)
+  if (fresh.length > allowedNewMons(Math.max(0, elapsed))) {
+    reasons.push('monsters')
+    flag = 2
+  }
+  for (const mon of fresh) {
+    if (!OBTAINED_HOW.includes(mon.obtainedHow as ObtainedHow)) {
+      reasons.push('source')
+      flag = 2
+    }
+    if (allowed.size && !allowed.has(mon.species)) {
+      reasons.push('region')
+      flag = 2
+    }
+  }
+  const chestGain = after.chests - before.chests
+  if (chestGain > allowedChests(Math.max(0, elapsed))) {
+    reasons.push('chests')
+    flag = 2
+  }
+  const shardGain = after.shards - before.shards
+  if (shardGain > allowedShards(Math.max(0, elapsed))) {
+    reasons.push('shards')
+    flag = 2
+  }
+  return { flag, reasons }
+}
