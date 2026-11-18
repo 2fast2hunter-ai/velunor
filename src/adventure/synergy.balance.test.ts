@@ -1,6 +1,5 @@
 import { describe, expect, it } from 'vitest'
 import { mulberry32 } from '../rng'
-import type { SkillDef } from '../types'
 import { fight1v1, type FightMods, type FightSide } from './battle'
 import { ARENA_LEVEL, fighterFromSpecies } from './arena'
 import { coopDamage } from './coop'
@@ -13,31 +12,6 @@ import {
   synergyMods,
   type SynergyMods
 } from './synergy'
-
-const skill: SkillDef = {
-  id: 'schlag',
-  name: 'Schlag',
-  cooldown: 4,
-  initialCooldown: 1,
-  target: 'default',
-  effects: [{ kind: 'damage', atkMult: 1.2 }]
-}
-
-function plain(): FightSide {
-  return {
-    speciesId: 'm01',
-    name: 'Funke',
-    type: 'fire',
-    maxHp: 900,
-    hp: 900,
-    atk: 46,
-    def: 30,
-    spd: 100,
-    skill,
-    passive: null,
-    level: 10
-  }
-}
 
 function arenaSide(): FightSide {
   const fighter = fighterFromSpecies('m01', false, 0, 0, 'a')
