@@ -30,6 +30,8 @@ jobs:
         run: npm ci
       - name: Test
         run: npm test
+      - name: Function bundles
+        run: npm run build:functions -- --check
       - name: Build
         run: npm run build
       - name: Upload artifact

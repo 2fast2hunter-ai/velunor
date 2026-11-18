@@ -1,5 +1,8 @@
+import { execFileSync } from 'node:child_process'
 import { readFileSync } from 'node:fs'
+import { fileURLToPath } from 'node:url'
 import { describe, expect, it } from 'vitest'
+import { fitScale } from '../const'
 import { beginAdventure } from '../save'
 import { simulateOffline } from '../sim'
 import { auditSync } from './check'
@@ -67,6 +70,15 @@ describe('reports', () => {
   })
 })
 
+describe('function bundles', () => {
+  it('matches the committed Deno bundles', () => {
+    execFileSync('node', ['scripts/build-functions.mjs', '--check'], {
+      cwd: fileURLToPath(new URL('../../../', import.meta.url)),
+      stdio: 'pipe'
+    })
+  })
+})
+
 describe('start layout fixes', () => {
   it('keeps the loading logo, the choose button and the consent buttons large enough', () => {
     const css = readFileSync(new URL('../adventure.css', import.meta.url), 'utf8')
@@ -74,7 +86,27 @@ describe('start layout fixes', () => {
     expect(css).toContain('#stage.is-entering .guard-card')
     expect(css).toMatch(/\.starter-choose\s*\{[^}]*min-height:\s*148px/)
     expect(css).toMatch(/\.starter-head \.home-back\s*\{[^}]*min-height:\s*148px/)
-    expect(css).toMatch(/\.choice-row button\s*\{[^}]*min-height:\s*160px/)
-    expect(css).toMatch(/\.choice-row button\s*\{[^}]*font-size:\s*54px/)
+    expect(css).toMatch(/\.choice-row button\s*\{[^}]*min-height:\s*148px/)
+    expect(css).toMatch(/\.choice-row button\s*\{[^}]*font-size:\s*48px/)
+  })
+
+  it('keeps sheet and account type readable at 390 px', () => {
+    const css = readFileSync(new URL('../adventure.css', import.meta.url), 'utf8')
+    const scale = fitScale(390, 844)
+    const body = 44
+    const title = 56
+    const button = 48
+    const height = 148
+    expect(body * scale).toBeGreaterThanOrEqual(14)
+    expect(title * scale).toBeGreaterThanOrEqual(18)
+    expect(button * scale).toBeGreaterThanOrEqual(16)
+    expect(height * scale).toBeGreaterThanOrEqual(48)
+    expect(css).toMatch(/\.sheet, #cloud-layer, \.cloud-card \{ font-size: 44px; \}/)
+    expect(css).toMatch(/\.sheet h2, #cloud-layer h2, \.is-menu \.cloud-card h2 \{ font-size: 56px;/)
+    expect(css).toContain('font-size: 48px')
+    expect(css).toContain('min-height: 148px')
+    const view = readFileSync(new URL('../view.ts', import.meta.url), 'utf8')
+    expect(view).toContain('class="cloud-block"')
+    expect(view).toContain('for="player-target"')
   })
 })
