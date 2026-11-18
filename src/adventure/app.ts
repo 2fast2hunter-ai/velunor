@@ -268,6 +268,17 @@ function deviceId(): string {
   return id
 }
 
+function exportSaveJson(): void {
+  if (!save) return
+  const blob = new Blob([JSON.stringify(save)], { type: 'application/json' })
+  const url = URL.createObjectURL(blob)
+  const link = document.createElement('a')
+  link.href = url
+  link.download = 'velunor-spielstand.json'
+  link.click()
+  URL.revokeObjectURL(url)
+}
+
 function activeLang(): Lang {
   if (save?.settings.lang === 'en' || keptSave?.settings.lang === 'en') return 'en'
   if (save || keptSave) return 'de'
@@ -3433,6 +3444,10 @@ function onClick(event: Event): void {
     const field = document.getElementById('account-email')
     const email = field instanceof HTMLInputElement ? field.value : ''
     void cloud?.linkEmail(email)
+    return
+  }
+  if (act === 'export-save') {
+    exportSaveJson()
     return
   }
   if (act === 'reset') {

@@ -1323,6 +1323,9 @@ function options(save: SaveV2, debug: boolean, shell: ShellFlags): string {
       ${power(0, 'opt.powerOff')}${power(2, 'opt.power2')}${power(5, 'opt.power5')}
     </div>
     ${debug ? `<div class="card" style="padding:12px;margin-top:12px"><b>${tr(save, 'opt.debug')}</b><p class="muted">${tr(save, 'opt.debugNote')}</p><input id="debug-hours" type="number" min="0" step="0.1" value="10"/> <button type="button" class="primary" data-act="jump">${tr(save, 'opt.jump')}</button> <button type="button" data-act="debug-stars">${tr(save, 'chest.debug')}</button></div>` : ''}
+    <p><button type="button" class="ghost" data-act="export-save">${tr(save, 'opt.export')}</button></p>
+    <p><a class="ghost" href="datenschutz.html">${tr(save, 'opt.privacy')}</a></p>
+    <p><a class="ghost" href="loeschen.html">${tr(save, 'opt.deleteWeb')}</a></p>
     <p><button type="button" class="ghost" data-act="reset">${ui('reset')}${tr(save, 'opt.reset')}</button></p>
       </div>
     </div>

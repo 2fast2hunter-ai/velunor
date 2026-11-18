@@ -1,0 +1,87 @@
+<!doctype html>
+<html lang="de">
+  <head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1" />
+    <title>Datenschutz · Velunor</title>
+    <style>
+      :root { color-scheme: dark; }
+      body {
+        margin: 0;
+        background: #120e22;
+        color: #f4efe4;
+        font: 18px/1.5 Nunito, "Segoe UI", sans-serif;
+      }
+      main { max-width: 42rem; margin: 0 auto; padding: 1.5rem 1.25rem 3rem; }
+      a { color: #f0c14a; }
+      h1, h2 { line-height: 1.2; }
+      h1 { font-size: 1.8rem; }
+      h2 { font-size: 1.25rem; margin-top: 2rem; }
+      .note { color: #c4b5fd; }
+    </style>
+  </head>
+  <body>
+    <main>
+      <p><a href="./">Zurück zu Velunor</a> · <a href="./loeschen.html">Konto löschen</a></p>
+      <h1>Datenschutz (Entwurf)</h1>
+      <p class="note">Noch nicht veröffentlicht und noch nicht rechtlich geprüft. Nichts davon ist bei einem Store eingereicht.</p>
+
+      <h2>Verantwortlicher</h2>
+      <p>[VON FABIAN-NOEL AUSZUFÜLLEN]</p>
+      <p>Name, Anschrift und eine erreichbare Kontakt-E-Mail. Für eine App mit Konten im Store braucht es diese Adresse. Die zuständige Aufsichtsbehörde hängt vom Sitz ab und bleibt ebenfalls [VON FABIAN-NOEL AUSZUFÜLLEN].</p>
+      <p>Vor der Veröffentlichung diesen Text rechtlich prüfen lassen. [rechtlich prüfen lassen]</p>
+
+      <h2>Auftragsverarbeitung</h2>
+      <p>Datenbank und Anmeldung laufen bei Supabase, Projekt <a href="https://psbouhfgvsygadihwtdk.supabase.co">https://psbouhfgvsygadihwtdk.supabase.co</a>, im Code als Hosting in Frankfurt (EU) bezeichnet. Vor dem Start den Auftragsverarbeitungsvertrag (DPA) von Supabase prüfen und annehmen. [VON FABIAN-NOEL AUSZUFÜLLEN]</p>
+      <ul>
+        <li>DPA von Supabase lesen und annehmen.</li>
+        <li>Verantwortlichen und Kontakt einsetzen.</li>
+        <li>Redirect-URL dieser Seite und der Löschseite in der Supabase-Auth prüfen, falls ein E-Mail-Link nicht zurückführt.</li>
+        <li>Diesen Entwurf rechtlich prüfen lassen.</li>
+      </ul>
+
+      <h2>Was Velunor nicht tut</h2>
+      <p>Keine Käufe. Truhen und das Glücksrad nutzen Gold und Marken aus dem Spiel, nicht Echtgeld. Keine Werbung, kein Tracking über Apps hinweg, keine Analyse-SDKs von Dritten, keine Weitergabe zu Werbezwecken. Die eigene Spielstatistik gibt es nur mit Einwilligung.</p>
+
+      <h2>Verarbeitete Daten</h2>
+      <ul>
+        <li><b>Konto-ID.</b> Beim Spiel mit Netz legt Supabase Auth ein anonymes Konto an.</li>
+        <li><b>E-Mail, optional.</b> Nur bei der Verknüpfung in den Optionen. Chat schreiben verlangt eine bestätigte E-Mail, das Konto selbst nicht.</li>
+        <li><b>Spielername</b> mit vierstelliger Kennung, für angemeldete Spieler lesbar.</li>
+        <li><b>Freundschaftscode</b> aus acht Zeichen, sichtbar für Leute, denen du ihn gibst. Er löscht kein Konto.</li>
+        <li><b>Spielstand und Monster</b>, Herkunft Truhe, Splitter, Ei, Rad oder Tausch.</li>
+        <li><b>Geräte-Kennung für den Abgleich.</b> Eine zufällige ID auf dem Gerät, keine Werbe-ID.</li>
+        <li><b>Freunde, Geschenke, Koop, Arena, Gilde</b>, soweit du sie nutzt.</li>
+        <li><b>Tausch.</b> Offene Angebote fallen mit dem Konto weg. Abgeschlossene Tauschzeilen bleiben mit beiden Konto-IDs, Art, Seltenheit und Stufe, ohne Namen.</li>
+        <li><b>Chat.</b> 30 Tage, gemeldete Nachrichten 90 Tage. Ein Stundenjob löscht sie. Beim Kontolöschen wird der Absender zu „gelöschtes Konto“, der Text bleibt bis zur Frist.</li>
+        <li><b>Chat-Alter.</b> Das Geburtsjahr wird nicht gespeichert. Das Gerät schickt nur ja oder nein für „13 oder älter“.</li>
+        <li><b>Meldungen.</b> Beim Löschen wird die Melder-ID geleert. Ein Löschjob für die Zeilen ist nicht eingebaut. Das Feld für die Frist steht auf 90 Tagen.</li>
+        <li><b>Spielstatistik, nur mit Einwilligung.</b> Zehn Spielereignisse ohne Name, E-Mail, Konto-ID, Geräte-ID und IP. Gelöscht mit dem Konto. Eine Löschung nach 13 Monaten ist nicht eingebaut. [ANNAHME]</li>
+        <li><b>IP-Adresse.</b> Die Spieltabelle speichert keine IP. Ob Supabase sie in Protokollen hält, steht im DPA. [VON FABIAN-NOEL AUSZUFÜLLEN]</li>
+      </ul>
+
+      <h2>Zwecke</h2>
+      <p>Spielbetrieb, Synchronisieren, Multiplayer und Schutz vor Betrug und Missbrauch.</p>
+
+      <h2>Rechtsgrundlagen</h2>
+      <p>Vertragserfüllung, Art. 6 Abs. 1 lit. b DSGVO, für den Spielbetrieb. Berechtigtes Interesse, Art. 6 Abs. 1 lit. f DSGVO, für Betrugsschutz und Missbrauchsabwehr. Einwilligung, Art. 6 Abs. 1 lit. a DSGVO, nur für die Spielstatistik. Widerruf in den Optionen mit „Nein“. [rechtlich prüfen lassen]</p>
+
+      <h2>Empfänger</h2>
+      <p>Supabase als Auftragsverarbeiter, Hosting in Frankfurt (EU). Der Web-Client liegt auf GitHub Pages. Keine Weitergabe zu Werbezwecken.</p>
+
+      <h2>Speicherdauer</h2>
+      <p>Bis zur Kontolöschung. Chat 30 Tage, gemeldete Nachrichten 90 Tage. Meldungszeilen ohne eingebauten Löschjob. Abgeschlossene Tausche bleiben ohne Namen. Spielstatistik bis zur Kontolöschung; 13 Monate sind nicht automatisiert. [ANNAHME] Inaktive anonyme Konten nach 24 Monaten zu löschen ist nicht eingebaut. [ANNAHME]</p>
+
+      <h2>Rechte</h2>
+      <p>Auskunft, Berichtigung, Löschung, Datenübertragbarkeit und Beschwerde bei der Aufsichtsbehörde. [VON FABIAN-NOEL AUSZUFÜLLEN]</p>
+      <ul>
+        <li><b>Löschung in der App.</b> Optionen, „Konto und Daten löschen“, zwei Bestätigungen. Das ruft die bestehende Funktion <code>delete-account</code> auf.</li>
+        <li><b>Löschung im Web.</b> <a href="./loeschen.html">loeschen.html</a> nutzt dieselbe Funktion. Es gibt keinen Konto-Code.</li>
+        <li><b>Export.</b> Optionen, „Speicherstand exportieren“, lädt den lokalen Spielstand als JSON. Das ist nicht der Chat und nicht die Meldungen.</li>
+      </ul>
+
+      <h2>Kontakt für Auskunft</h2>
+      <p>[VON FABIAN-NOEL AUSZUFÜLLEN]</p>
+    </main>
+  </body>
+</html>

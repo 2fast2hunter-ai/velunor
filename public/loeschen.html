@@ -1,0 +1,197 @@
+<!doctype html>
+<html lang="de">
+  <head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1" />
+    <title>Konto löschen · Velunor</title>
+    <style>
+      :root { color-scheme: dark; }
+      body {
+        margin: 0;
+        background: #120e22;
+        color: #f4efe4;
+        font: 18px/1.5 Nunito, "Segoe UI", sans-serif;
+      }
+      main { max-width: 42rem; margin: 0 auto; padding: 1.5rem 1.25rem 3rem; }
+      a { color: #f0c14a; }
+      h1 { font-size: 1.8rem; line-height: 1.2; }
+      form, .card {
+        background: #1a2744;
+        border-radius: 16px;
+        padding: 1rem;
+        margin: 1rem 0;
+      }
+      label { display: block; margin: 0.75rem 0 0.25rem; }
+      input {
+        width: 100%;
+        box-sizing: border-box;
+        font: inherit;
+        padding: 0.7rem 0.8rem;
+        border-radius: 12px;
+        border: 1px solid #31456f;
+        background: #120e22;
+        color: inherit;
+      }
+      button {
+        font: inherit;
+        font-weight: 700;
+        margin-top: 0.8rem;
+        padding: 0.8rem 1rem;
+        border: 0;
+        border-radius: 12px;
+        background: #f0c14a;
+        color: #2a2110;
+      }
+      button[disabled] { opacity: 0.55; }
+      .note { color: #c4b5fd; }
+      .bad { color: #f0a0a0; }
+    </style>
+  </head>
+  <body>
+    <main>
+      <p><a href="./">Zurück zu Velunor</a> · <a href="./datenschutz.html">Datenschutz</a></p>
+      <h1>Konto löschen</h1>
+      <p>Dieselbe Funktion wie in der App: <code>delete-account</code>. Es gibt keinen Konto-Code. Ein Freundschaftscode löscht kein Konto.</p>
+
+      <h2>In der App</h2>
+      <p>Optionen, „Konto und Daten löschen“, dann zweimal bestätigen. Spielstand, Monster, Name, Sperren und die Spielstatistik werden gelöscht. Der Chat-Absender wird zu „gelöschtes Konto“. Danach startet ein neues anonymes Konto.</p>
+
+      <h2>In diesem Browser</h2>
+      <p id="session-note">Die Seite prüft, ob hier schon eine Velunor-Sitzung liegt.</p>
+      <form id="erase-form">
+        <p>Löschung des angemeldeten Kontos. Tippe zur Bestätigung <b>LÖSCHEN</b>.</p>
+        <label for="phrase">Bestätigung</label>
+        <input id="phrase" name="phrase" autocomplete="off" autocapitalize="characters" />
+        <button id="erase" type="submit" disabled>Konto jetzt löschen</button>
+        <p id="erase-status" role="status"></p>
+      </form>
+
+      <h2>Mit verknüpfter E-Mail</h2>
+      <p>Ohne Sitzung in diesem Browser schickt das Formular einen Anmeldelink an die E-Mail, die in den Optionen verknüpft ist. Es wird kein neues Konto angelegt. Danach erscheint oben die Bestätigung. Wenn der Link nicht hierher zurückführt, ist die Redirect-URL in Supabase noch offen. [VON FABIAN-NOEL AUSZUFÜLLEN] Löschen geht dann in der App.</p>
+      <form id="mail-form">
+        <label for="email">E-Mail des verknüpften Kontos</label>
+        <input id="email" name="email" type="email" autocomplete="email" inputmode="email" />
+        <button type="submit">Anmeldelink senden</button>
+        <p id="mail-status" role="status"></p>
+      </form>
+    </main>
+    <script>
+      const HOST = 'https://psbouhfgvsygadihwtdk.supabase.co'
+      const KEY = 'sb_publishable_HSKBENtyF_1BAZbYwjsdEQ_KZVRVLFG'
+      const STORAGE = 'sb-psbouhfgvsygadihwtdk-auth-token'
+      const phrase = document.getElementById('phrase')
+      const eraseButton = document.getElementById('erase')
+      const eraseStatus = document.getElementById('erase-status')
+      const sessionNote = document.getElementById('session-note')
+      const mailStatus = document.getElementById('mail-status')
+
+      function tokenFrom(raw) {
+        if (!raw) return null
+        try {
+          const data = JSON.parse(raw)
+          return typeof data.access_token === 'string' && data.access_token ? data.access_token : null
+        } catch {
+          return null
+        }
+      }
+
+      function currentToken() {
+        return tokenFrom(localStorage.getItem(STORAGE))
+      }
+
+      function storeToken(access, refresh) {
+        localStorage.setItem(STORAGE, JSON.stringify({
+          access_token: access,
+          refresh_token: refresh || '',
+          token_type: 'bearer'
+        }))
+      }
+
+      function takeHash() {
+        const hash = new URLSearchParams(location.hash.replace(/^#/, ''))
+        const access = hash.get('access_token')
+        if (!access) return
+        storeToken(access, hash.get('refresh_token') || '')
+        history.replaceState(null, '', location.pathname + location.search)
+      }
+
+      function paint() {
+        const signedIn = Boolean(currentToken())
+        sessionNote.textContent = signedIn
+          ? 'Eine Sitzung liegt in diesem Browser. Die Bestätigung löscht dieses Konto.'
+          : 'Keine Sitzung in diesem Browser. Verknüpfe unten die E-Mail oder lösche das Konto in der App auf dem Gerät, das es angelegt hat.'
+        eraseButton.disabled = !signedIn || phrase.value.trim() !== 'LÖSCHEN'
+      }
+
+      takeHash()
+      phrase.addEventListener('input', paint)
+      paint()
+
+      document.getElementById('erase-form').addEventListener('submit', async (event) => {
+        event.preventDefault()
+        const token = currentToken()
+        if (!token || phrase.value.trim() !== 'LÖSCHEN') return
+        eraseButton.disabled = true
+        eraseStatus.textContent = 'Löschen läuft.'
+        eraseStatus.className = ''
+        try {
+          const response = await fetch(HOST + '/functions/v1/delete-account', {
+            method: 'POST',
+            headers: {
+              apikey: KEY,
+              Authorization: 'Bearer ' + token,
+              'Content-Type': 'application/json'
+            },
+            body: '{}'
+          })
+          if (!response.ok) {
+            eraseStatus.textContent = 'Die Löschung ist fehlgeschlagen. In der App unter Optionen geht es mit derselben Funktion.'
+            eraseStatus.className = 'bad'
+            paint()
+            return
+          }
+          for (const key of Object.keys(localStorage)) {
+            if (key.startsWith('velunor_') || key.startsWith('sb-')) localStorage.removeItem(key)
+          }
+          eraseStatus.textContent = 'Das Konto ist gelöscht.'
+          paint()
+        } catch {
+          eraseStatus.textContent = 'Kein Netz. Die Löschung ist nicht angekommen.'
+          eraseStatus.className = 'bad'
+          paint()
+        }
+      })
+
+      document.getElementById('mail-form').addEventListener('submit', async (event) => {
+        event.preventDefault()
+        const email = document.getElementById('email').value.trim()
+        if (!email || !email.includes('@')) {
+          mailStatus.textContent = 'Die E-Mail sieht nicht vollständig aus.'
+          mailStatus.className = 'bad'
+          return
+        }
+        mailStatus.textContent = 'Der Link wird geschickt.'
+        mailStatus.className = ''
+        const back = location.origin + location.pathname
+        try {
+          const response = await fetch(HOST + '/auth/v1/otp?redirect_to=' + encodeURIComponent(back), {
+            method: 'POST',
+            headers: {
+              apikey: KEY,
+              Authorization: 'Bearer ' + KEY,
+              'Content-Type': 'application/json'
+            },
+            body: JSON.stringify({ email, create_user: false })
+          })
+          mailStatus.textContent = response.ok
+            ? 'Wenn diese E-Mail verknüpft ist, liegt der Link im Postfach. Es wird kein neues Konto angelegt.'
+            : 'Der Link ist nicht rausgegangen. Löschen geht in der App.'
+          mailStatus.className = response.ok ? '' : 'bad'
+        } catch {
+          mailStatus.textContent = 'Kein Netz.'
+          mailStatus.className = 'bad'
+        }
+      })
+    </script>
+  </body>
+</html>
