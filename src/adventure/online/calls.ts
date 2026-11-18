@@ -75,7 +75,9 @@ export async function loadRankPage(board: string, friends = false): Promise<unkn
   try {
     const { data } = await supabaseClient().auth.getSession()
     if (!data.session) return { status: 'offline' }
-    const page = await supabaseClient().rpc('leaderboard_page', { p_board: board, p_friends: friends })
+    const page = board === 'guild'
+      ? await supabaseClient().rpc('guild_board')
+      : await supabaseClient().rpc('leaderboard_page', { p_board: board, p_friends: friends })
     if (page.error) return { status: 'offline' }
     return page.data
   } catch {

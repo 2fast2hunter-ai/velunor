@@ -47,7 +47,7 @@ import { browserCloudApi, watchAuth } from './cloud/supabaseApi'
 import { callOnline, claimRankRewards, clearVelunorKeys, loadOwnLabel, loadRankPage, sendBlockRow, sendReportRow } from './online/calls'
 import { isBoard, parseRankPage, RANK_FRAMES, type BoardId, type RankModel } from './online/ranks'
 import { buyNode, respecTree, treeCapMs } from './tree'
-import type { ArenaPanel, SocialPanel, TradePanel } from './view'
+import type { ArenaPanel, GuildPanel, SocialPanel, TradePanel } from './view'
 import { saveOwesCatchUp } from './online/check'
 import { nameIssue } from './online/name'
 import { createCloud, type CloudController } from './cloud/session'
@@ -58,6 +58,7 @@ import { eventsForEncounter, eventsForLoot, starEvent, teamProfile } from './clo
 import { equipFrame, equipTitle, syncAchievements } from './achievements'
 import { HATCH_MS, buyHortSlot, moveFromHort, moveToHort } from './hort'
 import { expeditionBusy, settleExpeditions, startExpedition, takeExpeditionNotes } from './expedition'
+import { foundCost } from './guild'
 import { buyCrystal, buyFruit, sellCrystal, sellFruit, useCrystal, useFruit } from './shop'
 import { buyPrize, spinWheel, type Multiplier, type SymbolId } from './wheel'
 import { chapterCapNow } from './dex'
@@ -171,6 +172,7 @@ let arenaPanel: ArenaPanel = { status: 'offline', note: '', rating: 1000, league
 let socialPanel: SocialPanel = { status: 'offline', code: '', friends: [], requests: [], note: '' }
 let expeditionPick = ''
 let tradePanel: TradePanel = { status: 'offline', note: '', mine: null, theirs: null, lockMs: 0, phase: 'pick' }
+let guildPanel: GuildPanel = { status: 'offline', name: '', tag: '', level: 1, points: 0, note: '' }
 let saveReady = false
 let wipingAccount = false
 
@@ -1191,7 +1193,7 @@ function render(step = save?.step): void {
     mult: wheelMult,
     symbols: wheelSymbols,
     note: wheelNote
-  }, { mapOpen, moreOpen, pcScroll, filtersOpen, dexOpen, shopTab, shopHint: Date.now() < shopFlashUntil, fighting: animating, cloud: mergedCloud(), masteryNote: Date.now() < masteryUntil ? masteryNote : '', ranks: { ...rankView, board: rankBoard, excluded: mergedCloud().flagLevel === 2 }, treePick, arena: arenaPanel, social: socialPanel, expeditionPick, trade: tradePanel }))
+  }, { mapOpen, moreOpen, pcScroll, filtersOpen, dexOpen, shopTab, shopHint: Date.now() < shopFlashUntil, fighting: animating, cloud: mergedCloud(), masteryNote: Date.now() < masteryUntil ? masteryNote : '', ranks: { ...rankView, board: rankBoard, excluded: mergedCloud().flagLevel === 2 }, treePick, arena: arenaPanel, social: socialPanel, expeditionPick, trade: tradePanel, guild: guildPanel }))
   if (screen === 'team') {
     pcIds = visiblePc(save, pc)
     const view = document.getElementById('pc-viewport')
@@ -1515,6 +1517,44 @@ function tradeText(code: string): string {
   const key = `trade.reason.${code}`
   const text = t(save.settings.lang, key)
   return text === key ? code : text
+}
+
+async function refreshGuild(): Promise<void> {
+  if (!save) return
+  const state = await callOnline('guild', { action: 'state' })
+  if (!state.ok) {
+    guildPanel = { ...guildPanel, status: 'offline' }
+    render()
+    return
+  }
+  const row = state.data.guild && typeof state.data.guild === 'object' ? state.data.guild as Record<string, unknown> : {}
+  guildPanel = {
+    status: 'ready',
+    name: typeof row.name === 'string' ? row.name : '',
+    tag: typeof row.tag === 'string' ? row.tag : '',
+    level: Math.max(1, Math.floor(Number(row.level)) || 1),
+    points: Math.max(0, Math.floor(Number(row.points)) || 0),
+    note: ''
+  }
+  render()
+}
+
+async function guildAction(act: string, phrase = ''): Promise<void> {
+  if (!save) return
+  const action = act === 'guild-found' ? 'found' : act === 'guild-join' ? 'join' : act === 'guild-phrase' ? 'phrase' : 'leave'
+  const result = await callOnline('guild', {
+    action,
+    name: save.name,
+    tag: save.name.slice(0, 3),
+    phrase,
+    region: save.region
+  })
+  if (result.ok && action === 'found') {
+    save.gold = Math.max(0, save.gold - foundCost(save.region))
+    try { writeSave(localStorage, save) } catch { /* the guild row already exists */ }
+  }
+  guildPanel = { ...guildPanel, note: result.ok ? '' : result.error }
+  await refreshGuild()
 }
 
 async function refreshTrade(): Promise<void> {
@@ -2749,7 +2789,12 @@ function onClick(event: Event): void {
     if (screen === 'arena') void refreshArena()
     if (screen === 'social') void refreshSocial()
     if (screen === 'trade') void refreshTrade()
+    if (screen === 'guild') void refreshGuild()
     kick()
+    return
+  }
+  if (act === 'guild-found' || act === 'guild-join' || act === 'guild-leave' || act === 'guild-phrase') {
+    void guildAction(act, node.getAttribute('data-id') ?? '')
     return
   }
   if (act === 'trade-offer' || act === 'trade-lock' || act === 'trade-confirm' || act === 'trade-cancel') {

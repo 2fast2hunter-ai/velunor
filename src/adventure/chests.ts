@@ -27,6 +27,7 @@ function draw(save: SaveV2): number {
 
 export function applyChest(save: SaveV2, roll: ChestRoll, now: number, rng?: () => number): ChestGrant {
   save.gold += roll.gold
+  save.stats.chestsOpened = (save.stats.chestsOpened ?? 0) + 1
   const name = species(roll.speciesId).name
   if (roll.isNew) {
     const uid = takeId(save)

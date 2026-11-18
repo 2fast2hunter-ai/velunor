@@ -56,6 +56,8 @@ export interface AdventureStats {
   shinies: number
   fruitsUsed: number
   crystalsUsed: number
+  /** Chests opened. Older saves load as 0. The guild reads this from the server copy. */
+  chestsOpened?: number
 }
 
 /**
@@ -191,6 +193,8 @@ export interface ExpeditionState {
   marks: number
   marksDay: string
   notes: string[]
+  /** Gold-tier returns. The guild reads this from the server copy of the save. */
+  goldDone?: number
 }
 
 export interface HortEgg {

@@ -74,15 +74,18 @@ function nameLetters(raw) {
 function collapseRepeats(letters, keep) {
   return letters.replace(/(.)\1+/g, (run, ch) => ch.repeat(Math.min(keep, run.length)));
 }
-function nameIssue(raw) {
+function bannedWord(raw) {
+  const letters = nameLetters(raw);
+  const forms = [collapseRepeats(letters, 2), collapseRepeats(letters, 1)];
+  if (forms.some((form) => ALLOWED.has(form))) return false;
+  return forms.some((form) => BLOCKED.some((word) => form.includes(word)));
+}
+function nameIssue(raw, max = NAME_MAX) {
   const name = raw.trim();
   if (name.length < NAME_MIN) return "short";
-  if (name.length > NAME_MAX) return "long";
+  if (name.length > max) return "long";
   if (!/^[\p{L}\p{N} ]+$/u.test(name)) return "chars";
-  const letters = nameLetters(name);
-  const forms = [collapseRepeats(letters, 2), collapseRepeats(letters, 1)];
-  if (forms.some((form) => ALLOWED.has(form))) return null;
-  if (forms.some((form) => BLOCKED.some((word) => form.includes(word)))) return "word";
+  if (bannedWord(name)) return "word";
   return null;
 }
 function planNameSave(existing, nextName, now) {
