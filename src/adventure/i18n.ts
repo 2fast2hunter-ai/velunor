@@ -710,7 +710,26 @@ const de: Record<string, string> = {
   'research.err.locked': 'Der Turm ist noch zu.',
   'research.err.busy': 'Es läuft schon eine Forschung.',
   'research.err.max': 'Diese Linie ist voll.',
-  'research.err.gold': 'Zu wenig Gold.'
+  'research.err.gold': 'Zu wenig Gold.',
+  'daily.title': 'Tagesaufgaben',
+  'daily.note': 'Drei Aufgaben am Tag. Neue Aufgaben nach 04:00 Ortszeit. Zurückdrehen der Uhr zahlt nichts doppelt.',
+  'daily.wait': 'Die Aufgaben stehen bereit, sobald der Tag beginnt.',
+  'daily.pay': '{marks} Marken · {gold} G',
+  'daily.calendar': 'Sieben Tage',
+  'daily.calendarNote': 'Jeder Tag mit Spielstart zählt. Ein verpasster Tag setzt nichts zurück.',
+  'daily.frameDay': 'Rahmen',
+  'daily.task.chest': 'Öffne {n} Truhen',
+  'daily.task.shard': 'Sammle {n} Splitter',
+  'daily.task.wild': 'Besiege {n} wilde Monster vom Typ {type}',
+  'daily.task.trainer': 'Besiege einen Trainer',
+  'daily.task.warden': 'Besiege einen Wächter',
+  'daily.task.expedition': 'Starte {n} Expeditionen',
+  'daily.task.arena': 'Greife {n}× in der Arena an',
+  'daily.task.coop': 'Hilf beim Koop-Boss',
+  'daily.frame.daily-dawn': 'Morgenring',
+  'daily.frame.daily-tide': 'Gezeitenring',
+  'daily.frame.daily-leaf': 'Blattring',
+  'daily.frame.daily-ember': 'Glutring'
 }
 
 const en: Record<string, string> = {
@@ -1420,7 +1439,26 @@ const en: Record<string, string> = {
   'research.err.locked': 'The tower is still shut.',
   'research.err.busy': 'A study is already running.',
   'research.err.max': 'This line is full.',
-  'research.err.gold': 'Not enough gold.'
+  'research.err.gold': 'Not enough gold.',
+  'daily.title': 'Daily tasks',
+  'daily.note': 'Three tasks a day. New tasks after 04:00 local time. Turning the clock back does not pay twice.',
+  'daily.wait': 'The tasks appear when the day begins.',
+  'daily.pay': '{marks} tokens · {gold} G',
+  'daily.calendar': 'Seven days',
+  'daily.calendarNote': 'Each day you start the game counts. A missed day resets nothing.',
+  'daily.frameDay': 'Frame',
+  'daily.task.chest': 'Open {n} chests',
+  'daily.task.shard': 'Collect {n} shards',
+  'daily.task.wild': 'Defeat {n} wild monsters of type {type}',
+  'daily.task.trainer': 'Defeat a trainer',
+  'daily.task.warden': 'Defeat a warden',
+  'daily.task.expedition': 'Start {n} expeditions',
+  'daily.task.arena': 'Attack {n} times in the arena',
+  'daily.task.coop': 'Help with the co-op boss',
+  'daily.frame.daily-dawn': 'Dawn ring',
+  'daily.frame.daily-tide': 'Tide ring',
+  'daily.frame.daily-leaf': 'Leaf ring',
+  'daily.frame.daily-ember': 'Ember ring'
 }
 
 const typesEn: Record<string, string> = {

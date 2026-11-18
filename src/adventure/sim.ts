@@ -51,6 +51,7 @@ import { expeditionBusy, settleExpeditions } from './expedition'
 import { makeMon, takeId } from './save'
 import { addExp, awakenCount, battleLevel, crossedAwaken, isAlive, monStats, realHp, speciesExp } from './stats'
 import { MASTERY_BOSS, MASTERY_WIN, addMastery, masteryLevel, pullMasteryUps, settleOfflineMastery, type MasteryUp } from './mastery'
+import { noteDaily, touchDaily } from './daily'
 import { offlineCapMs, settleResearch } from './research'
 import { treeAtkBonus, treeCritAdd, treeGuardHp, treeLastBreath, treeOfflineFactor, treeStrongType } from './tree'
 import { t } from './i18n'
@@ -633,6 +634,7 @@ function doWild(save: SaveV2, chapter: ChapterDef, now: number, opts: ResolveOpt
   outcome.exp = bouts.exp
   noteFarmWin(save)
   say(save, outcome, now, line(save, 'say.winGold', { gold: outcome.gold }), quiet)
+  noteDaily(save, 'wild', 1, species(speciesId).type)
   if (trace.foeKo) {
     const traceDrop = rollWildShard(save, speciesId, rngOf(save), now)
     if (traceDrop === 'unlock') say(save, outcome, now, line(save, 'say.spurUnlock', { name }), quiet)
@@ -680,6 +682,7 @@ function doTrainer(save: SaveV2, chapter: ChapterDef, now: number, opts: Resolve
   outcome.exp = bouts.exp
   if (grantTrainerChest(save, rngOf(save))) say(save, outcome, now, line(save, 'say.trainerChest'), quiet)
   noteFarmWin(save)
+  noteDaily(save, 'trainer', 1)
   say(save, outcome, now, line(save, 'say.trainerWin', { name, gold: outcome.gold }), quiet)
   advance(save, chapter)
   return finish(save, chapter, outcome)
@@ -784,6 +787,7 @@ function doGuardian(save: SaveV2, chapter: ChapterDef, now: number, opts: Resolv
     }
     return finish(save, chapter, outcome)
   }
+  noteDaily(save, 'warden', 1)
   if (badge && !hasBadge(save, badge)) {
     save.badges.push(badge)
     if (!chapter.council) grantWardenChest(save)
@@ -1008,6 +1012,7 @@ export function simulateOffline(save: SaveV2, rawMs: number, now: number): { sum
   }
   summary.mastery = settleOfflineMastery(save, masteryBag, treeOfflineFactor(save))
   settleExpeditions(save, now)
+  touchDaily(save, new Date(now))
   syncAchievements(save)
   save.lastSeenAt = now
   return { summary, countedMs }

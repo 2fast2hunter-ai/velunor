@@ -53,6 +53,8 @@ export function auditFromSave(save: SaveV2): AuditState {
     researchLoot: researchLootMult(save),
     researchShard: researchShardYield(save),
     research: researchAudit(save),
+    dailyMarks: Math.max(0, Math.floor(Number(save.daily?.marks)) || 0),
+    dailyGold: Math.max(0, Math.floor(Number(save.daily?.gold)) || 0),
     mons,
     speciesAllowed: poolFor(enteredRegions(save))
   }

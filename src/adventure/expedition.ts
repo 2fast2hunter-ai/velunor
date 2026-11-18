@@ -5,6 +5,7 @@ import { lastDailyReset } from './arena'
 import { t } from './i18n'
 import { chestStateOf, openChest, type ChestTier } from './lootbox'
 import { chapterById } from './route'
+import { noteDaily } from './daily'
 import { researchLootMult, scaleHatch } from './research'
 import { crystalExp } from './shop'
 import { addExp } from './stats'
@@ -200,6 +201,7 @@ export function startExpedition(save: SaveV2, questId: string, uid: string, now:
     place: quest.place,
     art: quest.art
   })
+  noteDaily(save, 'expedition', 1)
   return null
 }
 

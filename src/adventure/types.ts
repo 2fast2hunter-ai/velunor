@@ -170,6 +170,8 @@ export interface SaveV2 {
   synergy?: string[]
   /** Research tower. Missing on older files; the loader fills an empty tower. */
   research?: ResearchSave
+  /** Daily tasks and the 7-day calendar. Missing on older files; the loader fills an empty board. */
+  daily?: DailySave
 }
 
 export type ResearchLineId = 'gold' | 'ep' | 'offline' | 'expedition' | 'egg' | 'shard'
@@ -186,6 +188,25 @@ export interface ResearchSave {
   job: ResearchJobState | null
   /** Remainder toward the next bonus wild shard. Kept in [0, 1). */
   shardBank: number
+}
+
+export interface DailyTaskSave {
+  kind: 'chest' | 'shard' | 'wild' | 'trainer' | 'warden' | 'expedition' | 'arena' | 'coop'
+  need: number
+  have: number
+  claimed: boolean
+  type?: import('../types').TypeId
+}
+
+export interface DailySave {
+  key: string
+  count: number
+  credited: number
+  cycle: number
+  tasks: DailyTaskSave[]
+  frames: string[]
+  marks: number
+  gold: number
 }
 
 export interface ExpeditionQuest {
