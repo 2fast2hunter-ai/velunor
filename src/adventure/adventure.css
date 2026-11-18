@@ -1739,3 +1739,15 @@ img.is-shiny { filter: drop-shadow(0 0 10px #f0c14a); }
 .tier-mark { width: 44px; height: 44px; }
 .tier-mark.on { filter: drop-shadow(0 0 6px #f0c14a); }
 .expedition-bench { display: flex; flex-wrap: wrap; gap: 8px; }
+.trade-board { display: flex; flex-direction: column; gap: 12px; }
+.trade-card { border-radius: 28px; background: #121a30; padding: 16px; }
+.trade-card.empty { min-height: 88px; }
+.trade-escrow { display: flex; flex-direction: column; align-items: center; }
+.trade-escrow svg { width: 160px; height: 48px; }
+.trade-lock, .trade-escrow p { display: flex; align-items: center; gap: 8px; }
+.trade-lock svg, .trade-escrow p svg { width: 28px; height: 28px; }
+.trade-mark { width: 18px; height: 18px; vertical-align: middle; }
+@media (prefers-reduced-motion: no-preference) {
+  .trade-escrow svg { animation: trade-slide 1.6s ease-in-out infinite; }
+}
+@keyframes trade-slide { 0%, 100% { transform: translateY(0); } 50% { transform: translateY(6px); } }
