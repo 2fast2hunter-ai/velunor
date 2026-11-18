@@ -231,6 +231,7 @@ export function normalize(save: SaveV2, now: number): SaveV2 {
   save.v = 2
   // saveVersion climbs to the current step. 2 was portrait menus.
   // 3 adds swipe, vibration, font scale and battery mode.
+  // 6 adds the anonymous account. Older files keep every stored value.
   // Older files keep every stored value. Missing setting fields take the defaults.
   const seenVersion = Math.max(0, Math.floor(Number(save.saveVersion)) || 0)
   if (seenVersion < SAVE_VERSION) save.saveVersion = SAVE_VERSION
