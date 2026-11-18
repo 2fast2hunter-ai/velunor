@@ -1,0 +1,17 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 1080 2340">
+  <rect width="1080" height="2340" fill="#0b1020"/>
+  <rect x="70" y="80" width="940" height="2180" rx="64" fill="#120e22"/>
+  <text x="120" y="220" fill="#f4efe4" font-family="sans-serif" font-size="72" font-weight="700">Team</text>
+  <rect x="120" y="280" width="220" height="12" rx="6" fill="#7eb6ff"/>
+  
+    <rect x="160" y="480" width="240" height="300" rx="32" fill="#1a2744"/><rect x="440" y="480" width="240" height="300" rx="32" fill="#1a2744"/><rect x="720" y="480" width="240" height="300" rx="32" fill="#1a2744"/><rect x="160" y="840" width="240" height="300" rx="32" fill="#1a2744"/><rect x="440" y="840" width="240" height="300" rx="32" fill="#1a2744"/><rect x="720" y="840" width="240" height="300" rx="32" fill="#1a2744"/>
+  
+  <g fill="#24365f">
+    <rect x="140" y="2080" width="120" height="72" rx="20"/>
+    <rect x="300" y="2080" width="120" height="72" rx="20"/>
+    <rect x="460" y="2080" width="160" height="72" rx="20" fill="#7eb6ff"/>
+    <rect x="660" y="2080" width="120" height="72" rx="20"/>
+    <rect x="820" y="2080" width="120" height="72" rx="20"/>
+  </g>
+</svg>
