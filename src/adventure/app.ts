@@ -44,7 +44,9 @@ import { nameProblem, pickLook, pickName } from './home'
 import { inspectSave, nextDoor, resumeSave, type Door } from './continue'
 import { FIRST_ENTRANCE_MS, HOME_ASSETS, loadFraction, mountHomeParticles } from './homeBoot'
 import { beginAdventure, loadAdventure, writeSave } from './save'
-import { browserCloudApi, watchAuth } from './cloud/supabaseApi'
+import { browserCloudApi, supabaseClient, watchAuth } from './cloud/supabaseApi'
+import { callOnline, sendBlockRow, sendReportRow } from './online/calls'
+import { nameIssue } from './online/name'
 import { createCloud, type CloudController } from './cloud/session'
 import type { CloudView } from './cloud/types'
 import { CONSENT_KEY, DEVICE_KEY, QUEUE_KEY, REPLACE_SERVER_KEY, RESET_SERVER_KEY } from './cloud/config'
@@ -141,6 +143,28 @@ let cloudView: CloudView = {
   askConsent: false,
   conflict: null
 }
+let accountUi = {
+  flagLevel: (Number(localStorage.getItem('velunor_flag')) === 2 ? 2 : Number(localStorage.getItem('velunor_flag')) === 1 ? 1 : 0) as 0 | 1 | 2,
+  playerLabel: localStorage.getItem('velunor_player_label') ?? '',
+  nameError: '',
+  nameOpen: false,
+  reportOpen: false,
+  deleteStep: 0 as 0 | 1 | 2,
+  onlineDown: false
+}
+
+function mergedCloud(): CloudView {
+  return {
+    ...cloudView,
+    flagLevel: accountUi.flagLevel,
+    playerLabel: accountUi.playerLabel,
+    nameError: accountUi.nameError,
+    nameOpen: accountUi.nameOpen,
+    reportOpen: accountUi.reportOpen,
+    deleteStep: accountUi.deleteStep,
+    onlineDown: accountUi.onlineDown
+  }
+}
 let lastInput = Date.now()
 let timer = 0
 let animating = false
@@ -218,7 +242,7 @@ function mountCloudLayer(): void {
   if (!cloudReady) return
   const host = document.getElementById('fit')
   if (!host) return
-  const html = cloudLayerHtml(cloudView, activeLang())
+  const html = cloudLayerHtml(mergedCloud(), activeLang())
   if (html) host.insertAdjacentHTML('beforeend', html)
 }
 
@@ -318,6 +342,10 @@ function attachCloud(): void {
     clearReplace: () => { localStorage.removeItem(REPLACE_SERVER_KEY) },
     onView(view) {
       cloudView = view
+      if (view.flagLevel === 0 || view.flagLevel === 1 || view.flagLevel === 2) {
+        accountUi.flagLevel = view.flagLevel
+        localStorage.setItem('velunor_flag', String(view.flagLevel))
+      }
       refreshCloud()
     }
   })
@@ -848,6 +876,7 @@ function runFirstEntrance(next: SaveV2): Promise<void> {
       return
     }
     if (ally) ally.style.opacity = '0'
+    stage.classList.add('is-entering')
     const reduced = effectsReduced()
     const layer = document.createElement('button')
     layer.type = 'button'
@@ -859,11 +888,36 @@ function runFirstEntrance(next: SaveV2): Promise<void> {
     layer.innerHTML = `<img src="${art(`home/starter_${id}.png`)}" alt=""><b>${label}</b>`
     layer.setAttribute('aria-label', t(next.settings.lang, 'boot.enter', { name: label }))
     stage.appendChild(layer)
+    const sprite = document.getElementById('ally-sprite') ?? ally
+    if (sprite) {
+      const stageRect = stage.getBoundingClientRect()
+      const box = sprite.getBoundingClientRect()
+      const scale = stage.clientWidth > 0 ? stageRect.width / stage.clientWidth : 0
+      const rawLeft = (box.left - stageRect.left) / scale
+      const left = box.width > 8 ? rawLeft : rawLeft - 140
+      const top = (box.top - stageRect.top) / scale
+      const width = box.width > 8 ? box.width / scale : 280
+      const height = box.height > 8 ? box.height / scale : 280
+      if (scale > 0 && left > -40 && top > -40 && left < 1000 && top < 2200) {
+        layer.style.left = `${left}px`
+        layer.style.top = `${top}px`
+        layer.style.width = `${width}px`
+        layer.style.height = `${height}px`
+        layer.style.padding = '0'
+        layer.style.margin = '0'
+        const img = layer.querySelector('img')
+        if (img instanceof HTMLElement) {
+          img.style.width = `${width}px`
+          img.style.height = `${height}px`
+        }
+      }
+    }
     let settled = false
     const finish = () => {
       if (settled) return
       settled = true
       layer.remove()
+      stage.classList.remove('is-entering')
       if (ally) ally.style.opacity = ''
       resolve()
     }
@@ -1077,7 +1131,7 @@ function render(step = save?.step): void {
     mult: wheelMult,
     symbols: wheelSymbols,
     note: wheelNote
-  }, { mapOpen, moreOpen, pcScroll, filtersOpen, dexOpen, shopTab, shopHint: Date.now() < shopFlashUntil, fighting: animating, cloud: cloudView }))
+  }, { mapOpen, moreOpen, pcScroll, filtersOpen, dexOpen, shopTab, shopHint: Date.now() < shopFlashUntil, fighting: animating, cloud: mergedCloud() }))
   if (screen === 'team') {
     pcIds = visiblePc(save, pc)
     const view = document.getElementById('pc-viewport')
@@ -1970,6 +2024,84 @@ async function runOffline(rawMs: number): Promise<void> {
   if (!overlay) kick()
 }
 
+function nameErrorKey(issue: ReturnType<typeof nameIssue>): string {
+  if (issue === 'short') return 'cloud.nameShort'
+  if (issue === 'long') return 'cloud.nameLong'
+  if (issue === 'chars') return 'cloud.nameChars'
+  return 'cloud.nameWord'
+}
+
+async function savePlayerName(): Promise<void> {
+  const field = document.getElementById('player-name')
+  const raw = field instanceof HTMLInputElement ? field.value : ''
+  const issue = nameIssue(raw)
+  if (issue) {
+    accountUi.nameError = t(activeLang(), nameErrorKey(issue))
+    accountUi.nameOpen = true
+    mountCloudLayer()
+    const again = document.getElementById('player-name')
+    if (again instanceof HTMLInputElement) again.value = raw
+    return
+  }
+  const result = await callOnline('set-name', { name: raw.trim() })
+  if (!result.ok) {
+    accountUi.onlineDown = result.missing
+    accountUi.nameError = t(activeLang(), result.missing ? 'cloud.unavailable' : result.error === 'wait' ? 'cloud.nameWait' : result.error === 'taken' ? 'cloud.nameTaken' : 'cloud.nameWord')
+    mountCloudLayer()
+    return
+  }
+  accountUi.playerLabel = String(result.data.label ?? '')
+  accountUi.nameError = ''
+  accountUi.nameOpen = false
+  accountUi.onlineDown = false
+  localStorage.setItem('velunor_player_label', accountUi.playerLabel)
+  if (save) render()
+  else mountCloudLayer()
+}
+
+async function sendReport(reason: string): Promise<void> {
+  const field = document.getElementById('report-target')
+  const target = field instanceof HTMLInputElement ? field.value.trim() : ''
+  if (!target) {
+    accountUi.nameError = t(activeLang(), 'cloud.reportHint')
+    mountCloudLayer()
+    return
+  }
+  const result = await sendReportRow(target, reason)
+  accountUi.reportOpen = false
+  accountUi.onlineDown = !result.ok && result.missing
+  accountUi.nameError = result.ok ? '' : t(activeLang(), result.missing ? 'cloud.unavailable' : 'cloud.nameWord')
+  if (save && screen === 'options') render()
+  else mountCloudLayer()
+}
+
+async function sendBlock(): Promise<void> {
+  const field = document.getElementById('player-target')
+  const target = field instanceof HTMLInputElement ? field.value.trim() : ''
+  if (!target) return
+  const result = await sendBlockRow(target)
+  accountUi.onlineDown = !result.ok && result.missing
+  accountUi.nameError = result.ok ? t(activeLang(), 'cloud.blocked') : t(activeLang(), 'cloud.unavailable')
+  if (save) render()
+}
+
+async function deleteAccount(): Promise<void> {
+  const result = await callOnline('delete-account', {})
+  if (!result.ok) {
+    accountUi.onlineDown = true
+    accountUi.deleteStep = 0
+    accountUi.nameError = t(activeLang(), 'cloud.unavailable')
+    if (save) render()
+    return
+  }
+  try { await supabaseClient().auth.signOut() } catch { /* a new visit signs in again */ }
+  localStorage.removeItem(SAVE_KEY_V2)
+  localStorage.removeItem(SAVE_BACKUP)
+  localStorage.removeItem('velunor_flag')
+  localStorage.removeItem('velunor_player_label')
+  window.location.reload()
+}
+
 function onClick(event: Event): void {
   if (ignoreClick) {
     ignoreClick = false
@@ -1980,6 +2112,52 @@ function onClick(event: Event): void {
   const node = target.closest('[data-act]')
   if (!node) return
   const act = node.getAttribute('data-act')
+  if (act === 'name-open') {
+    accountUi.nameOpen = true
+    accountUi.nameError = ''
+    accountUi.reportOpen = false
+    mountCloudLayer()
+    return
+  }
+  if (act === 'name-close' || act === 'report-close' || act === 'delete-no') {
+    accountUi.nameOpen = false
+    accountUi.reportOpen = false
+    accountUi.deleteStep = 0
+    mountCloudLayer()
+    return
+  }
+  if (act === 'name-save') {
+    void savePlayerName()
+    return
+  }
+  if (act === 'report-open') {
+    accountUi.reportOpen = true
+    accountUi.nameOpen = false
+    mountCloudLayer()
+    return
+  }
+  if (act === 'report-send') {
+    void sendReport(node.getAttribute('data-reason') ?? '')
+    return
+  }
+  if (act === 'block-player') {
+    void sendBlock()
+    return
+  }
+  if (act === 'delete-ask') {
+    accountUi.deleteStep = 1
+    mountCloudLayer()
+    return
+  }
+  if (act === 'delete-next') {
+    accountUi.deleteStep = 2
+    mountCloudLayer()
+    return
+  }
+  if (act === 'delete-yes') {
+    void deleteAccount()
+    return
+  }
   if (act === 'consent') {
     cloud?.setConsent(node.getAttribute('data-consent') === 'yes' ? 'yes' : 'no')
     if (save) kick()
@@ -2626,7 +2804,7 @@ function onPointerDown(event: PointerEvent): void {
   sheetY = grab ? event.clientY : null
   const card = target?.closest('[data-press="card"]')
   heldCard = card?.getAttribute('data-uid') ?? ''
-  const block = Boolean(target?.closest('input, textarea, select, .sheet-grab'))
+  const block = Boolean(target?.closest('input, textarea, select, .sheet-grab, #cloud-layer'))
   const onShop = Boolean(target?.closest('.shop-screen'))
   gesture = { x: event.clientX, y: event.clientY, t: performance.now(), block, shop: onShop }
 }

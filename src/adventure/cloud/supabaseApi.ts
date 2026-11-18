@@ -3,6 +3,7 @@ import type { SaveV2 } from '../types'
 import { anonymousDisabled } from './analytics'
 import { SUPABASE_PUBLISHABLE_KEY, SUPABASE_URL } from './config'
 import type { ProgressScore } from './progress'
+import type { AuditState } from '../online/check'
 import type { CloudApi } from './types'
 import type { AnalyticsEvent } from './analytics'
 
@@ -79,6 +80,16 @@ export function browserCloudApi(): CloudApi {
     async deleteSave(userId) {
       const { error } = await supabase.from('saves').delete().eq('user_id', userId)
       return { error: error?.message ?? null }
+    },
+    async syncCheck(snapshot: AuditState) {
+      try {
+        const { data, error } = await supabase.functions.invoke('sync-check', { body: { audit: snapshot } })
+        if (error) return { flag: 0 as const, missing: true }
+        const flag = data && data.flag === 2 ? 2 : data && data.flag === 1 ? 1 : 0
+        return { flag: flag as 0 | 1 | 2, missing: false }
+      } catch {
+        return { flag: 0 as const, missing: true }
+      }
     },
     async writeEvents(userId, events: AnalyticsEvent[]) {
       if (!events.length) return { error: null }

@@ -1,6 +1,7 @@
 import { acceptEvent, capQueue, enqueue, eventsToSend, validEmail, type AnalyticsEvent, type Consent } from './analytics'
 import { decideSync, previewOf, saveFromUnknown, syncDue } from './conflict'
 import { APP_VERSION } from './config'
+import { auditFromSave } from '../online/snapshot'
 import { progressOf } from './progress'
 import type { CloudApi, CloudNotice, CloudPorts, CloudStatus, CloudView, SyncReason } from './types'
 
@@ -32,6 +33,7 @@ export function createCloud(api: CloudApi, ports: CloudPorts): CloudController {
   let holding: { local: NonNullable<ReturnType<CloudPorts['loadSave']>>; remote: NonNullable<ReturnType<CloudPorts['loadSave']>> } | null = null
   let pending: Promise<void> | null = null
   let again: SyncReason | null = null
+  let flagLevel: 0 | 1 | 2 | null = null
   let sessionSent = false
   let sessionProps: Record<string, string | number> | null = null
   let sending = false
@@ -44,7 +46,8 @@ export function createCloud(api: CloudApi, ports: CloudPorts): CloudController {
       email,
       notice,
       askConsent: consent === 'unset',
-      conflict: holding ? { local: previewOf(holding.local), remote: previewOf(holding.remote) } : null
+      conflict: holding ? { local: previewOf(holding.local), remote: previewOf(holding.remote) } : null,
+      ...(flagLevel == null ? {} : { flagLevel })
     }
   }
 
@@ -98,6 +101,16 @@ export function createCloud(api: CloudApi, ports: CloudPorts): CloudController {
     track('session_start', sessionProps)
   }
 
+  async function noteFlag(local: NonNullable<ReturnType<CloudPorts['loadSave']>>): Promise<void> {
+    if (!api.syncCheck) return
+    try {
+      const verdict = await api.syncCheck(auditFromSave(local))
+      if (!verdict.missing) flagLevel = verdict.flag
+    } catch {
+      /* A missing function must not stop the local save. */
+    }
+  }
+
   async function run(reason: SyncReason): Promise<void> {
     if (!ports.online()) {
       status = 'offline'
@@ -145,6 +158,7 @@ export function createCloud(api: CloudApi, ports: CloudPorts): CloudController {
         ports.clearReplace()
         lastSync = ports.now()
         if (notice === 'write-fail') setNotice('')
+        await noteFlag(local)
       }
       emit()
       await flush(reason === 'pause')
@@ -174,7 +188,10 @@ export function createCloud(api: CloudApi, ports: CloudPorts): CloudController {
       if (wrote.error) {
         setNotice('write-fail')
         synced = false
-      } else if (notice === 'write-fail' || notice === 'offline') setNotice('')
+      } else {
+        if (notice === 'write-fail' || notice === 'offline') setNotice('')
+        await noteFlag(local)
+      }
     } else if (decision.type === 'download' && remote) {
       ports.storeSave(remote)
       if (notice === 'write-fail' || notice === 'offline') setNotice('')

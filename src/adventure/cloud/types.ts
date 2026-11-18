@@ -23,6 +23,14 @@ export interface CloudView {
   notice: CloudNotice
   askConsent: boolean
   conflict: { local: DevicePreview; remote: DevicePreview } | null
+  /** 2 locks trade, arena, ranks and guild contributions. Single player stays open. */
+  flagLevel?: 0 | 1 | 2
+  playerLabel?: string
+  nameError?: string
+  nameOpen?: boolean
+  reportOpen?: boolean
+  deleteStep?: 0 | 1 | 2
+  onlineDown?: boolean
 }
 
 export interface CloudApi {
@@ -32,6 +40,8 @@ export interface CloudApi {
   writeSave(userId: string, save: SaveV2, progress: ProgressScore, deviceId: string): Promise<{ error: string | null }>
   deleteSave(userId: string): Promise<{ error: string | null }>
   writeEvents(userId: string, events: AnalyticsEvent[]): Promise<{ error: string | null }>
+  /** Missing when the function is not deployed yet. The local game keeps going. */
+  syncCheck?(snapshot: import('../online/check').AuditState): Promise<{ flag: 0 | 1 | 2; missing: boolean }>
 }
 
 export interface CloudPorts {
