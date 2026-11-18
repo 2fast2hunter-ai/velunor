@@ -4,7 +4,8 @@ import { fight1v1, type FightSide } from './battle'
 import { SAVE_VERSION } from './const'
 import { auditSync } from './online/check'
 import { auditFromSave } from './online/snapshot'
-import { beginAdventure, normalize } from './save'
+import { beginAdventure, loadAdventure, normalize, writeSave } from './save'
+import type { StorageLike } from './types'
 import { simulateOffline } from './sim'
 import { FRUIT_MS, grantGold, useFruit } from './shop'
 import { roadInterval } from './sources'
@@ -70,8 +71,8 @@ describe('mastery tree', () => {
     ;(save as { tree?: unknown }).tree = undefined
     save.mons[save.team[0]].lvl = 11
     normalize(save, 2_000)
-    expect(SAVE_VERSION).toBe(11)
-    expect(save.saveVersion).toBe(11)
+    expect(SAVE_VERSION).toBe(12)
+    expect(save.saveVersion).toBe(12)
     expect(save.tree?.nodes).toEqual([])
     expect(save.mons[save.team[0]].lvl).toBe(11)
     expect(treePointParts(save).earned).toBe(parts.earned)
@@ -79,7 +80,7 @@ describe('mastery tree', () => {
 
   it('applies each of the 24 nodes and refunds them on respec', () => {
     expect(TREE_NODES).toHaveLength(24)
-    expect(NODE_COSTS.reduce((sum, cost) => sum + cost, 0) * 3).toBe(126)
+    expect(NODE_COSTS.reduce((sum, cost) => sum + cost, 0) * 3).toBe(111)
     const save = beginAdventure('Ada', { skin: 0, hair: 0, color: 0 }, 'm01', 1_000)
     save.badges = ['Kieselwappen', 'Wellenwappen', 'Funkenwappen']
     expect(buyNode(save, 'chest-2')).toBeTruthy()
@@ -149,5 +150,30 @@ describe('mastery tree', () => {
     const clean = auditFromSave(cheat)
     cheat.gold += 2_000_000
     expect(auditSync(clean, auditFromSave(cheat), 60_000).flag).toBe(2)
+  })
+
+  it('keeps bought nodes and frees the cheaper cost once', () => {
+    const save = beginAdventure('Ada', { skin: 0, hair: 0, color: 0 }, 'm01', 1_000)
+    save.badges = Array.from({ length: 40 }, (_, index) => `Wappen ${index}`)
+    fill(save, 'chest', 8)
+    save.saveVersion = 11
+    const spent = branchNodes('chest').reduce((sum, node) => sum + node.cost, 0)
+    expect(spent).toBe(37)
+    expect(treeFree(save)).toBe(treePointParts(save).earned - 37)
+    const box: StorageLike = {
+      getItem: () => null,
+      setItem: () => undefined,
+      removeItem: () => undefined
+    }
+    const memory = new Map<string, string>()
+    box.getItem = (key) => memory.get(key) ?? null
+    box.setItem = (key, value) => { memory.set(key, value) }
+    writeSave(box, save)
+    const loaded = loadAdventure(box, 2_000)
+    expect(loaded?.tree?.nodes).toEqual(save.tree?.nodes)
+    expect(loaded?.log.some((row) => row.text.includes('Baum neu bepreist'))).toBe(true)
+    writeSave(box, loaded!)
+    const again = loadAdventure(box, 3_000)
+    expect(again?.log.filter((row) => row.text.includes('Baum neu bepreist'))).toHaveLength(1)
   })
 })

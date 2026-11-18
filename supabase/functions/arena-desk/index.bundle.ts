@@ -9891,7 +9891,7 @@ function starFactor(stars) {
 }
 
 // src/adventure/mastery.ts
-var MASTERY_STEPS = [1e3, 4e3, 12e3, 3e4, 6e4];
+var MASTERY_STEPS = [1e3, 3e3, 8e3, 18e3, 35e3];
 function masteryLevel(ep) {
   const points = Math.max(0, Math.floor(ep) || 0);
   let level2 = 0;
@@ -9953,36 +9953,26 @@ var KNOWN = new Set(SYNERGY_IDS);
 
 // src/adventure/synergy.ts
 var ROWS = [
-  { id: "gewitter", name: "Gewitter", types: ["water", "lightning"], bonus: { crit: 0.1 } },
-  { id: "flaechenbrand", name: "Fl\xE4chenbrand", types: ["fire", "wind"], bonus: { atk: 0.08 } },
-  { id: "wurzelgrund", name: "Wurzelgrund", types: ["plant", "earth"], bonus: { hp: 0.1 } },
-  { id: "polarstrom", name: "Polarstrom", types: ["ice", "water"], bonus: { foeSpd: 0.95 } },
-  { id: "bollwerk", name: "Bollwerk", types: ["stone", "metal"], bonus: { def: 0.1 } },
-  { id: "prisma", name: "Prisma", types: ["light", "crystal"], bonus: { atk: 0.05, crit: 0.05 } },
-  { id: "zwielicht", name: "Zwielicht", types: ["shadow", "ghost"], bonus: { dodge: 0.06 } },
-  { id: "rudelkraft", name: "Rudelkraft", types: ["fighting", "beast"], bonus: { wardenAtk: 0.08 } },
-  { id: "schwarmgift", name: "Schwarmgift", types: ["poison", "insect"], bonus: { status: 1.1 } },
-  { id: "resonanz", name: "Resonanz", types: ["psychic", "sound"], bonus: { cooldown: 0.9 } },
-  { id: "glutschwinge", name: "Glutschwinge", types: ["dragon", "fire"], bonus: { atk: 0.06, hp: 0.04 } },
-  { id: "sturmlied", name: "Sturmlied", types: ["wind", "sound"], bonus: { spd: 0.05 } }
+  { id: "gewitter", name: "Gewitter", types: ["water", "lightning"], bonus: { crit: 0.3, atk: 0.02 }, power: 123 },
+  { id: "flaechenbrand", name: "Fl\xE4chenbrand", types: ["fire", "wind"], bonus: { atk: 0.04 }, power: 130 },
+  { id: "wurzelgrund", name: "Wurzelgrund", types: ["plant", "earth"], bonus: { hp: 0.05 }, power: 132 },
+  { id: "polarstrom", name: "Polarstrom", types: ["ice", "water"], bonus: { foeSpd: 0.96 }, power: 176 },
+  { id: "bollwerk", name: "Bollwerk", types: ["stone", "metal"], bonus: { def: 0.06 }, power: 115 },
+  { id: "prisma", name: "Prisma", types: ["light", "crystal"], bonus: { atk: 0.03, crit: 0.1 }, power: 128 },
+  { id: "zwielicht", name: "Zwielicht", types: ["shadow", "ghost"], bonus: { dodge: 0.04 }, power: 133 },
+  { id: "rudelkraft", name: "Rudelkraft", types: ["fighting", "beast"], bonus: { wardenAtk: 0.06 }, power: 135 },
+  { id: "schwarmgift", name: "Schwarmgift", types: ["poison", "insect"], bonus: { status: 1.15 }, power: 111 },
+  { id: "resonanz", name: "Resonanz", types: ["psychic", "sound"], bonus: { cooldown: 0.92 }, power: 111 },
+  { id: "glutschwinge", name: "Glutschwinge", types: ["dragon", "fire"], bonus: { atk: 0.02, hp: 0.03 }, power: 135 },
+  { id: "sturmlied", name: "Sturmlied", types: ["wind", "sound"], bonus: { spd: 0.04 }, power: 176 }
 ];
-function powerOf(bonus) {
-  const crit = (bonus.crit ?? 0) * 100;
-  const status = bonus.status ? (bonus.status - 1) * 100 : 0;
-  const cooldown = bonus.cooldown ? (1 - bonus.cooldown) * 100 : 0;
-  const foe = bonus.foeSpd ? (1 - bonus.foeSpd) * 100 : 0;
-  return Math.round(
-    (bonus.atk ?? 0) * 100 + (bonus.hp ?? 0) * 100 + (bonus.def ?? 0) * 100 + (bonus.spd ?? 0) * 100 + (bonus.wardenAtk ?? 0) * 100 + (bonus.dodge ?? 0) * 100 + crit + status + cooldown + foe
-  );
-}
 var SYNERGIES = ROWS.map((row2, order) => ({
   ...row2,
-  order,
-  power: powerOf(row2.bonus)
+  order
 }));
 
 // src/adventure/tree.ts
-var NODE_COSTS = [2, 2, 4, 4, 6, 6, 8, 10];
+var NODE_COSTS = [1, 2, 3, 4, 5, 6, 7, 9];
 var CHEST_SHINY_BASE = 1 / 200;
 var HOUR_MS = 60 * 60 * 1e3;
 var TREE_CAP_MAX_MS = 12 * HOUR_MS;

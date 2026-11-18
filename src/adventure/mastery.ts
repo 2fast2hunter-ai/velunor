@@ -5,11 +5,10 @@ import type { SaveV2 } from './types'
 
 /**
  * Meisterschafts-EP for one species.
- * At speed 1 a main fighter wins about 1,220 fights an hour (13 wild and 3 trainers
- * on a 20-step loop, 2.8 s each). 60,000 M-EP is then about 49 hours.
- * The spec's 7,000 would have been about 6 hours, so the steps are scaled up.
+ * Rank 5 is 35,000 M-EP. At speed 3 that is inside 8–12 hours for the first species,
+ * counting fight points and a duplicate chest of that species.
  */
-export const MASTERY_STEPS = [1_000, 4_000, 12_000, 30_000, 60_000] as const
+export const MASTERY_STEPS = [1_000, 3_000, 8_000, 18_000, 35_000] as const
 export const MASTERY_WIN = 1
 export const MASTERY_BOSS = 5
 export const MASTERY_DUPE = 10

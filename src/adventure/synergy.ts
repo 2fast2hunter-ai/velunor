@@ -7,15 +7,16 @@ export { SYNERGY_CAP, synergyKnown } from './synergyIds'
 /**
  * Team type synergies. At most two are active.
  * A missing choice means the two strongest that the six-monster team actually has.
- * Sturmlied is +5% SPD. The old banner-seal bonus does not fit the lootbox rules.
- * "+10% crit" is 10% of the base crit chance (0.1), so +1 percentage point.
+ * Sturmlied is +4% SPD. The old banner-seal bonus does not fit the lootbox rules.
+ * Crit is a fraction of the base crit chance (0.1). 0.3 is +3 percentage points.
+ * `power` is the measured Arena-L100 mirror wins out of 200, not a formula.
  */
 export interface SynergyBonus {
   atk?: number
   hp?: number
   def?: number
   spd?: number
-  /** Multiplier on the opposing side's speed. 0.95 is −5%. */
+  /** Multiplier on the opposing side's speed. 0.96 is −4%. */
   foeSpd?: number
   /** Fraction of the base crit chance. 0.1 is +10% crit. */
   crit?: number
@@ -51,44 +52,29 @@ export interface SynergyMods {
   cooldown: number
 }
 
-export const PURITY_THREE = 0.05
-export const PURITY_FOUR = 0.1
+export const PURITY_THREE = 0.03
+export const PURITY_FOUR = 0.05
+/** Both active synergies together stop at +6% on one of ATK, HP, DEF or speed. */
+export const SYNERGY_STAT_CAP = 0.06
 
-const ROWS: readonly Omit<SynergyDef, 'power' | 'order'>[] = [
-  { id: 'gewitter', name: 'Gewitter', types: ['water', 'lightning'], bonus: { crit: 0.1 } },
-  { id: 'flaechenbrand', name: 'Flächenbrand', types: ['fire', 'wind'], bonus: { atk: 0.08 } },
-  { id: 'wurzelgrund', name: 'Wurzelgrund', types: ['plant', 'earth'], bonus: { hp: 0.1 } },
-  { id: 'polarstrom', name: 'Polarstrom', types: ['ice', 'water'], bonus: { foeSpd: 0.95 } },
-  { id: 'bollwerk', name: 'Bollwerk', types: ['stone', 'metal'], bonus: { def: 0.1 } },
-  { id: 'prisma', name: 'Prisma', types: ['light', 'crystal'], bonus: { atk: 0.05, crit: 0.05 } },
-  { id: 'zwielicht', name: 'Zwielicht', types: ['shadow', 'ghost'], bonus: { dodge: 0.06 } },
-  { id: 'rudelkraft', name: 'Rudelkraft', types: ['fighting', 'beast'], bonus: { wardenAtk: 0.08 } },
-  { id: 'schwarmgift', name: 'Schwarmgift', types: ['poison', 'insect'], bonus: { status: 1.1 } },
-  { id: 'resonanz', name: 'Resonanz', types: ['psychic', 'sound'], bonus: { cooldown: 0.9 } },
-  { id: 'glutschwinge', name: 'Glutschwinge', types: ['dragon', 'fire'], bonus: { atk: 0.06, hp: 0.04 } },
-  { id: 'sturmlied', name: 'Sturmlied', types: ['wind', 'sound'], bonus: { spd: 0.05 } }
+const ROWS: readonly Omit<SynergyDef, 'order'>[] = [
+  { id: 'gewitter', name: 'Gewitter', types: ['water', 'lightning'], bonus: { crit: 0.3, atk: 0.02 }, power: 123 },
+  { id: 'flaechenbrand', name: 'Flächenbrand', types: ['fire', 'wind'], bonus: { atk: 0.04 }, power: 130 },
+  { id: 'wurzelgrund', name: 'Wurzelgrund', types: ['plant', 'earth'], bonus: { hp: 0.05 }, power: 132 },
+  { id: 'polarstrom', name: 'Polarstrom', types: ['ice', 'water'], bonus: { foeSpd: 0.96 }, power: 176 },
+  { id: 'bollwerk', name: 'Bollwerk', types: ['stone', 'metal'], bonus: { def: 0.06 }, power: 115 },
+  { id: 'prisma', name: 'Prisma', types: ['light', 'crystal'], bonus: { atk: 0.03, crit: 0.1 }, power: 128 },
+  { id: 'zwielicht', name: 'Zwielicht', types: ['shadow', 'ghost'], bonus: { dodge: 0.04 }, power: 133 },
+  { id: 'rudelkraft', name: 'Rudelkraft', types: ['fighting', 'beast'], bonus: { wardenAtk: 0.06 }, power: 135 },
+  { id: 'schwarmgift', name: 'Schwarmgift', types: ['poison', 'insect'], bonus: { status: 1.15 }, power: 111 },
+  { id: 'resonanz', name: 'Resonanz', types: ['psychic', 'sound'], bonus: { cooldown: 0.92 }, power: 111 },
+  { id: 'glutschwinge', name: 'Glutschwinge', types: ['dragon', 'fire'], bonus: { atk: 0.02, hp: 0.03 }, power: 135 },
+  { id: 'sturmlied', name: 'Sturmlied', types: ['wind', 'sound'], bonus: { spd: 0.04 }, power: 176 }
 ]
-
-function powerOf(bonus: SynergyBonus): number {
-  const crit = (bonus.crit ?? 0) * 100
-  const status = bonus.status ? (bonus.status - 1) * 100 : 0
-  const cooldown = bonus.cooldown ? (1 - bonus.cooldown) * 100 : 0
-  const foe = bonus.foeSpd ? (1 - bonus.foeSpd) * 100 : 0
-  return Math.round(
-    (bonus.atk ?? 0) * 100
-    + (bonus.hp ?? 0) * 100
-    + (bonus.def ?? 0) * 100
-    + (bonus.spd ?? 0) * 100
-    + (bonus.wardenAtk ?? 0) * 100
-    + (bonus.dodge ?? 0) * 100
-    + crit + status + cooldown + foe
-  )
-}
 
 export const SYNERGIES: readonly SynergyDef[] = ROWS.map((row, order) => ({
   ...row,
-  order,
-  power: powerOf(row.bonus)
+  order
 }))
 
 export function presentSynergies(types: readonly TypeId[]): SynergyDef[] {
@@ -113,7 +99,7 @@ export function activeSynergies(types: readonly TypeId[], picked?: readonly stri
   return out
 }
 
-/** 3 of one type: +5% of that type's stats. 4 or more: +10%. */
+/** 3 of one type: +3% of that type's stats. 4 or more: +5%. */
 export function purityOf(types: readonly TypeId[], type: TypeId): number {
   let count = 0
   for (const row of types) if (row === type) count += 1
@@ -148,6 +134,11 @@ export function synergyMods(active: readonly SynergyDef[], warden: boolean): Syn
     if (bonus.status) mods.statusDur *= bonus.status
     if (bonus.cooldown) mods.cooldown *= bonus.cooldown
   }
+  mods.hp = Math.min(SYNERGY_STAT_CAP, mods.hp)
+  mods.def = Math.min(SYNERGY_STAT_CAP, mods.def)
+  mods.spd = Math.min(SYNERGY_STAT_CAP, mods.spd)
+  mods.atk = Math.min(SYNERGY_STAT_CAP, mods.atk)
+  mods.wardenAtk = Math.min(Math.max(0, SYNERGY_STAT_CAP - mods.atk), mods.wardenAtk)
   return mods
 }
 
