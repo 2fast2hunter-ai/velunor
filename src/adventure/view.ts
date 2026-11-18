@@ -57,11 +57,12 @@ import { ultName, ultPattern } from './ult'
 import { FACES, MULTIPLIERS, PRIZES, faceById, spinCost, wheelOpen, type Multiplier, type SymbolId } from './wheel'
 import { expToNext, isAlive, monStats, realHp } from './stats'
 import { masteryFrame, masteryGoal, masteryLevel, masteryStarRow } from './mastery'
+import { BOARDS, RANK_FRAMES, type RankLine, type RankModel } from './online/ranks'
 import type { OfflineSummary } from './sim'
 import type { SaveV2 } from './types'
 import { PC_VIEW_FALLBACK, virtualWindow } from './virtualList'
 
-export type Screen = 'adventure' | 'progress' | 'team' | 'codex' | 'activities' | 'shop' | 'achievements' | 'options' | 'guide'
+export type Screen = 'adventure' | 'progress' | 'team' | 'codex' | 'activities' | 'shop' | 'achievements' | 'ranks' | 'options' | 'guide'
 
 export interface WheelPanel {
   tab: 'hort' | 'wheel' | 'chests'
@@ -113,6 +114,7 @@ export interface ShellFlags {
   shopHint?: boolean
   cloud?: CloudView
   masteryNote?: string
+  ranks?: RankModel
 }
 
 const base = (): string => import.meta.env.BASE_URL || '/'
@@ -247,7 +249,7 @@ const TAB_ICONS: Record<string, string> = {
 }
 
 function tabbar(save: SaveV2, screen: Screen, moreOpen: boolean): string {
-  const moreScreens: Screen[] = ['shop', 'achievements', 'options', 'guide']
+  const moreScreens: Screen[] = ['shop', 'achievements', 'ranks', 'options', 'guide']
   const tabs: { id: string; label: string; active: boolean; act: string; screen?: Screen }[] = [
     { id: 'adventure', label: 'nav.adventure', active: screen === 'adventure', act: 'screen', screen: 'adventure' },
     { id: 'team', label: 'nav.team', active: screen === 'team', act: 'screen', screen: 'team' },
@@ -270,9 +272,12 @@ function moreSheet(save: SaveV2, open: boolean): string {
     ['options', 'moreOptions', 'nav.options'],
     ['guide', 'moreGuide', 'nav.guide']
   ]
+  const ranks = `<button type="button" data-act="screen" data-screen="ranks"><svg class="ui-icon" viewBox="0 0 24 24" aria-hidden="true"><path fill="currentColor" d="M4 20V9h4v11H4zm6 0V4h4v16h-4zm6 0v-7h4v7h-4z"/></svg>${tr(save, 'nav.ranks')}</button>`
   return `<div class="more-sheet card" ${open ? '' : 'hidden'}>
     <div class="more-who">${lookFace(save.look)}<b>${esc(save.name)}</b></div>
-    ${items.map(([id, icon, label]) => `<button type="button" data-act="screen" data-screen="${id}">${ui(icon)}${tr(save, label)}</button>`).join('')}
+    ${items.slice(0, 2).map(([id, icon, label]) => `<button type="button" data-act="screen" data-screen="${id}">${ui(icon)}${tr(save, label)}</button>`).join('')}
+    ${ranks}
+    ${items.slice(2).map(([id, icon, label]) => `<button type="button" data-act="screen" data-screen="${id}">${ui(icon)}${tr(save, label)}</button>`).join('')}
   </div>`
 }
 
@@ -1178,8 +1183,61 @@ function guide(save: SaveV2): string {
   </div>`
 }
 
+function placeBadge(place: number): string {
+  const tone = place === 1 ? 'gold' : place === 2 ? 'silver' : place === 3 ? 'bronze' : 'plain'
+  return `<svg class="rank-badge ${tone}" viewBox="0 0 64 64" aria-hidden="true"><circle cx="32" cy="28" r="16"/><path d="M24 42l8 14 8-14"/><text x="32" y="33" text-anchor="middle">${place}</text></svg>`
+}
+
+function frameGlyph(id: string, on: boolean): string {
+  const paths: Record<string, string> = {
+    codex: '<rect x="6" y="8" width="52" height="48" rx="14"/>',
+    progress: '<path d="M32 6l22 10v16c0 14-10 22-22 26C20 54 10 46 10 32V16z"/>',
+    week: '<circle cx="32" cy="32" r="22"/><path d="M32 16v16l10 6" fill="none"/>',
+    shimmer: '<path d="M32 8l6 14 16 2-12 10 4 16-14-8-14 8 4-16L10 24l16-2z"/>',
+    mastery: '<path d="M12 46l8-22 12 14 12-14 8 22z"/><path d="M18 50h28"/>',
+    ehren: '<circle cx="32" cy="32" r="20"/><circle cx="32" cy="32" r="10"/>'
+  }
+  return `<svg class="rank-frame ${on ? 'on' : ''}" viewBox="0 0 64 64" aria-hidden="true">${paths[id] ?? paths.codex}</svg>`
+}
+
+function rankRows(rows: RankLine[]): string {
+  if (!rows.length) return ''
+  return rows.map((row) => `<article class="rank-row ${row.self ? 'is-me' : ''}">
+    ${placeBadge(row.place)}
+    <div><b>${esc(row.label)}</b><div class="muted">${row.detail || row.score.toLocaleString('de-DE')}</div></div>
+  </article>`).join('')
+}
+
+function ranksScreen(save: SaveV2, model: RankModel | undefined): string {
+  const board = model?.board ?? 'codex'
+  const tabs = BOARDS.map((id) => `<button type="button" data-act="rank-board" data-board="${id}" class="${id === board ? 'on' : ''}">${tr(save, `ranks.board.${id}`)}</button>`).join('')
+  const frames = RANK_FRAMES.map((frame) => `<div class="rank-honor">${frameGlyph(frame.id, Boolean(model?.honors?.includes(frame.id)))}<span>${esc(tr(save, `ranks.frame.${frame.id}`))}</span></div>`).join('')
+  const status = model?.status ?? 'offline'
+  const body = status === 'loading'
+    ? `<p class="muted">${tr(save, 'ranks.loading')}</p>`
+    : status !== 'ready'
+      ? `<p class="muted">${tr(save, 'ranks.offline')}</p>`
+      : `${model?.excluded ? `<p class="muted">${tr(save, 'ranks.excluded')}</p>` : ''}
+        <h2>${tr(save, 'ranks.top')}</h2>
+        ${rankRows(model?.top ?? []) || `<p class="muted">${tr(save, 'ranks.empty')}</p>`}
+        <h2>${tr(save, 'ranks.around')}</h2>
+        ${rankRows(model?.around ?? []) || `<p class="muted">${tr(save, 'ranks.noSelf')}</p>`}`
+  return `<div class="menu-screen">
+    <div class="menu-scroll">
+      <div class="card panel">
+        <h2>${tr(save, 'nav.ranks')}</h2>
+        <div class="rank-tabs">${tabs}</div>
+        ${body}
+        <h2>${tr(save, 'ranks.frames')}</h2>
+        <div class="rank-frames">${frames}</div>
+      </div>
+    </div>
+  </div>`
+}
+
 function center(save: SaveV2, screen: Screen, now: number, pc: PcQuery, dex: CodexQuery, selected: string | null, debug: boolean, wheel: WheelPanel, shell: ShellFlags): string {
   if (screen === 'progress') return `<div class="menu-screen"><div class="menu-scroll">${progress(save)}</div></div>`
+  if (screen === 'ranks') return ranksScreen(save, shell.ranks)
   if (screen === 'team') return team(save, pc, selected, shell)
   if (screen === 'codex') return codex(save, dex, shell)
   if (screen === 'activities') return activitiesView(save, now, selected, wheel)

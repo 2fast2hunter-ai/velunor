@@ -44,6 +44,8 @@ export interface AuditState {
   shards: number
   /** Sum of Meisterschafts-EP. Older audits omit it and count as 0. */
   mastery?: number
+  /** Sum of mastery ranks, 0 to 5 per species. Older audits omit it. */
+  masteryRanks?: number
   mons: AuditMon[]
   /** Species the opened regions can actually award. */
   speciesAllowed: string[]

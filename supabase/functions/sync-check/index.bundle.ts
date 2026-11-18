@@ -5256,6 +5256,15 @@ function species(id) {
   return found;
 }
 
+// src/adventure/mastery.ts
+var MASTERY_STEPS = [1e3, 4e3, 12e3, 3e4, 6e4];
+function masteryLevel(ep) {
+  const points = Math.max(0, Math.floor(ep) || 0);
+  let level = 0;
+  for (const step of MASTERY_STEPS) if (points >= step) level += 1;
+  return level;
+}
+
 // data/regions.json
 var regions_default = {
   regions: [
@@ -9981,6 +9990,7 @@ function auditFromSave(save) {
   }));
   const shards = Object.values(save.shards ?? {}).reduce((sum, n) => sum + (Number(n) || 0), 0);
   const mastery = Object.values(save.mastery ?? {}).reduce((sum, n) => sum + (Number(n) || 0), 0);
+  const masteryRanks = Object.values(save.mastery ?? {}).reduce((sum, n) => sum + masteryLevel(Number(n) || 0), 0);
   const chests = (save.chests?.kiesel ?? 0) + (save.chests?.silber ?? 0) + (save.chests?.gold ?? 0) + (save.chests?.sternen ?? 0) + (save.roadReady ?? 0);
   return {
     at: save.lastSeenAt,
@@ -9992,6 +10002,7 @@ function auditFromSave(save) {
     chests,
     shards,
     mastery,
+    masteryRanks,
     mons,
     speciesAllowed: poolFor(enteredRegions(save))
   };
