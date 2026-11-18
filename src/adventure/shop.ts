@@ -3,6 +3,7 @@ import { RARITY_EXP } from './const'
 import { t } from './i18n'
 import { chapterById, type ChapterDef, type Spawn } from './route'
 import { addExp, crossedAwaken, expToNext } from './stats'
+import { treeFruitMs, treeGoldMult } from './tree'
 import { species } from '../data'
 import type { CrystalId, FruitId, SaveV2 } from './types'
 
@@ -137,7 +138,8 @@ export function combatExpFactor(save: SaveV2, at: number): number {
 }
 
 export function goldFactor(save: SaveV2, at: number): number {
-  return fruitActive(save, 'muenz', at) ? 1.25 : 1
+  const fruit = fruitActive(save, 'muenz', at) ? 1.25 : 1
+  return fruit * treeGoldMult(save)
 }
 
 export function grantGold(save: SaveV2, amount: number, at: number): number {
@@ -240,7 +242,7 @@ export function useFruit(save: SaveV2, id: FruitId, now: number): string | null 
   }
   save.bag.fruits[id] -= 1
   save.stats.fruitsUsed += 1
-  const until = now + FRUIT_MS
+  const until = now + treeFruitMs(save)
   const current = save.activeFruits.find((fruit) => fruit.id === id)
   if (current) current.until = until
   else save.activeFruits.push({ id, until })

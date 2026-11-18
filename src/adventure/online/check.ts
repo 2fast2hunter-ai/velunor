@@ -46,6 +46,10 @@ export interface AuditState {
   mastery?: number
   /** Sum of mastery ranks, 0 to 5 per species. Older audits omit it. */
   masteryRanks?: number
+  /** Gold multiplier from the mastery tree. Older audits omit it and count as 1. */
+  treeGold?: number
+  /** Offline cap in ms from the mastery tree. Older audits omit it and count as 8 h. */
+  treeCapMs?: number
   mons: AuditMon[]
   /** Species the opened regions can actually award. */
   speciesAllowed: string[]
@@ -66,11 +70,12 @@ function encounters(elapsedMs: number): number {
 }
 
 /** Highest gold the clock allows: speed ×3, coin fruit, a full trainer party, then the 1.2 buffer. */
-export function allowedGold(elapsedMs: number, region: number, chapter: number): number {
+export function allowedGold(elapsedMs: number, region: number, chapter: number, goldMult = 1): number {
   const level = reachLevel(region, chapter)
   const per = TRAINER_GOLD_PER_LEVEL * TRAINER_PARTY * level * COIN_BONUS
   const crest = (1000 + 750 * level) * COIN_BONUS
-  return Math.ceil((encounters(elapsedMs) * per + crest) * PLAUSIBILITY_BUFFER)
+  const mult = Math.max(1, Math.min(1.1, goldMult))
+  return Math.ceil((encounters(elapsedMs) * per + crest) * PLAUSIBILITY_BUFFER * mult)
 }
 
 /** Highest EP: speed ×3, learn fruit, buddy, full bench, four hort guests, rarity 9, then the 1.2 buffer. */
@@ -82,13 +87,14 @@ export function allowedEp(elapsedMs: number, region: number, chapter: number): n
   return Math.ceil(encounters(elapsedMs) * base * (team + hort) * PLAUSIBILITY_BUFFER)
 }
 
-function countedOffline(elapsedMs: number): number {
-  return Math.min(Math.max(0, elapsedMs), OFFLINE_CAP_MS)
+function countedOffline(elapsedMs: number, capMs = OFFLINE_CAP_MS): number {
+  const cap = Math.min(12 * 60 * 60 * 1000, Math.max(OFFLINE_CAP_MS, capMs))
+  return Math.min(Math.max(0, elapsedMs), cap)
 }
 
 /** Fights the offline catch-up can finish, capped at 8 h, or the faster online tempo. */
-function fightCeiling(elapsedMs: number): number {
-  const offline = Math.floor(countedOffline(elapsedMs) / BASE_ENCOUNTER_MS)
+function fightCeiling(elapsedMs: number, capMs = OFFLINE_CAP_MS): number {
+  const offline = Math.floor(countedOffline(elapsedMs, capMs) / BASE_ENCOUNTER_MS)
   const online = Math.ceil(Math.max(0, elapsedMs) / SPEED3_MS)
   return Math.max(offline, online, 1)
 }
@@ -97,28 +103,28 @@ function fightCeiling(elapsedMs: number): number {
  * One chest per fight covers finds and trainer drops, plus the road pile and the shop.
  * Storage stops at 99 of each of the four tiers.
  */
-export function allowedChests(elapsedMs: number): number {
-  const road = Math.floor(countedOffline(elapsedMs) / 60_000) + 5
+export function allowedChests(elapsedMs: number, capMs = OFFLINE_CAP_MS): number {
+  const road = Math.floor(countedOffline(elapsedMs, capMs) / 60_000) + 5
   const shop = Math.max(1, Math.ceil(Math.max(elapsedMs, 1) / 86_400_000)) * 10
-  return Math.min(99 * 4 + 5, Math.ceil((fightCeiling(elapsedMs) + road + shop) * PLAUSIBILITY_BUFFER))
+  return Math.min(99 * 4 + 5, Math.ceil((fightCeiling(elapsedMs, capMs) + road + shop) * PLAUSIBILITY_BUFFER))
 }
 
 /** One shard per fight. Offline catch-up and speed ×3 both fit, then the 1.2 buffer. */
-export function allowedShards(elapsedMs: number): number {
-  return Math.ceil(fightCeiling(elapsedMs) * PLAUSIBILITY_BUFFER)
+export function allowedShards(elapsedMs: number, capMs = OFFLINE_CAP_MS): number {
+  return Math.ceil(fightCeiling(elapsedMs, capMs) * PLAUSIBILITY_BUFFER)
 }
 
 /** One point per won bout, a boss bonus every few bouts, and a duplicate a minute. */
-export function allowedMastery(elapsedMs: number): number {
-  const fights = fightCeiling(elapsedMs)
+export function allowedMastery(elapsedMs: number, capMs = OFFLINE_CAP_MS): number {
+  const fights = fightCeiling(elapsedMs, capMs)
   const bosses = Math.ceil(fights / 6)
-  const dupes = Math.ceil(countedOffline(elapsedMs) / 60_000)
+  const dupes = Math.ceil(countedOffline(elapsedMs, capMs) / 60_000)
   return Math.ceil((fights + bosses * 5 + dupes * 10) * PLAUSIBILITY_BUFFER)
 }
 
 /** New monsters have to fit in chests, shard crafts, eggs and the wheel. */
-export function allowedNewMons(elapsedMs: number): number {
-  return allowedChests(elapsedMs) + Math.floor(allowedShards(elapsedMs) / 5) + Math.ceil(Math.max(0, elapsedMs) / 3_600_000) + 6
+export function allowedNewMons(elapsedMs: number, capMs = OFFLINE_CAP_MS): number {
+  return allowedChests(elapsedMs, capMs) + Math.floor(allowedShards(elapsedMs, capMs) / 5) + Math.ceil(Math.max(0, elapsedMs) / 3_600_000) + 6
 }
 
 export function crestsInOrder(badges: readonly string[]): boolean {
@@ -186,7 +192,9 @@ export function auditSync(before: AuditState | null, after: AuditState, elapsedM
   const chapter = Math.max(before.chapter, after.chapter)
   const goldGain = after.gold - before.gold
   const windowMs = Math.max(0, elapsed)
-  const goldFlag = gainFlag(goldGain, allowedGold(windowMs, region, chapter))
+  const goldMult = Math.max(1, before.treeGold ?? 1, after.treeGold ?? 1)
+  const capMs = Math.max(OFFLINE_CAP_MS, before.treeCapMs ?? 0, after.treeCapMs ?? 0)
+  const goldFlag = gainFlag(goldGain, allowedGold(windowMs, region, chapter, goldMult))
   if (goldFlag) reasons.push('gold')
   flag = bump(flag, goldFlag)
   const epGain = after.ep - before.ep
@@ -200,7 +208,7 @@ export function auditSync(before: AuditState | null, after: AuditState, elapsedM
   const known = new Set(before.mons.map((mon) => mon.uid))
   const fresh = after.mons.filter((mon) => !known.has(mon.uid))
   const allowed = new Set(after.speciesAllowed)
-  if (fresh.length > allowedNewMons(windowMs)) {
+  if (fresh.length > allowedNewMons(windowMs, capMs)) {
     reasons.push('monsters')
     flag = 2
   }
@@ -215,17 +223,17 @@ export function auditSync(before: AuditState | null, after: AuditState, elapsedM
     }
   }
   const chestGain = after.chests - before.chests
-  if (chestGain > allowedChests(windowMs)) {
+  if (chestGain > allowedChests(windowMs, capMs)) {
     reasons.push('chests')
     flag = 2
   }
   const shardGain = after.shards - before.shards
-  if (shardGain > allowedShards(windowMs)) {
+  if (shardGain > allowedShards(windowMs, capMs)) {
     reasons.push('shards')
     flag = 2
   }
   const masteryGain = (after.mastery ?? 0) - (before.mastery ?? 0)
-  const masteryFlag = gainFlag(masteryGain, allowedMastery(windowMs))
+  const masteryFlag = gainFlag(masteryGain, allowedMastery(windowMs, capMs))
   if (masteryFlag) reasons.push('mastery')
   flag = bump(flag, masteryFlag)
   return { flag, reasons }

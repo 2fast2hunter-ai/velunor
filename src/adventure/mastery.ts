@@ -77,9 +77,9 @@ export function pullMasteryUps(): MasteryUp[] {
 }
 
 /** Offline points are kept whole, then halved and floored once per absence. */
-export function settleOfflineMastery(save: SaveV2, bag: Map<string, number>): MasteryUp[] {
+export function settleOfflineMastery(save: SaveV2, bag: Map<string, number>, factor = OFFLINE_EXP_FACTOR): MasteryUp[] {
   for (const [speciesId, raw] of bag) {
-    const paid = Math.floor(Math.max(0, raw) * OFFLINE_EXP_FACTOR)
+    const paid = Math.floor(Math.max(0, raw) * factor)
     if (paid > 0) addMastery(save, speciesId, paid)
   }
   bag.clear()

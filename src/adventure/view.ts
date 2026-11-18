@@ -58,11 +58,12 @@ import { FACES, MULTIPLIERS, PRIZES, faceById, spinCost, wheelOpen, type Multipl
 import { expToNext, isAlive, monStats, realHp } from './stats'
 import { masteryFrame, masteryGoal, masteryLevel, masteryStarRow } from './mastery'
 import { BOARDS, RANK_FRAMES, type RankLine, type RankModel } from './online/ranks'
+import { TREE_NODES, branchNodes, respecCost, treeFree, treePointParts, treeUnlocked, chestShinyChance, type BranchId } from './tree'
 import type { OfflineSummary } from './sim'
 import type { SaveV2 } from './types'
 import { PC_VIEW_FALLBACK, virtualWindow } from './virtualList'
 
-export type Screen = 'adventure' | 'progress' | 'team' | 'codex' | 'activities' | 'shop' | 'achievements' | 'ranks' | 'options' | 'guide'
+export type Screen = 'adventure' | 'progress' | 'team' | 'codex' | 'activities' | 'shop' | 'achievements' | 'ranks' | 'tree' | 'options' | 'guide'
 
 export interface WheelPanel {
   tab: 'hort' | 'wheel' | 'chests'
@@ -115,6 +116,7 @@ export interface ShellFlags {
   cloud?: CloudView
   masteryNote?: string
   ranks?: RankModel
+  treePick?: string
 }
 
 const base = (): string => import.meta.env.BASE_URL || '/'
@@ -249,7 +251,7 @@ const TAB_ICONS: Record<string, string> = {
 }
 
 function tabbar(save: SaveV2, screen: Screen, moreOpen: boolean): string {
-  const moreScreens: Screen[] = ['shop', 'achievements', 'ranks', 'options', 'guide']
+  const moreScreens: Screen[] = ['shop', 'achievements', 'ranks', 'tree', 'options', 'guide']
   const tabs: { id: string; label: string; active: boolean; act: string; screen?: Screen }[] = [
     { id: 'adventure', label: 'nav.adventure', active: screen === 'adventure', act: 'screen', screen: 'adventure' },
     { id: 'team', label: 'nav.team', active: screen === 'team', act: 'screen', screen: 'team' },
@@ -273,10 +275,12 @@ function moreSheet(save: SaveV2, open: boolean): string {
     ['guide', 'moreGuide', 'nav.guide']
   ]
   const ranks = `<button type="button" data-act="screen" data-screen="ranks"><svg class="ui-icon" viewBox="0 0 24 24" aria-hidden="true"><path fill="currentColor" d="M4 20V9h4v11H4zm6 0V4h4v16h-4zm6 0v-7h4v7h-4z"/></svg>${tr(save, 'nav.ranks')}</button>`
+  const treeBtn = `<button type="button" data-act="screen" data-screen="tree"><svg class="ui-icon" viewBox="0 0 24 24" aria-hidden="true"><path fill="none" stroke="currentColor" stroke-width="2" d="M12 22V8M7 22V12M17 22V12M12 8l-5 4M12 8l5 4"/></svg>${tr(save, 'nav.tree')}</button>`
   return `<div class="more-sheet card" ${open ? '' : 'hidden'}>
     <div class="more-who">${lookFace(save.look)}<b>${esc(save.name)}</b></div>
     ${items.slice(0, 2).map(([id, icon, label]) => `<button type="button" data-act="screen" data-screen="${id}">${ui(icon)}${tr(save, label)}</button>`).join('')}
     ${ranks}
+    ${treeBtn}
     ${items.slice(2).map(([id, icon, label]) => `<button type="button" data-act="screen" data-screen="${id}">${ui(icon)}${tr(save, label)}</button>`).join('')}
   </div>`
 }
@@ -822,7 +826,8 @@ function chestRatesHtml(save: SaveV2, tier: ChestTier): string {
     </details>`
   }).join('')
   const pity = pityLine(tier, tier === 'kiesel' ? 0 : save.pity[tier])
-  return `<p class="muted">${esc(tr(save, 'chest.hint'))}</p>${pity ? `<p data-pity="${tier}">${esc(pity)}</p>` : ''}<div class="rate-list">${rows}</div>`
+  const shimmer = formatPercent(chestShinyChance(save) * 100)
+  return `<p class="muted">${esc(tr(save, 'chest.hint'))}</p><p class="muted">${esc(tr(save, 'tree.shinyLine', { n: shimmer }))}</p>${pity ? `<p data-pity="${tier}">${esc(pity)}</p>` : ''}<div class="rate-list">${rows}</div>`
 }
 
 function chestView(save: SaveV2, wheel: WheelPanel): string {
@@ -1235,9 +1240,59 @@ function ranksScreen(save: SaveV2, model: RankModel | undefined): string {
   </div>`
 }
 
+function treeGlyph(branch: BranchId, index: number, on: boolean): string {
+  const color = branch === 'chest' ? '#f0c14a' : branch === 'fight' ? '#ef9a9a' : '#90caf9'
+  const shapes = [
+    '<circle cx="32" cy="32" r="14"/>',
+    '<rect x="18" y="18" width="28" height="28" rx="8"/>',
+    '<polygon points="32,14 50,46 14,46"/>',
+    '<path d="M16 42c8-18 24-18 32 0" fill="none"/>',
+    '<circle cx="32" cy="32" r="8"/><circle cx="32" cy="32" r="18" fill="none"/>',
+    '<path d="M18 46 L32 16 L46 46"/>',
+    '<rect x="16" y="22" width="32" height="22" rx="8"/>',
+    '<polygon points="32,8 37,24 54,24 40,34 45,50 32,40 19,50 24,34 10,24 27,24"/>'
+  ]
+  return `<svg class="tree-glyph" viewBox="0 0 64 64" aria-hidden="true"><g fill="${on ? color : 'none'}" stroke="${color}" stroke-width="3">${shapes[index] ?? shapes[0]}</g></svg>`
+}
+
+function treeScreen(save: SaveV2, pick: string | undefined, now: number): string {
+  const lang = L(save)
+  const parts = treePointParts(save)
+  const chosen = TREE_NODES.find((node) => node.id === pick) ?? TREE_NODES[0]
+  const owned = new Set(save.tree?.nodes ?? [])
+  const columns = (['chest', 'fight', 'time'] as const).map((branch) => {
+    const nodes = branchNodes(branch).map((node) => `<button type="button" class="tree-node ${owned.has(node.id) ? 'owned' : ''} ${node.id === chosen.id ? 'on' : ''}" data-act="tree-node" data-id="${node.id}">
+      ${treeGlyph(branch, node.index, owned.has(node.id))}
+      <span>${esc(lang === 'en' ? node.nameEn : node.nameDe)}</span>
+    </button>`).join('')
+    return `<div class="tree-col"><h3>${tr(save, `tree.branch.${branch}`)}</h3>${nodes}</div>`
+  }).join('')
+  const cost = respecCost(save, now)
+  const locked = !treeUnlocked(save)
+  return `<div class="menu-screen">
+    <div class="menu-scroll">
+      <div class="card panel">
+        <h2>${tr(save, 'nav.tree')}</h2>
+        <p>${tr(save, 'tree.points', { free: treeFree(save), earned: parts.earned })}</p>
+        <p class="muted">${tr(save, 'tree.parts', parts)}</p>
+        ${locked ? `<p class="muted">${tr(save, 'tree.locked')}</p>` : ''}
+        <div class="tree-board">${columns}</div>
+        <article class="tree-detail">
+          <h3>${esc(lang === 'en' ? chosen.nameEn : chosen.nameDe)}</h3>
+          <p>${esc(lang === 'en' ? chosen.textEn : chosen.textDe)}</p>
+          <p class="muted">${tr(save, 'tree.cost', { n: chosen.cost })}</p>
+          <button type="button" class="primary" data-act="tree-buy" data-id="${chosen.id}" ${owned.has(chosen.id) || locked ? 'disabled' : ''}>${tr(save, owned.has(chosen.id) ? 'tree.owned' : 'tree.buy')}</button>
+        </article>
+        <button type="button" data-act="tree-reset">${tr(save, 'tree.respec', { gold: cost ? cost.toLocaleString(lang === 'en' ? 'en' : 'de-DE') : tr(save, 'tree.free') })}</button>
+      </div>
+    </div>
+  </div>`
+}
+
 function center(save: SaveV2, screen: Screen, now: number, pc: PcQuery, dex: CodexQuery, selected: string | null, debug: boolean, wheel: WheelPanel, shell: ShellFlags): string {
   if (screen === 'progress') return `<div class="menu-screen"><div class="menu-scroll">${progress(save)}</div></div>`
   if (screen === 'ranks') return ranksScreen(save, shell.ranks)
+  if (screen === 'tree') return treeScreen(save, shell.treePick, now)
   if (screen === 'team') return team(save, pc, selected, shell)
   if (screen === 'codex') return codex(save, dex, shell)
   if (screen === 'activities') return activitiesView(save, now, selected, wheel)

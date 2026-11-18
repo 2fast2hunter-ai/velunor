@@ -41,7 +41,7 @@ describe('lootbox L4 and L5', () => {
       regionsOpen: [1]
     }))
     const loaded = loadAdventure(storage, 50)
-    expect(loaded?.saveVersion).toBe(7)
+    expect(loaded?.saveVersion).toBe(8)
     expect(loaded?.mons.u1.lvl).toBe(40)
     expect(loaded?.mons.u1.shiny).toBe(true)
     expect(loaded?.mons.u2.hp).toBe(3)

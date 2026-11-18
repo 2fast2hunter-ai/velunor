@@ -1708,3 +1708,11 @@ img.is-shiny { filter: drop-shadow(0 0 10px #f0c14a); }
 .rank-honor { display: flex; flex-direction: column; align-items: center; gap: 6px; text-align: center; }
 .rank-frame { width: 88px; height: 88px; fill: none; stroke: #8d97ad; stroke-width: 3; opacity: 0.35; }
 .rank-frame.on { stroke: #f0c14a; opacity: 1; }
+.tree-board { display: grid; grid-template-columns: 1fr 1fr 1fr; gap: 12px; }
+.tree-col { display: flex; flex-direction: column; gap: 8px; }
+.tree-col h3 { margin: 0; text-align: center; }
+.tree-node { border: 0; border-radius: 22px; background: #121a30; color: #fff8e1; padding: 8px; display: flex; flex-direction: column; align-items: center; gap: 4px; }
+.tree-node.owned { background: #243156; }
+.tree-node.on { box-shadow: inset 0 0 0 4px #f0c14a; }
+.tree-glyph { width: 56px; height: 56px; }
+.tree-detail { margin-top: 16px; padding: 16px; border-radius: 22px; background: #10182c; }

@@ -4,7 +4,6 @@ import {
   BASE_ENCOUNTER_MS,
   CAUGHT_SCALE,
   OFFLINE_BLOCK,
-  OFFLINE_CAP_MS,
   SAVE_BACKUP,
   SAVE_KEY_V2,
   SEAL_BLEND,
@@ -47,6 +46,7 @@ import { beginAdventure, loadAdventure, writeSave } from './save'
 import { browserCloudApi, watchAuth } from './cloud/supabaseApi'
 import { callOnline, claimRankRewards, clearVelunorKeys, loadOwnLabel, loadRankPage, sendBlockRow, sendReportRow } from './online/calls'
 import { isBoard, parseRankPage, RANK_FRAMES, type BoardId, type RankModel } from './online/ranks'
+import { buyNode, respecTree, treeCapMs } from './tree'
 import { saveOwesCatchUp } from './online/check'
 import { nameIssue } from './online/name'
 import { createCloud, type CloudController } from './cloud/session'
@@ -162,6 +162,7 @@ let masteryUntil = 0
 let rankBoard: BoardId = 'codex'
 let rankToken = 0
 let rankView: RankModel = { board: 'codex', status: 'offline', top: [], around: [], honors: [], excluded: false }
+let treePick = 'chest-1'
 let saveReady = false
 let wipingAccount = false
 
@@ -1171,7 +1172,7 @@ function render(step = save?.step): void {
     mult: wheelMult,
     symbols: wheelSymbols,
     note: wheelNote
-  }, { mapOpen, moreOpen, pcScroll, filtersOpen, dexOpen, shopTab, shopHint: Date.now() < shopFlashUntil, fighting: animating, cloud: mergedCloud(), masteryNote: Date.now() < masteryUntil ? masteryNote : '', ranks: { ...rankView, board: rankBoard, excluded: mergedCloud().flagLevel === 2 } }))
+  }, { mapOpen, moreOpen, pcScroll, filtersOpen, dexOpen, shopTab, shopHint: Date.now() < shopFlashUntil, fighting: animating, cloud: mergedCloud(), masteryNote: Date.now() < masteryUntil ? masteryNote : '', ranks: { ...rankView, board: rankBoard, excluded: mergedCloud().flagLevel === 2 }, treePick }))
   if (screen === 'team') {
     pcIds = visiblePc(save, pc)
     const view = document.getElementById('pc-viewport')
@@ -2067,7 +2068,7 @@ async function runOffline(rawMs: number): Promise<void> {
 
 async function finishOffline(rawMs: number): Promise<void> {
   if (!save) return
-  const counted = Math.min(Math.max(0, rawMs), OFFLINE_CAP_MS)
+  const counted = Math.min(Math.max(0, rawMs), treeCapMs(save))
   const total = Math.floor(counted / BASE_ENCOUNTER_MS)
   if (total < OFFLINE_BLOCK && rawMs < WELCOME_AFTER_MS) {
     const quiet = simulateOffline(save, rawMs, Date.now())
@@ -2439,6 +2440,21 @@ function onClick(event: Event): void {
     if (screen === 'options') void refreshOwnLabel()
     if (screen === 'ranks') void refreshRanks()
     kick()
+    return
+  }
+  if (act === 'tree-node') {
+    treePick = node.getAttribute('data-id') || treePick
+    render()
+    return
+  }
+  if (act === 'tree-buy' || act === 'tree-reset') {
+    if (!save) return
+    const reason = act === 'tree-buy'
+      ? buyNode(save, node.getAttribute('data-id') || treePick)
+      : respecTree(save, Date.now())
+    if (reason) save.log.push({ t: Date.now(), text: reason })
+    else try { writeSave(localStorage, save) } catch { /* keep the local tree */ }
+    render()
     return
   }
   if (act === 'rank-board') {
