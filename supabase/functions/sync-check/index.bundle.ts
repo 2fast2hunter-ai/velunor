@@ -10050,6 +10050,13 @@ function lastDailyReset(now) {
   const back = local.hour < 4 ? 1 : 0;
   return berlinWall(local.year, local.month, local.day - back, 4);
 }
+function arenaDayKey(now) {
+  return lastDailyReset(now).toISOString();
+}
+
+// src/adventure/daily.ts
+var DAILY_MARK_CAP = 15;
+var DAILY_GOLD_CAP = 3e3;
 
 // src/adventure/research.ts
 var RESEARCH_LINES = ["gold", "ep", "offline", "expedition", "egg", "shard"];
@@ -10409,6 +10416,13 @@ function auditSync(before, after, elapsedMs, bonusGold = 0, nowMs = Date.now()) 
   const goldGain = after.gold - before.gold;
   const windowMs = Math.max(0, elapsed);
   const goldMult = Math.max(1, before.treeGold ?? 1, after.treeGold ?? 1) * Math.max(1, before.researchGold ?? 1, after.researchGold ?? 1);
+  const serverDay = arenaDayKey(new Date(nowMs));
+  const sameDaily = before.dailyDay === serverDay;
+  const marksGain = (after.dailyMarks ?? 0) - (before.dailyMarks ?? 0);
+  const dailyGoldGain = (after.dailyGold ?? 0) - (before.dailyGold ?? 0);
+  const marksAlready = sameDaily ? before.dailyMarksToday ?? 0 : 0;
+  const goldAlready = sameDaily ? before.dailyGoldToday ?? 0 : 0;
+  const dailyGoldRoom = dailyGoldGain > 0 ? Math.max(0, Math.min(dailyGoldGain, DAILY_GOLD_CAP - goldAlready)) : 0;
   const capMs = Math.max(OFFLINE_CAP_MS, before.treeCapMs ?? 0, after.treeCapMs ?? 0);
   const fightRoom = allowedGold(windowMs, region, chapter, goldMult) + Math.max(0, Math.floor(bonusGold));
   const day = lastDailyReset(new Date(nowMs)).toISOString();
@@ -10416,7 +10430,7 @@ function auditSync(before, after, elapsedMs, bonusGold = 0, nowMs = Date.now()) 
   const dayCap = Math.ceil(expeditionGoldCap(region, chapter) * Math.max(1, Math.min(1.4, lootMult)));
   const expeditionRoom = before.expeditionDay === day && typeof before.expeditionGoldLeft === "number" ? Math.max(0, Math.min(dayCap, before.expeditionGoldLeft)) : dayCap;
   const spent = researchSpend(before.research ?? null, after.research ?? null);
-  const goldFlag = gainFlag(goldGain + spent, fightRoom + expeditionRoom);
+  const goldFlag = gainFlag(goldGain + spent, fightRoom + expeditionRoom + dailyGoldRoom);
   if (goldFlag) reasons.push("gold");
   flag = bump(flag, goldFlag);
   const epGain = after.ep - before.ep;
@@ -10464,6 +10478,14 @@ function auditSync(before, after, elapsedMs, bonusGold = 0, nowMs = Date.now()) 
   if (researchFlag) {
     reasons.push("research");
     flag = bump(flag, researchFlag);
+  }
+  if (marksGain < 0 || dailyGoldGain < 0 || marksAlready + Math.max(0, marksGain) > DAILY_MARK_CAP || goldAlready + Math.max(0, dailyGoldGain) > DAILY_GOLD_CAP) {
+    reasons.push("daily");
+    flag = 2;
+  } else {
+    after.dailyDay = serverDay;
+    after.dailyMarksToday = marksAlready + Math.max(0, marksGain);
+    after.dailyGoldToday = goldAlready + Math.max(0, dailyGoldGain);
   }
   if (flag === 0) {
     const extra = Math.max(0, goldGain - fightRoom);
@@ -10535,6 +10557,8 @@ function auditFromSave(save) {
     researchLoot: researchLootMult(save),
     researchShard: researchShardYield(save),
     research: researchAudit(save),
+    dailyMarks: Math.max(0, Math.floor(Number(save.daily?.marks)) || 0),
+    dailyGold: Math.max(0, Math.floor(Number(save.daily?.gold)) || 0),
     mons,
     speciesAllowed: poolFor(enteredRegions(save))
   };

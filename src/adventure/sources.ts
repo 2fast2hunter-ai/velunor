@@ -12,6 +12,7 @@ import {
   type ChestTier
 } from './lootbox'
 import { makeMon, takeId } from './save'
+import { noteDaily } from './daily'
 import { takeWildShards } from './research'
 import { treeRoadCut, treeShardBonus } from './tree'
 import type { SaveV2 } from './types'
@@ -138,7 +139,9 @@ export function rollWildShard(save: SaveV2, speciesId: string, rng: () => number
   chance *= 1 + treeShardBonus(save)
   if (rng() >= chance) return null
   const owned = Object.values(save.mons).some((mon) => mon.species === speciesId)
-  save.shards[speciesId] = (save.shards[speciesId] ?? 0) + takeWildShards(save)
+  const gained = takeWildShards(save)
+  save.shards[speciesId] = (save.shards[speciesId] ?? 0) + gained
+  noteDaily(save, 'shard', gained)
   if (owned) return 'shard'
   const need = unlockShardCost(rarity)
   if ((save.shards[speciesId] ?? 0) < need) return 'shard'
@@ -194,7 +197,9 @@ export function meltDuplicate(save: SaveV2, uid: string): string | null {
   if (save.active === uid) save.active = save.team[0] ?? null
   if (save.buddy === uid) save.buddy = null
   save.dust += dust
-  save.shards[mon.species] = (save.shards[mon.species] ?? 0) + shardValue(species(mon.species).baseRarity)
+  const melted = shardValue(species(mon.species).baseRarity)
+  save.shards[mon.species] = (save.shards[mon.species] ?? 0) + melted
+  noteDaily(save, 'shard', melted)
   return null
 }
 

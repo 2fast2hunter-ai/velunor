@@ -1,5 +1,6 @@
 import { BASE_ENCOUNTER_MS, OFFLINE_CAP_MS } from '../const'
-import { lastDailyReset } from '../arena'
+import { arenaDayKey, lastDailyReset } from '../arena'
+import { DAILY_GOLD_CAP, DAILY_MARK_CAP } from '../daily'
 import { expeditionGold } from '../expedition'
 import { researchDurationMs, researchMsNeeded, researchSpend, type ResearchAudit } from '../research'
 
@@ -63,6 +64,16 @@ export interface AuditState {
   researchShard?: number
   /** Completed ranks and the one running job. Missing means nothing has been researched. */
   research?: ResearchAudit
+  /** Lifetime marks paid by daily tasks. Older audits omit it and count as 0. */
+  dailyMarks?: number
+  /** Lifetime gold paid by daily tasks and the calendar. Older audits omit it and count as 0. */
+  dailyGold?: number
+  /** Berlin day (04:00) the counters below belong to. Set by the server, not the client. */
+  dailyDay?: string
+  /** Marks from this source already accepted on dailyDay. */
+  dailyMarksToday?: number
+  /** Gold from this source already accepted on dailyDay. */
+  dailyGoldToday?: number
   /** Gold the server has already granted as gifts and co-op rewards. */
   bonusGold?: number
   /** Berlin day whose expedition gold allowance is stored below. */
@@ -247,6 +258,13 @@ export function auditSync(before: AuditState | null, after: AuditState, elapsedM
   const goldGain = after.gold - before.gold
   const windowMs = Math.max(0, elapsed)
   const goldMult = Math.max(1, before.treeGold ?? 1, after.treeGold ?? 1) * Math.max(1, before.researchGold ?? 1, after.researchGold ?? 1)
+  const serverDay = arenaDayKey(new Date(nowMs))
+  const sameDaily = before.dailyDay === serverDay
+  const marksGain = (after.dailyMarks ?? 0) - (before.dailyMarks ?? 0)
+  const dailyGoldGain = (after.dailyGold ?? 0) - (before.dailyGold ?? 0)
+  const marksAlready = sameDaily ? (before.dailyMarksToday ?? 0) : 0
+  const goldAlready = sameDaily ? (before.dailyGoldToday ?? 0) : 0
+  const dailyGoldRoom = dailyGoldGain > 0 ? Math.max(0, Math.min(dailyGoldGain, DAILY_GOLD_CAP - goldAlready)) : 0
   const capMs = Math.max(OFFLINE_CAP_MS, before.treeCapMs ?? 0, after.treeCapMs ?? 0)
   const fightRoom = allowedGold(windowMs, region, chapter, goldMult) + Math.max(0, Math.floor(bonusGold))
   const day = lastDailyReset(new Date(nowMs)).toISOString()
@@ -256,7 +274,7 @@ export function auditSync(before: AuditState | null, after: AuditState, elapsedM
     ? Math.max(0, Math.min(dayCap, before.expeditionGoldLeft))
     : dayCap
   const spent = researchSpend(before.research ?? null, after.research ?? null)
-  const goldFlag = gainFlag(goldGain + spent, fightRoom + expeditionRoom)
+  const goldFlag = gainFlag(goldGain + spent, fightRoom + expeditionRoom + dailyGoldRoom)
   if (goldFlag) reasons.push('gold')
   flag = bump(flag, goldFlag)
   const epGain = after.ep - before.ep
@@ -304,6 +322,14 @@ export function auditSync(before: AuditState | null, after: AuditState, elapsedM
   if (researchFlag) {
     reasons.push('research')
     flag = bump(flag, researchFlag)
+  }
+  if (marksGain < 0 || dailyGoldGain < 0 || marksAlready + Math.max(0, marksGain) > DAILY_MARK_CAP || goldAlready + Math.max(0, dailyGoldGain) > DAILY_GOLD_CAP) {
+    reasons.push('daily')
+    flag = 2
+  } else {
+    after.dailyDay = serverDay
+    after.dailyMarksToday = marksAlready + Math.max(0, marksGain)
+    after.dailyGoldToday = goldAlready + Math.max(0, dailyGoldGain)
   }
   if (flag === 0) {
     const extra = Math.max(0, goldGain - fightRoom)

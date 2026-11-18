@@ -6,6 +6,7 @@ import { expToNext } from './stats'
 import { clampChestCount, emptyPity, enteredRegions, startChests, type ChestTier } from './lootbox'
 import { fontScale } from './touch'
 import { settleExpeditions } from './expedition'
+import { isDailyFrame, normalizeDaily } from './daily'
 import { normalizeResearch } from './research'
 import { normalizeTreeNodes } from './tree'
 import { SYNERGY_CAP, synergyKnown } from './synergyIds'
@@ -240,6 +241,7 @@ export function normalize(save: SaveV2, now: number): SaveV2 {
   // 6 adds the anonymous account. 7 adds mastery. 8 adds the mastery tree, empty until a node is bought.
   // 9 adds expeditions. Older files get an empty board and keep every monster.
   // 10 adds the research tower. Older files get an empty tower and keep every monster.
+  // 11 adds daily tasks and the 7-day calendar. Older files get an empty board and keep every monster.
   // Older files keep every stored value. Missing setting fields take the defaults.
   const seenVersion = Math.max(0, Math.floor(Number(save.saveVersion)) || 0)
   if (seenVersion < SAVE_VERSION) save.saveVersion = SAVE_VERSION
@@ -453,13 +455,16 @@ export function normalize(save: SaveV2, now: number): SaveV2 {
   if (!Number.isFinite(save.lastBreedAt) || save.lastBreedAt <= 0) save.lastBreedAt = save.lastSeenAt || now
   save.claimed = Array.isArray(save.claimed) ? save.claimed.filter((id) => typeof id === 'string') : []
   save.equippedTitle = typeof save.equippedTitle === 'string' && save.claimed.includes(save.equippedTitle) ? save.equippedTitle : null
-  save.equippedFrame = typeof save.equippedFrame === 'string' && save.claimed.includes(save.equippedFrame) ? save.equippedFrame : null
+  save.equippedFrame = typeof save.equippedFrame === 'string' ? save.equippedFrame : null
   save.pendingAwaken = Array.isArray(save.pendingAwaken)
     ? save.pendingAwaken.filter((row) => row && save.mons[row.uid] && (row.level === 25 || row.level === 50))
     : []
   settleExpeditions(save, now)
   if ('synergy' in save) save.synergy = readSynergy(save.synergy)
   normalizeResearch(save, now)
+  normalizeDaily(save)
+  if (typeof save.equippedFrame === 'string' && !save.claimed.includes(save.equippedFrame) && !isDailyFrame(save.equippedFrame)) save.equippedFrame = null
+  if (typeof save.equippedFrame === 'string' && isDailyFrame(save.equippedFrame) && !save.daily?.frames.includes(save.equippedFrame)) save.equippedFrame = null
   return save
 }
 

@@ -47,6 +47,7 @@ import { beginAdventure, loadAdventure, makeMon, writeSave } from './save'
 import { browserCloudApi, watchAuth } from './cloud/supabaseApi'
 import { callOnline, claimRankRewards, clearVelunorKeys, loadOwnLabel, loadRankPage, sendBlockRow, sendReportRow } from './online/calls'
 import { isBoard, parseRankPage, RANK_FRAMES, type BoardId, type RankModel } from './online/ranks'
+import { equipDailyFrame, noteDaily, touchDaily } from './daily'
 import { offlineCapMs, settleResearch, startResearch, RESEARCH_LINES, type ResearchLine } from './research'
 import { buyNode, respecTree } from './tree'
 import type { ArenaPanel, ChatPanel, GuildPanel, SocialPanel, TradePanel } from './view'
@@ -1178,6 +1179,7 @@ function pumpExpeditions(now = Date.now()): void {
   if (!save) return
   settleExpeditions(save, now)
   settleResearch(save, now)
+  touchDaily(save, new Date(now))
   const notes = takeExpeditionNotes(save)
   if (!notes.length) return
   masteryNote = notes.join(' · ')
@@ -1718,6 +1720,7 @@ async function socialAction(act: string, code: string | null): Promise<void> {
   if (act === 'coop-attempt') {
     const roster = [...current.team, ...Object.keys(current.mons)].filter((uid, index, all) => current.mons[uid] && !expeditionBusy(current, uid) && all.indexOf(uid) === index).slice(0, 6)
     const result = await callOnline('coop-boss', { action: 'attempt', uids: roster })
+    if (result.ok) noteDaily(current, 'coop', 1)
     socialPanel = { ...socialPanel, note: result.ok ? '' : t(current.settings.lang, 'social.noFriends') }
     await refreshSocial()
   }
@@ -1758,6 +1761,7 @@ async function arenaAction(act: string, index: string | null): Promise<void> {
     render()
     return
   }
+  noteDaily(save, 'arena', 1)
   const replay = result.data.replay as { win?: unknown, bouts?: unknown }
   const bouts = Array.isArray(replay.bouts) ? replay.bouts.flatMap((bout) => {
     if (!bout || typeof bout !== 'object') return []
@@ -3156,6 +3160,7 @@ function onClick(event: Event): void {
   }
   if (act === 'equip-frame') {
     equipFrame(save, node.getAttribute('data-id') ?? '')
+    equipDailyFrame(save, node.getAttribute('data-id') ?? '')
     render()
     return
   }

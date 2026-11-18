@@ -71,6 +71,7 @@ import {
   researchUnlocked,
   type ResearchLine
 } from './research'
+import { DAILY_FRAMES, calendarReward, isDailyFrame, slotReward, type DailyFrameId } from './daily'
 import type { OfflineSummary } from './sim'
 import type { SaveV2 } from './types'
 import { PC_VIEW_FALLBACK, virtualWindow } from './virtualList'
@@ -390,7 +391,7 @@ function moreSheet(save: SaveV2, open: boolean): string {
   const arenaBtn = `<button type="button" data-act="screen" data-screen="arena"><svg class="ui-icon" viewBox="0 0 24 24" aria-hidden="true"><circle cx="12" cy="12" r="8" fill="none" stroke="currentColor" stroke-width="2"/><path fill="currentColor" d="M12 6l1.6 3.4L17 11l-3.4 1.6L12 16l-1.6-3.4L7 11l3.4-1.6z"/></svg>${tr(save, 'nav.arena')}</button>`
   const socialBtn = `<button type="button" data-act="screen" data-screen="social"><svg class="ui-icon" viewBox="0 0 24 24" aria-hidden="true"><circle cx="8" cy="9" r="3" fill="currentColor"/><circle cx="16" cy="9" r="3" fill="currentColor"/><path fill="currentColor" d="M3 19c.4-3 2.4-4.5 5-4.5s4.6 1.5 5 4.5H3zm8 0c.3-2 1.6-3.4 3.5-4 1.2.6 2.2 1.6 2.5 4H11z"/></svg>${tr(save, 'nav.friends')}</button>`
   return `<div class="more-sheet card" ${open ? '' : 'hidden'}>
-    <div class="more-who">${lookFace(save.look)}<b>${esc(save.name)}</b></div>
+    <div class="more-who">${lookFace(save.look, save.equippedFrame ?? '')}<b>${esc(save.name)}</b></div>
     ${items.slice(0, 2).map(([id, icon, label]) => `<button type="button" data-act="screen" data-screen="${id}">${ui(icon)}${tr(save, label)}</button>`).join('')}
     ${ranks}
     ${treeBtn}
@@ -1100,6 +1101,56 @@ function wheelView(save: SaveV2, wheel: WheelPanel): string {
   </div>`
 }
 
+function dailyFrameSvg(id: DailyFrameId): string {
+  const art = `daily/frame-${id.slice('daily-'.length)}`
+  const body: Record<DailyFrameId, string> = {
+    'daily-dawn': '<circle cx="32" cy="32" r="26" fill="none" stroke="#f0c14a" stroke-width="6"/><path d="M32 6v8M32 50v8M6 32h8M50 32h8" stroke="#f2d27a" stroke-width="4" stroke-linecap="round"/>',
+    'daily-tide': '<circle cx="32" cy="32" r="26" fill="none" stroke="#7eb6ff" stroke-width="6"/><path d="M14 36c6-8 12-8 18 0s12 8 18 0" fill="none" stroke="#d6e8ff" stroke-width="3" stroke-linecap="round"/>',
+    'daily-leaf': '<circle cx="32" cy="32" r="26" fill="none" stroke="#7dcea0" stroke-width="6"/><path d="M32 16c10 8 12 16 8 26-10-2-16-10-16-18 2-4 5-6 8-8z" fill="#1c3b2e"/>',
+    'daily-ember': '<circle cx="32" cy="32" r="26" fill="none" stroke="#e07a5f" stroke-width="6"/><path d="M32 14c6 8 10 12 10 20a10 10 0 0 1-20 0c0-6 4-8 6-12 1 4 3 5 4 5s1-6 0-13z" fill="#f0c14a"/>'
+  }
+  return `<svg class="daily-frame" data-art="${art}" viewBox="0 0 64 64" aria-hidden="true">${body[id]}</svg>`
+}
+
+function dailyCard(save: SaveV2): string {
+  const board = save.daily
+  const tasks = (board?.tasks ?? []).map((task, index) => {
+    const reward = slotReward(index)
+    const type = task.type ? typeLabel(L(save), task.type, typeName(task.type)) : ''
+    const name = tr(save, `daily.task.${task.kind}`, { n: task.need, type })
+    const fruit = reward.fruit ? ` · ${tr(save, `fruit.${reward.fruit}`)}` : ''
+    return `<li class="daily-task${task.claimed ? ' done' : ''}">
+      <b>${esc(name)}</b>
+      <span>${task.have}/${task.need}</span>
+      <span class="muted">${tr(save, 'daily.pay', { marks: reward.marks, gold: reward.gold })}${fruit}</span>
+    </li>`
+  }).join('')
+  const days = Array.from({ length: 7 }, (_, index) => {
+    const day = index + 1
+    const on = (board?.credited ?? 0) >= day
+    const reward = calendarReward(day)
+    const label = reward.frame ? tr(save, 'daily.frameDay') : reward.fruit ? tr(save, `fruit.${reward.fruit}`) : `${reward.gold} G`
+    return `<li class="daily-day${on ? ' on' : ''}"><b>${day}</b><span>${esc(label)}</span></li>`
+  }).join('')
+  const frames = DAILY_FRAMES.map((id) => {
+    const owned = Boolean(board?.frames.includes(id))
+    const on = save.equippedFrame === id
+    return `<button type="button" class="daily-frame-btn${on ? ' on' : ''}" data-act="equip-frame" data-id="${id}" data-art="daily/frame-${id.slice('daily-'.length)}" ${owned ? '' : 'disabled'}>
+      ${dailyFrameSvg(id)}
+      <span>${esc(tr(save, `daily.frame.${id}`))}</span>
+    </button>`
+  }).join('')
+  return `<section class="card panel daily-card" data-art="daily/board">
+    <h2>${tr(save, 'daily.title')}</h2>
+    <p class="muted">${tr(save, 'daily.note')}</p>
+    <ul class="daily-tasks">${tasks || `<li class="muted">${tr(save, 'daily.wait')}</li>`}</ul>
+    <h3>${tr(save, 'daily.calendar')}</h3>
+    <p class="muted">${tr(save, 'daily.calendarNote')}</p>
+    <ol class="daily-days">${days}</ol>
+    <div class="daily-frames">${frames}</div>
+  </section>`
+}
+
 function hortView(save: SaveV2, now: number, selected: string | null, wheel: WheelPanel): string {
   const offer = hortOffer(save)
   const locale = L(save) === 'en' ? 'en' : 'de-DE'
@@ -1124,6 +1175,7 @@ function hortView(save: SaveV2, now: number, selected: string | null, wheel: Whe
     : ''
   return `<div class="menu-screen">
     <div class="menu-scroll">
+      ${dailyCard(save)}
       <div class="card panel">
         <h2>${tr(save, 'hort.title')}</h2>
         <p class="muted">${tr(save, 'hort.note', { a: HORT_PRICES[1].toLocaleString(locale), b: HORT_PRICES[2].toLocaleString(locale), c: HORT_PRICES[3].toLocaleString(locale) })}</p>
@@ -2059,8 +2111,10 @@ function card(save: SaveV2, uid: string): string {
   </div>`
 }
 
-export function lookFace(look: AvatarLook): string {
-  return `<canvas class="look-face" data-look="${look.skin},${look.hair},${look.color}" width="512" height="512"></canvas>`
+export function lookFace(look: AvatarLook, frame = ''): string {
+  const canvas = `<canvas class="look-face" data-look="${look.skin},${look.hair},${look.color}" width="512" height="512"></canvas>`
+  if (!isDailyFrame(frame)) return canvas
+  return `<span class="look-wrap">${dailyFrameSvg(frame)}<span class="look-face-clip">${canvas}</span></span>`
 }
 
 export function continueHtml(save: SaveV2, now: number, lang: Lang = 'de', asking = false): string {
@@ -2073,7 +2127,7 @@ export function continueHtml(save: SaveV2, now: number, lang: Lang = 'de', askin
     <div class="home-scroll">
       ${homeTop(lang, false, true, Boolean(save.settings.reduceMotion))}
       <article class="continue-card">
-        <div class="continue-who">${lookFace(save.look)}<div><b>${esc(facts.name)}</b><p>${esc(played)}</p></div></div>
+        <div class="continue-who">${lookFace(save.look, save.equippedFrame ?? '')}<div><b>${esc(facts.name)}</b><p>${esc(played)}</p></div></div>
         <p>${esc(t(lang, 'start.place', { region: facts.region, chapter: facts.chapter, step: facts.step }))}</p>
         <p>${esc(t(lang, 'start.teamLine', { name: facts.lead, level: facts.leadLevel, team: facts.team }))}</p>
         <p>${esc(t(lang, 'start.best', { name: facts.strongest, level: facts.strongestLevel }))}</p>

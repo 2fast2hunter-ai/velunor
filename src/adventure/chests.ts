@@ -13,6 +13,7 @@ import { MASTERY_DUPE, addMastery } from './mastery'
 import { rollShiny } from './shiny'
 import { chestShinyChance, markSeal, sealReady, treeDupeMastery } from './tree'
 import { makeMon, takeId } from './save'
+import { noteDaily } from './daily'
 import { grantCodexChests } from './sources'
 import type { SaveV2 } from './types'
 
@@ -28,6 +29,7 @@ function draw(save: SaveV2): number {
 export function applyChest(save: SaveV2, roll: ChestRoll, now: number, rng?: () => number): ChestGrant {
   save.gold += roll.gold
   save.stats.chestsOpened = (save.stats.chestsOpened ?? 0) + 1
+  noteDaily(save, 'chest', 1)
   const name = species(roll.speciesId).name
   if (roll.isNew) {
     const uid = takeId(save)
@@ -47,7 +49,9 @@ export function applyChest(save: SaveV2, roll: ChestRoll, now: number, rng?: () 
     grantCodexChests(save)
     return { ...roll, name, place }
   }
-  save.shards[roll.speciesId] = (save.shards[roll.speciesId] ?? 0) + shardValue(roll.rarity)
+  const shards = shardValue(roll.rarity)
+  save.shards[roll.speciesId] = (save.shards[roll.speciesId] ?? 0) + shards
+  noteDaily(save, 'shard', shards)
   addMastery(save, roll.speciesId, Math.round(MASTERY_DUPE * treeDupeMastery(save)))
   return { ...roll, name, place: 'exp' }
 }
