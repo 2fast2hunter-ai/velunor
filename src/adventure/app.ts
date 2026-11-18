@@ -155,6 +155,7 @@ let accountUi = {
   statusNote: ''
 }
 let catchingUp = false
+let saveReady = false
 let wipingAccount = false
 
 function mergedCloud(): CloudView {
@@ -324,9 +325,10 @@ function attachCloud(): void {
       localStorage.setItem(QUEUE_KEY, JSON.stringify(events))
     },
     loadSave() {
+      if (!saveReady || catchingUp) return null
       if (save?.started) return save
       if (keptSave?.started) return keptSave
-      return loadAdventure(localStorage, Date.now())
+      return null
     },
     storeSave(next) {
       const playing = Boolean(save?.started)
@@ -349,10 +351,15 @@ function attachCloud(): void {
     },
     pendingReset: () => localStorage.getItem(RESET_SERVER_KEY) === '1',
     clearReset: () => { localStorage.removeItem(RESET_SERVER_KEY) },
-    deferUpload: () => catchingUp || Boolean(save && saveOwesCatchUp(save.lastSeenAt, Date.now(), WELCOME_AFTER_MS)) || Boolean(!save && keptSave && saveOwesCatchUp(keptSave.lastSeenAt, Date.now(), WELCOME_AFTER_MS)),
+    deferUpload: () => {
+      if (!saveReady || catchingUp) return true
+      const current = save?.started ? save : keptSave?.started ? keptSave : null
+      return Boolean(current && saveOwesCatchUp(current.lastSeenAt, Date.now(), WELCOME_AFTER_MS))
+    },
     pendingReplace: () => localStorage.getItem(REPLACE_SERVER_KEY) === '1',
     clearReplace: () => { localStorage.removeItem(REPLACE_SERVER_KEY) },
     onView(view) {
+      if (wipingAccount) return
       cloudView = view
       if (view.flagLevel === 0 || view.flagLevel === 1 || view.flagLevel === 2) {
         accountUi.flagLevel = view.flagLevel
@@ -366,7 +373,11 @@ function attachCloud(): void {
   watchAuth(() => { void cloud?.sync('start') })
   window.setInterval(() => { void cloud?.sync('interval') }, 5 * 60 * 1000)
   window.setInterval(() => { void cloud?.flush() }, 60 * 1000)
-  void cloud.start()
+}
+
+function releaseSync(): void {
+  saveReady = true
+  void cloud?.sync('start')
 }
 
 export function bootAdventure(): void {
@@ -392,7 +403,11 @@ export function bootAdventure(): void {
   draftLang = storedLang === 'en' || storedLang === 'de' ? storedLang : (navigator.language.toLowerCase().startsWith('en') ? 'en' : 'de')
   document.documentElement.lang = draftLang
   window.addEventListener('pagehide', () => {
-    if (wipingAccount || !save) {
+    if (wipingAccount) {
+      for (const key of clearVelunorKeys(Object.keys(localStorage))) localStorage.removeItem(key)
+      return
+    }
+    if (!save) {
       void cloud?.pause()
       return
     }
@@ -867,6 +882,8 @@ function openFrontDoor(): Promise<void> {
     }
     cloudReady = true
     refreshCloud()
+    const owed = Boolean(keptSave?.started && saveOwesCatchUp(keptSave.lastSeenAt, Date.now(), WELCOME_AFTER_MS))
+    if (!owed) releaseSync()
   })
 }
 
@@ -1286,7 +1303,7 @@ function currentPresence(): Presence {
 }
 
 function onPresence(): void {
-  if (document.hidden) void cloud?.pause()
+  if (document.hidden && !wipingAccount) void cloud?.pause()
   if (!save?.started) return
   const pause = batteryPause(save.settings.battery, currentPresence())
   if (pause) {
@@ -1986,10 +2003,10 @@ async function runOffline(rawMs: number): Promise<void> {
   catchingUp = true
   window.clearTimeout(timer)
   try {
-  await finishOffline(rawMs)
+    await finishOffline(rawMs)
   } finally {
     catchingUp = false
-    void cloud?.sync('online')
+    releaseSync()
   }
 }
 
@@ -2379,6 +2396,7 @@ function onClick(event: Event): void {
     mapOpen = false
     void cloud?.sync('online')
     render()
+    void refreshOwnLabel()
     return
   }
   if (act === 'more') {

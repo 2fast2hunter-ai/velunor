@@ -8,6 +8,12 @@ export const FX_MAX_MS = 700
 /** Floor after the tempo split, for the whole effect. */
 export const FX_MIN_MS = 150
 
+/** A scene can update before create() has built the strip images. */
+export function hideStripImages(proj?: { setVisible(on: boolean): void } | null, hit?: { setVisible(on: boolean): void } | null): void {
+  proj?.setVisible(false)
+  hit?.setVisible(false)
+}
+
 export type StripKind = 'projectile-loop' | 'beam-tile' | 'buildup' | 'melee-overlay' | 'wave-loop' | 'hit'
 
 interface StripFile {

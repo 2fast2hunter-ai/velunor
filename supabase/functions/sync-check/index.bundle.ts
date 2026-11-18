@@ -1,3 +1,11 @@
+// src/adventure/const.ts
+var BASE_ENCOUNTER_MS = 2800;
+var OFFLINE_CAP_MS = 8 * 60 * 60 * 1e3;
+var WELCOME_AFTER_MS = 5 * 60 * 1e3;
+var SHELL_H = 2340;
+var SAFE_H = 1920;
+var SHELL_BAND = (SHELL_H - SAFE_H) / 2;
+
 // src/adventure/online/check.ts
 var PLAUSIBILITY_BUFFER = 1.2;
 var SPEED3_MS = 930;
@@ -36,12 +44,21 @@ function allowedEp(elapsedMs, region, chapter) {
   const hort = 4 * 0.3 * LEARN_BONUS;
   return Math.ceil(encounters(elapsedMs) * base * (team + hort) * PLAUSIBILITY_BUFFER);
 }
+function countedOffline(elapsedMs) {
+  return Math.min(Math.max(0, elapsedMs), OFFLINE_CAP_MS);
+}
+function fightCeiling(elapsedMs) {
+  const offline = Math.floor(countedOffline(elapsedMs) / BASE_ENCOUNTER_MS);
+  const online = Math.ceil(Math.max(0, elapsedMs) / SPEED3_MS);
+  return Math.max(offline, online, 1);
+}
 function allowedChests(elapsedMs) {
-  const days = Math.max(1, Math.ceil(Math.max(0, elapsedMs) / 864e5));
-  return Math.min(99 * 4, Math.floor(Math.max(0, elapsedMs) / 6e4) + days * 10 + 8);
+  const road = Math.floor(countedOffline(elapsedMs) / 6e4) + 5;
+  const shop = Math.max(1, Math.ceil(Math.max(elapsedMs, 1) / 864e5)) * 10;
+  return Math.min(99 * 4 + 5, Math.ceil((fightCeiling(elapsedMs) + road + shop) * PLAUSIBILITY_BUFFER));
 }
 function allowedShards(elapsedMs) {
-  return encounters(elapsedMs);
+  return Math.ceil(fightCeiling(elapsedMs) * PLAUSIBILITY_BUFFER);
 }
 function allowedNewMons(elapsedMs) {
   return allowedChests(elapsedMs) + Math.floor(allowedShards(elapsedMs) / 5) + Math.ceil(Math.max(0, elapsedMs) / 36e5) + 6;
@@ -59,11 +76,20 @@ function gainFlag(gain, allowed) {
   if (gain > allowed * 2) return 2;
   return 1;
 }
+function auditHasProgress(before, after) {
+  if (after.gold > before.gold || after.ep > before.ep) return true;
+  if (after.chests > before.chests || after.shards > before.shards) return true;
+  if (after.region > before.region || after.chapter > before.chapter) return true;
+  if (after.badges.some((badge) => !before.badges.includes(badge))) return true;
+  const known = new Set(before.mons.map((mon) => mon.uid));
+  return after.mons.some((mon) => !known.has(mon.uid));
+}
 function stickAudit(previousFlag, baseline, next, elapsedMs) {
   const verdict = auditSync(baseline, next, elapsedMs);
   const flag = Math.max(previousFlag, verdict.flag);
-  const keep = previousFlag >= 1 || verdict.flag >= 1;
-  return { flag, audit: keep ? baseline : next, reasons: verdict.reasons };
+  const progress = baseline ? auditHasProgress(baseline, next) : true;
+  const advanceClock = previousFlag < 1 && verdict.flag < 1 && progress;
+  return { flag, audit: advanceClock ? next : baseline, advanceClock, reasons: verdict.reasons };
 }
 function auditSync(before, after, elapsedMs) {
   if (!before) return { flag: 0, reasons: [] };
@@ -5219,13 +5245,6 @@ function species(id) {
   return found;
 }
 
-// src/adventure/const.ts
-var OFFLINE_CAP_MS = 8 * 60 * 60 * 1e3;
-var WELCOME_AFTER_MS = 5 * 60 * 1e3;
-var SHELL_H = 2340;
-var SAFE_H = 1920;
-var SHELL_BAND = (SHELL_H - SAFE_H) / 2;
-
 // data/regions.json
 var regions_default = {
   regions: [
@@ -10000,33 +10019,36 @@ Deno.serve(async (req) => {
   } catch {
     return json({ error: "save" }, 400);
   }
-  const profile = await db.from("profiles").select("last_audit, flag_level, audited_at, updated_at").eq("user_id", user.id).maybeSingle();
+  const profile = await db.from("profiles").select("last_audit, flag_level, audited_at, updated_at, audit_generation").eq("user_id", user.id).maybeSingle();
   const before = profile.data?.last_audit ?? null;
   const previousFlag = profile.data?.flag_level === 2 ? 2 : profile.data?.flag_level === 1 ? 1 : 0;
   const auditedAt = Date.parse(String(profile.data?.audited_at ?? profile.data?.updated_at ?? ""));
   const elapsed = before && Number.isFinite(auditedAt) ? Date.now() - auditedAt : 0;
   const stuck = stickAudit(previousFlag, before, after, elapsed);
   const nowIso = (/* @__PURE__ */ new Date()).toISOString();
+  const generation = Number(profile.data?.audit_generation) || 0;
   if (!profile.data) {
     await db.from("profiles").insert({
       user_id: user.id,
       flag_level: stuck.flag,
       last_audit: stuck.audit,
       audited_at: nowIso,
+      audit_generation: stuck.advanceClock ? 1 : 0,
       updated_at: nowIso
     });
-  } else if (stuck.audit === before) {
+  } else if (!stuck.advanceClock) {
     await db.from("profiles").update({ flag_level: stuck.flag, updated_at: nowIso }).eq("user_id", user.id);
   } else {
     await db.from("profiles").update({
       flag_level: stuck.flag,
       last_audit: stuck.audit,
       audited_at: nowIso,
+      audit_generation: generation + 1,
       updated_at: nowIso
     }).eq("user_id", user.id);
   }
   const known = new Set((before?.mons ?? []).map((mon) => mon.uid));
-  const fresh = stuck.audit === before ? [] : after.mons.filter((mon) => !known.has(mon.uid) && ["Truhe", "Splitter", "Ei", "Rad", "Tausch"].includes(mon.obtainedHow));
+  const fresh = stuck.advanceClock ? after.mons.filter((mon) => !known.has(mon.uid) && ["Truhe", "Splitter", "Ei", "Rad", "Tausch"].includes(mon.obtainedHow)) : [];
   if (fresh.length) {
     await db.from("monsters_owned").upsert(fresh.map((mon) => ({
       uid: mon.uid,

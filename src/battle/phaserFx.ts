@@ -13,7 +13,7 @@ import {
   type HitGrade
 } from './hitReadout'
 import { particleBudget, POOL_SIZE, sharedParticleRoom, typeFx, type TypeFxDef } from './typeFx'
-import { effectTiming, hitBurstLook, hitStrip, projStrip, stripFrame, stripTexture } from './strips'
+import { effectTiming, hideStripImages, hitBurstLook, hitStrip, projStrip, stripFrame, stripTexture } from './strips'
 import type { TypeId } from '../types'
 import type { WeatherId } from '../adventure/weather'
 
@@ -423,8 +423,7 @@ class FxScene extends Phaser.Scene {
   }
 
   private hideStrips(): void {
-    this.proj.setVisible(false)
-    this.hitFx.setVisible(false)
+    hideStripImages(this.proj, this.hitFx)
   }
 
   private drawStrip(age: number, travelMs: number, hitMs: number): void {
