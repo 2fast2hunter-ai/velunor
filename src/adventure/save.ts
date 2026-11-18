@@ -7,6 +7,7 @@ import { clampChestCount, emptyPity, enteredRegions, startChests, type ChestTier
 import { fontScale } from './touch'
 import { settleExpeditions } from './expedition'
 import { normalizeTreeNodes } from './tree'
+import { SYNERGY_CAP, synergyKnown } from './synergyIds'
 import { readLook } from './avatar'
 import type { AdventureSettings, AvatarLook, OwnedMon, SaveV2, StorageLike } from './types'
 
@@ -455,7 +456,19 @@ export function normalize(save: SaveV2, now: number): SaveV2 {
     ? save.pendingAwaken.filter((row) => row && save.mons[row.uid] && (row.level === 25 || row.level === 50))
     : []
   settleExpeditions(save, now)
+  if ('synergy' in save) save.synergy = readSynergy(save.synergy)
   return save
+}
+
+function readSynergy(value: unknown): string[] | undefined {
+  if (!Array.isArray(value)) return undefined
+  const out: string[] = []
+  for (const id of value) {
+    if (typeof id !== 'string' || !synergyKnown(id) || out.includes(id)) continue
+    out.push(id)
+    if (out.length >= SYNERGY_CAP) break
+  }
+  return out
 }
 
 const CODE_PREFIX = 'VELUNOR1.'

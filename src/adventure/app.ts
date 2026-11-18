@@ -24,7 +24,8 @@ import { shotAt, shouldRecover } from './present'
 import { species, typeColor } from '../data'
 import { teamWeatherMarks, weatherArrow, weatherAt } from './weather'
 import { ultName } from './ult'
-import { activeCombos, AURA_FRAMES, AURA_MS } from './combo'
+import { AURA_FRAMES, AURA_MS } from './combo'
+import { activeSynergies, presentSynergies, SYNERGY_CAP, synergyKnown } from './synergy'
 import { mechIcon, type MechId } from './mech'
 import { AILMENTS, ailmentIcon, type AilmentId } from './ailment'
 import { sfx } from '../ui'
@@ -2172,7 +2173,8 @@ function teamTypes(): TypeId[] {
 }
 
 function teamHasCombo(): boolean {
-  return activeCombos(teamTypes()).length > 0
+  if (!save) return false
+  return activeSynergies(teamTypes(), save.synergy).length > 0
 }
 
 function showAura(speed: number): void {
@@ -3000,6 +3002,27 @@ function onClick(event: Event): void {
     if (showAwaken()) return
     render()
     kick()
+    return
+  }
+  if (act === 'synergy-auto') {
+    delete save.synergy
+    render()
+    return
+  }
+  if (act === 'synergy') {
+    const id = node.getAttribute('data-id') ?? ''
+    if (!synergyKnown(id)) return
+    const types = teamTypes()
+    const present = new Set(presentSynergies(types).map((row) => row.id))
+    if (!present.has(id)) return
+    const current = activeSynergies(types, save.synergy).map((row) => row.id)
+    const next = current.includes(id)
+      ? current.filter((row) => row !== id)
+      : current.length >= SYNERGY_CAP
+        ? [...current.slice(1), id]
+        : [...current, id]
+    save.synergy = next
+    render()
     return
   }
   if (act === 'to-pc' && selected) {

@@ -52,7 +52,7 @@ Deno.serve(async (req) => {
     const ensured = await db.rpc('coop_ensure', { p_user: user.id, p_day: day })
     const beast = weeklyBeast(new Date(String(ensured.data?.week ?? Date.now())))
     const seed = (Date.now() ^ user.id.length) >>> 0
-    const damage = coopDamage(team.fighters, beast.type, seed || 1)
+    const damage = coopDamage(team.fighters, beast.type, seed || 1, team.synergy)
     const strike = await db.rpc('coop_strike', { p_user: user.id, p_day: day, p_damage: damage, p_seed: seed })
     return json(strike.data ?? { error: 'strike' })
   }

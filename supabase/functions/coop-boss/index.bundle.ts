@@ -10162,8 +10162,7 @@ function skillUsable(unit, foe) {
   if (kinds.size === 1 && kinds.has("heal") && unit.hp >= unit.side.maxHp - 0.01) return false;
   return true;
 }
-function applyStatus(target, effect, caster) {
-  const duration = effect.duration;
+function applyStatus(target, effect, caster, duration = effect.duration) {
   const value = effect.value ?? 0;
   if (effect.status === "burn") {
     const burnDmg = Math.max(0, Math.floor(atkOf(caster) * (value || combat.burnAtkFraction)));
@@ -10225,7 +10224,13 @@ function tick(unit) {
     }
   }
 }
-function fight1v1(allySide, foeSide, rng, trace, weather = null, mods = null) {
+function withSpd(side, mul) {
+  if (mul == null || mul === 1) return side;
+  return { ...side, spd: Math.max(1, Math.round(side.spd * mul)) };
+}
+function fight1v1(allyIn, foeIn, rng, trace, weather = null, mods = null) {
+  const allySide = withSpd(allyIn, mods?.allySpd);
+  const foeSide = withSpd(foeIn, mods?.foeSpd);
   const ally = makeActor(allySide);
   const foe = makeActor(foeSide);
   const frames = [];
@@ -10325,6 +10330,8 @@ function fight1v1(allySide, foeSide, rng, trace, weather = null, mods = null) {
     let dmg = rawDamage(atkOf(attacker) * (extra?.atkScale ?? 1), defOf(target, pierce), skillMult * blow * (rage ? RAGE_MULT : 1), tMult * wMult, crit, variance);
     if (attacker.mark?.id === "schock") dmg = Math.floor(dmg * AILMENTS.schock.damage);
     if (!extra?.unavoidable && attacker.mark?.id === "spreu" && rng() < AILMENTS.spreu.miss) dmg = 0;
+    const dodge = target === ally ? mods?.dodge ?? 0 : mods?.foeDodge ?? 0;
+    if (!extra?.unavoidable && dodge > 0 && rng() < dodge) dmg = 0;
     const landed = dmg > 0;
     if (landed && hasMech(target, "panzerung") && target.armorCrits < ARMOR_CRITS) dmg = Math.max(1, Math.floor(dmg * (1 - ARMOR_CUT)));
     if (boosted) attacker.impulseLeft -= 1;
@@ -10414,11 +10421,13 @@ function fight1v1(allySide, foeSide, rng, trace, weather = null, mods = null) {
         if (hadDamage && !own && !damaged.ok) continue;
         if (victim.hp <= 0) continue;
         if (rng() >= effect.chance) continue;
-        applyStatus(victim, effect, unit);
+        const durMul = unit === ally ? mods?.statusDur ?? 1 : mods?.foeStatusDur ?? 1;
+        applyStatus(victim, effect, unit, durMul === 1 ? effect.duration : effect.duration * durMul);
         if (trace) pending.push({ from: unit === ally ? "ally" : "foe", amount: 0, crit: false, type: unit.side.type, band: "neutral", ko: false, kind: "status" });
       }
     }
-    unit.cd = skill.cooldown;
+    const cdMul = unit === ally ? mods?.cooldown ?? 1 : mods?.foeCooldown ?? 1;
+    unit.cd = cdMul === 1 || skill.cooldown <= 0 ? skill.cooldown : Math.max(1, Math.floor(skill.cooldown * cdMul));
     push(`${unit.side.name} setzt ${skill.name ?? "eine F\xE4higkeit"} ein.`);
     if (hadDamage) noteBossAttack(unit, other);
   };
@@ -10540,6 +10549,127 @@ function fight1v1(allySide, foeSide, rng, trace, weather = null, mods = null) {
     foeHp: Math.max(0, foe.hp),
     counter: Boolean(allySide.counter),
     mechs: foeSide.mechs?.length ? [...foeSide.mechs] : void 0
+  };
+}
+
+// src/adventure/synergyIds.ts
+var SYNERGY_IDS = [
+  "gewitter",
+  "flaechenbrand",
+  "wurzelgrund",
+  "polarstrom",
+  "bollwerk",
+  "prisma",
+  "zwielicht",
+  "rudelkraft",
+  "schwarmgift",
+  "resonanz",
+  "glutschwinge",
+  "sturmlied"
+];
+var SYNERGY_CAP = 2;
+var KNOWN = new Set(SYNERGY_IDS);
+
+// src/adventure/synergy.ts
+var PURITY_THREE = 0.05;
+var PURITY_FOUR = 0.1;
+var ROWS = [
+  { id: "gewitter", name: "Gewitter", types: ["water", "lightning"], bonus: { crit: 0.1 } },
+  { id: "flaechenbrand", name: "Fl\xE4chenbrand", types: ["fire", "wind"], bonus: { atk: 0.08 } },
+  { id: "wurzelgrund", name: "Wurzelgrund", types: ["plant", "earth"], bonus: { hp: 0.1 } },
+  { id: "polarstrom", name: "Polarstrom", types: ["ice", "water"], bonus: { foeSpd: 0.95 } },
+  { id: "bollwerk", name: "Bollwerk", types: ["stone", "metal"], bonus: { def: 0.1 } },
+  { id: "prisma", name: "Prisma", types: ["light", "crystal"], bonus: { atk: 0.05, crit: 0.05 } },
+  { id: "zwielicht", name: "Zwielicht", types: ["shadow", "ghost"], bonus: { dodge: 0.06 } },
+  { id: "rudelkraft", name: "Rudelkraft", types: ["fighting", "beast"], bonus: { wardenAtk: 0.08 } },
+  { id: "schwarmgift", name: "Schwarmgift", types: ["poison", "insect"], bonus: { status: 1.1 } },
+  { id: "resonanz", name: "Resonanz", types: ["psychic", "sound"], bonus: { cooldown: 0.9 } },
+  { id: "glutschwinge", name: "Glutschwinge", types: ["dragon", "fire"], bonus: { atk: 0.06, hp: 0.04 } },
+  { id: "sturmlied", name: "Sturmlied", types: ["wind", "sound"], bonus: { spd: 0.05 } }
+];
+function powerOf(bonus) {
+  const crit = (bonus.crit ?? 0) * 100;
+  const status = bonus.status ? (bonus.status - 1) * 100 : 0;
+  const cooldown = bonus.cooldown ? (1 - bonus.cooldown) * 100 : 0;
+  const foe = bonus.foeSpd ? (1 - bonus.foeSpd) * 100 : 0;
+  return Math.round(
+    (bonus.atk ?? 0) * 100 + (bonus.hp ?? 0) * 100 + (bonus.def ?? 0) * 100 + (bonus.spd ?? 0) * 100 + (bonus.wardenAtk ?? 0) * 100 + (bonus.dodge ?? 0) * 100 + crit + status + cooldown + foe
+  );
+}
+var SYNERGIES = ROWS.map((row2, order) => ({
+  ...row2,
+  order,
+  power: powerOf(row2.bonus)
+}));
+function presentSynergies(types) {
+  const have = new Set(types);
+  return SYNERGIES.filter((row2) => have.has(row2.types[0]) && have.has(row2.types[1]));
+}
+function activeSynergies(types, picked) {
+  const present = presentSynergies(types);
+  if (picked == null) {
+    return [...present].sort((a, b) => b.power - a.power || a.order - b.order).slice(0, SYNERGY_CAP);
+  }
+  const byId = new Map(present.map((row2) => [row2.id, row2]));
+  const out = [];
+  for (const id of picked) {
+    const row2 = byId.get(id);
+    if (!row2 || out.includes(row2)) continue;
+    out.push(row2);
+    if (out.length >= SYNERGY_CAP) break;
+  }
+  return out;
+}
+function purityOf(types, type) {
+  let count = 0;
+  for (const row2 of types) if (row2 === type) count += 1;
+  if (count >= 4) return PURITY_FOUR;
+  if (count >= 3) return PURITY_THREE;
+  return 0;
+}
+function synergyMods(active, warden) {
+  const mods = {
+    atk: 0,
+    hp: 0,
+    def: 0,
+    spd: 0,
+    wardenAtk: 0,
+    foeSpd: 1,
+    critAdd: 0,
+    dodge: 0,
+    statusDur: 1,
+    cooldown: 1
+  };
+  for (const row2 of active) {
+    const bonus = row2.bonus;
+    mods.atk += bonus.atk ?? 0;
+    mods.hp += bonus.hp ?? 0;
+    mods.def += bonus.def ?? 0;
+    mods.spd += bonus.spd ?? 0;
+    if (warden) mods.wardenAtk += bonus.wardenAtk ?? 0;
+    if (bonus.foeSpd) mods.foeSpd *= bonus.foeSpd;
+    mods.critAdd += combat.critChance * (bonus.crit ?? 0);
+    mods.dodge += bonus.dodge ?? 0;
+    if (bonus.status) mods.statusDur *= bonus.status;
+    if (bonus.cooldown) mods.cooldown *= bonus.cooldown;
+  }
+  return mods;
+}
+function scaleSide(side, mods, purity = 0) {
+  const hp = (1 + mods.hp) * (1 + purity);
+  const atk = (1 + mods.atk + mods.wardenAtk) * (1 + purity);
+  const def = (1 + mods.def) * (1 + purity);
+  const spd = (1 + mods.spd) * (1 + purity);
+  if (hp === 1 && atk === 1 && def === 1 && spd === 1) return side;
+  const maxHp = Math.max(1, Math.round(side.maxHp * hp));
+  const fraction = side.maxHp > 0 ? side.hp / side.maxHp : 1;
+  return {
+    ...side,
+    maxHp,
+    hp: side.hp <= 0 ? 0 : Math.max(1, Math.round(maxHp * fraction)),
+    atk: Math.max(1, Math.round(side.atk * atk)),
+    def: Math.max(1, Math.round(side.def * def)),
+    spd: Math.max(1, Math.round(side.spd * spd))
   };
 }
 
@@ -10770,7 +10900,7 @@ function bakeTeam(fighters, save) {
     critAdd: save ? treeCritAdd(save) : 0,
     strongType: save ? treeStrongType(save) : 1.5,
     breath: save ? treeLastBreath(save) : false,
-    synergy: null
+    synergy: save?.synergy == null ? null : save.synergy.slice(0, 2)
   };
 }
 function teamFromRegister(rows, save) {
@@ -10815,10 +10945,12 @@ function sideFrom(fighter) {
     level: 100
   };
 }
-function coopDamage(fighters, beastType, seed) {
+function coopDamage(fighters, beastType, seed, picked) {
   if (!fighters.length) return 0;
   const rng = mulberry32(seed >>> 0 || 1);
   const each = Math.max(1, Math.floor(COOP_ACTIONS / fighters.length));
+  const types = fighters.map((fighter) => fighter.type);
+  const mods = synergyMods(activeSynergies(types, picked ?? null), false);
   let total = 0;
   for (const fighter of fighters) {
     const foe = {
@@ -10834,7 +10966,14 @@ function coopDamage(fighters, beastType, seed) {
       passive: null,
       level: 100
     };
-    const trace = fight1v1(sideFrom(fighter), foe, rng, false, null, { actionCap: each });
+    const trace = fight1v1(scaleSide(sideFrom(fighter), mods, purityOf(types, fighter.type)), foe, rng, false, null, {
+      actionCap: each,
+      critAdd: mods.critAdd,
+      dodge: mods.dodge,
+      statusDur: mods.statusDur,
+      cooldown: mods.cooldown,
+      foeSpd: mods.foeSpd
+    });
     total += Math.max(0, trace.foeMax - trace.foeHp);
   }
   return total;
@@ -11014,7 +11153,7 @@ Deno.serve(async (req) => {
     const ensured2 = await db.rpc("coop_ensure", { p_user: user.id, p_day: day });
     const beast2 = weeklyBeast(new Date(String(ensured2.data?.week ?? Date.now())));
     const seed = (Date.now() ^ user.id.length) >>> 0;
-    const damage = coopDamage(team.fighters, beast2.type, seed || 1);
+    const damage = coopDamage(team.fighters, beast2.type, seed || 1, team.synergy);
     const strike = await db.rpc("coop_strike", { p_user: user.id, p_day: day, p_damage: damage, p_seed: seed });
     return json(strike.data ?? { error: "strike" });
   }

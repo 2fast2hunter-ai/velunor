@@ -290,13 +290,13 @@ textarea { width: 100%; box-sizing: border-box; background: #121a30; color: inhe
   box-sizing: border-box;
   z-index: 4;
 }
-.dock.has-combo { grid-template-columns: 96px minmax(0, 1fr) 148px; }
+.dock.has-combo { grid-template-columns: 120px minmax(0, 1fr) 148px; }
 .combo-slot { position: relative; align-self: center; }
 .combo-mark {
-  width: 80px; height: 80px; padding: 0; border: 0; border-radius: 18px;
-  background: rgba(8, 12, 24, 0.72); display: grid; place-items: center; cursor: pointer;
+  width: auto; min-width: 80px; height: 80px; padding: 4px; border: 0; border-radius: 18px;
+  background: rgba(8, 12, 24, 0.72); display: flex; align-items: center; justify-content: center; gap: 2px; cursor: pointer;
 }
-.combo-mark img { width: 72px; height: 72px; object-fit: contain; }
+.combo-mark img, .combo-mark svg { width: 36px; height: 36px; object-fit: contain; }
 .combo-tip {
   position: absolute; z-index: 9; left: 0; bottom: calc(100% + 12px);
   width: max-content; max-width: 420px; margin: 0; padding: 10px 14px; border-radius: 16px;
@@ -1237,6 +1237,44 @@ img.is-shiny { filter: drop-shadow(0 0 10px #f0c14a); }
   grid-template-columns: repeat(3, minmax(0, 1fr));
   gap: 8px;
 }
+.synergy-board { flex: 0 0 auto; margin: 4px 12px 0; }
+.synergy-note { margin: 0 0 8px; color: #9fb0cc; font-size: calc(22px * var(--font-scale, 1)); }
+.synergy-grid {
+  display: flex;
+  gap: 8px;
+  overflow-x: auto;
+  padding-bottom: 4px;
+}
+.synergy-pick {
+  flex: 0 0 180px;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 4px;
+  min-height: 148px;
+  padding: 8px 8px 10px;
+  border: 0;
+  border-radius: 18px;
+  background: #1a2744;
+  color: inherit;
+  cursor: pointer;
+}
+.synergy-pick svg { width: 52px; height: 52px; }
+.synergy-pick b { font-size: 22px; line-height: 1.15; }
+.synergy-pick span { font-size: 18px; line-height: 1.2; color: #c9d4ea; text-align: center; }
+.synergy-pick.on { outline: 3px solid #f0c14a; background: #24365f; }
+.synergy-pick:disabled { opacity: 0.38; cursor: default; }
+.synergy-auto {
+  margin-top: 12px;
+  border: 0;
+  border-radius: 14px;
+  padding: 10px 16px;
+  background: #24365f;
+  color: inherit;
+  cursor: pointer;
+}
+.synergy-auto.on { outline: 3px solid #f0c14a; }
+.synergy-purity { margin: 10px 0 0; color: #d7e7c8; font-weight: 700; }
 .team-grid .mon-card, .hort-grid .mon-card, .codex-grid .mon-card {
   min-height: 132px;
   min-width: 0;

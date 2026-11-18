@@ -56,7 +56,7 @@ Deno.serve(async (req) => {
     const team = teamFromRegister(rows, adventure)
     if (!team) return json({ error: 'team' }, 400)
     const beast = weeklyBeast(new Date())
-    const damage = coopDamage(team.fighters, beast.type, (Date.now() >>> 0) || 1)
+    const damage = coopDamage(team.fighters, beast.type, (Date.now() >>> 0) || 1, team.synergy)
     const hit = await db.rpc('guild_act', { p_user: user.id, p_body: { action: 'beast', damage } })
     return json({ ...(hit.data ?? {}), damage })
   }

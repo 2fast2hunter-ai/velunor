@@ -1,8 +1,8 @@
 import { rarityInfo, species, typeName } from '../data'
 import { nextFloat } from '../rng'
 import type { TypeId } from '../types'
-import type { FightSide, FightTrace } from './battle'
-import { fight1v1, type FightMods } from './battle'
+import { fight1v1, type FightMods, type FightSide, type FightTrace } from './battle'
+import { activeSynergies, purityOf, scaleSide, synergyMods, type SynergyMods } from './synergy'
 import { weatherAt } from './weather'
 import { orderMods, type OrderSeat } from './order'
 import { councilAssignment, guardianAssignment, type MechId } from './mech'
@@ -509,11 +509,31 @@ export function applyCatch(save: SaveV2, speciesId: string, level: number, shiny
   return { species: speciesId, name, chance: 0, success: true, place: 'exp', shiny, level }
 }
 
-function fightMods(save: SaveV2, breath?: { left: number }): FightMods {
+function teamTypesOf(save: SaveV2): TypeId[] {
+  return save.team.flatMap((uid) => {
+    const mon = save.mons[uid]
+    return mon ? [species(mon.species).type] : []
+  })
+}
+
+function synergyPack(save: SaveV2, warden: boolean): { types: TypeId[], mods: SynergyMods } {
+  const types = teamTypesOf(save)
+  return { types, mods: synergyMods(activeSynergies(types, save.synergy), warden) }
+}
+
+function withTeamSynergy(side: FightSide, pack: { types: TypeId[], mods: SynergyMods }): FightSide {
+  return scaleSide(side, pack.mods, purityOf(pack.types, side.type))
+}
+
+function fightMods(save: SaveV2, breath: { left: number } | undefined, mods: SynergyMods): FightMods {
   return {
-    critAdd: treeCritAdd(save),
+    critAdd: treeCritAdd(save) + mods.critAdd,
     strongType: treeStrongType(save),
-    breath
+    breath,
+    dodge: mods.dodge,
+    statusDur: mods.statusDur,
+    cooldown: mods.cooldown,
+    foeSpd: mods.foeSpd
   }
 }
 
@@ -524,8 +544,9 @@ function fightOne(save: SaveV2, chapter: ChapterDef, speciesId: string, level: n
   save.active = fighter
   const allyMon = save.mons[fighter]
   const cap = chapterCapNow(save, chapter)
-  const ally = sideFrom(allyMon, cap, orderMods(seatsOf(save), fighter, foe.type, false), masteryLevel(save.mastery?.[allyMon.species] ?? 0), { atk: treeAtkBonus(save) })
-  const trace = fight1v1(ally, foe, rngOf(save), opts.trace, opts.offline ? null : weatherAt(now), fightMods(save))
+  const pack = synergyPack(save, false)
+  const ally = withTeamSynergy(sideFrom(allyMon, cap, orderMods(seatsOf(save), fighter, foe.type, false), masteryLevel(save.mastery?.[allyMon.species] ?? 0), { atk: treeAtkBonus(save) }), pack)
+  const trace = fight1v1(ally, foe, rngOf(save), opts.trace, opts.offline ? null : weatherAt(now), fightMods(save, undefined, pack.mods))
   storeHp(allyMon, trace.allyHp, trace.allyMax)
   if (trace.win) {
     save.stats.wins += 1
@@ -670,10 +691,12 @@ function runGauntlet(
   scale: BossScale,
   opts: ResolveOpts,
   now: number,
-  mechs: MechId[] = []
+  mechs: MechId[] = [],
+  warden = false
 ): { traces: FightTrace[]; wins: number; lastFighter: string | null; wiped: boolean; exp: number } {
   const traces: FightTrace[] = []
   const breath = treeLastBreath(save) ? { left: 1 } : undefined
+  const pack = synergyPack(save, warden)
   let index = 0
   let foeFraction = 1
   let wins = 0
@@ -698,7 +721,7 @@ function runGauntlet(
     const allyMon = save.mons[fighter]
     const cap = chapterCapNow(save, chapter)
     const foeType = species(foe.species).type
-    const trace = fight1v1(sideFrom(allyMon, cap, orderMods(seatsOf(save), fighter, foeType, enteredAfterKo), masteryLevel(save.mastery?.[allyMon.species] ?? 0), { atk: treeAtkBonus(save), hp: treeGuardHp(save) }), foeSide(foe.species, foe.level, foe.shiny ?? false, scale, foeFraction, mechs), rngOf(save), opts.trace, opts.offline ? null : weatherAt(now), fightMods(save, breath))
+    const trace = fight1v1(withTeamSynergy(sideFrom(allyMon, cap, orderMods(seatsOf(save), fighter, foeType, enteredAfterKo), masteryLevel(save.mastery?.[allyMon.species] ?? 0), { atk: treeAtkBonus(save), hp: treeGuardHp(save) }), pack), foeSide(foe.species, foe.level, foe.shiny ?? false, scale, foeFraction, mechs), rngOf(save), opts.trace, opts.offline ? null : weatherAt(now), fightMods(save, breath, pack.mods))
     traces.push(trace)
     lastFighter = fighter
     if (opts.summary) opts.summary.fights += 1
@@ -746,7 +769,7 @@ function doGuardian(save: SaveV2, chapter: ChapterDef, now: number, opts: Resolv
   outcome.boss = { name: guard.name, title: guard.epithet, species: guard.team[0].species }
   say(save, outcome, now, line(save, 'say.guard', { epithet: guard.epithet, name: guard.name, type: typeName(species(guard.team[0].species).type) }), quiet)
   const foes = guard.team.map((mon) => ({ species: mon.species, level: mon.level }))
-  const bouts = runGauntlet(save, chapter, foes, bossScale(guard), opts, now, guardianAssignment(guard.badge, guard.name, Boolean(chapter.special)))
+  const bouts = runGauntlet(save, chapter, foes, bossScale(guard), opts, now, guardianAssignment(guard.badge, guard.name, Boolean(chapter.special)), true)
   outcome.traces = bouts.traces
   if (bouts.wins < foes.length) {
     outcome.win = false
