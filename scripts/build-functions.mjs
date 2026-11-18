@@ -4,7 +4,7 @@ import { dirname, resolve } from 'node:path'
 import { fileURLToPath } from 'node:url'
 
 const root = resolve(dirname(fileURLToPath(import.meta.url)), '..')
-export const FUNCTIONS = ['sync-check', 'set-name', 'delete-account', 'arena-fight', 'arena-desk', 'friends', 'coop-boss', 'trade', 'guild']
+export const FUNCTIONS = ['sync-check', 'set-name', 'delete-account', 'arena-fight', 'arena-desk', 'friends', 'coop-boss', 'trade', 'guild', 'chat-send', 'admin-decide']
 const EXTERNAL = ['https://esm.sh/@supabase/supabase-js@2.49.1']
 
 export async function bundleSource(name) {

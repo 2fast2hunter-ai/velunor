@@ -47,7 +47,7 @@ import { browserCloudApi, watchAuth } from './cloud/supabaseApi'
 import { callOnline, claimRankRewards, clearVelunorKeys, loadOwnLabel, loadRankPage, sendBlockRow, sendReportRow } from './online/calls'
 import { isBoard, parseRankPage, RANK_FRAMES, type BoardId, type RankModel } from './online/ranks'
 import { buyNode, respecTree, treeCapMs } from './tree'
-import type { ArenaPanel, GuildPanel, SocialPanel, TradePanel } from './view'
+import type { ArenaPanel, ChatPanel, GuildPanel, SocialPanel, TradePanel } from './view'
 import { saveOwesCatchUp } from './online/check'
 import { nameIssue } from './online/name'
 import { createCloud, type CloudController } from './cloud/session'
@@ -173,6 +173,7 @@ let socialPanel: SocialPanel = { status: 'offline', code: '', friends: [], reque
 let expeditionPick = ''
 let tradePanel: TradePanel = { status: 'offline', note: '', mine: null, theirs: null, lockMs: 0, phase: 'pick' }
 let guildPanel: GuildPanel = { status: 'offline', name: '', tag: '', level: 1, points: 0, note: '' }
+let chatPanel: ChatPanel = { status: 'offline', lines: [], note: '', adult: null }
 let saveReady = false
 let wipingAccount = false
 
@@ -1193,7 +1194,7 @@ function render(step = save?.step): void {
     mult: wheelMult,
     symbols: wheelSymbols,
     note: wheelNote
-  }, { mapOpen, moreOpen, pcScroll, filtersOpen, dexOpen, shopTab, shopHint: Date.now() < shopFlashUntil, fighting: animating, cloud: mergedCloud(), masteryNote: Date.now() < masteryUntil ? masteryNote : '', ranks: { ...rankView, board: rankBoard, excluded: mergedCloud().flagLevel === 2 }, treePick, arena: arenaPanel, social: socialPanel, expeditionPick, trade: tradePanel, guild: guildPanel }))
+  }, { mapOpen, moreOpen, pcScroll, filtersOpen, dexOpen, shopTab, shopHint: Date.now() < shopFlashUntil, fighting: animating, cloud: mergedCloud(), masteryNote: Date.now() < masteryUntil ? masteryNote : '', ranks: { ...rankView, board: rankBoard, excluded: mergedCloud().flagLevel === 2 }, treePick, arena: arenaPanel, social: socialPanel, expeditionPick, trade: tradePanel, guild: guildPanel, chat: chatPanel }))
   if (screen === 'team') {
     pcIds = visiblePc(save, pc)
     const view = document.getElementById('pc-viewport')
@@ -1517,6 +1518,28 @@ function tradeText(code: string): string {
   const key = `trade.reason.${code}`
   const text = t(save.settings.lang, key)
   return text === key ? code : text
+}
+
+async function refreshChat(): Promise<void> {
+  const state = await callOnline('chat-send', { action: 'state' })
+  if (!state.ok) {
+    chatPanel = { ...chatPanel, status: 'offline' }
+    render()
+    return
+  }
+  const lines = Array.isArray(state.data.lines) ? state.data.lines.flatMap((line) => {
+    if (!line || typeof line !== 'object') return []
+    const row = line as { label?: unknown, body?: unknown }
+    if (typeof row.label !== 'string' || typeof row.body !== 'string') return []
+    return [{ label: row.label, body: row.body }]
+  }) : []
+  chatPanel = {
+    status: state.data.adult === true || state.data.adult === false ? 'ready' : 'age',
+    adult: state.data.adult === true ? true : state.data.adult === false ? false : null,
+    lines,
+    note: ''
+  }
+  render()
 }
 
 async function refreshGuild(): Promise<void> {
@@ -2790,7 +2813,26 @@ function onClick(event: Event): void {
     if (screen === 'social') void refreshSocial()
     if (screen === 'trade') void refreshTrade()
     if (screen === 'guild') void refreshGuild()
+    if (screen === 'chat') void refreshChat()
     kick()
+    return
+  }
+  if (act === 'chat-age') {
+    const year = Math.floor(Number((document.getElementById('chat-year') as HTMLInputElement | null)?.value))
+    const adult = year > 1900 && new Date().getFullYear() - year >= 13
+    void callOnline('chat-send', { action: 'age', adult }).then((result) => {
+      chatPanel = { ...chatPanel, adult: result.ok ? adult : null, status: result.ok ? 'ready' : 'age', note: result.ok ? '' : result.error }
+      render()
+    })
+    return
+  }
+  if (act === 'chat-send') {
+    const text = (document.getElementById('chat-text') as HTMLInputElement | null)?.value ?? ''
+    void callOnline('chat-send', { action: 'send', kind: 'guild', text }).then((result) => {
+      chatPanel = { ...chatPanel, note: result.ok ? '' : result.error }
+      if (result.ok) void refreshChat()
+      else render()
+    })
     return
   }
   if (act === 'guild-found' || act === 'guild-join' || act === 'guild-leave' || act === 'guild-phrase') {
