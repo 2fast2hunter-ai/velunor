@@ -10051,6 +10051,92 @@ function lastDailyReset(now) {
   return berlinWall(local.year, local.month, local.day - back, 4);
 }
 
+// src/adventure/research.ts
+var RESEARCH_LINES = ["gold", "ep", "offline", "expedition", "egg", "shard"];
+var RESEARCH_MAX = 10;
+function researchCost(level2) {
+  const step = Math.max(1, Math.min(RESEARCH_MAX, Math.floor(level2)));
+  return Math.round(2e4 * 1.8 ** (step - 1));
+}
+function researchDurationMs(level2) {
+  const step = Math.max(1, Math.min(RESEARCH_MAX, Math.floor(level2)));
+  return Math.round(30 * 60 * 1e3 * 1.6 ** (step - 1));
+}
+function researchRank(save, line) {
+  const n = Math.floor(Number(save.research?.ranks?.[line]));
+  if (!Number.isFinite(n)) return 0;
+  return Math.max(0, Math.min(RESEARCH_MAX, n));
+}
+function researchGoldMult(save) {
+  return 1 + 0.03 * researchRank(save, "gold");
+}
+function researchEpMult(save) {
+  return 1 + 0.03 * researchRank(save, "ep");
+}
+function researchLootMult(save) {
+  return 1 + 0.04 * researchRank(save, "expedition");
+}
+function researchShardYield(save) {
+  return 1 + 0.03 * researchRank(save, "shard");
+}
+function offlineCapMs(save) {
+  const bonus = researchRank(save, "offline") * 15 * 60 * 1e3;
+  return Math.min(TREE_CAP_MAX_MS, treeCapMs(save) + bonus);
+}
+var EMPTY_RANKS = [0, 0, 0, 0, 0, 0];
+function researchAudit(save) {
+  if (!save.research) return { ranks: [...EMPTY_RANKS], job: null };
+  const ranks = RESEARCH_LINES.map((line) => {
+    const n = Number(save.research?.ranks?.[line]);
+    return Number.isFinite(n) ? Math.floor(n) : -1;
+  });
+  const job = save.research.job;
+  if (!job) return { ranks, job: null };
+  return {
+    ranks,
+    job: {
+      line: RESEARCH_LINES.indexOf(job.line),
+      level: Math.floor(Number(job.level)),
+      startedAt: Math.floor(Number(job.startedAt)),
+      readyAt: Math.floor(Number(job.readyAt))
+    }
+  };
+}
+function researchMsNeeded(before, after, beforeAt) {
+  const prev = before?.ranks ?? EMPTY_RANKS;
+  const prepaid = before?.job ?? null;
+  let needed = 0;
+  let used = false;
+  for (let line = 0; line < RESEARCH_LINES.length; line++) {
+    const from = Number.isFinite(prev[line]) ? prev[line] : 0;
+    for (let level2 = from + 1; level2 <= after.ranks[line]; level2++) {
+      if (prepaid && !used && prepaid.line === line && prepaid.level === level2) {
+        needed += Math.max(0, prepaid.readyAt - beforeAt);
+        used = true;
+      } else needed += researchDurationMs(level2);
+    }
+  }
+  return needed;
+}
+function researchSpend(before, after) {
+  if (!after) return 0;
+  const prev = before?.ranks ?? EMPTY_RANKS;
+  const prepaid = before?.job ?? null;
+  let spend = 0;
+  let used = false;
+  for (let line = 0; line < RESEARCH_LINES.length; line++) {
+    const from = Number.isFinite(prev[line]) ? prev[line] : 0;
+    for (let level2 = from + 1; level2 <= after.ranks[line]; level2++) {
+      if (prepaid && !used && prepaid.line === line && prepaid.level === level2) used = true;
+      else spend += researchCost(level2);
+    }
+  }
+  const job = after.job;
+  const same = Boolean(job && prepaid && job.line === prepaid.line && job.level === prepaid.level && job.startedAt === prepaid.startedAt && job.readyAt === prepaid.readyAt);
+  if (job && !same) spend += researchCost(job.level);
+  return spend;
+}
+
 // src/adventure/dex.ts
 function regionRoster(regionId) {
   const region = regions.find((entry) => entry.id === regionId);
@@ -10212,15 +10298,16 @@ function allowedGold(elapsedMs, region, chapter, goldMult = 1) {
   const level2 = reachLevel(region, chapter);
   const per = TRAINER_GOLD_PER_LEVEL * TRAINER_PARTY * level2 * COIN_BONUS;
   const crest = (1e3 + 750 * level2) * COIN_BONUS;
-  const mult = Math.max(1, Math.min(1.1, goldMult));
+  const mult = Math.max(1, Math.min(1.1 * 1.3, goldMult));
   return Math.ceil((encounters(elapsedMs) * per + crest) * PLAUSIBILITY_BUFFER * mult);
 }
-function allowedEp(elapsedMs, region, chapter) {
+function allowedEp(elapsedMs, region, chapter, epMult = 1) {
   const level2 = reachLevel(region, chapter);
   const base = 8 * level2 * (1 + 0.15 * 9);
   const team = 1 * 1.3 * LEARN_BONUS + 5 * 0.5 * LEARN_BONUS;
   const hort = 4 * 0.3 * LEARN_BONUS;
-  return Math.ceil(encounters(elapsedMs) * base * (team + hort) * PLAUSIBILITY_BUFFER);
+  const mult = Math.max(1, Math.min(1.3, epMult));
+  return Math.ceil(encounters(elapsedMs) * base * (team + hort) * PLAUSIBILITY_BUFFER * mult);
 }
 function countedOffline(elapsedMs, capMs = OFFLINE_CAP_MS) {
   const cap = Math.min(12 * 60 * 60 * 1e3, Math.max(OFFLINE_CAP_MS, capMs));
@@ -10236,8 +10323,9 @@ function allowedChests(elapsedMs, capMs = OFFLINE_CAP_MS) {
   const shop = Math.max(1, Math.ceil(Math.max(elapsedMs, 1) / 864e5)) * 10;
   return Math.min(99 * 4 + 5, Math.ceil((fightCeiling(elapsedMs, capMs) + road + shop) * PLAUSIBILITY_BUFFER));
 }
-function allowedShards(elapsedMs, capMs = OFFLINE_CAP_MS) {
-  return Math.ceil(fightCeiling(elapsedMs, capMs) * PLAUSIBILITY_BUFFER);
+function allowedShards(elapsedMs, capMs = OFFLINE_CAP_MS, yieldMult = 1) {
+  const mult = Math.max(1, Math.min(1.3, yieldMult));
+  return Math.ceil(fightCeiling(elapsedMs, capMs) * PLAUSIBILITY_BUFFER * mult);
 }
 function allowedMastery(elapsedMs, capMs = OFFLINE_CAP_MS) {
   const fights = fightCeiling(elapsedMs, capMs);
@@ -10280,6 +10368,33 @@ function stickAudit(previousFlag, baseline, next, elapsedMs, bonusGold = 0) {
 function expeditionGoldCap(region, chapter) {
   return expeditionGold(reachLevel(region, chapter), 1 + 4 + 8, "gold");
 }
+var RESEARCH_SKEW_MS = 15e3;
+function researchVerdict(before, after, elapsedMs, nowMs) {
+  const next = after.research;
+  if (!next) return 0;
+  if (next.ranks.length !== 6 || next.ranks.some((rank2) => !Number.isInteger(rank2) || rank2 < 0 || rank2 > 10)) return 2;
+  const prev = before.research ?? null;
+  const prevRanks = prev?.ranks ?? [0, 0, 0, 0, 0, 0];
+  if (prev && (prev.ranks.length !== 6 || prev.ranks.some((rank2) => !Number.isInteger(rank2) || rank2 < 0 || rank2 > 10))) return 2;
+  for (let line = 0; line < 6; line++) if (next.ranks[line] < prevRanks[line]) return 2;
+  const job = next.job;
+  if (job) {
+    if (!Number.isInteger(job.line) || job.line < 0 || job.line > 5) return 2;
+    if (!Number.isInteger(job.level) || job.level !== next.ranks[job.line] + 1 || job.level > 10) return 2;
+    if (!Number.isFinite(job.startedAt) || !Number.isFinite(job.readyAt)) return 2;
+    if (job.startedAt > nowMs + RESEARCH_SKEW_MS) return 2;
+    if (job.readyAt - job.startedAt !== researchDurationMs(job.level)) return 2;
+    if (job.readyAt <= nowMs - RESEARCH_SKEW_MS) return 2;
+  }
+  const prepaid = prev?.job ?? null;
+  if (prepaid && prepaid.level > (next.ranks[prepaid.line] ?? 0)) {
+    if (!job || job.line !== prepaid.line || job.level !== prepaid.level || job.startedAt !== prepaid.startedAt || job.readyAt !== prepaid.readyAt) return 2;
+  }
+  const beforeAt = Number.isFinite(before.at) ? before.at : nowMs - elapsedMs;
+  const needed = researchMsNeeded(prev, next, beforeAt);
+  if (needed > elapsedMs + RESEARCH_SKEW_MS) return 2;
+  return 0;
+}
 function auditSync(before, after, elapsedMs, bonusGold = 0, nowMs = Date.now()) {
   if (!before) return { flag: 0, reasons: [] };
   const reasons = [];
@@ -10293,17 +10408,20 @@ function auditSync(before, after, elapsedMs, bonusGold = 0, nowMs = Date.now()) 
   const chapter = Math.max(before.chapter, after.chapter);
   const goldGain = after.gold - before.gold;
   const windowMs = Math.max(0, elapsed);
-  const goldMult = Math.max(1, before.treeGold ?? 1, after.treeGold ?? 1);
+  const goldMult = Math.max(1, before.treeGold ?? 1, after.treeGold ?? 1) * Math.max(1, before.researchGold ?? 1, after.researchGold ?? 1);
   const capMs = Math.max(OFFLINE_CAP_MS, before.treeCapMs ?? 0, after.treeCapMs ?? 0);
   const fightRoom = allowedGold(windowMs, region, chapter, goldMult) + Math.max(0, Math.floor(bonusGold));
   const day = lastDailyReset(new Date(nowMs)).toISOString();
-  const dayCap = expeditionGoldCap(region, chapter);
+  const lootMult = Math.max(1, before.researchLoot ?? 1, after.researchLoot ?? 1);
+  const dayCap = Math.ceil(expeditionGoldCap(region, chapter) * Math.max(1, Math.min(1.4, lootMult)));
   const expeditionRoom = before.expeditionDay === day && typeof before.expeditionGoldLeft === "number" ? Math.max(0, Math.min(dayCap, before.expeditionGoldLeft)) : dayCap;
-  const goldFlag = gainFlag(goldGain, fightRoom + expeditionRoom);
+  const spent = researchSpend(before.research ?? null, after.research ?? null);
+  const goldFlag = gainFlag(goldGain + spent, fightRoom + expeditionRoom);
   if (goldFlag) reasons.push("gold");
   flag = bump(flag, goldFlag);
   const epGain = after.ep - before.ep;
-  const epFlag = gainFlag(epGain, allowedEp(windowMs, region, chapter));
+  const epMult = Math.max(1, before.researchEp ?? 1, after.researchEp ?? 1);
+  const epFlag = gainFlag(epGain, allowedEp(windowMs, region, chapter, epMult));
   if (epFlag) reasons.push("ep");
   flag = bump(flag, epFlag);
   if (!crestsInOrder(after.badges)) {
@@ -10333,7 +10451,8 @@ function auditSync(before, after, elapsedMs, bonusGold = 0, nowMs = Date.now()) 
     flag = 2;
   }
   const shardGain = after.shards - before.shards;
-  if (shardGain > allowedShards(windowMs, capMs)) {
+  const shardYield = Math.max(1, before.researchShard ?? 1, after.researchShard ?? 1);
+  if (shardGain > allowedShards(windowMs, capMs, shardYield)) {
     reasons.push("shards");
     flag = 2;
   }
@@ -10341,6 +10460,11 @@ function auditSync(before, after, elapsedMs, bonusGold = 0, nowMs = Date.now()) 
   const masteryFlag = gainFlag(masteryGain, allowedMastery(windowMs, capMs));
   if (masteryFlag) reasons.push("mastery");
   flag = bump(flag, masteryFlag);
+  const researchFlag = researchVerdict(before, after, windowMs, nowMs);
+  if (researchFlag) {
+    reasons.push("research");
+    flag = bump(flag, researchFlag);
+  }
   if (flag === 0) {
     const extra = Math.max(0, goldGain - fightRoom);
     after.expeditionDay = day;
@@ -10405,6 +10529,12 @@ function auditFromSave(save) {
     mastery,
     masteryRanks,
     ...treeAudit(save),
+    treeCapMs: offlineCapMs(save),
+    researchGold: researchGoldMult(save),
+    researchEp: researchEpMult(save),
+    researchLoot: researchLootMult(save),
+    researchShard: researchShardYield(save),
+    research: researchAudit(save),
     mons,
     speciesAllowed: poolFor(enteredRegions(save))
   };

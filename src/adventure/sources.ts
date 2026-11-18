@@ -12,6 +12,7 @@ import {
   type ChestTier
 } from './lootbox'
 import { makeMon, takeId } from './save'
+import { takeWildShards } from './research'
 import { treeRoadCut, treeShardBonus } from './tree'
 import type { SaveV2 } from './types'
 
@@ -137,7 +138,7 @@ export function rollWildShard(save: SaveV2, speciesId: string, rng: () => number
   chance *= 1 + treeShardBonus(save)
   if (rng() >= chance) return null
   const owned = Object.values(save.mons).some((mon) => mon.species === speciesId)
-  save.shards[speciesId] = (save.shards[speciesId] ?? 0) + 1
+  save.shards[speciesId] = (save.shards[speciesId] ?? 0) + takeWildShards(save)
   if (owned) return 'shard'
   const need = unlockShardCost(rarity)
   if ((save.shards[speciesId] ?? 0) < need) return 'shard'

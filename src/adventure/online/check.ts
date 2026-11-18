@@ -1,6 +1,7 @@
 import { BASE_ENCOUNTER_MS, OFFLINE_CAP_MS } from '../const'
 import { lastDailyReset } from '../arena'
 import { expeditionGold } from '../expedition'
+import { researchDurationMs, researchMsNeeded, researchSpend, type ResearchAudit } from '../research'
 
 /** Server plausibility for one sync. Numbers follow the live fight and the loot tables. */
 
@@ -50,8 +51,18 @@ export interface AuditState {
   masteryRanks?: number
   /** Gold multiplier from the mastery tree. Older audits omit it and count as 1. */
   treeGold?: number
-  /** Offline cap in ms from the mastery tree. Older audits omit it and count as 8 h. */
+  /** Offline cap in ms from the mastery tree and the research tower. Older audits omit it and count as 8 h. */
   treeCapMs?: number
+  /** Gold multiplier from the research tower. Older audits omit it and count as 1. */
+  researchGold?: number
+  /** EP multiplier from the research tower. Older audits omit it and count as 1. */
+  researchEp?: number
+  /** Expedition loot multiplier. Older audits omit it and count as 1. */
+  researchLoot?: number
+  /** Expected wild shards per drop. Older audits omit it and count as 1. */
+  researchShard?: number
+  /** Completed ranks and the one running job. Missing means nothing has been researched. */
+  research?: ResearchAudit
   /** Gold the server has already granted as gifts and co-op rewards. */
   bonusGold?: number
   /** Berlin day whose expedition gold allowance is stored below. */
@@ -82,17 +93,18 @@ export function allowedGold(elapsedMs: number, region: number, chapter: number, 
   const level = reachLevel(region, chapter)
   const per = TRAINER_GOLD_PER_LEVEL * TRAINER_PARTY * level * COIN_BONUS
   const crest = (1000 + 750 * level) * COIN_BONUS
-  const mult = Math.max(1, Math.min(1.1, goldMult))
+  const mult = Math.max(1, Math.min(1.1 * 1.3, goldMult))
   return Math.ceil((encounters(elapsedMs) * per + crest) * PLAUSIBILITY_BUFFER * mult)
 }
 
 /** Highest EP: speed ×3, learn fruit, buddy, full bench, four hort guests, rarity 9, then the 1.2 buffer. */
-export function allowedEp(elapsedMs: number, region: number, chapter: number): number {
+export function allowedEp(elapsedMs: number, region: number, chapter: number, epMult = 1): number {
   const level = reachLevel(region, chapter)
   const base = 8 * level * (1 + 0.15 * 9)
   const team = 1 * 1.3 * LEARN_BONUS + 5 * 0.5 * LEARN_BONUS
   const hort = 4 * 0.3 * LEARN_BONUS
-  return Math.ceil(encounters(elapsedMs) * base * (team + hort) * PLAUSIBILITY_BUFFER)
+  const mult = Math.max(1, Math.min(1.3, epMult))
+  return Math.ceil(encounters(elapsedMs) * base * (team + hort) * PLAUSIBILITY_BUFFER * mult)
 }
 
 function countedOffline(elapsedMs: number, capMs = OFFLINE_CAP_MS): number {
@@ -118,8 +130,9 @@ export function allowedChests(elapsedMs: number, capMs = OFFLINE_CAP_MS): number
 }
 
 /** One shard per fight. Offline catch-up and speed ×3 both fit, then the 1.2 buffer. */
-export function allowedShards(elapsedMs: number, capMs = OFFLINE_CAP_MS): number {
-  return Math.ceil(fightCeiling(elapsedMs, capMs) * PLAUSIBILITY_BUFFER)
+export function allowedShards(elapsedMs: number, capMs = OFFLINE_CAP_MS, yieldMult = 1): number {
+  const mult = Math.max(1, Math.min(1.3, yieldMult))
+  return Math.ceil(fightCeiling(elapsedMs, capMs) * PLAUSIBILITY_BUFFER * mult)
 }
 
 /** One point per won bout, a boss bonus every few bouts, and a duplicate a minute. */
@@ -191,6 +204,35 @@ export function expeditionGoldCap(region: number, chapter: number): number {
   return expeditionGold(reachLevel(region, chapter), 1 + 4 + 8, 'gold')
 }
 
+const RESEARCH_SKEW_MS = 15_000
+
+function researchVerdict(before: AuditState, after: AuditState, elapsedMs: number, nowMs: number): 0 | 1 | 2 {
+  const next = after.research
+  if (!next) return 0
+  if (next.ranks.length !== 6 || next.ranks.some((rank) => !Number.isInteger(rank) || rank < 0 || rank > 10)) return 2
+  const prev = before.research ?? null
+  const prevRanks = prev?.ranks ?? [0, 0, 0, 0, 0, 0]
+  if (prev && (prev.ranks.length !== 6 || prev.ranks.some((rank) => !Number.isInteger(rank) || rank < 0 || rank > 10))) return 2
+  for (let line = 0; line < 6; line++) if (next.ranks[line] < prevRanks[line]) return 2
+  const job = next.job
+  if (job) {
+    if (!Number.isInteger(job.line) || job.line < 0 || job.line > 5) return 2
+    if (!Number.isInteger(job.level) || job.level !== next.ranks[job.line] + 1 || job.level > 10) return 2
+    if (!Number.isFinite(job.startedAt) || !Number.isFinite(job.readyAt)) return 2
+    if (job.startedAt > nowMs + RESEARCH_SKEW_MS) return 2
+    if (job.readyAt - job.startedAt !== researchDurationMs(job.level)) return 2
+    if (job.readyAt <= nowMs - RESEARCH_SKEW_MS) return 2
+  }
+  const prepaid = prev?.job ?? null
+  if (prepaid && prepaid.level > (next.ranks[prepaid.line] ?? 0)) {
+    if (!job || job.line !== prepaid.line || job.level !== prepaid.level || job.startedAt !== prepaid.startedAt || job.readyAt !== prepaid.readyAt) return 2
+  }
+  const beforeAt = Number.isFinite(before.at) ? before.at : nowMs - elapsedMs
+  const needed = researchMsNeeded(prev, next, beforeAt)
+  if (needed > elapsedMs + RESEARCH_SKEW_MS) return 2
+  return 0
+}
+
 export function auditSync(before: AuditState | null, after: AuditState, elapsedMs?: number, bonusGold = 0, nowMs = Date.now()): AuditResult {
   if (!before) return { flag: 0, reasons: [] }
   const reasons: string[] = []
@@ -204,19 +246,22 @@ export function auditSync(before: AuditState | null, after: AuditState, elapsedM
   const chapter = Math.max(before.chapter, after.chapter)
   const goldGain = after.gold - before.gold
   const windowMs = Math.max(0, elapsed)
-  const goldMult = Math.max(1, before.treeGold ?? 1, after.treeGold ?? 1)
+  const goldMult = Math.max(1, before.treeGold ?? 1, after.treeGold ?? 1) * Math.max(1, before.researchGold ?? 1, after.researchGold ?? 1)
   const capMs = Math.max(OFFLINE_CAP_MS, before.treeCapMs ?? 0, after.treeCapMs ?? 0)
   const fightRoom = allowedGold(windowMs, region, chapter, goldMult) + Math.max(0, Math.floor(bonusGold))
   const day = lastDailyReset(new Date(nowMs)).toISOString()
-  const dayCap = expeditionGoldCap(region, chapter)
+  const lootMult = Math.max(1, before.researchLoot ?? 1, after.researchLoot ?? 1)
+  const dayCap = Math.ceil(expeditionGoldCap(region, chapter) * Math.max(1, Math.min(1.4, lootMult)))
   const expeditionRoom = before.expeditionDay === day && typeof before.expeditionGoldLeft === 'number'
     ? Math.max(0, Math.min(dayCap, before.expeditionGoldLeft))
     : dayCap
-  const goldFlag = gainFlag(goldGain, fightRoom + expeditionRoom)
+  const spent = researchSpend(before.research ?? null, after.research ?? null)
+  const goldFlag = gainFlag(goldGain + spent, fightRoom + expeditionRoom)
   if (goldFlag) reasons.push('gold')
   flag = bump(flag, goldFlag)
   const epGain = after.ep - before.ep
-  const epFlag = gainFlag(epGain, allowedEp(windowMs, region, chapter))
+  const epMult = Math.max(1, before.researchEp ?? 1, after.researchEp ?? 1)
+  const epFlag = gainFlag(epGain, allowedEp(windowMs, region, chapter, epMult))
   if (epFlag) reasons.push('ep')
   flag = bump(flag, epFlag)
   if (!crestsInOrder(after.badges)) {
@@ -246,7 +291,8 @@ export function auditSync(before: AuditState | null, after: AuditState, elapsedM
     flag = 2
   }
   const shardGain = after.shards - before.shards
-  if (shardGain > allowedShards(windowMs, capMs)) {
+  const shardYield = Math.max(1, before.researchShard ?? 1, after.researchShard ?? 1)
+  if (shardGain > allowedShards(windowMs, capMs, shardYield)) {
     reasons.push('shards')
     flag = 2
   }
@@ -254,6 +300,11 @@ export function auditSync(before: AuditState | null, after: AuditState, elapsedM
   const masteryFlag = gainFlag(masteryGain, allowedMastery(windowMs, capMs))
   if (masteryFlag) reasons.push('mastery')
   flag = bump(flag, masteryFlag)
+  const researchFlag = researchVerdict(before, after, windowMs, nowMs)
+  if (researchFlag) {
+    reasons.push('research')
+    flag = bump(flag, researchFlag)
+  }
   if (flag === 0) {
     const extra = Math.max(0, goldGain - fightRoom)
     after.expeditionDay = day

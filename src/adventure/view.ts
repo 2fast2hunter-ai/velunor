@@ -61,11 +61,21 @@ import { expToNext, isAlive, monStats, realHp } from './stats'
 import { masteryFrame, masteryGoal, masteryLevel, masteryStarRow } from './mastery'
 import { BOARDS, RANK_FRAMES, type RankLine, type RankModel } from './online/ranks'
 import { TREE_NODES, branchNodes, respecCost, treeFree, treePointParts, treeUnlocked, chestShinyChance, type BranchId } from './tree'
+import {
+  RESEARCH_LINES,
+  RESEARCH_MAX,
+  researchCost,
+  researchDurationMs,
+  researchLootMult,
+  researchRank,
+  researchUnlocked,
+  type ResearchLine
+} from './research'
 import type { OfflineSummary } from './sim'
 import type { SaveV2 } from './types'
 import { PC_VIEW_FALLBACK, virtualWindow } from './virtualList'
 
-export type Screen = 'adventure' | 'progress' | 'team' | 'codex' | 'activities' | 'shop' | 'achievements' | 'ranks' | 'tree' | 'arena' | 'social' | 'expedition' | 'trade' | 'guild' | 'chat' | 'options' | 'guide'
+export type Screen = 'adventure' | 'progress' | 'team' | 'codex' | 'activities' | 'shop' | 'achievements' | 'ranks' | 'tree' | 'tower' | 'arena' | 'social' | 'expedition' | 'trade' | 'guild' | 'chat' | 'options' | 'guide'
 
 export interface WheelPanel {
   tab: 'hort' | 'wheel' | 'chests'
@@ -352,7 +362,7 @@ const TAB_ICONS: Record<string, string> = {
 }
 
 function tabbar(save: SaveV2, screen: Screen, moreOpen: boolean): string {
-  const moreScreens: Screen[] = ['shop', 'achievements', 'ranks', 'tree', 'arena', 'social', 'expedition', 'trade', 'guild', 'chat', 'options', 'guide']
+  const moreScreens: Screen[] = ['shop', 'achievements', 'ranks', 'tree', 'tower', 'arena', 'social', 'expedition', 'trade', 'guild', 'chat', 'options', 'guide']
   const tabs: { id: string; label: string; active: boolean; act: string; screen?: Screen }[] = [
     { id: 'adventure', label: 'nav.adventure', active: screen === 'adventure', act: 'screen', screen: 'adventure' },
     { id: 'team', label: 'nav.team', active: screen === 'team', act: 'screen', screen: 'team' },
@@ -384,6 +394,7 @@ function moreSheet(save: SaveV2, open: boolean): string {
     ${items.slice(0, 2).map(([id, icon, label]) => `<button type="button" data-act="screen" data-screen="${id}">${ui(icon)}${tr(save, label)}</button>`).join('')}
     ${ranks}
     ${treeBtn}
+    <button type="button" data-act="screen" data-screen="tower"><svg class="ui-icon" viewBox="0 0 24 24" aria-hidden="true"><path fill="currentColor" d="M10 2h4v4h3v4h2v12H5V10h2V6h3z"/></svg>${tr(save, 'nav.tower')}</button>
     ${arenaBtn}
     ${socialBtn}
     <button type="button" data-act="screen" data-screen="expedition"><svg class="ui-icon" viewBox="0 0 24 24" aria-hidden="true"><path fill="currentColor" d="M4 16c3-6 6-6 8-2s5-4 8-2v6H4z"/><circle cx="16" cy="7" r="2.4" fill="currentColor"/></svg>${tr(save, 'nav.expedition')}</button>
@@ -1471,6 +1482,63 @@ function arenaScreen(save: SaveV2, panel: ArenaPanel | undefined): string {
   </div></div></div>`
 }
 
+function towerGlyph(line: ResearchLine): string {
+  const art = `tower/${line}`
+  const body: Record<ResearchLine, string> = {
+    gold: '<circle cx="32" cy="32" r="18" fill="#f0c14a"/><circle cx="32" cy="32" r="10" fill="none" stroke="#8a6a12" stroke-width="4"/>',
+    ep: '<path d="M32 8l6 16h16l-13 10 5 16-14-10-14 10 5-16-13-10h16z" fill="#f2d27a"/>',
+    offline: '<path d="M40 14a16 16 0 1 0 0 36 12 12 0 1 1 0-36z" fill="#9eb6e0"/>',
+    expedition: '<path d="M16 50V14h22l-6 10 6 10H16" fill="#7dcea0"/><path d="M16 50v-8" stroke="#243044" stroke-width="4" stroke-linecap="round"/>',
+    egg: '<ellipse cx="32" cy="36" rx="16" ry="20" fill="#f4efe4"/><path d="M22 34c6 2 14 2 20 0" fill="none" stroke="#d7c7a2" stroke-width="3"/>',
+    shard: '<path d="M32 8l14 18-14 30L18 26z" fill="#8fd0ea"/><path d="M32 8l6 18-6 30-6-30z" fill="#d7f3ff"/>'
+  }
+  return `<svg class="tower-svg" data-art="${art}" viewBox="0 0 64 64" aria-hidden="true">${body[line]}</svg>`
+}
+
+function towerTime(ms: number): string {
+  const mins = Math.max(1, Math.round(ms / 60000))
+  if (mins < 60) return `${mins} min`
+  const hours = Math.floor(mins / 60)
+  const rest = mins % 60
+  if (hours < 48) return rest ? `${hours} h ${rest} min` : `${hours} h`
+  const days = ms / 86_400_000
+  return `${days.toFixed(1)} d`
+}
+
+function towerScreen(save: SaveV2, now: number): string {
+  const unlocked = researchUnlocked(save)
+  const job = save.research?.job ?? null
+  const floors = [...RESEARCH_LINES].reverse().map((line) => {
+    const rank = researchRank(save, line)
+    const running = job?.line === line
+    const next = rank + 1
+    const pips = Array.from({ length: RESEARCH_MAX }, (_, index) => `<i class="${index < rank ? 'on' : ''}"></i>`).join('')
+    const pct = (line === 'expedition' ? 4 : line === 'egg' ? -4 : 3) * rank
+    const action = !unlocked || rank >= RESEARCH_MAX || (job && !running)
+      ? ''
+      : running
+        ? `<p class="tower-run">${tr(save, 'research.running', { time: towerTime(Math.max(0, job.readyAt - now)) })}</p>`
+        : `<button type="button" class="primary" data-act="research-start" data-id="${line}" ${save.gold < researchCost(next) ? 'disabled' : ''}>${tr(save, 'research.start', { gold: researchCost(next).toLocaleString('de-DE'), time: towerTime(researchDurationMs(next)) })}</button>`
+    return `<article class="tower-floor${running ? ' running' : ''}" data-art="tower/${line}">
+      ${towerGlyph(line)}
+      <div>
+        <h3>${tr(save, `research.${line}`)}</h3>
+        <p>${tr(save, 'research.rank', { rank, max: RESEARCH_MAX, pct })}</p>
+        <p class="muted">${tr(save, `research.${line}.line`)}</p>
+        <div class="tower-pips" aria-hidden="true">${pips}</div>
+        ${action}
+      </div>
+    </article>`
+  }).join('')
+  return `<div class="menu-screen"><div class="menu-scroll"><div class="card panel tower-screen" data-art="tower/screen">
+    <h2>${tr(save, 'nav.tower')}</h2>
+    <p class="muted">${tr(save, unlocked ? 'research.note' : 'research.locked')}</p>
+    ${job ? '' : `<p class="muted">${tr(save, 'research.one')}</p>`}
+    <div class="tower-stack">${floors}</div>
+    <p class="muted">${tr(save, 'research.lootNow', { n: Math.round((researchLootMult(save) - 1) * 100) })}</p>
+  </div></div></div>`
+}
+
 function treeScreen(save: SaveV2, pick: string | undefined, now: number): string {
   const lang = L(save)
   const parts = treePointParts(save)
@@ -1743,6 +1811,7 @@ function center(save: SaveV2, screen: Screen, now: number, pc: PcQuery, dex: Cod
   if (screen === 'progress') return `<div class="menu-screen"><div class="menu-scroll">${progress(save)}</div></div>`
   if (screen === 'ranks') return ranksScreen(save, shell.ranks)
   if (screen === 'tree') return treeScreen(save, shell.treePick, now)
+  if (screen === 'tower') return towerScreen(save, now)
   if (screen === 'arena') return arenaScreen(save, shell.arena)
   if (screen === 'social') return socialScreen(save, shell.social)
   if (screen === 'expedition') return expeditionScreen(save, now, shell.expeditionPick, shell.guild?.level ?? 0)

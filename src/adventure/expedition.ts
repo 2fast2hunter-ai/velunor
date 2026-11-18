@@ -5,6 +5,7 @@ import { lastDailyReset } from './arena'
 import { t } from './i18n'
 import { chestStateOf, openChest, type ChestTier } from './lootbox'
 import { chapterById } from './route'
+import { researchLootMult, scaleHatch } from './research'
 import { crystalExp } from './shop'
 import { addExp } from './stats'
 import { treeExpeditionSlots } from './tree'
@@ -258,6 +259,10 @@ export function settleExpeditions(save: SaveV2, now: number): ExpeditionReport[]
     const type = mon ? species(mon.species).type : run.type
     const tier = mon ? expeditionTier(type, rarity, run) : 'bronze'
     const loot = previewLoot(lootLevel(save), run.hours, tier, mon?.lvl ?? 1)
+    const lootMult = researchLootMult(save)
+    loot.gold = Math.round(loot.gold * lootMult)
+    loot.marks = Math.round(loot.marks * lootMult)
+    loot.ep = Math.round(loot.ep * lootMult)
     const room = Math.max(0, MARK_CAP - state.marks)
     const marks = Math.min(room, loot.marks)
     state.marks += marks
@@ -277,7 +282,7 @@ export function settleExpeditions(save: SaveV2, now: number): ExpeditionReport[]
         const chest = TIER_CHEST[tier]
         const rolled = openChest(chest, chestStateOf(save), rng)
         if (chest !== 'kiesel') save.pity[chest] = rolled.pity
-        save.eggs.push({ species: rolled.speciesId, shiny: false, readyAt: now + EGG_READY_MS })
+        save.eggs.push({ species: rolled.speciesId, shiny: false, readyAt: now + scaleHatch(EGG_READY_MS, save) })
         egg = true
       } catch {
         egg = false

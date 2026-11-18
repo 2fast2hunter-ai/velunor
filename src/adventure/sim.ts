@@ -51,7 +51,8 @@ import { expeditionBusy, settleExpeditions } from './expedition'
 import { makeMon, takeId } from './save'
 import { addExp, awakenCount, battleLevel, crossedAwaken, isAlive, monStats, realHp, speciesExp } from './stats'
 import { MASTERY_BOSS, MASTERY_WIN, addMastery, masteryLevel, pullMasteryUps, settleOfflineMastery, type MasteryUp } from './mastery'
-import { treeAtkBonus, treeCapMs, treeCritAdd, treeGuardHp, treeLastBreath, treeOfflineFactor, treeStrongType } from './tree'
+import { offlineCapMs, settleResearch } from './research'
+import { treeAtkBonus, treeCritAdd, treeGuardHp, treeLastBreath, treeOfflineFactor, treeStrongType } from './tree'
 import { t } from './i18n'
 import type { SkillDef } from '../types'
 import type { OwnedMon, SaveV2 } from './types'
@@ -991,7 +992,8 @@ export function resolveEncounter(save: SaveV2, now: number, opts: ResolveOpts): 
 }
 
 export function simulateOffline(save: SaveV2, rawMs: number, now: number): { summary: OfflineSummary; countedMs: number } {
-  const countedMs = Math.min(Math.max(0, rawMs), treeCapMs(save))
+  settleResearch(save, now)
+  const countedMs = Math.min(Math.max(0, rawMs), offlineCapMs(save))
   bankRoad(save, countedMs)
   save.roadAt = now
   const count = Math.floor(countedMs / BASE_ENCOUNTER_MS)

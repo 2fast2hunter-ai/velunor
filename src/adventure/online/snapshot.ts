@@ -1,5 +1,6 @@
 import { species } from '../../data'
 import { masteryLevel } from '../mastery'
+import { researchAudit, researchEpMult, researchGoldMult, researchLootMult, researchShardYield, offlineCapMs } from '../research'
 import { treeAudit } from '../tree'
 import { START_GOLD } from '../const'
 import { enteredRegions, poolFor } from '../lootbox'
@@ -46,6 +47,12 @@ export function auditFromSave(save: SaveV2): AuditState {
     mastery,
     masteryRanks,
     ...treeAudit(save),
+    treeCapMs: offlineCapMs(save),
+    researchGold: researchGoldMult(save),
+    researchEp: researchEpMult(save),
+    researchLoot: researchLootMult(save),
+    researchShard: researchShardYield(save),
+    research: researchAudit(save),
     mons,
     speciesAllowed: poolFor(enteredRegions(save))
   }
