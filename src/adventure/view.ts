@@ -56,6 +56,7 @@ import { councilAssignment, guardianAssignment, mechIcon, mechName, mechTip, typ
 import { ultName, ultPattern } from './ult'
 import { FACES, MULTIPLIERS, PRIZES, faceById, spinCost, wheelOpen, type Multiplier, type SymbolId } from './wheel'
 import { expToNext, isAlive, monStats, realHp } from './stats'
+import { masteryFrame, masteryGoal, masteryLevel, masteryStarRow } from './mastery'
 import type { OfflineSummary } from './sim'
 import type { SaveV2 } from './types'
 import { PC_VIEW_FALLBACK, virtualWindow } from './virtualList'
@@ -111,6 +112,7 @@ export interface ShellFlags {
   shopTab?: ShopTab
   shopHint?: boolean
   cloud?: CloudView
+  masteryNote?: string
 }
 
 const base = (): string => import.meta.env.BASE_URL || '/'
@@ -126,6 +128,14 @@ function ui(id: UiArtId): string {
 function portrait(speciesId: string, large = false, extra = ''): string {
   const color = rarityInfo(species(speciesId).baseRarity).color
   return `<img class="portrait ${extra}" style="--rarity:${color}" src="${monsterArt(speciesId, large)}" alt=""/>`
+}
+
+function masteryPlate(save: SaveV2, speciesId: string, extra = ''): string {
+  const level = masteryLevel(save.mastery?.[speciesId] ?? 0)
+  const frame = masteryFrame(level)
+  const ring = frame === 'none' ? '' : ` m-${frame}`
+  const shine = frame === 'gold' ? ' m-shine' : ''
+  return `<span class="m-plate${ring}${shine}">${portrait(speciesId, false, extra)}${masteryStarRow(level)}</span>`
 }
 
 export function monsterArt(id: string, large = false): string {
@@ -577,7 +587,7 @@ export function visiblePc(save: SaveV2, query: PcQuery): string[] {
     if (query.sort === 'level') return mon.lvl
     if (query.sort === 'rarity') return sp.baseRarity
     if (query.sort === 'stats') {
-      const stats = monStats(mon)
+      const stats = monStats(mon, mon.lvl, masteryLevel(save.mastery?.[mon.species] ?? 0))
       return stats.hp + stats.atk + stats.def + stats.spd
     }
     return mon.caughtAt
@@ -596,7 +606,7 @@ export function pcWindowHtml(save: SaveV2, uids: string[], selected: string | nu
     if (!mon) return ''
     const sp = species(mon.species)
     return `<button type="button" class="mon-card ${selected === uid ? 'on' : ''}" data-act="select" data-uid="${uid}" draggable="true" data-drag="pc">
-      ${portrait(sp.id)}
+      ${masteryPlate(save, sp.id)}
       <div>${esc(sp.name)}</div>
       <div class="muted">Lv ${mon.lvl}${mon.shiny ? ' · Schimmer' : ''}</div>
     </button>`
@@ -624,7 +634,7 @@ function team(save: SaveV2, query: PcQuery, selected: string | null, shell: Shel
     if (!uid || !save.mons[uid]) return `<div class="mon-card slot" aria-hidden="true"><img class="slot-ghost" src="${art(UI_ART.slotEmpty)}" alt=""/><span class="slot-num">${index + 1}</span></div>`
     const mon = save.mons[uid]
     return `<button type="button" class="mon-card ${selected === uid ? 'on' : ''}" data-act="select" data-uid="${uid}" data-index="${index}" data-press="card" draggable="true" data-drag="team">
-      ${portrait(mon.species)}
+      ${masteryPlate(save, mon.species)}
       <div>${index + 1}. ${esc(species(mon.species).name)}</div>
       <div class="muted">Lv ${mon.lvl}${save.buddy === uid ? ` · ${tr(save, 'team.buddy')}` : ''}${fightsHere(save, mon) ? '' : ` · ${tr(save, 'team.other')}`}</div>
     </button>`
@@ -681,8 +691,11 @@ function codex(save: SaveV2, filter: CodexQuery, shell: ShellFlags): string {
   const cells = rows.map((mon) => {
     const status = dexStatus(save, mon.id)
     const hidden = status === 'missing'
+    const face = hidden
+      ? portrait(mon.id, false, 'sil').replace('style="', 'style="opacity:.25;')
+      : masteryPlate(save, mon.id, status === 'owned' || status === 'released' ? '' : 'sil')
     return `<button type="button" class="mon-card" data-act="dex" data-species="${mon.id}">
-      ${portrait(mon.id, false, status === 'owned' || status === 'released' ? '' : 'sil').replace('style="', hidden ? 'style="opacity:.25;' : 'style="')}
+      ${face}
       <div>${hidden ? tr(save, 'codex.no', { n: speciesNumber(mon.id) }) : esc(mon.name)}</div>
       <div class="muted">${dexStatusLabel(status)}</div>
     </button>`
@@ -1159,7 +1172,7 @@ function guide(save: SaveV2): string {
   return `<div class="menu-screen">
     <div class="menu-scroll">
       <div class="card panel"><h2>${ui('guide')}${tr(save, 'guide.title')}</h2>
-        ${[1, 2, 3, 4, 5, 6, 7, 8, 9, 10, 11, 12].map((n) => `<p>${ui('guide')}${tr(save, `guide.${n}`)}</p>`).join('')}
+        ${[1, 2, 3, 4, 5, 6, 7, 8, 9, 10, 11, 12, 13].map((n) => `<p>${ui('guide')}${tr(save, `guide.${n}`)}</p>`).join('')}
       </div>
     </div>
   </div>`
@@ -1209,6 +1222,7 @@ export function gameHtml(save: SaveV2, screen: Screen, now: number, pc: PcQuery,
       ${adventure && sideOpen ? drawerSheet(save, now) : ''}
       ${moreSheet(save, moreOpen)}
       ${overlay ? `<div class="overlay overlay-sheet">${overlayHtml(save, overlay)}</div>` : ''}
+      ${shell.masteryNote ? `<p class="mastery-toast" role="status">${esc(shell.masteryNote)}</p>` : ''}
     </div>
     <div class="band band-bot"></div>
   </div>`
@@ -1308,6 +1322,7 @@ function overlayHtml(save: SaveV2, overlay: Overlay): string {
       <p>${tr(save, 'welcome.stats', { fights: overlay.summary.fights.toLocaleString(locale), dupes: overlay.summary.dupes.toLocaleString(locale), gold: gold(overlay.summary.gold) })}</p>
       <div class="catches">${sprites || `<span class="muted">${tr(save, 'welcome.none')}</span>`}</div>
       ${levels || `<p class="muted">${tr(save, 'welcome.levels')}</p>`}
+      <p>${tr(save, 'welcome.mastery', { names: overlay.summary.mastery.length ? overlay.summary.mastery.map((row) => `${species(row.speciesId).name} ${row.level}`).join(', ') : '—' })}</p>
       <p>${tr(save, 'welcome.badges', { names: overlay.summary.badges.length ? overlay.summary.badges.join(', ') : '—' })}</p>
     </div>
     <button type="button" class="primary" data-act="close">${tr(save, 'welcome.next')}</button>
@@ -1350,6 +1365,7 @@ function dexEntry(save: SaveV2, id: string): string {
     <img class="hero ${hidden ? 'sil' : ''}" src="${monsterArt(id, true)}" alt=""/>
     <div class="kicker">Nr. ${speciesNumber(id)} · ${dexStatusLabel(status)}</div>
     <h2>${esc(sp.name)}</h2>
+    ${masteryStarRow(masteryLevel(save.mastery?.[id] ?? 0))}
     <p>${esc(typeName(sp.type))} · ${esc(rarityInfo(sp.baseRarity).name)} · ${tr(save, 'codex.catches', { n: (save.dex[id]?.caught ?? 0).toLocaleString('de-DE') })}</p>
     <div class="stats">
       <div class="stat">HP<br/>${base.hp}</div>
@@ -1370,7 +1386,9 @@ function card(save: SaveV2, uid: string): string {
   const mon = save.mons[uid]
   if (!mon) return `<div class="sheet sheet-full" data-sheet="swipe">${grab()}<p>${tr(save, 'card.none')}</p><button type="button" class="primary" data-act="close">${tr(save, 'codex.close')}</button></div>`
   const sp = species(mon.species)
-  const stats = monStats(mon)
+  const rank = masteryLevel(save.mastery?.[mon.species] ?? 0)
+  const goal = masteryGoal(save.mastery?.[mon.species] ?? 0)
+  const stats = monStats(mon, mon.lvl, rank)
   const need = expToNext(mon.lvl)
   const pct = Math.max(0, Math.min(100, (mon.exp / need) * 100))
   const when = new Date(mon.caughtAt).toLocaleString('de-DE')
@@ -1378,6 +1396,9 @@ function card(save: SaveV2, uid: string): string {
     <div class="sheet-body">
     <img class="hero" src="${monsterArt(sp.id, true)}" alt=""/>
     <h2>${esc(sp.name)}${mon.shiny ? ' · Schimmer' : ''} · ${tr(save, 'chest.star', { n: save.stars[sp.id] ?? 0 })}</h2>
+    ${masteryPlate(save, sp.id)}
+    <div class="bar-exp m-bar"><span style="width:${goal.pct}%"></span></div>
+    <p class="muted">${goal.done ? tr(save, 'mastery.max') : tr(save, 'mastery.ep', { have: goal.into.toLocaleString('de-DE'), need: goal.span.toLocaleString('de-DE') })} · ${tr(save, 'mastery.bonus', { pct: rank * 2 })}</p>
     <p>${esc(typeLabel(L(save), sp.type, typeName(sp.type)))} · ${esc(rarityLabel(L(save), sp.baseRarity, rarityInfo(sp.baseRarity).name))} · Lv ${mon.lvl} · ${tr(save, 'card.awaken', { n: mon.lvl >= 50 ? 2 : mon.lvl >= 25 ? 1 : 0 })}</p>
     <div class="bar-exp"><span style="width:${pct}%"></span></div>
     <p class="muted">EP ${mon.exp.toLocaleString('de-DE')} / ${need.toLocaleString('de-DE')}</p>

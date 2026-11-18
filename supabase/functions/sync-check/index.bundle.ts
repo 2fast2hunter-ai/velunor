@@ -60,6 +60,12 @@ function allowedChests(elapsedMs) {
 function allowedShards(elapsedMs) {
   return Math.ceil(fightCeiling(elapsedMs) * PLAUSIBILITY_BUFFER);
 }
+function allowedMastery(elapsedMs) {
+  const fights = fightCeiling(elapsedMs);
+  const bosses = Math.ceil(fights / 6);
+  const dupes = Math.ceil(countedOffline(elapsedMs) / 6e4);
+  return Math.ceil((fights + bosses * 5 + dupes * 10) * PLAUSIBILITY_BUFFER);
+}
 function allowedNewMons(elapsedMs) {
   return allowedChests(elapsedMs) + Math.floor(allowedShards(elapsedMs) / 5) + Math.ceil(Math.max(0, elapsedMs) / 36e5) + 6;
 }
@@ -79,6 +85,7 @@ function gainFlag(gain, allowed) {
 function auditHasProgress(before, after) {
   if (after.gold > before.gold || after.ep > before.ep) return true;
   if (after.chests > before.chests || after.shards > before.shards) return true;
+  if ((after.mastery ?? 0) > (before.mastery ?? 0)) return true;
   if (after.region > before.region || after.chapter > before.chapter) return true;
   if (after.badges.some((badge) => !before.badges.includes(badge))) return true;
   const known = new Set(before.mons.map((mon) => mon.uid));
@@ -142,6 +149,10 @@ function auditSync(before, after, elapsedMs) {
     reasons.push("shards");
     flag = 2;
   }
+  const masteryGain = (after.mastery ?? 0) - (before.mastery ?? 0);
+  const masteryFlag = gainFlag(masteryGain, allowedMastery(windowMs));
+  if (masteryFlag) reasons.push("mastery");
+  flag = bump(flag, masteryFlag);
   return { flag, reasons };
 }
 
@@ -9969,6 +9980,7 @@ function auditFromSave(save) {
     obtainedHow: obtainedHow(mon.caughtWhere)
   }));
   const shards = Object.values(save.shards ?? {}).reduce((sum, n) => sum + (Number(n) || 0), 0);
+  const mastery = Object.values(save.mastery ?? {}).reduce((sum, n) => sum + (Number(n) || 0), 0);
   const chests = (save.chests?.kiesel ?? 0) + (save.chests?.silber ?? 0) + (save.chests?.gold ?? 0) + (save.chests?.sternen ?? 0) + (save.roadReady ?? 0);
   return {
     at: save.lastSeenAt,
@@ -9979,6 +9991,7 @@ function auditFromSave(save) {
     badges: [...save.badges ?? []],
     chests,
     shards,
+    mastery,
     mons,
     speciesAllowed: poolFor(enteredRegions(save))
   };

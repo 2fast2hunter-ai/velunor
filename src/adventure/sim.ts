@@ -51,6 +51,7 @@ import { bossScale, type BossScale } from './gauntlet'
 import { battleRoster, fightsHere, ownsRegional, seatRegional } from './origin'
 import { makeMon, takeId } from './save'
 import { addExp, awakenCount, battleLevel, crossedAwaken, isAlive, monStats, realHp, speciesExp } from './stats'
+import { MASTERY_BOSS, MASTERY_WIN, addMastery, masteryLevel, pullMasteryUps, settleOfflineMastery, type MasteryUp } from './mastery'
 import { t } from './i18n'
 import type { SkillDef } from '../types'
 import type { OwnedMon, SaveV2 } from './types'
@@ -81,6 +82,7 @@ export interface EncounterOutcome {
   hold: boolean
   scene: ChapterDef['scene']
   shiny: boolean
+  masteryUps?: MasteryUp[]
 }
 
 export interface OfflineSummary {
@@ -91,6 +93,7 @@ export interface OfflineSummary {
   catches: string[]
   levels: { uid: string; name: string; from: number; to: number }[]
   badges: string[]
+  mastery: MasteryUp[]
 }
 
 export interface ResolveOpts {
@@ -98,10 +101,12 @@ export interface ResolveOpts {
   trace: boolean
   summary?: OfflineSummary
   levelLeft?: Map<string, number>
+  /** Whole M-EP earned while offline, halved once at the end of the absence. */
+  masteryBag?: Map<string, number>
 }
 
 export function emptySummary(): OfflineSummary {
-  return { encounters: 0, fights: 0, gold: 0, dupes: 0, catches: [], levels: [], badges: [] }
+  return { encounters: 0, fights: 0, gold: 0, dupes: 0, catches: [], levels: [], badges: [], mastery: [] }
 }
 
 export function catchChance(rarity: number, foeLevel: number, fighterLevel: number, mult = 1, cap = CATCH_CAP, pityPp = 0): number {
@@ -301,10 +306,10 @@ function storeHp(mon: OwnedMon, battleHp: number, battleMax: number): void {
   mon.hp = Math.max(1, Math.min(real, Math.round(fraction * real)))
 }
 
-function sideFrom(mon: OwnedMon, cap: number, mods?: { defMul: number; atkMul: number; counter: boolean; anchor: boolean }): FightSide {
+function sideFrom(mon: OwnedMon, cap: number, mods?: { defMul: number; atkMul: number; counter: boolean; anchor: boolean }, mastery = 0): FightSide {
   const sp = species(mon.species)
   const level = battleLevel(mon.lvl, cap)
-  const stats = monStats({ ...mon, lvl: level })
+  const stats = monStats({ ...mon, lvl: level }, level, mastery)
   const real = realHp(mon)
   const fraction = real.max > 0 ? real.hp / real.max : 1
   const maxHp = stats.hp
@@ -378,9 +383,22 @@ function wipe(save: SaveV2, now: number, quiet: boolean): void {
   log(save, now, line(save, 'say.wipeRoad'), quiet)
 }
 
+function noteMastery(save: SaveV2, fighter: string | null, amount: number, opts: ResolveOpts): void {
+  if (!fighter || !save.team.includes(fighter)) return
+  const speciesId = save.mons[fighter]?.species
+  if (!speciesId || amount <= 0) return
+  if (opts.offline) {
+    if (!opts.masteryBag) opts.masteryBag = new Map()
+    opts.masteryBag.set(speciesId, (opts.masteryBag.get(speciesId) ?? 0) + amount)
+    return
+  }
+  addMastery(save, speciesId, amount)
+}
+
 function finish(save: SaveV2, chapter: ChapterDef, outcome: EncounterOutcome): EncounterOutcome {
   outcome.hold = save.hold
   outcome.scene = chapter.scene
+  outcome.masteryUps = pullMasteryUps()
   syncAchievements(save)
   return outcome
 }
@@ -498,11 +516,12 @@ function fightOne(save: SaveV2, chapter: ChapterDef, speciesId: string, level: n
   save.active = fighter
   const allyMon = save.mons[fighter]
   const cap = chapterCapNow(save, chapter)
-  const ally = sideFrom(allyMon, cap, orderMods(seatsOf(save), fighter, foe.type, false))
+  const ally = sideFrom(allyMon, cap, orderMods(seatsOf(save), fighter, foe.type, false), masteryLevel(save.mastery?.[allyMon.species] ?? 0))
   const trace = fight1v1(ally, foe, rngOf(save), opts.trace, opts.offline ? null : weatherAt(now))
   storeHp(allyMon, trace.allyHp, trace.allyMax)
   if (trace.win) {
     save.stats.wins += 1
+    noteMastery(save, fighter, MASTERY_WIN, opts)
     const exp = awardCombatExp(save, cap, level, species(speciesId).baseRarity, fighter, opts, now)
     if (opts.summary) opts.summary.fights += 1
     return { trace, fighter, exp }
@@ -670,13 +689,14 @@ function runGauntlet(
     const allyMon = save.mons[fighter]
     const cap = chapterCapNow(save, chapter)
     const foeType = species(foe.species).type
-    const trace = fight1v1(sideFrom(allyMon, cap, orderMods(seatsOf(save), fighter, foeType, enteredAfterKo)), foeSide(foe.species, foe.level, foe.shiny ?? false, scale, foeFraction, mechs), rngOf(save), opts.trace, opts.offline ? null : weatherAt(now))
+    const trace = fight1v1(sideFrom(allyMon, cap, orderMods(seatsOf(save), fighter, foeType, enteredAfterKo), masteryLevel(save.mastery?.[allyMon.species] ?? 0)), foeSide(foe.species, foe.level, foe.shiny ?? false, scale, foeFraction, mechs), rngOf(save), opts.trace, opts.offline ? null : weatherAt(now))
     traces.push(trace)
     lastFighter = fighter
     if (opts.summary) opts.summary.fights += 1
     if (trace.win) {
       storeHp(allyMon, trace.allyHp, trace.allyMax)
       save.stats.wins += 1
+      noteMastery(save, fighter, MASTERY_WIN, opts)
       exp += awardCombatExp(save, cap, foe.level, species(foe.species).baseRarity, fighter, opts, now)
       index += 1
       foeFraction = 1
@@ -742,6 +762,7 @@ function doGuardian(save: SaveV2, chapter: ChapterDef, now: number, opts: Resolv
   outcome.gold = paidGuard
   outcome.exp = bouts.exp
   outcome.badge = badge || null
+  noteMastery(save, bouts.lastFighter, MASTERY_BOSS, opts)
   if (opts.summary) {
     opts.summary.gold += paidGuard
     if (badge) opts.summary.badges.push(badge)
@@ -786,7 +807,7 @@ export function councilPurse(save: SaveV2, memberId: string, baseGold: number, s
   return repeat ? Math.floor(baseGold / 2) : baseGold
 }
 
-export function recordCouncilWin(save: SaveV2, now: number, quiet: boolean): EncounterOutcome {
+export function recordCouncilWin(save: SaveV2, now: number, quiet: boolean, fighter: string | null = null, opts: ResolveOpts | null = null): EncounterOutcome {
   const chapter = chapterById(save.region, save.chapter)
   const council = chapter.council
   if (!council) throw new Error('Kein Hoher Rat')
@@ -800,6 +821,7 @@ export function recordCouncilWin(save: SaveV2, now: number, quiet: boolean): Enc
     save.councilBeaten.push(member.id)
   }
   const paid = grantGold(save, pay, now)
+  if (opts) noteMastery(save, fighter, MASTERY_BOSS, opts)
   outcome.gold = paid
   say(save, outcome, now, line(save, 'say.councilWin', { epithet: member.epithet, name: member.name, gold: paid }), quiet)
   healTeam(save)
@@ -865,7 +887,7 @@ function doCouncil(save: SaveV2, chapter: ChapterDef, now: number, opts: Resolve
     }
     return finish(save, chapter, outcome)
   }
-  const won = recordCouncilWin(save, now, quiet)
+  const won = recordCouncilWin(save, now, quiet, bouts.lastFighter, opts)
   won.traces = bouts.traces
   won.exp = bouts.exp
   won.boss = outcome.boss
@@ -943,12 +965,15 @@ export function simulateOffline(save: SaveV2, rawMs: number, now: number): { sum
   const count = Math.floor(countedMs / BASE_ENCOUNTER_MS)
   const summary = emptySummary()
   const levelLeft = new Map<string, number>()
+  const masteryBag = new Map<string, number>()
   const start = save.lastSeenAt || now - countedMs
   for (let i = 0; i < count; i++) {
     if (save.hold) break
     const at = start + (i + 1) * 2800
-    resolveEncounter(save, at, { offline: true, trace: false, summary, levelLeft })
+    resolveEncounter(save, at, { offline: true, trace: false, summary, levelLeft, masteryBag })
   }
+  summary.mastery = settleOfflineMastery(save, masteryBag)
+  syncAchievements(save)
   save.lastSeenAt = now
   return { summary, countedMs }
 }

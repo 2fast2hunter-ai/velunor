@@ -87,6 +87,7 @@ export function blankSave(now: number): SaveV2 {
     pity: emptyPity(),
     shards: {},
     stars: {},
+    mastery: {},
     roadMs: 0,
     roadReady: 0,
     roadAt: now,
@@ -231,7 +232,7 @@ export function normalize(save: SaveV2, now: number): SaveV2 {
   save.v = 2
   // saveVersion climbs to the current step. 2 was portrait menus.
   // 3 adds swipe, vibration, font scale and battery mode.
-  // 6 adds the anonymous account. Older files keep every stored value.
+  // 6 adds the anonymous account. 7 adds mastery, stored as 0 until a species earns it.
   // Older files keep every stored value. Missing setting fields take the defaults.
   const seenVersion = Math.max(0, Math.floor(Number(save.saveVersion)) || 0)
   if (seenVersion < SAVE_VERSION) save.saveVersion = SAVE_VERSION
@@ -358,6 +359,7 @@ export function normalize(save: SaveV2, now: number): SaveV2 {
   save.shards = recordOf(save.shards)
   save.stars = recordOf(save.stars)
   for (const id of Object.keys(save.stars)) save.stars[id] = Math.max(0, Math.min(5, Math.floor(save.stars[id]) || 0))
+  save.mastery = recordOf(save.mastery)
   save.roadMs = Math.max(0, Math.floor(Number(save.roadMs)) || 0)
   save.roadReady = Math.max(0, Math.min(4, Math.floor(Number(save.roadReady)) || 0))
   save.roadAt = Math.max(0, Math.floor(Number(save.roadAt)) || now)

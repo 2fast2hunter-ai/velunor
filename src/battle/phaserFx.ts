@@ -13,7 +13,7 @@ import {
   type HitGrade
 } from './hitReadout'
 import { particleBudget, POOL_SIZE, sharedParticleRoom, typeFx, type TypeFxDef } from './typeFx'
-import { effectTiming, hideStripImages, hitBurstLook, hitStrip, projStrip, stripFrame, stripTexture } from './strips'
+import { effectTiming, hideStripImages, hitBurstLook, hitStrip, oldestByBorn, projStrip, stripFrame, stripTexture } from './strips'
 import type { TypeId } from '../types'
 import type { WeatherId } from '../adventure/weather'
 
@@ -149,7 +149,8 @@ class FxScene extends Phaser.Scene {
 
   spawnNumber(x: number, y: number, amount: number, grade: HitGrade, holdMs: number, weather = 1): void {
     let slot = this.numbers.find((row) => !row.active)
-    if (!slot) slot = this.numbers.reduce((oldest, row) => row.born < oldest.born ? row : oldest)
+    if (!slot) slot = oldestByBorn(this.numbers)
+    if (!slot) return
     slot.active = true
     slot.born = this.time.now
     slot.hold = holdMs

@@ -127,6 +127,8 @@ export interface SaveV2 {
   shards: Record<string, number>
   /** Star rank 0 to 5 keyed by species id. */
   stars: Record<string, number>
+  /** Meisterschafts-EP keyed by species id. Missing on older files; the loader fills {}. */
+  mastery?: Record<string, number>
   /** Play time saved toward the next road chest. */
   roadMs: number
   /** Kiesel chests waiting on the road, at most 4. */

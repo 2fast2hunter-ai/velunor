@@ -9,6 +9,7 @@ import {
   type ChestRoll,
   type ChestTier
 } from './lootbox'
+import { MASTERY_DUPE, addMastery } from './mastery'
 import { makeMon, takeId } from './save'
 import { grantCodexChests } from './sources'
 import type { SaveV2 } from './types'
@@ -43,6 +44,7 @@ export function applyChest(save: SaveV2, roll: ChestRoll, now: number): ChestGra
     return { ...roll, name, place }
   }
   save.shards[roll.speciesId] = (save.shards[roll.speciesId] ?? 0) + shardValue(roll.rarity)
+  addMastery(save, roll.speciesId, MASTERY_DUPE)
   return { ...roll, name, place: 'exp' }
 }
 

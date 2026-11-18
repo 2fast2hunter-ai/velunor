@@ -10,7 +10,10 @@ const BLOCKED = [
 ]
 
 /** Whole names that merely contain a blocked piece and are still allowed. */
-const ALLOWED = new Set(['barsch', 'marschall', 'scunthorpe', 'shitake'])
+const ALLOWED = new Set([
+  'barsch', 'marschall', 'scunthorpe', 'shitake',
+  'harsch', 'marsch', 'fackel', 'nazim', 'fukuda', 'yamashita'
+])
 
 const LEET: Record<string, string> = {
   '0': 'o', '1': 'i', '3': 'e', '4': 'a', '5': 's', '7': 't', '@': 'a', '$': 's'

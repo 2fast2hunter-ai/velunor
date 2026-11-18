@@ -1,5 +1,6 @@
 import { species } from '../data'
 import { starFactor } from './lootbox'
+import { masteryFactor } from './mastery'
 import { MAX_LEVEL } from './const'
 import type { TypeId } from '../types'
 import type { OwnedMon } from './types'
@@ -57,14 +58,15 @@ export function battleLevel(level: number, cap: number): number {
   return Math.min(level, cap)
 }
 
-export function monStats(mon: OwnedMon, level = mon.lvl): CombatStats {
+export function monStats(mon: OwnedMon, level = mon.lvl, mastery = 0): CombatStats {
   const raw = combatStats(mon.species, level, mon.shiny)
   const factor = awakenFactor(level)
   const stars = starFactor(mon.stars ?? 0)
+  const rank = masteryFactor(mastery)
   return {
-    hp: Math.round(raw.hp * factor * stars),
-    atk: Math.round(raw.atk * factor * stars),
-    def: Math.round(raw.def * factor * stars),
+    hp: Math.round(raw.hp * factor * stars * rank),
+    atk: Math.round(raw.atk * factor * stars * rank),
+    def: Math.round(raw.def * factor * stars * rank),
     spd: Math.round(raw.spd * factor)
   }
 }

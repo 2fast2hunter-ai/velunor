@@ -1,9 +1,14 @@
 import { describe, expect, it } from 'vitest'
 import { FxPool } from './fxPool'
 import { particleBudget, POOL_SIZE, typeFx } from './typeFx'
-import { battleStripTypes, effectTiming, FX_MAX_MS, FX_MIN_MS, FX_POOL_MAX, hideStripImages, hitBurstLook, hitStrip, projStrip, stripFrame } from './strips'
+import { battleStripTypes, effectTiming, FX_MAX_MS, FX_MIN_MS, FX_POOL_MAX, hideStripImages, hitBurstLook, hitStrip, oldestByBorn, projStrip, stripFrame } from './strips'
 
 describe('type strips', () => {
+  it('does not reduce an empty hit-number pool', () => {
+    expect(oldestByBorn([])).toBeUndefined()
+    expect(oldestByBorn([{ born: 4 }, { born: 1 }, { born: 9 }])?.born).toBe(1)
+  })
+
   it('hides strip images only after they exist', () => {
     expect(() => hideStripImages(undefined, undefined)).not.toThrow()
     let hidden = 0

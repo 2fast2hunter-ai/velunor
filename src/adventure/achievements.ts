@@ -1,6 +1,8 @@
 import { monsters, typeName, typesCfg } from '../data'
 import { t } from './i18n'
 import { regionRoster } from './dex'
+import { masteryLevel } from './mastery'
+import { regions } from './route'
 import type { SaveV2 } from './types'
 import type { TypeId } from '../types'
 
@@ -80,6 +82,14 @@ export const GOALS: Goal[] = [
   row('badge-Ratsiegel', 'Ratsiegel', 'Ratsmitglied', 'gold', 10000, (save) => save.badges.includes('Ratsiegel')),
   row('region-1', 'Grünmark komplett', 'Markgraf', 'leaf', 20000, (save) => regionDone(save, 1)),
   row('region-2', 'Frostküste komplett', 'Küstenwächter', 'frost', 50000, (save) => regionDone(save, 2)),
+  ...regions.filter((region) => !region.placeholder).map((region) => row(
+    `master-${region.id}`,
+    `Meister der ${region.name}`,
+    `Meister der ${region.name}`,
+    'gold',
+    5000,
+    (save) => regionRoster(region.id).filter((id) => masteryLevel(save.mastery?.[id] ?? 0) >= 5).length >= 5
+  )),
   ...typeGoals,
   row('egg-1', 'Erstes Ei', 'Brutpfleger', 'plain', 500, atLeast(eggs, 1)),
   row('egg-10', '10 Eier', 'Nester', 'leaf', 3000, atLeast(eggs, 10)),
