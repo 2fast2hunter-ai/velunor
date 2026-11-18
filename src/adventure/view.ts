@@ -65,7 +65,7 @@ import type { OfflineSummary } from './sim'
 import type { SaveV2 } from './types'
 import { PC_VIEW_FALLBACK, virtualWindow } from './virtualList'
 
-export type Screen = 'adventure' | 'progress' | 'team' | 'codex' | 'activities' | 'shop' | 'achievements' | 'ranks' | 'tree' | 'arena' | 'social' | 'expedition' | 'trade' | 'guild' | 'options' | 'guide'
+export type Screen = 'adventure' | 'progress' | 'team' | 'codex' | 'activities' | 'shop' | 'achievements' | 'ranks' | 'tree' | 'arena' | 'social' | 'expedition' | 'trade' | 'guild' | 'chat' | 'options' | 'guide'
 
 export interface WheelPanel {
   tab: 'hort' | 'wheel' | 'chests'
@@ -124,6 +124,19 @@ export interface ShellFlags {
   expeditionPick?: string
   trade?: TradePanel
   guild?: GuildPanel
+  chat?: ChatPanel
+}
+
+export interface ChatLine {
+  label: string
+  body: string
+}
+
+export interface ChatPanel {
+  status: 'offline' | 'ready' | 'loading' | 'age'
+  lines: ChatLine[]
+  note: string
+  adult: boolean | null
 }
 
 export interface GuildPanel {
@@ -339,7 +352,7 @@ const TAB_ICONS: Record<string, string> = {
 }
 
 function tabbar(save: SaveV2, screen: Screen, moreOpen: boolean): string {
-  const moreScreens: Screen[] = ['shop', 'achievements', 'ranks', 'tree', 'arena', 'social', 'expedition', 'trade', 'guild', 'options', 'guide']
+  const moreScreens: Screen[] = ['shop', 'achievements', 'ranks', 'tree', 'arena', 'social', 'expedition', 'trade', 'guild', 'chat', 'options', 'guide']
   const tabs: { id: string; label: string; active: boolean; act: string; screen?: Screen }[] = [
     { id: 'adventure', label: 'nav.adventure', active: screen === 'adventure', act: 'screen', screen: 'adventure' },
     { id: 'team', label: 'nav.team', active: screen === 'team', act: 'screen', screen: 'team' },
@@ -376,6 +389,7 @@ function moreSheet(save: SaveV2, open: boolean): string {
     <button type="button" data-act="screen" data-screen="expedition"><svg class="ui-icon" viewBox="0 0 24 24" aria-hidden="true"><path fill="currentColor" d="M4 16c3-6 6-6 8-2s5-4 8-2v6H4z"/><circle cx="16" cy="7" r="2.4" fill="currentColor"/></svg>${tr(save, 'nav.expedition')}</button>
     <button type="button" data-act="screen" data-screen="trade"><svg class="ui-icon" viewBox="0 0 24 24" aria-hidden="true"><rect x="4" y="6" width="7" height="12" rx="2" fill="currentColor"/><rect x="13" y="6" width="7" height="12" rx="2" fill="currentColor" opacity=".7"/></svg>${tr(save, 'nav.trade')}</button>
     <button type="button" data-act="screen" data-screen="guild"><svg class="ui-icon" viewBox="0 0 24 24" aria-hidden="true"><path fill="currentColor" d="M12 3l7 4v5c0 4.5-3 7.5-7 9-4-1.5-7-4.5-7-9V7z"/></svg>${tr(save, 'nav.guild')}</button>
+    <button type="button" data-act="screen" data-screen="chat"><svg class="ui-icon" viewBox="0 0 24 24" aria-hidden="true"><path fill="currentColor" d="M5 6h14a2 2 0 0 1 2 2v7a2 2 0 0 1-2 2H9l-4 3v-3H5a2 2 0 0 1-2-2V8a2 2 0 0 1 2-2z"/></svg>${tr(save, 'nav.chat')}</button>
     ${items.slice(2).map(([id, icon, label]) => `<button type="button" data-act="screen" data-screen="${id}">${ui(icon)}${tr(save, label)}</button>`).join('')}
   </div>`
 }
@@ -1639,6 +1653,38 @@ function guildScreen(save: SaveV2, panel: GuildPanel | undefined): string {
   </div></div></div>`
 }
 
+function chatScreen(save: SaveV2, panel: ChatPanel | undefined): string {
+  const view = panel ?? { status: 'offline' as const, lines: [], note: '', adult: null }
+  if (view.status === 'offline') {
+    return `<div class="menu-screen"><div class="menu-scroll"><div class="card panel"><h2>Offline</h2><p class="muted">${tr(save, 'chat.offline')}</p></div></div></div>`
+  }
+  if (view.status === 'age' || view.adult === null) {
+    return `<div class="menu-screen"><div class="menu-scroll"><div class="card panel">
+      <h2>${tr(save, 'nav.chat')}</h2>
+      <p>${tr(save, 'chat.year')}</p>
+      <input id="chat-year" type="number" inputmode="numeric" min="1900" max="2026"/>
+      <button type="button" class="primary" data-act="chat-age">${tr(save, 'chat.yearSave')}</button>
+    </div></div></div>`
+  }
+  if (!view.adult) {
+    return `<div class="menu-screen"><div class="menu-scroll"><div class="card panel">
+      <h2>${tr(save, 'nav.chat')}</h2>
+      <p>${tr(save, 'chat.young')}</p>
+      <button type="button" data-act="guild-phrase" data-id="hallo">${tr(save, 'guild.phrase')}</button>
+    </div></div></div>`
+  }
+  const lines = view.lines.map((line) => `<p class="chat-line"><b>${esc(line.label)}</b> ${esc(line.body)} <button type="button" data-act="chat-report" data-id="${esc(line.label)}">${tr(save, 'chat.report')}</button> <button type="button" data-act="chat-mute" data-id="${esc(line.label)}">${tr(save, 'chat.mute')}</button></p>`).join('')
+  return `<div class="menu-screen chat-screen"><div class="menu-scroll"><div class="card panel">
+    <h2>${tr(save, 'nav.chat')}</h2>
+    ${lines || `<p class="muted">${tr(save, 'chat.empty')}</p>`}
+    ${view.note ? `<p class="muted">${esc(view.note)}</p>` : ''}
+  </div></div>
+  <form class="chat-form" data-act="chat-form">
+    <input id="chat-text" maxlength="200" autocomplete="off"/>
+    <button type="submit" class="primary" data-act="chat-send">${tr(save, 'chat.send')}</button>
+  </form></div>`
+}
+
 function center(save: SaveV2, screen: Screen, now: number, pc: PcQuery, dex: CodexQuery, selected: string | null, debug: boolean, wheel: WheelPanel, shell: ShellFlags): string {
   if (screen === 'progress') return `<div class="menu-screen"><div class="menu-scroll">${progress(save)}</div></div>`
   if (screen === 'ranks') return ranksScreen(save, shell.ranks)
@@ -1648,6 +1694,7 @@ function center(save: SaveV2, screen: Screen, now: number, pc: PcQuery, dex: Cod
   if (screen === 'expedition') return expeditionScreen(save, now, shell.expeditionPick, shell.guild?.level ?? 0)
   if (screen === 'trade') return tradeScreen(save, shell.trade)
   if (screen === 'guild') return guildScreen(save, shell.guild)
+  if (screen === 'chat') return chatScreen(save, shell.chat)
   if (screen === 'team') return team(save, pc, selected, shell)
   if (screen === 'codex') return codex(save, dex, shell)
   if (screen === 'activities') return activitiesView(save, now, selected, wheel)

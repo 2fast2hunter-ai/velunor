@@ -6,6 +6,7 @@ Deno.serve(async (req) => {
   if (!user) return json({ error: 'auth' }, 401)
   const db = admin()
   await db.rpc('guild_act', { p_user: user.id, p_body: { action: 'leave' } })
+  await db.rpc('anonymize_chat', { p_user: user.id })
   await db.from('reports').update({ reporter: null }).eq('reporter', user.id)
   await db.from('monsters_owned').delete().eq('owner', user.id)
   await db.from('blocks').delete().eq('owner', user.id)

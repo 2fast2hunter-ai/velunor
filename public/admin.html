@@ -1,0 +1,71 @@
+<!doctype html>
+<html lang="de">
+<head>
+  <meta charset="utf-8"/>
+  <meta name="viewport" content="width=device-width, initial-scale=1"/>
+  <title>Velunor Meldungen</title>
+  <style>
+    body { margin: 0; font-family: system-ui, sans-serif; background: #10182c; color: #fff8e1; }
+    main { max-width: 880px; margin: 0 auto; padding: 24px; }
+    article, form { background: #1c2744; border-radius: 24px; padding: 16px; margin: 12px 0; }
+    button { border: 0; border-radius: 16px; padding: 10px 14px; margin: 4px; background: #243156; color: inherit; }
+    input { border: 0; border-radius: 16px; padding: 10px 14px; }
+    .hoch { box-shadow: inset 0 0 0 3px #e07070; }
+  </style>
+</head>
+<body>
+  <main>
+    <h1>Meldungen</h1>
+    <p id="gate">Nur ein Konto aus der Tabelle admins sieht diese Liste.</p>
+    <form id="login">
+      <input id="email" type="email" autocomplete="username" placeholder="E-Mail"/>
+      <input id="password" type="password" autocomplete="current-password" placeholder="Passwort"/>
+      <button type="submit">Anmelden</button>
+    </form>
+    <div id="list"></div>
+  </main>
+  <script type="module">
+    import { createClient } from 'https://esm.sh/@supabase/supabase-js@2.49.1'
+    const url = 'https://psbouhfgvsygadihwtdk.supabase.co'
+    const key = 'sb_publishable_HSKBENtyF_1BAZbYwjsdEQ_KZVRVLFG'
+    const db = createClient(url, key)
+    const list = document.getElementById('list')
+    const gate = document.getElementById('gate')
+    async function load() {
+      const session = await db.auth.getSession()
+      if (!session.data.session) return
+      const me = await db.from('admins').select('user_id').maybeSingle()
+      if (!me.data) { gate.textContent = 'Dieses Konto ist kein Admin.'; return }
+      gate.textContent = 'Vorsortierung ist nur ein Vorschlag.'
+      const reports = await db.from('reports').select('id, target_label, reason, priority, agent_note, status, context').order('priority').limit(50)
+      list.innerHTML = (reports.data ?? []).map((row) => `<article class="${row.priority}">
+        <h2>${row.priority} · ${row.reason}</h2>
+        <p>${row.target_label}</p>
+        <p>${row.agent_note}</p>
+        <p>${row.status}</p>
+        ${['keine', 'verwarnen', '24h', '7tage', 'dauerhaft', 'name'].map((decision) => `<button type="button" data-report="${row.id}" data-decision="${decision}">${decision}</button>`).join('')}
+      </article>`).join('')
+    }
+    document.getElementById('login').addEventListener('submit', async (event) => {
+      event.preventDefault()
+      await db.auth.signInWithPassword({
+        email: document.getElementById('email').value,
+        password: document.getElementById('password').value
+      })
+      await load()
+    })
+    list.addEventListener('click', async (event) => {
+      const button = event.target.closest('button')
+      if (!button) return
+      const session = await db.auth.getSession()
+      await fetch(`${url}/functions/v1/admin-decide`, {
+        method: 'POST',
+        headers: { 'content-type': 'application/json', authorization: `Bearer ${session.data.session?.access_token ?? ''}`, apikey: key },
+        body: JSON.stringify({ report: button.dataset.report, decision: button.dataset.decision })
+      })
+      await load()
+    })
+    load()
+  </script>
+</body>
+</html>
