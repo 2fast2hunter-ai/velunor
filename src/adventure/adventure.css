@@ -627,6 +627,7 @@ img.is-shiny { filter: drop-shadow(0 0 10px #f0c14a); }
 }
 .primary { background: #f0c14a; color: #2a2110; font-weight: 800; }
 .ghost { background: transparent; border: 1px solid #31456f; }
+a.ghost { color: inherit; text-decoration: none; display: inline-block; }
 
 .overlay {
   position: absolute;
