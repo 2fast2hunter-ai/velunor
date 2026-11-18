@@ -140,7 +140,7 @@ alter table public.admin_decisions enable row level security;
 alter table public.urgent_alerts enable row level security;
 
 create policy messages_read on public.messages
-  for select to authenticated using (
+  for select to authenticated using ((
     (
       channel like 'guild:%'
       and exists (
@@ -166,7 +166,7 @@ create policy messages_read on public.messages
         (mute.guild_id is null and mute.owner = auth.uid())
         or (mute.guild_id::text = split_part(messages.channel, ':', 2))
       )
-  );
+  ));
 
 create policy chat_flags_own on public.chat_flags
   for select to authenticated using (user_id = auth.uid());
