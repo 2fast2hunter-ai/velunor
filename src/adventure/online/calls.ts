@@ -1,4 +1,6 @@
 import { supabaseClient } from '../cloud/supabaseApi'
+import { lineUp } from '../shell/line'
+import { withBackoff } from '../shell/backoff'
 import { reportReason } from './report'
 
 /** Keys removed after account deletion. The auth token lives under sb-. */
@@ -29,8 +31,7 @@ export async function functionFailure(error: { message?: string, context?: unkno
   return { missing: true, error: error.message ?? 'Netz' }
 }
 
-/** A missing function is not a crash. The caller keeps the local game and says the area is unavailable. */
-export async function callOnline(name: string, body: unknown): Promise<OnlineCall> {
+async function callOnce(name: string, body: unknown): Promise<OnlineCall> {
   try {
     const { data, error } = await supabaseClient().functions.invoke(name, { body: body as Record<string, unknown> })
     if (error) {
@@ -43,6 +44,17 @@ export async function callOnline(name: string, body: unknown): Promise<OnlineCal
   } catch (err) {
     return { ok: false, missing: true, error: err instanceof Error ? err.message : 'Netz', data: {} }
   }
+}
+
+/** A missing function is not a crash. Transport failures are tried again. A server answer is final. */
+export async function callOnline(name: string, body: unknown): Promise<OnlineCall> {
+  if (!lineUp()) return { ok: false, missing: true, error: 'offline', data: {} }
+  return withBackoff(() => callOnce(name, body), {
+    attempts: 3,
+    retryable: (result) => result.missing,
+    base: 400,
+    cap: 3_200
+  })
 }
 
 async function userId(): Promise<string | null> {

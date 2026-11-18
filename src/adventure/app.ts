@@ -48,6 +48,9 @@ import { browserCloudApi, watchAuth } from './cloud/supabaseApi'
 import { callOnline, claimRankRewards, clearVelunorKeys, loadOwnLabel, loadRankPage, sendBlockRow, sendReportRow } from './online/calls'
 import { isBoard, parseRankPage, RANK_FRAMES, type BoardId, type RankModel } from './online/ranks'
 import { equipDailyFrame, noteDaily, touchDaily } from './daily'
+import { backEffect } from './shell/back'
+import { lineUp, setLineUp } from './shell/line'
+import { webStore, type ShellStorage } from './shell/storage'
 import { offlineCapMs, settleResearch, startResearch, RESEARCH_LINES, type ResearchLine } from './research'
 import { buyNode, respecTree } from './tree'
 import type { ArenaPanel, ChatPanel, GuildPanel, SocialPanel, TradePanel } from './view'
@@ -119,6 +122,17 @@ import {
 } from './view'
 
 const RESET_FLAG = 'velunor_v2_reset'
+const SHELL_SAVE_MS = 30_000
+
+function browserStore(): ShellStorage {
+  const local = typeof localStorage === 'undefined'
+    ? { getItem: () => null, setItem: () => undefined, removeItem: () => undefined }
+    : localStorage
+  return webStore(local)
+}
+
+let gameStore: ShellStorage = browserStore()
+let nativeShell = false
 
 let save: SaveV2 | null = null
 let screen: Screen = 'adventure'
@@ -333,10 +347,10 @@ function trackedEncounter(now: number, trace: boolean): EncounterOutcome {
 function attachCloud(): void {
   const consent = readConsent()
   cloudView = { ...cloudView, consent, askConsent: consent === 'unset' }
-  const existing = loadAdventure(localStorage, Date.now())
+  const existing = loadAdventure(gameStore, Date.now())
   cloud = createCloud(browserCloudApi(), {
     now: () => Date.now(),
-    online: () => navigator.onLine,
+    online: () => lineUp(),
     deviceId,
     consent: readConsent,
     setConsent(value) {
@@ -354,7 +368,7 @@ function attachCloud(): void {
     },
     storeSave(next) {
       const playing = Boolean(save?.started)
-      try { writeSave(localStorage, next) } catch { /* the memory copy still applies */ }
+      try { writeSave(gameStore, next) } catch { /* the memory copy still applies */ }
       if (playing) {
         save = next
         keptSave = next
@@ -402,7 +416,11 @@ function releaseSync(): void {
   void cloud?.sync('start')
 }
 
-export function bootAdventure(): void {
+export function bootAdventure(shell?: { storage: ShellStorage, native: boolean, listen?: (hooks: { onPause: () => void, onResume: () => void, onBack: () => void, onLine: (up: boolean) => void }) => void }): void {
+  if (shell) {
+    gameStore = shell.storage
+    nativeShell = shell.native
+  }
   const root = document.getElementById('game')
   if (!root) return
   root.innerHTML = `<picture id="frame-bg"><source srcset="${art('backgrounds/bg_frame_desktop.webp')}" type="image/webp"/><img src="${art('backgrounds/bg_frame_desktop.jpg')}" alt=""/></picture><div id="fit"></div><div id="turn" hidden></div>`
@@ -436,7 +454,8 @@ export function bootAdventure(): void {
     if (save) {
       const paused = batteryPause(save.settings.battery, currentPresence())
       if (!paused && Date.now() - lastTick < encounterMs(save.settings.speed) * 2) save.lastSeenAt = Date.now()
-      writeSave(localStorage, save)
+      writeSave(gameStore, save)
+      void gameStore.flush()
     }
     void cloud?.pause()
   })
@@ -455,8 +474,36 @@ export function bootAdventure(): void {
   window.setInterval(() => {
     if (!save?.started || overlay?.kind === 'offline') return
     save.lastSeenAt = stampWhilePaused(save.lastSeenAt, Date.now(), away)
-    try { writeSave(localStorage, save) } catch { /* keep playing */ }
-  }, AUTOSAVE_MS)
+    try { writeSave(gameStore, save) } catch { /* keep playing */ }
+  }, nativeShell ? SHELL_SAVE_MS : AUTOSAVE_MS)
+
+  shell?.listen?.({
+    onPause() {
+      if (save) {
+        save.lastSeenAt = Date.now()
+        writeSave(gameStore, save)
+      }
+      void gameStore.flush()
+      void cloud?.pause()
+    },
+    onResume() {
+      if (save?.started) {
+        const raw = resumeGap(Date.now(), save.lastSeenAt)
+        if (shouldCatchUp(raw) || raw >= WELCOME_AFTER_MS) {
+          void runOffline(raw)
+        } else kick()
+      }
+      void cloud?.sync('online')
+    },
+    onBack() {
+      hardwareBack()
+    },
+    onLine(up) {
+      setLineUp(up)
+      if (up) void cloud?.sync('online')
+      else cloud?.markOffline()
+    }
+  })
 
   const params = new URLSearchParams(window.location.search)
   const fxDemo = params.get('fx')
@@ -1161,7 +1208,7 @@ async function start(next: SaveV2, intro = false): Promise<void> {
     localStorage.setItem(REPLACE_SERVER_KEY, '1')
     noteTutorial(3)
   }
-  try { writeSave(localStorage, save) } catch { /* ignore */ }
+  try { writeSave(gameStore, save) } catch { /* ignore */ }
   if (intro) void cloud?.sync('online')
   screen = 'adventure'
   noteProgress()
@@ -1184,7 +1231,7 @@ function pumpExpeditions(now = Date.now()): void {
   if (!notes.length) return
   masteryNote = notes.join(' · ')
   masteryUntil = now + 4200
-  try { writeSave(localStorage, save) } catch { /* the return is already in the save */ }
+  try { writeSave(gameStore, save) } catch { /* the return is already in the save */ }
 }
 
 function render(step = save?.step): void {
@@ -1348,7 +1395,7 @@ function onPresence(): void {
       window.clearTimeout(timer)
       dropFrame()
       setFxRunning(false, BATTERY_FPS)
-      try { writeSave(localStorage, save) } catch { /* keep the gap */ }
+      try { writeSave(gameStore, save) } catch { /* keep the gap */ }
     }
     return
   }
@@ -1411,7 +1458,7 @@ function loop(): void {
     }
     save.lastSeenAt = lastTick
     noteProgress()
-    try { writeSave(localStorage, save) } catch { /* ignore */ }
+    try { writeSave(gameStore, save) } catch { /* ignore */ }
     timer = window.setTimeout(loop, dur)
     return
   }
@@ -1434,7 +1481,7 @@ function loop(): void {
     return
   }
   save.lastSeenAt = now
-  try { writeSave(localStorage, save) } catch { /* ignore */ }
+  try { writeSave(gameStore, save) } catch { /* ignore */ }
   animating = true
   pendingOutcome = outcome
   if (screen !== 'adventure') {
@@ -1449,7 +1496,55 @@ function loop(): void {
   play(outcome, save.settings.speed, () => finishPresent(outcome))
 }
 
+function hardwareBack(): void {
+  const effect = backEffect({
+    overlay: overlay != null,
+    more: moreOpen,
+    filters: filtersOpen,
+    dex: dexOpen,
+    map: mapOpen,
+    side: sideOpen
+  })
+  if (effect === 'close-overlay') {
+    overlay = null
+    render()
+    return
+  }
+  if (effect === 'close-more') {
+    moreOpen = false
+    render()
+    return
+  }
+  if (effect === 'close-filters') {
+    filtersOpen = false
+    render()
+    return
+  }
+  if (effect === 'close-dex') {
+    dexOpen = false
+    render()
+    return
+  }
+  if (effect === 'close-map') {
+    mapOpen = false
+    render()
+    return
+  }
+  if (effect === 'close-side') {
+    sideOpen = false
+    render()
+    return
+  }
+  overlay = { kind: 'quit' }
+  render()
+}
+
 async function refreshArena(): Promise<void> {
+  if (!lineUp()) {
+    arenaPanel = { ...arenaPanel, status: 'offline', note: '' }
+    render()
+    return
+  }
   arenaPanel = { ...arenaPanel, status: 'loading' }
   render()
   const state = await callOnline('arena-desk', { action: 'state' })
@@ -1464,7 +1559,7 @@ async function refreshArena(): Promise<void> {
     const marks = Math.max(0, Math.floor(Number(claim.data.marks)) || 0)
     if (marks > 0) {
       save.marks += marks
-      try { writeSave(localStorage, save) } catch { /* the server already marked the season claimed */ }
+      try { writeSave(gameStore, save) } catch { /* the server already marked the season claimed */ }
       masteryNote = t(save.settings.lang, 'ranks.reward', { marks: marks.toLocaleString(save.settings.lang === 'en' ? 'en' : 'de-DE'), titles: '' })
       masteryUntil = Date.now() + 4200
     }
@@ -1515,7 +1610,7 @@ function grantServerGift(gold: number, fruit: number, marks: number, eggs: strin
   for (const speciesId of eggs) {
     if (speciesId) save.eggs.push({ species: speciesId, shiny: true, readyAt })
   }
-  try { writeSave(localStorage, save) } catch { /* the server already marked the grant claimed */ }
+  try { writeSave(gameStore, save) } catch { /* the server already marked the grant claimed */ }
 }
 
 function tradeText(code: string): string {
@@ -1526,6 +1621,11 @@ function tradeText(code: string): string {
 }
 
 async function refreshChat(): Promise<void> {
+  if (!lineUp()) {
+    chatPanel = { ...chatPanel, status: 'offline' }
+    render()
+    return
+  }
   const state = await callOnline('chat-send', { action: 'state' })
   if (!state.ok) {
     chatPanel = { ...chatPanel, status: 'offline' }
@@ -1549,6 +1649,11 @@ async function refreshChat(): Promise<void> {
 
 async function refreshGuild(): Promise<void> {
   if (!save) return
+  if (!lineUp()) {
+    guildPanel = { ...guildPanel, status: 'offline' }
+    render()
+    return
+  }
   const state = await callOnline('guild', { action: 'state' })
   if (!state.ok) {
     guildPanel = { ...guildPanel, status: 'offline' }
@@ -1579,13 +1684,18 @@ async function guildAction(act: string, phrase = ''): Promise<void> {
   })
   if (result.ok && action === 'found') {
     save.gold = Math.max(0, save.gold - foundCost(save.region))
-    try { writeSave(localStorage, save) } catch { /* the guild row already exists */ }
+    try { writeSave(gameStore, save) } catch { /* the guild row already exists */ }
   }
   guildPanel = { ...guildPanel, note: result.ok ? '' : result.error }
   await refreshGuild()
 }
 
 async function refreshTrade(): Promise<void> {
+  if (!lineUp()) {
+    tradePanel = { ...tradePanel, status: 'offline', note: '' }
+    render()
+    return
+  }
   tradePanel = { ...tradePanel, status: 'loading' }
   render()
   const state = await callOnline('trade', { action: 'state' })
@@ -1645,13 +1755,18 @@ async function tradeAction(act: string): Promise<void> {
       entry.seen += 1
       entry.caught = Math.max(1, entry.caught)
       save.dex[speciesId] = entry
-      try { writeSave(localStorage, save) } catch { /* the server already swapped the row */ }
+      try { writeSave(gameStore, save) } catch { /* the server already swapped the row */ }
     }
   }
   await refreshTrade()
 }
 
 async function refreshSocial(): Promise<void> {
+  if (!lineUp()) {
+    socialPanel = { ...socialPanel, status: 'offline', note: '' }
+    render()
+    return
+  }
   socialPanel = { ...socialPanel, status: 'loading' }
   render()
   const friends = await callOnline('friends', { action: 'state' })
@@ -1798,6 +1913,11 @@ async function arenaAction(act: string, index: string | null): Promise<void> {
 }
 
 async function refreshRanks(): Promise<void> {
+  if (!lineUp()) {
+    rankView = { ...rankView, status: 'offline' }
+    render()
+    return
+  }
   const token = ++rankToken
   rankView = { ...rankView, board: rankBoard, status: 'loading' }
   render()
@@ -1808,7 +1928,7 @@ async function refreshRanks(): Promise<void> {
     if (token !== rankToken || !save) return
     if (reward.marks > 0) {
       save.marks += reward.marks
-      try { writeSave(localStorage, save) } catch { /* the server already marked the reward claimed */ }
+      try { writeSave(gameStore, save) } catch { /* the server already marked the reward claimed */ }
       const titles = reward.titles.length ? ` · ${reward.titles.join(', ')}` : ''
       masteryNote = t(save.settings.lang, 'ranks.reward', { marks: reward.marks.toLocaleString(save.settings.lang === 'en' ? 'en' : 'de-DE'), titles })
       masteryUntil = Date.now() + 4200
@@ -2455,7 +2575,7 @@ async function finishOffline(rawMs: number): Promise<void> {
     lastTick = Date.now()
     if (quiet.summary.catches.length) buzz('unlock')
     if (quiet.summary.badges.length) buzz('crest')
-    try { writeSave(localStorage, save) } catch { /* keep playing */ }
+    try { writeSave(gameStore, save) } catch { /* keep playing */ }
     render()
     kick()
     return
@@ -2490,7 +2610,7 @@ async function finishOffline(rawMs: number): Promise<void> {
   save.roadAt = Date.now()
   save.lastSeenAt = stopped ? reached : Date.now()
   lastTick = Date.now()
-  try { writeSave(localStorage, save) } catch { /* ignore */ }
+  try { writeSave(gameStore, save) } catch { /* ignore */ }
   animating = false
   if (stopped) {
     overlay = null
@@ -2700,7 +2820,7 @@ function onClick(event: Event): void {
     if (!save) {
       if (keptSave && (door === 'continue' || door === 'ask')) {
         keptSave.settings.lang = draftLang
-        try { writeSave(localStorage, keptSave) } catch { /* keep the door */ }
+        try { writeSave(gameStore, keptSave) } catch { /* keep the door */ }
         showDoor(door)
         return
       }
@@ -2860,7 +2980,7 @@ function onClick(event: Event): void {
     if (!save) return
     const reason = startExpedition(save, node.getAttribute('data-id') ?? expeditionPick, node.getAttribute('data-uid') ?? '', Date.now())
     if (reason) save.log.push({ t: Date.now(), text: reason })
-    else try { writeSave(localStorage, save) } catch { /* the run is in the save */ }
+    else try { writeSave(gameStore, save) } catch { /* the run is in the save */ }
     render()
     return
   }
@@ -2896,7 +3016,7 @@ function onClick(event: Event): void {
       ? buyNode(save, node.getAttribute('data-id') || treePick)
       : respecTree(save, Date.now())
     if (reason) save.log.push({ t: Date.now(), text: reason })
-    else try { writeSave(localStorage, save) } catch { /* keep the local tree */ }
+    else try { writeSave(gameStore, save) } catch { /* keep the local tree */ }
     render()
     return
   }
@@ -2906,7 +3026,7 @@ function onClick(event: Event): void {
     if (!RESEARCH_LINES.includes(line as ResearchLine)) return
     const problem = startResearch(save, line as ResearchLine, Date.now())
     if (problem) masteryNote = t(save.settings.lang, `research.err.${problem}`)
-    else try { writeSave(localStorage, save) } catch { /* the job is already on the save */ }
+    else try { writeSave(gameStore, save) } catch { /* the job is already on the save */ }
     masteryUntil = Date.now() + 4200
     render()
     return
@@ -3014,6 +3134,10 @@ function onClick(event: Event): void {
     render()
     return
   }
+  if (act === 'quit-yes') {
+    void import('./shell/native').then((mod) => mod.exitApp())
+    return
+  }
   if (act === 'close') {
     overlay = null
     if (showAwaken()) return
@@ -3116,7 +3240,7 @@ function onClick(event: Event): void {
     }
     save.log.push({ t: Date.now(), text: reason ?? t(save.settings.lang, 'shop.bought', { name: row.name }) })
     if (save.log.length > 50) save.log.splice(0, save.log.length - 50)
-    try { writeSave(localStorage, save) } catch { /* ignore */ }
+    try { writeSave(gameStore, save) } catch { /* ignore */ }
     render()
     return
   }
@@ -3135,7 +3259,7 @@ function onClick(event: Event): void {
     }
     save.log.push({ t: Date.now(), text: reason ?? 'Erledigt.' })
     if (save.log.length > 50) save.log.splice(0, save.log.length - 50)
-    try { writeSave(localStorage, save) } catch { /* ignore */ }
+    try { writeSave(gameStore, save) } catch { /* ignore */ }
     render()
     return
   }
@@ -3173,7 +3297,7 @@ function onClick(event: Event): void {
   }
   if (act === 'chest-claim') {
     claimRoad(save)
-    try { writeSave(localStorage, save) } catch { /* ignore */ }
+    try { writeSave(gameStore, save) } catch { /* ignore */ }
     render()
     return
   }
@@ -3181,7 +3305,7 @@ function onClick(event: Event): void {
     const tier = node.getAttribute('data-tier') === 'silber' ? 'silber' : 'kiesel'
     const reason = buyChestForGold(save, tier, Date.now())
     if (reason) save.log.push({ t: Date.now(), text: reason })
-    try { writeSave(localStorage, save) } catch { /* ignore */ }
+    try { writeSave(gameStore, save) } catch { /* ignore */ }
     render()
     return
   }
@@ -3189,21 +3313,21 @@ function onClick(event: Event): void {
     const tier = node.getAttribute('data-tier') === 'sternen' ? 'sternen' : 'gold'
     const reason = buyChestForMarks(save, tier)
     if (reason) save.log.push({ t: Date.now(), text: reason })
-    try { writeSave(localStorage, save) } catch { /* ignore */ }
+    try { writeSave(gameStore, save) } catch { /* ignore */ }
     render()
     return
   }
   if (act === 'melt') {
     const reason = meltDuplicate(save, node.getAttribute('data-uid') ?? '')
     if (reason) save.log.push({ t: Date.now(), text: reason })
-    try { writeSave(localStorage, save) } catch { /* ignore */ }
+    try { writeSave(gameStore, save) } catch { /* ignore */ }
     render()
     return
   }
   if (act === 'craft') {
     const reason = craftSpecies(save, node.getAttribute('data-id') ?? '', Date.now())
     if (reason) save.log.push({ t: Date.now(), text: reason })
-    try { writeSave(localStorage, save) } catch { /* ignore */ }
+    try { writeSave(gameStore, save) } catch { /* ignore */ }
     render()
     return
   }
@@ -3216,13 +3340,13 @@ function onClick(event: Event): void {
       const event = starEvent(speciesId, before + 1)
       if (event) cloud?.track(event.event, event.props)
     }
-    try { writeSave(localStorage, save) } catch { /* ignore */ }
+    try { writeSave(gameStore, save) } catch { /* ignore */ }
     render()
     return
   }
   if (act === 'debug-stars' && debug) {
     debugStarChests(save)
-    try { writeSave(localStorage, save) } catch { /* ignore */ }
+    try { writeSave(gameStore, save) } catch { /* ignore */ }
     render()
     return
   }
@@ -3241,7 +3365,7 @@ function onClick(event: Event): void {
     syncAchievements(save)
     for (const event of eventsForLoot(tier, grants.length, shardsBefore, save.shards)) cloud?.track(event.event, event.props)
     overlay = act === 'chest-all' ? { kind: 'chest-summary', grants } : { kind: 'chest-reveal', grant: grants[0] }
-    try { writeSave(localStorage, save) } catch { /* ignore */ }
+    try { writeSave(gameStore, save) } catch { /* ignore */ }
     render()
     if (overlay?.kind === 'chest-reveal') startChestAnim(save.settings.speed, save.settings.reduceMotion)
     return
@@ -3270,14 +3394,14 @@ function onClick(event: Event): void {
       wheelSymbols = spun.symbols
       wheelNote = `${spun.marks.toLocaleString('de-DE')} Glücksmarken.`
     }
-    try { writeSave(localStorage, save) } catch { /* ignore */ }
+    try { writeSave(gameStore, save) } catch { /* ignore */ }
     render()
     return
   }
   if (act === 'buy-prize') {
     const reason = buyPrize(save, node.getAttribute('data-id') ?? '', Date.now())
     wheelNote = reason ?? 'Im PC.'
-    try { writeSave(localStorage, save) } catch { /* ignore */ }
+    try { writeSave(gameStore, save) } catch { /* ignore */ }
     render()
     return
   }
@@ -3285,7 +3409,7 @@ function onClick(event: Event): void {
     const reason = buyHortSlot(save)
     save.log.push({ t: Date.now(), text: reason ?? 'Ein Hortplatz ist offen.' })
     if (save.log.length > 50) save.log.splice(0, save.log.length - 50)
-    try { writeSave(localStorage, save) } catch { /* ignore */ }
+    try { writeSave(gameStore, save) } catch { /* ignore */ }
     render()
     return
   }

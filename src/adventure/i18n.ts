@@ -5,6 +5,10 @@ export type Lang = 'de' | 'en'
 
 const de: Record<string, string> = {
   'nav.adventure': 'Abenteuer',
+  'shell.quitTitle': 'Spiel beenden?',
+  'shell.quitBody': 'Der Spielstand bleibt auf diesem Gerät.',
+  'shell.quitYes': 'Beenden',
+  'shell.quitNo': 'Weiter spielen',
   'nav.progress': 'Fortschritt',
   'nav.team': 'Team/PC',
   'nav.codex': 'Kodex',
@@ -734,6 +738,10 @@ const de: Record<string, string> = {
 
 const en: Record<string, string> = {
   'nav.adventure': 'Adventure',
+  'shell.quitTitle': 'Leave the game?',
+  'shell.quitBody': 'The save stays on this device.',
+  'shell.quitYes': 'Leave',
+  'shell.quitNo': 'Keep playing',
   'nav.progress': 'Progress',
   'nav.team': 'Team/PC',
   'nav.codex': 'Codex',
