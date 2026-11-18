@@ -57,7 +57,7 @@ const TIME: Array<[string, string, string, string]> = [
   ['Nachklang II', 'Echo II', 'Offline-EP auf ×0,7.', 'Offline EP to ×0.7.'],
   ['Münze I', 'Coin I', 'Gold aus Kämpfen und Funden +5 %.', 'Gold from fights and finds +5%.'],
   ['Münze II', 'Coin II', 'Gold aus Kämpfen und Funden +10 %.', 'Gold from fights and finds +10%.'],
-  ['Expedition', 'Expedition', 'Ein Expeditionsslot. Wirkt erst ab Schritt 11. Bis dahin ist der Knoten nur vorgemerkt.', 'One expedition slot. It works from step 11. Until then the node is only reserved.'],
+  ['Expedition', 'Expedition', 'Ein weiterer Expeditionsslot, zusätzlich zu den drei festen.', 'One more expedition slot, on top of the three fixed ones.'],
   ['Zeitweber', 'Time weaver', 'Früchte halten 90 statt 60 Minuten.', 'Fruits last 90 minutes instead of 60.']
 ]
 
@@ -266,7 +266,7 @@ export function treeGoldMult(save: SaveV2): number {
   return 1
 }
 
-/** Reserved until expeditions exist in step 11. */
+/** One extra expedition slot once this node is bought. */
 export function treeExpeditionSlots(save: SaveV2): number {
   return rank(save, 'time') >= 7 ? 1 : 0
 }

@@ -19,6 +19,79 @@ function json(body, status = 200) {
   return new Response(JSON.stringify(body), { status, headers: cors });
 }
 
+// data/types.json
+var types_default = {
+  activeTypes: ["fire", "water", "plant", "earth", "wind", "ice", "lightning", "metal", "fighting", "beast", "light", "shadow", "ghost", "psychic", "sound", "dragon"],
+  multipliers: { strong: 1.5, weak: 0.75, neutral: 1 },
+  mutualStrong: [["light", "shadow"]],
+  names: {
+    fire: "Feuer",
+    water: "Wasser",
+    plant: "Pflanze",
+    earth: "Erde",
+    wind: "Wind",
+    ice: "Eis",
+    lightning: "Blitz",
+    poison: "Gift",
+    metal: "Metall",
+    stone: "Stein",
+    light: "Licht",
+    shadow: "Schatten",
+    ghost: "Geist",
+    dragon: "Drache",
+    insect: "Insekt",
+    beast: "Bestie",
+    fighting: "Kampf",
+    psychic: "Psycho",
+    sound: "Klang",
+    crystal: "Kristall"
+  },
+  colors: {
+    fire: "#ff7043",
+    water: "#42a5f5",
+    plant: "#66bb6a",
+    earth: "#a1887f",
+    wind: "#80deea",
+    ice: "#b3e5fc",
+    lightning: "#ffee58",
+    poison: "#8e24aa",
+    metal: "#b0bec5",
+    stone: "#8d6e63",
+    light: "#fff8e1",
+    shadow: "#5e35b1",
+    ghost: "#ce93d8",
+    dragon: "#ef5350",
+    insect: "#9ccc65",
+    beast: "#ff8a65",
+    fighting: "#e53935",
+    psychic: "#f06292",
+    sound: "#4dd0e1",
+    crystal: "#e1bee7"
+  },
+  strongAgainst: {
+    fire: ["plant", "ice", "insect"],
+    water: ["earth", "stone"],
+    plant: ["water", "light"],
+    earth: ["fire", "lightning", "poison"],
+    wind: ["plant", "insect", "fighting"],
+    ice: ["wind", "dragon", "beast"],
+    lightning: ["water", "wind", "metal"],
+    poison: ["plant", "beast", "crystal"],
+    metal: ["ice", "stone", "crystal"],
+    stone: ["fire", "wind", "ice"],
+    light: ["shadow", "ghost", "dragon"],
+    shadow: ["psychic", "ghost", "light"],
+    ghost: ["psychic", "sound"],
+    dragon: ["dragon", "sound"],
+    insect: ["psychic", "shadow", "poison"],
+    beast: ["insect", "sound"],
+    fighting: ["stone", "metal", "beast"],
+    psychic: ["fighting", "poison"],
+    sound: ["crystal", "metal"],
+    crystal: ["light", "lightning", "earth"]
+  }
+};
+
 // data/rarities.json
 var rarities_default = {
   levels: [
@@ -5106,6 +5179,7 @@ var stages_default = {
 };
 
 // src/data.ts
+var typesCfg = types_default;
 var rarities = rarities_default.levels;
 var ascensionCosts = rarities_default.ascension;
 var monsters = monsters_default;
@@ -5117,6 +5191,9 @@ function species(id) {
   const found = monsterById.get(id);
   if (!found) throw new Error(`Unknown species ${id}`);
   return found;
+}
+function typeName(id) {
+  return typesCfg.names[id];
 }
 
 // src/rng.ts
@@ -9817,25 +9894,25 @@ function starFactor(stars) {
 var MASTERY_STEPS = [1e3, 4e3, 12e3, 3e4, 6e4];
 function masteryLevel(ep) {
   const points = Math.max(0, Math.floor(ep) || 0);
-  let level = 0;
-  for (const step of MASTERY_STEPS) if (points >= step) level += 1;
-  return level;
+  let level2 = 0;
+  for (const step of MASTERY_STEPS) if (points >= step) level2 += 1;
+  return level2;
 }
-function masteryFactor(level) {
-  const rank2 = Math.max(0, Math.min(MASTERY_STEPS.length, Math.floor(level) || 0));
+function masteryFactor(level2) {
+  const rank2 = Math.max(0, Math.min(MASTERY_STEPS.length, Math.floor(level2) || 0));
   return 1 + 0.02 * rank2;
 }
 
 // src/adventure/stats.ts
-function awakenCount(level) {
-  return (level >= 50 ? 1 : 0) + (level >= 25 ? 1 : 0);
+function awakenCount(level2) {
+  return (level2 >= 50 ? 1 : 0) + (level2 >= 25 ? 1 : 0);
 }
-function awakenFactor(level) {
-  return 1 + 0.15 * awakenCount(level);
+function awakenFactor(level2) {
+  return 1 + 0.15 * awakenCount(level2);
 }
-function combatStats(speciesId, level, shiny = false) {
+function combatStats(speciesId, level2, shiny = false) {
   const base = species(speciesId).base;
-  const growth = 1 + 0.06 * (level - 1);
+  const growth = 1 + 0.06 * (level2 - 1);
   const shine = shiny ? 1.1 : 1;
   return {
     hp: Math.round(base.hp * growth * shine),
@@ -9844,9 +9921,9 @@ function combatStats(speciesId, level, shiny = false) {
     spd: Math.round(base.spd * shine)
   };
 }
-function monStats(mon, level = mon.lvl, mastery = 0) {
-  const raw = combatStats(mon.species, level, mon.shiny);
-  const factor = awakenFactor(level);
+function monStats(mon, level2 = mon.lvl, mastery = 0) {
+  const raw = combatStats(mon.species, level2, mon.shiny);
+  const factor = awakenFactor(level2);
   const stars = starFactor(mon.stars ?? 0);
   const rank2 = masteryFactor(mastery);
   return {
@@ -9889,19 +9966,19 @@ var TIME = [
   ["Nachklang II", "Echo II", "Offline-EP auf \xD70,7.", "Offline EP to \xD70.7."],
   ["M\xFCnze I", "Coin I", "Gold aus K\xE4mpfen und Funden +5 %.", "Gold from fights and finds +5%."],
   ["M\xFCnze II", "Coin II", "Gold aus K\xE4mpfen und Funden +10 %.", "Gold from fights and finds +10%."],
-  ["Expedition", "Expedition", "Ein Expeditionsslot. Wirkt erst ab Schritt 11. Bis dahin ist der Knoten nur vorgemerkt.", "One expedition slot. It works from step 11. Until then the node is only reserved."],
+  ["Expedition", "Expedition", "Ein weiterer Expeditionsslot, zus\xE4tzlich zu den drei festen.", "One more expedition slot, on top of the three fixed ones."],
   ["Zeitweber", "Time weaver", "Fr\xFCchte halten 90 statt 60 Minuten.", "Fruits last 90 minutes instead of 60."]
 ];
 function column(branch, rows) {
-  return rows.map((row, index) => ({
+  return rows.map((row2, index) => ({
     id: `${branch}-${index + 1}`,
     branch,
     index,
     cost: NODE_COSTS[index],
-    nameDe: row[0],
-    nameEn: row[1],
-    textDe: row[2],
-    textEn: row[3]
+    nameDe: row2[0],
+    nameEn: row2[1],
+    textDe: row2[2],
+    textEn: row2[3]
   }));
 }
 var TREE_NODES = [
@@ -10076,12 +10153,12 @@ function bakeTeam(fighters, save) {
 }
 function teamFromRegister(rows, save) {
   if (rows.length !== 6) return null;
-  const fighters = rows.map((row) => blankFighter(
-    row.species,
-    row.schimmer,
-    save.stars?.[row.species] ?? 0,
-    masteryLevel(save.mastery?.[row.species] ?? 0),
-    row.uid
+  const fighters = rows.map((row2) => blankFighter(
+    row2.species,
+    row2.schimmer,
+    save.stars?.[row2.species] ?? 0,
+    masteryLevel(save.mastery?.[row2.species] ?? 0),
+    row2.uid
   ));
   return bakeTeam(fighters, save);
 }
@@ -10118,11 +10195,133 @@ function pickOpponents(selfId, selfRating, pool, seed) {
   return chosen;
 }
 
+// src/adventure/dex.ts
+function regionRoster(regionId) {
+  const region = regions.find((entry) => entry.id === regionId);
+  if (!region) return [];
+  const ids = /* @__PURE__ */ new Set();
+  for (const chapter of region.chapters) {
+    if (chapter.council || chapter.special) continue;
+    for (const row2 of [...chapter.day, ...chapter.night, ...chapter.weather ?? []]) ids.add(row2.species);
+  }
+  return [...ids];
+}
+
+// src/adventure/achievements.ts
+var WAPPEN = [
+  ["Kieselwappen", "Kieseltr\xE4ger", "stone"],
+  ["Wellenwappen", "Wellenl\xE4ufer", "tide"],
+  ["Funkenwappen", "Funkenh\xFCter", "spark"],
+  ["Moorwappen", "Moorw\xE4chter", "veil"],
+  ["Felswappen", "Felssetzer", "stone"],
+  ["Sturmwappen", "Sturmrufer", "night"],
+  ["Frostwappen", "Frostmark", "frost"],
+  ["Klingenwappen", "Klingentr\xE4ger", "ember"]
+];
+function caughtCount(save) {
+  return Object.values(save.dex).filter((entry) => entry.caught > 0).length;
+}
+function seenCount(save) {
+  return Object.values(save.dex).filter((entry) => entry.seen > 0).length;
+}
+function regionDone(save, regionId) {
+  const roster = regionRoster(regionId);
+  return roster.length > 0 && roster.every((id) => (save.dex[id]?.caught ?? 0) > 0);
+}
+function typeDone(save, type) {
+  const all = monsters.filter((mon) => mon.type === type);
+  return all.length > 0 && all.every((mon) => (save.dex[mon.id]?.caught ?? 0) > 0);
+}
+function atLeast(read, need) {
+  return (save) => read(save) >= need;
+}
+var wins = (save) => save.stats.wins;
+var catches = (save) => save.stats.catches;
+var dupes = (save) => save.stats.dupes;
+var eggs = (save) => save.stats.eggs;
+var shinies = (save) => save.stats.shinies;
+var level = (save) => Math.max(0, ...Object.values(save.mons).map((mon) => mon.lvl));
+function row(id, name, title, frame, gold, met) {
+  return { id, name, title, frame, gold, met };
+}
+var typeGoals = Object.keys(typesCfg.names).map((type) => row(
+  `type-${type}`,
+  `Alle ${typeName(type)}-Arten`,
+  `Kenner der ${typeName(type)}`,
+  "leaf",
+  8e3,
+  (save) => typeDone(save, type)
+));
+var GOALS = [
+  row("win-10", "10 Siege", "Wegbereiter", "gold", 500, atLeast(wins, 10)),
+  row("win-100", "100 Siege", "Hundertk\xE4mper", "night", 4e3, atLeast(wins, 100)),
+  row("win-1000", "1.000 Siege", "Tausendk\xE4mper", "ember", 25e3, atLeast(wins, 1e3)),
+  row("catch-10", "10 F\xE4nge", "F\xE4nger", "tide", 500, atLeast(catches, 10)),
+  row("catch-100", "100 F\xE4nge", "Bannmeister", "tide", 4e3, atLeast(catches, 100)),
+  row("catch-500", "500 F\xE4nge", "Siegelh\xFCter", "gold", 2e4, atLeast(catches, 500)),
+  row("dupe-10", "10 Duplikate", "Sammler", "plain", 400, atLeast(dupes, 10)),
+  row("dupe-100", "100 Duplikate", "Archivar", "plain", 3e3, atLeast(dupes, 100)),
+  row("dupe-1000", "1.000 Duplikate", "H\xFCter der Arten", "gold", 15e3, atLeast(dupes, 1e3)),
+  ...WAPPEN.map(([badge, title, frame]) => row(`badge-${badge}`, badge, title, frame, 2e3, (save) => save.badges.includes(badge))),
+  row("badge-Ratsiegel", "Ratsiegel", "Ratsmitglied", "gold", 1e4, (save) => save.badges.includes("Ratsiegel")),
+  row("region-1", "Gr\xFCnmark komplett", "Markgraf", "leaf", 2e4, (save) => regionDone(save, 1)),
+  row("region-2", "Frostk\xFCste komplett", "K\xFCstenw\xE4chter", "frost", 5e4, (save) => regionDone(save, 2)),
+  ...regions.filter((region) => !region.placeholder).map((region) => row(
+    `master-${region.id}`,
+    `Meister der ${region.name}`,
+    `Meister der ${region.name}`,
+    "gold",
+    5e3,
+    (save) => regionRoster(region.id).filter((id) => masteryLevel(save.mastery?.[id] ?? 0) >= 5).length >= 5
+  )),
+  ...typeGoals,
+  row("egg-1", "Erstes Ei", "Brutpfleger", "plain", 500, atLeast(eggs, 1)),
+  row("egg-10", "10 Eier", "Nester", "leaf", 3e3, atLeast(eggs, 10)),
+  row("egg-50", "50 Eier", "Hortmeister", "gold", 15e3, atLeast(eggs, 50)),
+  row("shiny-1", "Erster Schimmer", "Glanzsucher", "spark", 2e3, atLeast(shinies, 1)),
+  row("shiny-10", "10 Schimmer", "Lichttr\xE4ger", "spark", 25e3, atLeast(shinies, 10)),
+  row("level-10", "Ein Monster auf Lv 10", "Lehrling", "plain", 400, atLeast(level, 10)),
+  row("level-25", "Ein Monster auf Lv 25", "Erfahrener", "night", 2500, atLeast(level, 25)),
+  row("level-50", "Ein Monster auf Lv 50", "Veteran", "ember", 12e3, atLeast(level, 50)),
+  row("dex-10", "10 Arten im Kodex", "Kodexanw\xE4rter", "plain", 800, atLeast(caughtCount, 10)),
+  row("dex-25", "25 Arten im Kodex", "Kodexschreiber", "leaf", 2500, atLeast(caughtCount, 25)),
+  row("dex-50", "50 Arten im Kodex", "Kodexh\xFCter", "night", 8e3, atLeast(caughtCount, 50)),
+  row("dex-100", "100 Arten im Kodex", "Kodexmeister", "gold", 4e4, atLeast(caughtCount, 100)),
+  row("seen-100", "100 Arten gesichtet", "Sp\xE4her des Kodex", "veil", 1e4, atLeast(seenCount, 100)),
+  row("hort-2", "Hortplatz 2", "Hortbauer", "leaf", 1500, (save) => save.hortSlots >= 2),
+  row("hort-3", "Hortplatz 3", "Hortvogt", "stone", 8e3, (save) => save.hortSlots >= 3),
+  row("hort-4", "Hortplatz 4", "Hortf\xFCrst", "gold", 2e4, (save) => save.hortSlots >= 4),
+  row("team-6", "Team aus 6", "Sechserzug", "tide", 1e3, (save) => save.team.length >= 6),
+  row("fruit-10", "10 Fr\xFCchte gegessen", "Fruchtkenner", "leaf", 3e3, (save) => save.stats.fruitsUsed >= 10),
+  row("crystal-10", "10 Kristalle gegeben", "Kristallhand", "spark", 3e3, (save) => save.stats.crystalsUsed >= 10),
+  row("hort-guest", "Ein Monster im Hort", "Hortgast", "plain", 300, (save) => save.hort.length >= 1)
+];
+
+// src/adventure/shop.ts
+var FRUIT_MS = 60 * 60 * 1e3;
+var FRUITS = [
+  { id: "fang", name: "Gl\xFCcksfrucht", price: 4e3, effect: "N\xE4chste Truhe: +1 Pp auf Seltenheit ab 5" },
+  { id: "goldfang", name: "Goldfangfrucht", price: 15e3, effect: "Wird in Gold erstattet" },
+  { id: "spuer", name: "Spurfrucht", price: 8e3, effect: "Spur-Chance +50 %" },
+  { id: "neugier", name: "Neugierfrucht", price: 1e4, effect: "Noch nicht erhaltene Arten \xD73" },
+  { id: "glanz", name: "Glanzfrucht", price: 25e3, effect: "Schimmer-Chance \xD72" },
+  { id: "lern", name: "Lernfrucht", price: 6e3, effect: "Kampf-EP +25 %" },
+  { id: "muenz", name: "M\xFCnzfrucht", price: 6e3, effect: "Gold +25 %" }
+];
+var FRUIT_IDS = FRUITS.map((fruit) => fruit.id);
+
+// src/adventure/expedition.ts
+var HOUR_MS2 = 60 * 60 * 1e3;
+var EGG_READY_MS = 4 * HOUR_MS2;
+function expeditionBusy(save, uid) {
+  return Boolean(save.expeditions?.runs.some((run) => run.uid === uid));
+}
+
 // supabase/functions/arena-desk/index.ts
-function labelOf(row) {
-  if (!row) return "Spieler";
-  if (row.hidden) return `Spieler#${row.tag ?? "0000"}`;
-  return row.display || "Spieler";
+function labelOf(row2) {
+  if (!row2) return "Spieler";
+  if (row2.hidden) return `Spieler#${row2.tag ?? "0000"}`;
+  return row2.display || "Spieler";
 }
 Deno.serve(async (req) => {
   if (req.method === "OPTIONS") return new Response("ok", { headers: cors });
@@ -10149,12 +10348,12 @@ Deno.serve(async (req) => {
   if (!existing.data) {
     await db.from("arena_profiles").insert({ user_id: user.id });
   }
-  const row = existing.data ?? { rating: 1e3, attacks: 5, attacks_at: (/* @__PURE__ */ new Date()).toISOString(), day_key: "", defense: null, suggestions: [] };
+  const row2 = existing.data ?? { rating: 1e3, attacks: 5, attacks_at: (/* @__PURE__ */ new Date()).toISOString(), day_key: "", defense: null, suggestions: [] };
   const now = Date.now();
   const charged = chargeAttacks({
-    attacks: Number(row.attacks) || 0,
-    attacksAt: Date.parse(String(row.attacks_at)) || now,
-    dayKey: String(row.day_key ?? "")
+    attacks: Number(row2.attacks) || 0,
+    attacksAt: Date.parse(String(row2.attacks_at)) || now,
+    dayKey: String(row2.day_key ?? "")
   }, now);
   await db.from("arena_profiles").update({
     attacks: charged.attacks,
@@ -10169,7 +10368,9 @@ Deno.serve(async (req) => {
     if (rows.length !== 6) return json({ error: "team" }, 400);
     const saved = await db.from("saves").select("save_json").eq("user_id", user.id).maybeSingle();
     if (!saved.data?.save_json) return json({ error: "team" }, 400);
-    const team = teamFromRegister(rows, saved.data.save_json);
+    const adventure = saved.data.save_json;
+    if (uids.some((uid) => expeditionBusy(adventure, uid))) return json({ error: "team" }, 400);
+    const team = teamFromRegister(rows, adventure);
     if (!team) return json({ error: "team" }, 400);
     await db.from("arena_profiles").update({ defense: team }).eq("user_id", user.id);
     return json({ ok: true, species: team.fighters.map((fighter) => fighter.speciesId) });
@@ -10193,7 +10394,7 @@ Deno.serve(async (req) => {
       return [{ practice: false, seed: 1, id: entry.user_id, label, rating: Number(entry.rating) || 1e3, species: speciesIds }];
     });
     const seed = (now ^ user.id.length) >>> 0 || 1;
-    const cards = pickOpponents(user.id, Number(row.rating) || 1e3, pool, seed);
+    const cards = pickOpponents(user.id, Number(row2.rating) || 1e3, pool, seed);
     await db.from("arena_profiles").update({ suggestions: cards }).eq("user_id", user.id);
     return json({
       suggestions: cards.map((card, index) => ({
@@ -10221,8 +10422,8 @@ Deno.serve(async (req) => {
     const logs = await db.from("arena_logs").select("at, attacker_label, win, delta").eq("defender", user.id).order("at", { ascending: false }).limit(20);
     return json({ logs: logs.data ?? [] });
   }
-  const rating = Number(row.rating) || 1e3;
-  const defense = row.defense?.fighters;
+  const rating = Number(row2.rating) || 1e3;
+  const defense = row2.defense?.fighters;
   return json({
     locked: !unlocked,
     rating,

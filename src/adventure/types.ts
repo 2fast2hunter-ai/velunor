@@ -1,3 +1,4 @@
+import type { TypeId } from '../types'
 import type { Speed } from './const'
 import type { ChestCounts, PityState } from './lootbox'
 import type { Lang } from './i18n'
@@ -158,6 +159,38 @@ export interface SaveV2 {
   equippedFrame: string | null
   /** Awakening sequences still waiting to be shown. */
   pendingAwaken: { uid: string; level: 25 | 50 }[]
+  /** PC expeditions. Missing on older files; the loader fills an empty board. */
+  expeditions?: ExpeditionState
+}
+
+export interface ExpeditionQuest {
+  id: string
+  type: TypeId
+  rarity: number
+  hours: 1 | 4 | 8
+  place: string
+  art: string
+}
+
+export interface ExpeditionRun {
+  questId: string
+  uid: string
+  startedAt: number
+  hours: 1 | 4 | 8
+  type: TypeId
+  rarity: number
+  place: string
+  art: string
+}
+
+export interface ExpeditionState {
+  seed: number
+  day: string
+  quests: ExpeditionQuest[]
+  runs: ExpeditionRun[]
+  marks: number
+  marksDay: string
+  notes: string[]
 }
 
 export interface HortEgg {

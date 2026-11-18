@@ -47,6 +47,7 @@ import { advanceHort, HORT_EP_RATE } from './hort'
 import { applyFruitWeights, combatExpFactor, fruitActive, fruitDef, grantGold, rollFindFruit } from './shop'
 import { bossScale, type BossScale } from './gauntlet'
 import { battleRoster, fightsHere, ownsRegional, seatRegional } from './origin'
+import { expeditionBusy, settleExpeditions } from './expedition'
 import { makeMon, takeId } from './save'
 import { addExp, awakenCount, battleLevel, crossedAwaken, isAlive, monStats, realHp, speciesExp } from './stats'
 import { MASTERY_BOSS, MASTERY_WIN, addMastery, masteryLevel, pullMasteryUps, settleOfflineMastery, type MasteryUp } from './mastery'
@@ -981,6 +982,7 @@ export function simulateOffline(save: SaveV2, rawMs: number, now: number): { sum
     resolveEncounter(save, at, { offline: true, trace: false, summary, levelLeft, masteryBag })
   }
   summary.mastery = settleOfflineMastery(save, masteryBag, treeOfflineFactor(save))
+  settleExpeditions(save, now)
   syncAchievements(save)
   save.lastSeenAt = now
   return { summary, countedMs }
@@ -1039,6 +1041,7 @@ export function moveToPc(save: SaveV2, uid: string): string | null {
 
 export function moveToTeam(save: SaveV2, uid: string, swapWith: string | null): string | null {
   if (!save.pc.includes(uid)) return line(save, 'err.notPc')
+  if (expeditionBusy(save, uid)) return line(save, 'err.expedition')
   const mon = save.mons[uid]
   if (mon && teamBlocksShiny(save, mon.species, mon.shiny, swapWith)) return line(save, 'err.shiny')
   if (save.team.length < TEAM_MAX) {

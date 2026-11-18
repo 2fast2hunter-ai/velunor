@@ -5,6 +5,7 @@ import { chapterById, councilOf, findChapter, regions, speciesKnown } from './ro
 import { expToNext } from './stats'
 import { clampChestCount, emptyPity, enteredRegions, startChests, type ChestTier } from './lootbox'
 import { fontScale } from './touch'
+import { settleExpeditions } from './expedition'
 import { normalizeTreeNodes } from './tree'
 import { readLook } from './avatar'
 import type { AdventureSettings, AvatarLook, OwnedMon, SaveV2, StorageLike } from './types'
@@ -235,6 +236,7 @@ export function normalize(save: SaveV2, now: number): SaveV2 {
   // saveVersion climbs to the current step. 2 was portrait menus.
   // 3 adds swipe, vibration, font scale and battery mode.
   // 6 adds the anonymous account. 7 adds mastery. 8 adds the mastery tree, empty until a node is bought.
+  // 9 adds expeditions. Older files get an empty board and keep every monster.
   // Older files keep every stored value. Missing setting fields take the defaults.
   const seenVersion = Math.max(0, Math.floor(Number(save.saveVersion)) || 0)
   if (seenVersion < SAVE_VERSION) save.saveVersion = SAVE_VERSION
@@ -451,6 +453,7 @@ export function normalize(save: SaveV2, now: number): SaveV2 {
   save.pendingAwaken = Array.isArray(save.pendingAwaken)
     ? save.pendingAwaken.filter((row) => row && save.mons[row.uid] && (row.level === 25 || row.level === 50))
     : []
+  settleExpeditions(save, now)
   return save
 }
 

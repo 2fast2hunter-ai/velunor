@@ -57,6 +57,7 @@ import { isEventName, type AnalyticsEvent, type Consent } from './cloud/analytic
 import { eventsForEncounter, eventsForLoot, starEvent, teamProfile } from './cloud/playEvents'
 import { equipFrame, equipTitle, syncAchievements } from './achievements'
 import { HATCH_MS, buyHortSlot, moveFromHort, moveToHort } from './hort'
+import { expeditionBusy, settleExpeditions, startExpedition, takeExpeditionNotes } from './expedition'
 import { buyCrystal, buyFruit, sellCrystal, sellFruit, useCrystal, useFruit } from './shop'
 import { buyPrize, spinWheel, type Multiplier, type SymbolId } from './wheel'
 import { chapterCapNow } from './dex'
@@ -168,6 +169,7 @@ let treePick = 'chest-1'
 let arenaTimer = 0
 let arenaPanel: ArenaPanel = { status: 'offline', note: '', rating: 1000, league: 'Kiesel', attacks: 0, slots: [], suggestions: [], logs: [], frames: [], replay: null }
 let socialPanel: SocialPanel = { status: 'offline', code: '', friends: [], requests: [], note: '' }
+let expeditionPick = ''
 let saveReady = false
 let wipingAccount = false
 
@@ -1166,8 +1168,19 @@ async function start(next: SaveV2, intro = false): Promise<void> {
   }
 }
 
+function pumpExpeditions(now = Date.now()): void {
+  if (!save) return
+  settleExpeditions(save, now)
+  const notes = takeExpeditionNotes(save)
+  if (!notes.length) return
+  masteryNote = notes.join(' · ')
+  masteryUntil = now + 4200
+  try { writeSave(localStorage, save) } catch { /* the return is already in the save */ }
+}
+
 function render(step = save?.step): void {
   if (!save) return
+  pumpExpeditions()
   document.documentElement.lang = save.settings.lang === 'en' ? 'en' : 'de'
   const prev = document.getElementById('pc-viewport')
   if (prev && keepPcScroll) pcScroll = prev.scrollTop
@@ -1177,7 +1190,7 @@ function render(step = save?.step): void {
     mult: wheelMult,
     symbols: wheelSymbols,
     note: wheelNote
-  }, { mapOpen, moreOpen, pcScroll, filtersOpen, dexOpen, shopTab, shopHint: Date.now() < shopFlashUntil, fighting: animating, cloud: mergedCloud(), masteryNote: Date.now() < masteryUntil ? masteryNote : '', ranks: { ...rankView, board: rankBoard, excluded: mergedCloud().flagLevel === 2 }, treePick, arena: arenaPanel, social: socialPanel }))
+  }, { mapOpen, moreOpen, pcScroll, filtersOpen, dexOpen, shopTab, shopHint: Date.now() < shopFlashUntil, fighting: animating, cloud: mergedCloud(), masteryNote: Date.now() < masteryUntil ? masteryNote : '', ranks: { ...rankView, board: rankBoard, excluded: mergedCloud().flagLevel === 2 }, treePick, arena: arenaPanel, social: socialPanel, expeditionPick }))
   if (screen === 'team') {
     pcIds = visiblePc(save, pc)
     const view = document.getElementById('pc-viewport')
@@ -1360,6 +1373,7 @@ function buzz(kind: HapticKind): void {
 
 function loop(): void {
   powerCheck()
+  pumpExpeditions()
   if (!save?.started || animating || overlay || cloudBlocks() || (save.hold && !save.challengeNow)) return
   const dur = encounterMs(save.settings.speed)
   const now = Date.now()
@@ -1562,7 +1576,7 @@ async function socialAction(act: string, code: string | null): Promise<void> {
     return
   }
   if (act === 'coop-attempt') {
-    const roster = [...current.team, ...Object.keys(current.mons)].filter((uid, index, all) => current.mons[uid] && all.indexOf(uid) === index).slice(0, 6)
+    const roster = [...current.team, ...Object.keys(current.mons)].filter((uid, index, all) => current.mons[uid] && !expeditionBusy(current, uid) && all.indexOf(uid) === index).slice(0, 6)
     const result = await callOnline('coop-boss', { action: 'attempt', uids: roster })
     socialPanel = { ...socialPanel, note: result.ok ? '' : t(current.settings.lang, 'social.noFriends') }
     await refreshSocial()
@@ -2663,9 +2677,22 @@ function onClick(event: Event): void {
     kick()
     return
   }
+  if (act === 'expedition-quest') {
+    expeditionPick = node.getAttribute('data-id') ?? ''
+    render()
+    return
+  }
+  if (act === 'expedition-send') {
+    if (!save) return
+    const reason = startExpedition(save, node.getAttribute('data-id') ?? expeditionPick, node.getAttribute('data-uid') ?? '', Date.now())
+    if (reason) save.log.push({ t: Date.now(), text: reason })
+    else try { writeSave(localStorage, save) } catch { /* the run is in the save */ }
+    render()
+    return
+  }
   if (act === 'arena-pick') {
     const uid = node.getAttribute('data-uid') ?? ''
-    if (!uid || arenaPanel.slots.includes(uid) || arenaPanel.slots.length >= 6) return
+    if (!uid || !save || expeditionBusy(save, uid) || arenaPanel.slots.includes(uid) || arenaPanel.slots.length >= 6) return
     arenaPanel = { ...arenaPanel, slots: [...arenaPanel.slots, uid] }
     render()
     return

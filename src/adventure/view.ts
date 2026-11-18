@@ -32,6 +32,7 @@ import {
   type ChestTier
 } from './lootbox'
 import type { ChestGrant } from './chests'
+import { expeditionBusy, expeditionSlots, expeditionTier } from './expedition'
 import { workshopCost } from './sources'
 import {
   SHOP_ART,
@@ -63,7 +64,7 @@ import type { OfflineSummary } from './sim'
 import type { SaveV2 } from './types'
 import { PC_VIEW_FALLBACK, virtualWindow } from './virtualList'
 
-export type Screen = 'adventure' | 'progress' | 'team' | 'codex' | 'activities' | 'shop' | 'achievements' | 'ranks' | 'tree' | 'arena' | 'social' | 'options' | 'guide'
+export type Screen = 'adventure' | 'progress' | 'team' | 'codex' | 'activities' | 'shop' | 'achievements' | 'ranks' | 'tree' | 'arena' | 'social' | 'expedition' | 'options' | 'guide'
 
 export interface WheelPanel {
   tab: 'hort' | 'wheel' | 'chests'
@@ -119,6 +120,7 @@ export interface ShellFlags {
   treePick?: string
   arena?: ArenaPanel
   social?: SocialPanel
+  expeditionPick?: string
 }
 
 export interface SocialFriend {
@@ -304,7 +306,7 @@ const TAB_ICONS: Record<string, string> = {
 }
 
 function tabbar(save: SaveV2, screen: Screen, moreOpen: boolean): string {
-  const moreScreens: Screen[] = ['shop', 'achievements', 'ranks', 'tree', 'arena', 'options', 'guide']
+  const moreScreens: Screen[] = ['shop', 'achievements', 'ranks', 'tree', 'arena', 'social', 'expedition', 'options', 'guide']
   const tabs: { id: string; label: string; active: boolean; act: string; screen?: Screen }[] = [
     { id: 'adventure', label: 'nav.adventure', active: screen === 'adventure', act: 'screen', screen: 'adventure' },
     { id: 'team', label: 'nav.team', active: screen === 'team', act: 'screen', screen: 'team' },
@@ -338,6 +340,7 @@ function moreSheet(save: SaveV2, open: boolean): string {
     ${treeBtn}
     ${arenaBtn}
     ${socialBtn}
+    <button type="button" data-act="screen" data-screen="expedition"><svg class="ui-icon" viewBox="0 0 24 24" aria-hidden="true"><path fill="currentColor" d="M4 16c3-6 6-6 8-2s5-4 8-2v6H4z"/><circle cx="16" cy="7" r="2.4" fill="currentColor"/></svg>${tr(save, 'nav.expedition')}</button>
     ${items.slice(2).map(([id, icon, label]) => `<button type="button" data-act="screen" data-screen="${id}">${ui(icon)}${tr(save, label)}</button>`).join('')}
   </div>`
 }
@@ -1482,12 +1485,68 @@ function socialScreen(save: SaveV2, panel: SocialPanel | undefined): string {
   </div></div></div>`
 }
 
+function placeArt(art: string, place: string): string {
+  const shift = [...art].reduce((sum, char) => sum + char.charCodeAt(0), 0) % 36
+  return `<svg class="expedition-art" data-art="${esc(art)}" viewBox="0 0 320 120" role="img" aria-label="${esc(place)}">
+    <rect width="320" height="120" rx="28" fill="hsl(${188 + shift} 42% 76%)"/>
+    <circle cx="248" cy="34" r="16" fill="#fff4cc"/>
+    <path d="M0 80c48-30 78-6 118-22s62-4 96 12 62 10 106-14v64H0z" fill="hsl(${24 + shift} 38% 58%)"/>
+    <ellipse cx="92" cy="90" rx="18" ry="8" fill="#ffffff55"/>
+  </svg>`
+}
+
+function tierMark(tier: 'bronze' | 'silber' | 'gold', on: boolean): string {
+  const fill = tier === 'gold' ? '#f0c14a' : tier === 'silber' ? '#d9e2ec' : '#d08a4c'
+  return `<svg class="tier-mark${on ? ' on' : ''}" data-art="expedition/tier-${tier}" viewBox="0 0 48 48" aria-hidden="true"><circle cx="24" cy="24" r="18" fill="${fill}"/><circle cx="24" cy="24" r="7" fill="#fff8"/></svg>`
+}
+
+function expeditionScreen(save: SaveV2, now: number, pick: string | undefined): string {
+  const state = save.expeditions
+  const slots = expeditionSlots(save)
+  const used = state?.runs.length ?? 0
+  const chosen = state?.quests.find((quest) => quest.id === pick) ?? state?.quests[0]
+  const marks = tierMark('bronze', false) + tierMark('silber', false) + tierMark('gold', false)
+  const cards = (state?.quests ?? []).map((quest) => {
+    const gone = state?.runs.some((run) => run.questId === quest.id)
+    const selected = chosen?.id === quest.id
+    return `<article class="expedition-card${selected ? ' on' : ''}" data-art="${esc(quest.art)}">
+      ${placeArt(quest.art, quest.place)}
+      <h3>${esc(quest.place)}</h3>
+      <p>${esc(tr(save, 'expedition.wish', { type: typeLabel(L(save), quest.type, typeName(quest.type)), rarity: quest.rarity }))}</p>
+      <p>${tr(save, 'expedition.hours', { n: quest.hours })}</p>
+      <div class="tier-row">${marks}</div>
+      <p class="muted">${tr(save, 'expedition.egg', { n: 2 })} · ${tr(save, 'expedition.egg', { n: 4 })} · ${tr(save, 'expedition.egg', { n: 8 })}</p>
+      ${gone ? `<p class="muted">${tr(save, 'expedition.away')}</p>` : `<button type="button" data-act="expedition-quest" data-id="${esc(quest.id)}">${tr(save, 'expedition.send')}</button>`}
+    </article>`
+  }).join('')
+  const bench = save.pc.filter((uid) => save.mons[uid] && !expeditionBusy(save, uid)).slice(0, 12).map((uid) => {
+    const mon = save.mons[uid]
+    const tier = chosen ? expeditionTier(species(mon.species).type, species(mon.species).baseRarity, chosen) : 'bronze'
+    return `<button type="button" data-act="expedition-send" data-id="${esc(chosen?.id ?? '')}" data-uid="${esc(uid)}">${esc(species(mon.species).name)} · ${tr(save, `expedition.tier.${tier}`)}</button>`
+  }).join('')
+  const away = (state?.runs ?? []).map((run) => {
+    const left = Math.max(0, run.startedAt + run.hours * 60 * 60 * 1000 - now)
+    const hours = Math.ceil(left / (60 * 60 * 1000))
+    return `<p>${esc(run.place)} · ${tr(save, 'expedition.hours', { n: hours })}</p>`
+  }).join('')
+  return `<div class="menu-screen"><div class="menu-scroll"><div class="card panel">
+    <h2>${tr(save, 'nav.expedition')}</h2>
+    <p>${tr(save, 'expedition.lead')}</p>
+    <p>${tr(save, 'expedition.slots', { used, slots })}</p>
+    <div class="expedition-list">${cards}</div>
+    <h3>${tr(save, 'nav.team')}</h3>
+    <div class="expedition-bench">${bench || `<p class="muted">${tr(save, 'expedition.empty')}</p>`}</div>
+    ${away}
+  </div></div></div>`
+}
+
 function center(save: SaveV2, screen: Screen, now: number, pc: PcQuery, dex: CodexQuery, selected: string | null, debug: boolean, wheel: WheelPanel, shell: ShellFlags): string {
   if (screen === 'progress') return `<div class="menu-screen"><div class="menu-scroll">${progress(save)}</div></div>`
   if (screen === 'ranks') return ranksScreen(save, shell.ranks)
   if (screen === 'tree') return treeScreen(save, shell.treePick, now)
   if (screen === 'arena') return arenaScreen(save, shell.arena)
   if (screen === 'social') return socialScreen(save, shell.social)
+  if (screen === 'expedition') return expeditionScreen(save, now, shell.expeditionPick)
   if (screen === 'team') return team(save, pc, selected, shell)
   if (screen === 'codex') return codex(save, dex, shell)
   if (screen === 'activities') return activitiesView(save, now, selected, wheel)
