@@ -1,6 +1,7 @@
 import { acceptEvent, capQueue, enqueue, eventsToSend, validEmail, type AnalyticsEvent, type Consent } from './analytics'
 import { decideSync, previewOf, saveFromUnknown, syncDue } from './conflict'
 import { APP_VERSION } from './config'
+import { mayUploadSave } from '../online/check'
 import { auditFromSave } from '../online/snapshot'
 import { progressOf } from './progress'
 import type { CloudApi, CloudNotice, CloudPorts, CloudStatus, CloudView, SyncReason } from './types'
@@ -124,6 +125,11 @@ export function createCloud(api: CloudApi, ports: CloudPorts): CloudController {
     }
     if (holding && reason !== 'online') {
       await flush(reason === 'pause')
+      return
+    }
+    if (!mayUploadSave(Boolean(ports.deferUpload?.()))) {
+      status = 'online'
+      emit()
       return
     }
     status = 'sync'
