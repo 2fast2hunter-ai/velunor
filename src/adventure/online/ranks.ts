@@ -1,6 +1,6 @@
 /** Leaderboard rules. The SQL migration uses the same weeks, cutoffs and titles. */
 
-export const BOARDS = ['codex', 'progress', 'week', 'shimmer', 'mastery'] as const
+export const BOARDS = ['codex', 'progress', 'week', 'shimmer', 'mastery', 'arena'] as const
 export type BoardId = (typeof BOARDS)[number]
 
 export const CRESTS = [
@@ -30,7 +30,8 @@ export const BOARD_TITLES: Record<BoardId, string> = {
   progress: 'Wegmarke',
   week: 'Wochenkranz',
   shimmer: 'Schimmerreif',
-  mastery: 'Meisterkrone'
+  mastery: 'Meisterkrone',
+  arena: 'Arenakern'
 }
 
 export const RANK_FRAMES = [
@@ -218,7 +219,8 @@ export interface RankLine {
   self: boolean
 }
 
-export function rankDetail(detail: { region?: number, crests?: number, council?: number }, lang: 'de' | 'en'): string {
+export function rankDetail(detail: { region?: number, crests?: number, council?: number, league?: string }, lang: 'de' | 'en'): string {
+  if (typeof detail.league === 'string' && detail.league) return detail.league
   if (typeof detail.region !== 'number') return ''
   const crests = Number(detail.crests) || 0
   const council = Number(detail.council) || 0
@@ -242,7 +244,7 @@ function parseLines(value: unknown, lang: 'de' | 'en'): RankLine[] {
     const item = row as Record<string, unknown>
     const place = Math.floor(Number(item.place))
     if (!(place > 0)) continue
-    const detail = item.detail && typeof item.detail === 'object' ? item.detail as { region?: number, crests?: number, council?: number } : {}
+    const detail = item.detail && typeof item.detail === 'object' ? item.detail as { region?: number, crests?: number, council?: number, league?: string } : {}
     lines.push({
       place,
       label: typeof item.label === 'string' && item.label ? item.label : 'Spieler',

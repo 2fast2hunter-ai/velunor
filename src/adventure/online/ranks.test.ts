@@ -117,7 +117,7 @@ describe('leaderboards', () => {
     expect(html).toContain('Spieler#1111')
     expect(html).toContain('rank-frame on')
     expect(html).not.toContain('Freunde')
-    expect(BOARDS).toHaveLength(5)
+    expect(BOARDS).toHaveLength(6)
     const offline = gameHtml(save, 'ranks', 1_000, pc, dex, null, false, false, null)
     expect(offline).toContain('Dein Spielstand bleibt auf diesem Gerät')
     const sql = readFileSync(new URL('../../../supabase/migrations/20261118210000_schritt7_ranks.sql', import.meta.url), 'utf8')

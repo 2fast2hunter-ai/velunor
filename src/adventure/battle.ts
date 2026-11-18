@@ -286,9 +286,13 @@ function tick(unit: Actor): void {
 
 export interface FightMods {
   critAdd?: number
+  foeCritAdd?: number
   /** Replaces a 1.5 type advantage for the ally. */
   strongType?: number
+  /** Replaces a 1.5 type advantage for the foe. */
+  foeStrongType?: number
   breath?: { left: number }
+  foeBreath?: { left: number }
 }
 
 export function fight1v1(allySide: FightSide, foeSide: FightSide, rng: () => number, trace: boolean, weather: WeatherId | null = null, mods: FightMods | null = null): FightTrace {
@@ -360,9 +364,10 @@ export function fight1v1(allySide: FightSide, foeSide: FightSide, rng: () => num
     if (target.hp <= 0) {
       target.wallLeft = 0
       target.wallFresh = false
-      if (target === ally && mods?.breath && mods.breath.left > 0 && target.rebirths <= 0) {
+      const breath = target === ally ? mods?.breath : mods?.foeBreath
+      if (breath && breath.left > 0 && target.rebirths <= 0) {
         target.hp = 1
-        mods.breath.left = 0
+        breath.left = 0
       } else if (target.rebirths > 0) {
         target.rebirths -= 1
         target.hp = Math.max(1, Math.floor(target.side.maxHp * target.rebirthPct))
@@ -379,9 +384,11 @@ export function fight1v1(allySide: FightSide, foeSide: FightSide, rng: () => num
   const strike = (attacker: Actor, target: Actor, skillMult: number, pierce: number, ult?: UltPattern, extra?: { atkScale?: number; unavoidable?: boolean; helper?: boolean; pulse?: boolean }): number => {
     let tMult = typeMult(attacker.side.type, target.side.type)
     if (attacker === ally && tMult === 1.5 && mods?.strongType) tMult = mods.strongType
+    if (attacker !== ally && tMult === 1.5 && mods?.foeStrongType) tMult = mods.foeStrongType
     const wMult = ult === 'heilleucht' ? 1 : weatherFactor(weather, attacker.side.type)
     const boosted = attacker.impulseLeft > 0 && !ult && !extra?.helper && !extra?.pulse
-    const crit = rng() < combat.critChance + (attacker === ally ? (mods?.critAdd ?? 0) : 0)
+    const critAdd = attacker === ally ? (mods?.critAdd ?? 0) : (mods?.foeCritAdd ?? 0)
+    const crit = rng() < combat.critChance + critAdd
     const variance = combat.varianceMin + (combat.varianceMax - combat.varianceMin) * rng()
     const blow = attacker.opening && !extra?.helper && !extra?.pulse ? 1 + COUNTER_BLOW : 1
     if (attacker.opening && !extra?.helper && !extra?.pulse) attacker.struck = true

@@ -47,6 +47,7 @@ import { browserCloudApi, watchAuth } from './cloud/supabaseApi'
 import { callOnline, claimRankRewards, clearVelunorKeys, loadOwnLabel, loadRankPage, sendBlockRow, sendReportRow } from './online/calls'
 import { isBoard, parseRankPage, RANK_FRAMES, type BoardId, type RankModel } from './online/ranks'
 import { buyNode, respecTree, treeCapMs } from './tree'
+import type { ArenaPanel } from './view'
 import { saveOwesCatchUp } from './online/check'
 import { nameIssue } from './online/name'
 import { createCloud, type CloudController } from './cloud/session'
@@ -163,6 +164,8 @@ let rankBoard: BoardId = 'codex'
 let rankToken = 0
 let rankView: RankModel = { board: 'codex', status: 'offline', top: [], around: [], honors: [], excluded: false }
 let treePick = 'chest-1'
+let arenaTimer = 0
+let arenaPanel: ArenaPanel = { status: 'offline', note: '', rating: 1000, league: 'Kiesel', attacks: 0, slots: [], suggestions: [], logs: [], frames: [], replay: null }
 let saveReady = false
 let wipingAccount = false
 
@@ -1172,7 +1175,7 @@ function render(step = save?.step): void {
     mult: wheelMult,
     symbols: wheelSymbols,
     note: wheelNote
-  }, { mapOpen, moreOpen, pcScroll, filtersOpen, dexOpen, shopTab, shopHint: Date.now() < shopFlashUntil, fighting: animating, cloud: mergedCloud(), masteryNote: Date.now() < masteryUntil ? masteryNote : '', ranks: { ...rankView, board: rankBoard, excluded: mergedCloud().flagLevel === 2 }, treePick }))
+  }, { mapOpen, moreOpen, pcScroll, filtersOpen, dexOpen, shopTab, shopHint: Date.now() < shopFlashUntil, fighting: animating, cloud: mergedCloud(), masteryNote: Date.now() < masteryUntil ? masteryNote : '', ranks: { ...rankView, board: rankBoard, excluded: mergedCloud().flagLevel === 2 }, treePick, arena: arenaPanel }))
   if (screen === 'team') {
     pcIds = visiblePc(save, pc)
     const view = document.getElementById('pc-viewport')
@@ -1419,6 +1422,114 @@ function loop(): void {
   }
   render(outcome.step)
   play(outcome, save.settings.speed, () => finishPresent(outcome))
+}
+
+async function refreshArena(): Promise<void> {
+  arenaPanel = { ...arenaPanel, status: 'loading' }
+  render()
+  const state = await callOnline('arena-desk', { action: 'state' })
+  if (!state.ok) {
+    arenaPanel = { ...arenaPanel, status: 'offline', note: '' }
+    render()
+    return
+  }
+  const claim = await callOnline('arena-desk', { action: 'claim' })
+  const logs = await callOnline('arena-desk', { action: 'log' })
+  if (claim.ok && save) {
+    const marks = Math.max(0, Math.floor(Number(claim.data.marks)) || 0)
+    if (marks > 0) {
+      save.marks += marks
+      try { writeSave(localStorage, save) } catch { /* the server already marked the season claimed */ }
+      masteryNote = t(save.settings.lang, 'ranks.reward', { marks: marks.toLocaleString(save.settings.lang === 'en' ? 'en' : 'de-DE'), titles: '' })
+      masteryUntil = Date.now() + 4200
+    }
+  }
+  const frames = Array.isArray(claim.data?.frames) ? claim.data.frames.filter((frame): frame is string => typeof frame === 'string') : arenaPanel.frames
+  const rows = Array.isArray(logs.data?.logs) ? logs.data.logs : []
+  arenaPanel = {
+    ...arenaPanel,
+    status: state.data.locked ? 'locked' : 'ready',
+    rating: Math.floor(Number(state.data.rating)) || 1000,
+    league: typeof state.data.league === 'string' ? state.data.league : 'Kiesel',
+    attacks: Math.floor(Number(state.data.attacks)) || 0,
+    frames,
+    logs: rows.flatMap((line) => {
+      if (!line || typeof line !== 'object') return []
+      const row = line as { attacker_label?: unknown, win?: unknown, delta?: unknown }
+      return [{ label: String(row.attacker_label ?? 'Spieler'), win: Boolean(row.win), delta: Math.floor(Number(row.delta)) || 0 }]
+    })
+  }
+  render()
+}
+
+async function arenaAction(act: string, index: string | null): Promise<void> {
+  if (!save) return
+  if (act === 'arena-save') {
+    const result = await callOnline('arena-desk', { action: 'defend', uids: arenaPanel.slots })
+    arenaPanel = { ...arenaPanel, note: result.ok ? '' : t(save.settings.lang, 'arena.locked') }
+    render()
+    return
+  }
+  if (act === 'arena-suggest') {
+    const result = await callOnline('arena-desk', { action: 'suggest' })
+    const cards = Array.isArray(result.data.suggestions) ? result.data.suggestions : []
+    arenaPanel = {
+      ...arenaPanel,
+      suggestions: cards.flatMap((card) => {
+        if (!card || typeof card !== 'object') return []
+        const row = card as { index?: unknown, practice?: unknown, label?: unknown, rating?: unknown, league?: unknown, species?: unknown }
+        return [{
+          index: Math.floor(Number(row.index)) || 0,
+          practice: Boolean(row.practice),
+          label: String(row.label ?? 'Übung'),
+          rating: Math.floor(Number(row.rating)) || 0,
+          league: String(row.league ?? ''),
+          species: Array.isArray(row.species) ? row.species.filter((id): id is string => typeof id === 'string') : []
+        }]
+      })
+    }
+    render()
+    return
+  }
+  const result = await callOnline('arena-fight', { index: Math.floor(Number(index)) || 0 })
+  if (!result.ok || !result.data.replay || typeof result.data.replay !== 'object') {
+    arenaPanel = { ...arenaPanel, note: result.error === 'limit' ? t(save.settings.lang, 'arena.attacks', { n: 0 }) : t(save.settings.lang, 'arena.offline') }
+    render()
+    return
+  }
+  const replay = result.data.replay as { win?: unknown, bouts?: unknown }
+  const bouts = Array.isArray(replay.bouts) ? replay.bouts.flatMap((bout) => {
+    if (!bout || typeof bout !== 'object') return []
+    const row = bout as { allyName?: unknown, foeName?: unknown, allyHp?: unknown, allyMax?: unknown, foeHp?: unknown, foeMax?: unknown, win?: unknown }
+    return [{
+      allyName: String(row.allyName ?? ''),
+      foeName: String(row.foeName ?? ''),
+      allyHp: Math.floor(Number(row.allyHp)) || 0,
+      allyMax: Math.max(1, Math.floor(Number(row.allyMax)) || 1),
+      foeHp: Math.floor(Number(row.foeHp)) || 0,
+      foeMax: Math.max(1, Math.floor(Number(row.foeMax)) || 1),
+      win: Boolean(row.win)
+    }]
+  }) : []
+  arenaPanel = {
+    ...arenaPanel,
+    rating: Math.floor(Number(result.data.rating)) || arenaPanel.rating,
+    league: typeof result.data.league === 'string' ? result.data.league : arenaPanel.league,
+    attacks: Math.floor(Number(result.data.attacks)) || 0,
+    suggestions: [],
+    replay: { label: String(result.data.label ?? ''), win: Boolean(replay.win), step: 0, bouts }
+  }
+  render()
+  window.clearInterval(arenaTimer)
+  arenaTimer = window.setInterval(() => {
+    const current = arenaPanel.replay
+    if (!current || current.step >= current.bouts.length - 1) {
+      window.clearInterval(arenaTimer)
+      return
+    }
+    arenaPanel = { ...arenaPanel, replay: { ...current, step: current.step + 1 } }
+    render()
+  }, 700)
 }
 
 async function refreshRanks(): Promise<void> {
@@ -2439,7 +2550,25 @@ function onClick(event: Event): void {
     render()
     if (screen === 'options') void refreshOwnLabel()
     if (screen === 'ranks') void refreshRanks()
+    if (screen === 'arena') void refreshArena()
     kick()
+    return
+  }
+  if (act === 'arena-pick') {
+    const uid = node.getAttribute('data-uid') ?? ''
+    if (!uid || arenaPanel.slots.includes(uid) || arenaPanel.slots.length >= 6) return
+    arenaPanel = { ...arenaPanel, slots: [...arenaPanel.slots, uid] }
+    render()
+    return
+  }
+  if (act === 'arena-clear') {
+    const index = Number(node.getAttribute('data-index'))
+    arenaPanel = { ...arenaPanel, slots: arenaPanel.slots.filter((_, place) => place !== index) }
+    render()
+    return
+  }
+  if (act === 'arena-save' || act === 'arena-suggest' || act === 'arena-fight') {
+    void arenaAction(act, node.getAttribute('data-index'))
     return
   }
   if (act === 'tree-node') {
