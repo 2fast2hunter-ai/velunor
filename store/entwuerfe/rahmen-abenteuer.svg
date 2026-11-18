@@ -1,0 +1,19 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 1080 2340">
+  <rect width="1080" height="2340" fill="#0b1020"/>
+  <rect x="70" y="80" width="940" height="2180" rx="64" fill="#120e22"/>
+  <text x="120" y="220" fill="#f4efe4" font-family="sans-serif" font-size="72" font-weight="700">Abenteuer</text>
+  <rect x="120" y="280" width="220" height="12" rx="6" fill="#f0c14a"/>
+  
+    <path d="M160 1680 C 360 900, 700 1100, 920 520" fill="none" stroke="#f0c14a" stroke-width="18" stroke-linecap="round"/>
+    <circle cx="920" cy="520" r="28" fill="#d7ecf7"/>
+    <rect x="160" y="1760" width="760" height="180" rx="28" fill="#1a2744"/>
+  
+  <g fill="#24365f">
+    <rect x="140" y="2080" width="120" height="72" rx="20"/>
+    <rect x="300" y="2080" width="120" height="72" rx="20"/>
+    <rect x="460" y="2080" width="160" height="72" rx="20" fill="#f0c14a"/>
+    <rect x="660" y="2080" width="120" height="72" rx="20"/>
+    <rect x="820" y="2080" width="120" height="72" rx="20"/>
+  </g>
+</svg>
