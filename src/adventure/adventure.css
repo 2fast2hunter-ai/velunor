@@ -96,8 +96,8 @@ body.is-landscape-phone #turn { display: grid; }
   box-sizing: border-box;
 }
 .anchor { min-width: 0; min-height: 0; }
-.anchor-top { display: grid; grid-template-rows: minmax(96px, calc(96px * var(--font-scale, 1))) 132px 120px; overflow: hidden; }
-.is-menu .anchor-top { grid-template-rows: minmax(96px, calc(96px * var(--font-scale, 1))); }
+.anchor-top { display: grid; grid-template-rows: minmax(160px, calc(160px * var(--font-scale, 1))) 132px 120px; overflow: hidden; }
+.is-menu .anchor-top { grid-template-rows: minmax(160px, calc(160px * var(--font-scale, 1))); }
 .is-shop .anchor-top { display: none; }
 .is-shop .safe { grid-template-rows: minmax(0, 1fr) auto; }
 .is-shop .band-top { background: transparent; }
