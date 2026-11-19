@@ -33,7 +33,8 @@ import {
 } from './lootbox'
 import type { ChestGrant } from './chests'
 import { expeditionBusy, expeditionSlots, expeditionTier } from './expedition'
-import { COLORS, SHAPES, SYMBOLS } from './guild'
+import { crestCount } from './arena'
+import { COLORS, SHAPES, SYMBOLS, foundCost, guildFoundBlock } from './guild'
 import { tradedOnly } from './trade'
 import { workshopCost } from './sources'
 import {
@@ -153,6 +154,24 @@ export interface ChatPanel {
   adult: boolean | null
 }
 
+export interface GuildPerson {
+  id: string
+  label: string
+  role?: 'lead' | 'deputy' | 'member'
+}
+
+export interface GuildGoalView {
+  goal: string
+  progress: number
+  target: number
+}
+
+export interface GuildHit {
+  id: string
+  name: string
+  tag: string
+}
+
 export interface GuildPanel {
   status: 'offline' | 'ready' | 'loading'
   name: string
@@ -160,6 +179,17 @@ export interface GuildPanel {
   level: number
   points: number
   note: string
+  id?: string
+  role?: 'lead' | 'deputy' | 'member' | ''
+  code?: string
+  members?: GuildPerson[]
+  requests?: GuildPerson[]
+  goals?: GuildGoalView[]
+  hits?: GuildHit[]
+  draftName?: string
+  draftTag?: string
+  draftQuery?: string
+  draftCode?: string
   shape?: string
   symbol?: string
   color?: string
@@ -873,7 +903,7 @@ function codex(save: SaveV2, filter: CodexQuery, shell: ShellFlags): string {
     return `<button type="button" class="mon-card" data-act="dex" data-species="${mon.id}">
       ${face}
       <div>${hidden ? tr(save, 'codex.no', { n: speciesNumber(mon.id) }) : esc(mon.name)}</div>
-      <div class="muted">${dexStatusLabel(status)}${tradedOnly(save, mon.id) ? ` <svg class="trade-mark" data-art="codex/traded" viewBox="0 0 24 24" aria-label="${esc(tr(save, 'trade.traded'))}"><circle cx="12" cy="12" r="9" fill="#f0c14a"/><path d="M7 12h10M13 8l4 4-4 4" fill="none" stroke="#243044" stroke-width="2" stroke-linecap="round"/></svg>` : ''}</div>
+      <div class="muted">${dexStatusLabel(status)}${tradedOnly(save, mon.id) ? ` <img class="trade-mark" data-art="codex/traded" src="${art('codex/traded@2x.png')}" alt="${esc(tr(save, 'trade.traded'))}" title="${esc(tr(save, 'trade.traded'))}"/>` : ''}</div>
     </button>`
   }).join('')
   return `<div class="menu-screen">
@@ -1123,6 +1153,7 @@ function dailyCard(save: SaveV2): string {
   }).join('')
   return `<section class="card panel daily-card" data-art="daily/board">
     <h2>${tr(save, 'daily.title')}</h2>
+    <img class="daily-board" src="${art('daily/board@2x.png')}" alt=""/>
     <p class="muted">${tr(save, 'daily.note')}</p>
     <ul class="daily-tasks">${tasks || `<li class="muted">${tr(save, 'daily.wait')}</li>`}</ul>
     <h3>${tr(save, 'daily.calendar')}</h3>
@@ -1176,6 +1207,17 @@ function hortView(save: SaveV2, now: number, selected: string | null, wheel: Whe
   </div>`
 }
 
+function achieveArt(id: string): UiArtId {
+  if (id.startsWith('win-')) return 'achWins'
+  if (id.startsWith('catch-') || id.startsWith('shiny-')) return 'achFinds'
+  if (id.startsWith('dupe-')) return 'achCollect'
+  if (id.startsWith('badge-')) return 'achBadges'
+  if (id.startsWith('region-') || id.startsWith('master-')) return 'achRegion'
+  if (id.startsWith('type-')) return 'achTypes'
+  if (id.startsWith('dex-') || id.startsWith('seen-')) return 'achCodex'
+  return 'achCare'
+}
+
 function achievementsView(save: SaveV2): string {
   const done = save.claimed.length
   const rows = GOALS.map((goal) => {
@@ -1186,7 +1228,7 @@ function achievementsView(save: SaveV2): string {
     const title = goalTitle(L(save), goal.id, goal.title, typeBit)
     const mark = typeId ? typeIcon(typeId as TypeId) : ''
     return `<article class="list-row achieve ${have ? 'done' : ''}">
-      ${ui('achieve')}<div>${mark}<b>${esc(name)}</b><div class="muted">${have ? tr(save, 'ach.have', { title, frame: goal.frame }) : tr(save, 'ach.open')} · ${goal.gold.toLocaleString(L(save) === 'en' ? 'en' : 'de-DE')} G</div></div>
+      ${ui(achieveArt(goal.id))}<div>${mark}<b>${esc(name)}</b><div class="muted">${have ? tr(save, 'ach.have', { title, frame: goal.frame }) : tr(save, 'ach.open')} · ${goal.gold.toLocaleString(L(save) === 'en' ? 'en' : 'de-DE')} G</div></div>
       ${have ? `<div class="list-actions"><button type="button" data-act="equip-title" data-id="${goal.id}">${ui('equipTitle')}${tr(save, 'ach.titleBtn')}</button><button type="button" data-act="equip-frame" data-id="${goal.id}">${ui('equipFrame')}${tr(save, 'ach.frameBtn')}</button></div>` : ''}
     </article>`
   }).join('')
@@ -1400,8 +1442,8 @@ function guide(save: SaveV2): string {
 }
 
 function placeBadge(place: number): string {
-  const tone = place === 1 ? 'gold' : place === 2 ? 'silver' : place === 3 ? 'bronze' : 'plain'
-  return `<svg class="rank-badge ${tone}" viewBox="0 0 64 64" aria-hidden="true"><circle cx="32" cy="28" r="16"/><path d="M24 42l8 14 8-14"/><text x="32" y="33" text-anchor="middle">${place}</text></svg>`
+  if (place >= 1 && place <= 3) return `<img class="rank-badge" src="${art(`ranks/place-${place}@2x.png`)}" alt="${place}"/>`
+  return `<span class="rank-badge plain"><img src="${art('ranks/place-n@2x.png')}" alt=""/><b>${place}</b></span>`
 }
 
 function frameGlyph(id: string, on: boolean): string {
@@ -1716,7 +1758,7 @@ function tradeCard(card: TradeCard | null, save: SaveV2): string {
   return `<article class="trade-card">
     <b>${esc(card.name)}</b>
     <p>${tr(save, 'trade.rarity', { n: card.rarity })} · ${tr(save, 'trade.level', { n: card.level })}${card.shiny ? ` · ${tr(save, 'trade.shiny')}` : ''}</p>
-    ${card.reason ? `<p class="trade-lock"><svg data-art="trade/lock" viewBox="0 0 32 32" aria-hidden="true"><rect x="8" y="14" width="16" height="12" rx="4" fill="#f0c14a"/><path d="M11 14v-3a5 5 0 0 1 10 0v3" fill="none" stroke="#243044" stroke-width="2"/></svg> ${esc(card.reason)}</p>` : ''}
+    ${card.reason ? `<p class="trade-lock"><img data-art="trade/lock" src="${art('trade/lock@2x.png')}" alt=""/> ${esc(card.reason)}</p>` : ''}
   </article>`
 }
 
@@ -1731,8 +1773,8 @@ function tradeScreen(save: SaveV2, panel: TradePanel | undefined): string {
     <p class="muted">${tr(save, 'trade.lead')}</p>
     ${tradeCard(view.theirs, save)}
     <div class="trade-escrow" data-art="trade/escrow">
-      <svg viewBox="0 0 160 48" aria-hidden="true"><rect x="58" y="8" width="44" height="32" rx="16" fill="#1c2744"/><circle cx="40" cy="24" r="10" fill="#f0c14a"/><circle cx="120" cy="24" r="10" fill="#9ad7ff"/></svg>
-      ${view.phase === 'locked' ? `<p><svg data-art="trade/lock" viewBox="0 0 32 32" aria-hidden="true"><rect x="8" y="14" width="16" height="12" rx="4" fill="#f0c14a"/><path d="M11 14v-3a5 5 0 0 1 10 0v3" fill="none" stroke="#243044" stroke-width="2"/></svg> ${tr(save, 'trade.wait', { n: seconds })}</p>` : ''}
+      <img class="escrow-art" src="${art('trade/escrow@2x.png')}" alt=""/>
+      ${view.phase === 'locked' ? `<p><img data-art="trade/lock" src="${art('trade/lock@2x.png')}" alt=""/> ${tr(save, 'trade.wait', { n: seconds })}</p>` : ''}
     </div>
     ${tradeCard(view.mine, save)}
     <label class="friend-search">${tr(save, 'trade.code')}<input id="trade-code" maxlength="8"/></label>
@@ -1770,20 +1812,64 @@ function guildScreen(save: SaveV2, panel: GuildPanel | undefined): string {
   if (view.status !== 'ready') {
     return `<div class="menu-screen"><div class="menu-scroll"><div class="card panel"><h2>Offline</h2><p class="muted">${tr(save, 'guild.offline')}</p></div></div></div>`
   }
+  if (!view.name) return guildFoundScreen(save, view)
+  const officer = view.role === 'lead' || view.role === 'deputy'
+  const goals = (view.goals ?? []).map((goal) => {
+    const label = tr(save, `guild.goal.${goal.goal}`)
+    return `<li>${esc(label === `guild.goal.${goal.goal}` ? goal.goal : label)} · ${goal.progress}/${goal.target}</li>`
+  }).join('')
+  const members = (view.members ?? []).map((member) => {
+    const role = member.role ?? 'member'
+    const actions = [
+      view.role === 'lead' && role === 'member' ? `<button type="button" data-act="guild-role" data-id="${esc(member.id)}">${tr(save, 'guild.promote')}</button>` : '',
+      view.role === 'lead' && role !== 'lead' && member.id !== '' ? `<button type="button" data-act="guild-kick" data-id="${esc(member.id)}">${tr(save, 'guild.kick')}</button>` : '',
+      officer && role !== 'lead' ? `<button type="button" data-act="guild-mute" data-id="${esc(member.id)}">${tr(save, 'guild.mute')}</button>` : ''
+    ].join(' ')
+    return `<article class="friend-row"><b>${esc(member.label)}</b><p class="muted">${tr(save, `guild.role.${role}`)}</p>${actions}</article>`
+  }).join('')
+  const requests = officer ? (view.requests ?? []).map((request) => `<article class="friend-row"><b>${esc(request.label)}</b><button type="button" data-act="guild-accept" data-id="${esc(request.id)}">${tr(save, 'guild.accept')}</button><button type="button" data-act="guild-decline" data-id="${esc(request.id)}">${tr(save, 'guild.decline')}</button></article>`).join('') : ''
   return `<div class="menu-screen"><div class="menu-scroll"><div class="card panel guild-board">
     <h2>${tr(save, 'nav.guild')}</h2>
     ${guildEmblem(view)}
-    <h3>${esc(view.name || tr(save, 'guild.found'))} ${view.tag ? `· ${esc(view.tag)}` : ''}</h3>
+    <h3>${esc(view.name)} ${view.tag ? `· ${esc(view.tag)}` : ''}</h3>
     <p>${tr(save, 'guild.level', { n: view.level })} · ${tr(save, 'guild.points', { n: view.points })}</p>
+    ${officer && view.code ? `<p>${tr(save, 'guild.code')}: <b>${esc(view.code)}</b></p>` : ''}
     <p class="muted">${tr(save, 'guild.lead')}</p>
+    <ul class="guild-goals">${goals}</ul>
+    ${officer ? `<h3>${tr(save, 'guild.requests')}</h3>${requests || `<p class="muted">${tr(save, 'social.noRequests')}</p>`}` : ''}
+    <h3>${tr(save, 'guild.members')}</h3>
+    ${members}
     <div class="guild-phrases">
       <button type="button" data-act="guild-phrase" data-id="hallo">${tr(save, 'guild.phrase')}</button>
       <button type="button" data-act="guild-phrase" data-id="danke">Danke</button>
       <button type="button" data-act="guild-phrase" data-id="los">Los</button>
     </div>
-    <button type="button" class="primary" data-act="guild-found">${tr(save, 'guild.found')}</button>
-    <button type="button" data-act="guild-join">${tr(save, 'guild.join')}</button>
     <button type="button" data-act="guild-leave">${tr(save, 'guild.leave')}</button>
+    ${view.note ? `<p class="muted">${esc(view.note)}</p>` : ''}
+  </div></div></div>`
+}
+
+function guildFoundScreen(save: SaveV2, view: GuildPanel): string {
+  const crests = crestCount(save.badges)
+  const block = guildFoundBlock(crests, save.gold, save.region, view.draftName ?? '', view.draftTag ?? '')
+  const reason = block.reason === 'crests'
+    ? tr(save, 'guild.reason.crests', { n: crests })
+    : block.reason === 'gold'
+      ? tr(save, 'guild.reason.gold', { gold: foundCost(save.region).toLocaleString(L(save) === 'en' ? 'en' : 'de-DE') })
+      : tr(save, 'guild.reason.name')
+  const hits = (view.hits ?? []).map((hit) => `<article class="friend-row"><b>${esc(hit.name)} · ${esc(hit.tag)}</b><button type="button" data-act="guild-join" data-name="${esc(hit.name)}">${tr(save, 'guild.join')}</button></article>`).join('')
+  return `<div class="menu-screen"><div class="menu-scroll"><div class="card panel guild-board">
+    <h2>${tr(save, 'nav.guild')}</h2>
+    ${guildEmblem()}
+    <label class="friend-search">${tr(save, 'guild.name')}<input id="guild-name" data-field="guild-name" maxlength="20" value="${esc(view.draftName ?? '')}"/></label>
+    <label class="friend-search">${tr(save, 'guild.tag')}<input id="guild-tag" data-field="guild-tag" maxlength="3" value="${esc(view.draftTag ?? '')}"/></label>
+    <button type="button" class="primary" data-act="guild-found" ${block.disabled ? 'disabled' : ''}>${tr(save, 'guild.found')}</button>
+    <p id="guild-reason" class="muted">${esc(reason)}</p>
+    <label class="friend-search">${tr(save, 'guild.search')}<input id="guild-query" data-field="guild-query" maxlength="20" value="${esc(view.draftQuery ?? '')}"/></label>
+    <button type="button" data-act="guild-search">${tr(save, 'guild.search')}</button>
+    ${hits}
+    <label class="friend-search">${tr(save, 'guild.code')}<input id="guild-code" data-field="guild-code" maxlength="8" value="${esc(view.draftCode ?? '')}"/></label>
+    <button type="button" data-act="guild-join">${tr(save, 'guild.join')}</button>
     ${view.note ? `<p class="muted">${esc(view.note)}</p>` : ''}
   </div></div></div>`
 }
@@ -1808,7 +1894,7 @@ function chatScreen(save: SaveV2, panel: ChatPanel | undefined): string {
       <button type="button" data-act="guild-phrase" data-id="hallo">${tr(save, 'guild.phrase')}</button>
     </div></div></div>`
   }
-  const lines = view.lines.map((line) => `<p class="chat-line"><b>${esc(line.label)}</b> ${esc(line.body)} <button type="button" data-act="chat-report" data-id="${esc(line.label)}">${tr(save, 'chat.report')}</button> <button type="button" data-act="chat-mute" data-id="${esc(line.label)}">${tr(save, 'chat.mute')}</button></p>`).join('')
+  const lines = view.lines.map((line) => `<p class="chat-line"><b>${esc(line.label)}</b> ${esc(line.body)} <button type="button" data-act="chat-report" data-id="${esc(line.label)}"><img class="chat-icon" src="${art('chat/report@2x.png')}" alt=""/>${tr(save, 'chat.report')}</button> <button type="button" data-act="chat-mute" data-id="${esc(line.label)}"><img class="chat-icon" src="${art('chat/mute@2x.png')}" alt=""/>${tr(save, 'chat.mute')}</button></p>`).join('')
   return `<div class="menu-screen chat-screen"><div class="menu-scroll"><div class="card panel">
     <h2>${tr(save, 'nav.chat')}</h2>
     ${lines || `<p class="muted">${tr(save, 'chat.empty')}</p>`}
@@ -1816,7 +1902,7 @@ function chatScreen(save: SaveV2, panel: ChatPanel | undefined): string {
   </div></div>
   <form class="chat-form" data-act="chat-form">
     <input id="chat-text" maxlength="200" autocomplete="off"/>
-    <button type="submit" class="primary" data-act="chat-send">${tr(save, 'chat.send')}</button>
+    <button type="submit" class="primary" data-act="chat-send"><img class="chat-icon" src="${art('chat/send@2x.png')}" alt=""/>${tr(save, 'chat.send')}</button>
   </form></div>`
 }
 
