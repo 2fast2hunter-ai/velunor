@@ -594,8 +594,8 @@ select {
   border-color: transparent !important;
   border-width: 0 18px !important;
   border-image-source: var(--kit-progress-track) !important;
-  border-image-slice: 28 fill !important;
-  border-image-width: 18px !important;
+  border-image-slice: 0 28 fill !important;
+  border-image-width: 0 18px !important;
   border-image-repeat: stretch !important;
 }
 .boot-track span,
@@ -612,10 +612,10 @@ select {
   background: none !important;
   border-style: solid !important;
   border-color: transparent !important;
-  border-width: 0 10px !important;
+  border-width: 0 8px !important;
   border-image-source: var(--kit-progress-fill-gold) !important;
-  border-image-slice: 20 fill !important;
-  border-image-width: 10px !important;
+  border-image-slice: 0 20 fill !important;
+  border-image-width: 0 8px !important;
   border-image-repeat: stretch !important;
   min-width: 20px;
 }
@@ -1051,8 +1051,8 @@ select {
   background-clip: padding-box !important;
   border-radius: 99px !important;
 }
-.starter-track { border-width: 0 8px !important; border-image-width: 8px !important; height: 32px !important; }
-.starter-track span { border-width: 0 8px !important; border-image-width: 8px !important; min-width: 16px !important; }
+.starter-track { border-width: 0 8px !important; border-image-slice: 0 28 fill !important; border-image-width: 0 8px !important; height: 32px !important; }
+.starter-track span { border-width: 0 8px !important; border-image-slice: 0 20 fill !important; border-image-width: 0 8px !important; min-width: 16px !important; }
 .starter-card[data-species="m01"] .starter-track span { border-image-source: var(--kit-progress-fill-red) !important; }
 .starter-card[data-species="m02"] .starter-track span { border-image-source: var(--kit-progress-fill-blue) !important; }
 .starter-card[data-species="m03"] .starter-track span { border-image-source: var(--kit-progress-fill-green) !important; }
@@ -1469,7 +1469,7 @@ button.log div { grid-column: 2; }
   overflow: visible !important;
   white-space: nowrap !important;
   text-overflow: clip !important;
-  font-size: 22px !important;
+  font-size: 28px !important;
   line-height: 1.1 !important;
   border-width: 8px 8px 6px !important;
   border-image-width: 10px 10px 8px !important;
@@ -1513,18 +1513,25 @@ button.log div { grid-column: 2; }
 .m-plate.m-bronze,
 .m-plate.m-silver,
 .m-plate.m-gold {
-  border-style: solid !important;
-  border-color: transparent !important;
-  border-width: 14px !important;
-  border-image-slice: 56 !important;
-  border-image-width: 20px !important;
-  border-image-outset: 3px !important;
-  border-image-repeat: stretch !important;
+  border-image: none !important;
+  border-width: 0 !important;
   box-shadow: none !important;
 }
-.m-plate.m-bronze { border-image-source: var(--kit-mastery-ring-bronze) !important; }
-.m-plate.m-silver { border-image-source: var(--kit-mastery-ring-silver) !important; }
-.m-plate.m-gold { border-image-source: var(--kit-mastery-ring-gold) !important; }
+.m-plate.m-bronze .pframe::before,
+.m-plate.m-silver .pframe::before,
+.m-plate.m-gold .pframe::before {
+  content: '';
+  position: absolute;
+  inset: -22%;
+  background-position: center;
+  background-repeat: no-repeat;
+  background-size: contain;
+  pointer-events: none;
+  z-index: 3;
+}
+.m-plate.m-bronze .pframe::before { background-image: var(--kit-mastery-ring-bronze); }
+.m-plate.m-silver .pframe::before { background-image: var(--kit-mastery-ring-silver); }
+.m-plate.m-gold .pframe::before { background-image: var(--kit-mastery-ring-gold); }
 .starter-frame { display: none !important; }
 .starter-card[data-species="m01"],
 .starter-card[data-species="m02"],
@@ -1546,6 +1553,14 @@ button.log div { grid-column: 2; }
 .menu-dock > .dock-primary {
   font-size: 34px !important;
   line-height: 1.15 !important;
+}
+#stage .menu-dock > button[data-act="to-hort"],
+#stage .menu-dock > button[data-act="from-hort"] {
+  font-size: 28px !important;
+  line-height: 1.1 !important;
+  white-space: nowrap !important;
+  overflow: hidden !important;
+  text-overflow: clip !important;
 }
 .menu-dock[data-dock="hort"] > button[data-act="activity"],
 .menu-dock[data-dock="chests"] > button[data-act="activity"],
