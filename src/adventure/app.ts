@@ -787,7 +787,7 @@ function showK3Demo(part: string | null): void {
       <div id="battle-fx"></div>
       <div class="wx-stack">
         <div class="wx-chip" id="wx-chip"><img src="${art('battle/weather_icon_regen.png')}" alt=""/> Regen · Wasser +15 % · Feuer −15 %</div>
-        <p class="wx-preview">Jetzt: Regen. Dein Team: ${marks.up} ▲, ${marks.down} ▼</p>
+        <p class="wx-preview">Jetzt: Regen. Dein Team: ${marks.up} <img class="arrow" src="${art('battle/stat_up.png')}" alt="▲"/>, ${marks.down} <img class="arrow" src="${art('battle/stat_down.png')}" alt="▼"/></p>
       </div>
       <div class="combatant foe" id="foe-actor" style="left:72%;top:58%"><b>Ziel ${arrowTag(foeType, 'regen')}</b><img class="sprite" src="${monsterArt('m66', true)}" alt=""/></div>
       <div class="combatant ally" id="ally-actor" style="left:28%;top:72%"><b>Funkfuchs ${arrowTag(allyType, 'regen')}</b><img class="sprite" src="${monsterArt('m01', true)}" alt=""/></div>

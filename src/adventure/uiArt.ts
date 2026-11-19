@@ -64,7 +64,16 @@ export const UI_ART = {
   importCode: 'ui/import.webp',
   reset: 'ui/reset.webp',
   guide: 'ui/guide.webp',
-  close: 'ui/close.webp'
+  close: 'ui/close.webp',
+  moreRanks: 'ui/nav_ranks.webp',
+  moreTree: 'ui/nav_tree.webp',
+  moreTower: 'ui/nav_tower.webp',
+  moreArena: 'ui/nav_arena.webp',
+  moreFriends: 'ui/nav_friends.webp',
+  moreExpedition: 'ui/nav_expedition.webp',
+  moreTrade: 'ui/nav_trade.webp',
+  moreGuild: 'ui/nav_guild.webp',
+  moreChat: 'ui/nav_chat.webp'
 } as const
 
 export type UiArtId = keyof typeof UI_ART

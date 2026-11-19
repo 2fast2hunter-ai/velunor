@@ -378,8 +378,8 @@ textarea { width: 100%; box-sizing: border-box; background: #121a30; color: inhe
 }
 .guard-title, .guard-names, .guard-ult { text-align: center; }
 .guard-names { display: flex; flex-wrap: wrap; justify-content: center; gap: 4px 14px; }
-.guard-card .up { color: #69f0ae; }
-.guard-card .down { color: #ff5252; }
+.guard-card .arrow, .wx-preview .arrow { width: 18px; height: 18px; vertical-align: -3px; }
+.type-icon { width: 22px; height: 22px; vertical-align: -5px; margin-right: 4px; }
 .guard-card .mech-line {
   display: flex; align-items: flex-start; gap: 8px; width: 100%; text-align: left;
 }
@@ -589,7 +589,7 @@ img.sil { filter: brightness(0); opacity: 0.8; }
 .pct { margin-left: auto; font-weight: 800; }
 .clock { font-size: calc(18px * var(--font-scale, 1)); display: flex; align-items: center; gap: 8px; }
 .wx { width: 22px; height: 22px; display: inline-flex; }
-.wx svg { width: 22px; height: 22px; }
+.wx img { width: 22px; height: 22px; }
 .forecast { display: flex; flex-wrap: wrap; gap: 4px; margin: 8px 0; }
 .forecast .now { outline: 1px solid #f0c14a; border-radius: 6px; }
 img.is-shiny { filter: drop-shadow(0 0 10px #f0c14a); }
@@ -1069,7 +1069,7 @@ a.ghost { color: inherit; text-decoration: none; display: inline-block; }
 .hud-gold img { width: 40px; height: 40px; object-fit: contain; }
 .hud-gold b, .hud-dex { color: #f0c14a; }
 .hud .wx { width: 36px; height: 36px; }
-.hud .wx svg { width: 36px; height: 36px; }
+.hud .wx img { width: 36px; height: 36px; }
 
 .chapter-line {
   display: flex;
@@ -1380,6 +1380,11 @@ a.ghost { color: inherit; text-decoration: none; display: inline-block; }
 }
 .hort-grid { grid-template-columns: repeat(2, minmax(0, 1fr)); }
 .codex-grid .mon-card img { width: 96px; height: 96px; }
+.mon-card img.type-icon,
+.team-grid .mon-card img.type-icon,
+.hort-grid .mon-card img.type-icon,
+.vlist-window .mon-card img.type-icon,
+.codex-grid .mon-card img.type-icon { width: 22px; height: 22px; object-fit: contain; }
 .codex-grid .mon-card div, .hort-grid .mon-card div { font-size: calc(24px * var(--font-scale, 1)); line-height: calc(30px * var(--font-scale, 1)); max-width: 100%; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
 
 .region-bar { display: flex; align-items: center; gap: 12px; }
