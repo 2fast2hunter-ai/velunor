@@ -721,7 +721,7 @@ function progress(save: SaveV2): string {
     const crest = chapter.special || !badge
       ? ''
       : `<img class="crest-mini${save.badges.includes(badge) ? '' : ' off'}" src="${art(crestArt(badge))}" alt=""/>`
-    return `<button class="text-btn" data-act="travel" data-region="${region.id}" data-chapter="${chapter.id}" ${open ? '' : 'disabled'}>
+    return `<button class="text-btn${here ? ' on' : ''}" data-act="travel" data-region="${region.id}" data-chapter="${chapter.id}" ${open ? '' : 'disabled'}>
       ${crest || ui('chapterMark')}<b>${esc(chapter.name)}</b> ${here ? '· hier' : ''}
       <div class="muted">${range}, ${esc(mark)}</div>
     </button>`

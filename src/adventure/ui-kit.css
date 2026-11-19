@@ -20,7 +20,7 @@
 }
 
 /* Muster */
-html, body, #game, #stage, .band, #turn, .home {
+html, body, #game, #stage:not(.is-shop), .band, #turn, .home {
   background-color: #1c2447 !important;
   background-image: var(--kit-bg-pattern-night) !important;
   background-repeat: repeat !important;
@@ -36,7 +36,11 @@ html, body, #game, #stage, .band, #turn, .home {
 button.log,
 .mon-card,
 .chest-tile,
-.chest-card {
+.chest-card,
+.shop-card,
+.expedition-card,
+.arena-card,
+.arena-replay {
   box-sizing: border-box;
   background: none !important;
   border-style: solid !important;
@@ -71,7 +75,12 @@ button.log,
 .mini,
 .mon-card.slot,
 .daily-day,
-[data-act="craft"] {
+[data-act="craft"],
+.arena-slot,
+.tree-detail,
+.shop-toast,
+.tower-floor,
+.league-item {
   box-sizing: border-box;
   background: none !important;
   border-style: solid !important;
@@ -91,7 +100,10 @@ button.log,
 .continue-card,
 .mon-card,
 .chest-tile,
-.chest-card {
+.chest-card,
+.shop-card,
+.expedition-card,
+.arena-card {
   border-image-source: var(--kit-panel-card) !important;
   border-image-slice: 72 fill !important;
   border-image-width: 40px !important;
@@ -102,7 +114,8 @@ button.log,
 .modal,
 .more-sheet,
 .lang-sheet,
-.filter-body {
+.filter-body,
+.map-sheet {
   box-sizing: border-box;
   background: none !important;
   border-style: solid !important;
@@ -124,7 +137,11 @@ button.log,
 .sight-row,
 .rate-list li,
 .rate-list summary,
-.wheel-stage + .menu-scroll .shop-row {
+.wheel-stage + .menu-scroll .shop-row,
+.achieve,
+.rank-row,
+.text-btn[data-act="travel"],
+button.shop-stock {
   box-sizing: border-box;
   background: none !important;
   border-style: solid !important;
@@ -168,7 +185,7 @@ button.log,
 
 /* Knöpfe. Gold ist hell, deshalb dunkle Schrift. Die übrigen farbigen Knöpfe tragen die Kontur. */
 .kit-btn,
-.primary:not(.shop-buy):not(.challenge-fab):not([data-act="spin"]):not([data-act="buy-hort"]):not([data-act="chest-claim"]):not([data-act="activity"]),
+.primary:not(.shop-buy):not(.challenge-fab):not([data-act="spin"]):not([data-act="buy-hort"]):not([data-act="chest-claim"]):not([data-act="activity"]):not([data-act="region"]),
 .ghost,
 .danger,
 .home-back,
@@ -176,7 +193,7 @@ button.log,
 .starter-choose,
 .choice-row button,
 .menu button,
-.text-btn,
+.text-btn:not([data-act="travel"]),
 .card.panel > button:not(.primary):not([data-act="craft"]),
 .menu-dock > button:not(.tab):not([data-act="activity"]):not([data-act="spin"]):not([data-act="buy-hort"]):not([data-act="chest-claim"]),
 .challenge-fab,
@@ -186,7 +203,10 @@ button.log,
 .chest-info,
 .filter-body button,
 .list-actions button,
-.is-menu .row-actions button:not(.primary) {
+.is-menu .row-actions button:not(.primary):not([data-act="region"]),
+.shop-buy,
+.expedition-card > button,
+.expedition-bench > button {
   box-sizing: border-box;
   background: none !important;
   border-style: solid !important;
@@ -208,7 +228,7 @@ button.log,
   border-width: 8px 10px !important;
   border-image-width: 14px 16px !important;
 }
-.primary:not(.shop-buy):not(.challenge-fab):not([data-act="spin"]):not([data-act="buy-hort"]):not([data-act="chest-claim"]):not([data-act="activity"]),
+.primary:not(.shop-buy):not(.challenge-fab):not([data-act="spin"]):not([data-act="buy-hort"]):not([data-act="chest-claim"]):not([data-act="activity"]):not([data-act="region"]),
 .starter-card.is-on .starter-choose,
 .lang-sheet button.primary,
 .home-bar .primary,
@@ -224,7 +244,8 @@ button.log,
 .challenge-fab,
 .menu-dock > .primary[data-act="spin"],
 .menu-dock > .primary[data-act="buy-hort"],
-.primary[data-act="chest-claim"] {
+.primary[data-act="chest-claim"],
+.shop-buy.can {
   border-image-source: var(--kit-button-gold-normal) !important;
   color: var(--ink) !important;
   text-shadow: none !important;
@@ -242,7 +263,8 @@ button.log,
   .challenge-fab:hover,
   .primary[data-act="spin"]:hover,
   .primary[data-act="buy-hort"]:hover,
-  .primary[data-act="chest-claim"]:hover { border-image-source: var(--kit-button-gold-hover) !important; }
+  .primary[data-act="chest-claim"]:hover,
+  .shop-buy.can:hover { border-image-source: var(--kit-button-gold-hover) !important; }
 }
 .primary:not(.shop-buy):not(.challenge-fab):not([data-act="spin"]):not([data-act="buy-hort"]):not([data-act="chest-claim"]):not([data-act="activity"]):active,
 .home-bar .primary:active { border-image-source: var(--kit-button-primary-pressed) !important; }
@@ -254,7 +276,8 @@ button.log,
 .challenge-fab:active,
 .primary[data-act="spin"]:active,
 .primary[data-act="buy-hort"]:active,
-.primary[data-act="chest-claim"]:active { border-image-source: var(--kit-button-gold-pressed) !important; }
+.primary[data-act="chest-claim"]:active,
+.shop-buy.can:active { border-image-source: var(--kit-button-gold-pressed) !important; }
 .primary:not(.shop-buy):not(.challenge-fab):not([data-act="spin"]):not([data-act="buy-hort"]):not([data-act="chest-claim"]):disabled,
 .primary:not(.shop-buy):not(.challenge-fab):not([data-act="spin"]):not([data-act="buy-hort"]):not([data-act="chest-claim"])[aria-disabled="true"],
 .home-bar .primary:disabled,
@@ -321,7 +344,9 @@ button.log,
 .hud .chev { color: var(--ink-light) !important; }
 .kit-counter,
 .hud-gold,
-.hud-dex {
+.hud-dex,
+.wallet {
+  background: none !important;
   border-style: solid !important;
   border-color: transparent !important;
   border-width: 4px 10px !important;
@@ -336,7 +361,9 @@ button.log,
 .kit-header,
 .chapter-line,
 .home-hero,
-.filter-bar {
+.filter-bar,
+.shop-sheet h2,
+.shop-confirm h2 {
   box-sizing: border-box;
   background-color: transparent !important;
   border-style: solid !important;
@@ -365,7 +392,9 @@ button.log,
 .kit-tabbar,
 .tabbar,
 .home-bar,
-.menu-dock {
+.menu-dock,
+.shop-tabs,
+.rank-tabs {
   box-sizing: border-box;
   background: none !important;
   border-style: solid !important;
@@ -380,7 +409,10 @@ button.log,
 }
 .kit-tab,
 .tab,
-[data-act="activity"] {
+[data-act="activity"]:not(.shop-stock):not(.shop-toast),
+.shop-tabs button,
+.rank-tabs button,
+[data-act="region"] {
   box-sizing: border-box;
   background: none !important;
   border-style: solid !important;
@@ -399,7 +431,10 @@ button.log,
 }
 .tab.active,
 .kit-tab.on,
-[data-act="activity"].primary {
+[data-act="activity"].primary,
+.shop-tabs button.on,
+.rank-tabs button.on,
+[data-act="region"].primary {
   border-image-source: var(--kit-tab-active) !important;
   color: var(--ink) !important;
   font-weight: 700;
@@ -414,6 +449,7 @@ button.log,
 .synergy-pick,
 .synergy-auto,
 .daily-frame-btn,
+.tree-node,
 .konter-label,
 .forecast .now {
   box-sizing: border-box;
@@ -619,7 +655,8 @@ select {
 .guard-card,
 .mech-row,
 .combo-tip,
-.status-tip {
+.status-tip,
+.shop-toast {
   border-image-source: var(--kit-panel-glass) !important;
   color: var(--ink-light) !important;
   text-shadow: var(--ink-shadow) !important;
@@ -631,7 +668,9 @@ select {
 }
 .dock,
 .daily-day,
-[data-act="craft"] {
+[data-act="craft"],
+.tower-floor,
+.league-item {
   border-image-source: var(--kit-panel-raised) !important;
   color: var(--ink) !important;
   text-shadow: none !important;
@@ -644,7 +683,14 @@ select {
 .synergy-pick.on,
 .synergy-auto.on,
 .daily-frame-btn.on,
-.forecast .now { border-image-source: var(--kit-panel-row-selected) !important; }
+.forecast .now,
+.achieve.done,
+.rank-row.is-me,
+.text-btn.on[data-act="travel"],
+.expedition-card.on,
+.tower-floor.running { border-image-source: var(--kit-panel-row-selected) !important; }
+.tree-node.owned { border-image-source: var(--kit-badge-gold) !important; }
+.tree-node.on { border-image-source: var(--kit-panel-row-selected) !important; }
 .konter-label { border-image-source: var(--kit-badge-gold) !important; }
 .rate-list li:nth-child(even),
 .rate-list details:nth-child(even) { border-image-source: var(--kit-panel-row-alt) !important; }
@@ -667,11 +713,19 @@ select {
 .challenge-fab:disabled,
 .primary[data-act="spin"]:disabled,
 .primary[data-act="buy-hort"]:disabled,
-.primary[data-act="chest-claim"]:disabled {
+.primary[data-act="chest-claim"]:disabled,
+.shop-buy.blocked {
   border-image-source: var(--kit-button-gold-disabled) !important;
   color: #7d776c !important;
   text-shadow: none !important;
 }
+.shop-sheet h2,
+.shop-confirm h2 { border-image-source: var(--kit-dialog-head) !important; }
+.tower-pips i {
+  border-radius: 0 !important;
+  background: var(--kit-badge-blue) center / contain no-repeat !important;
+}
+.tower-pips i.on { background-image: var(--kit-badge-gold) !important; }
 
 .home:not(.is-door):not(.is-starter) .home-scroll { padding-bottom: 260px; }
 .home :focus-visible { outline: 6px solid #fff8e1; outline-offset: 4px; }
