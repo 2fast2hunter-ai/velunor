@@ -224,7 +224,8 @@ button.shop-stock,
 [data-act="trade-cancel"],
 [data-act="guild-search"],
 [data-act="guild-join"],
-[data-act="guild-leave"] {
+[data-act="guild-leave"],
+.lang-sheet button {
   box-sizing: border-box;
   background: none !important;
   border-style: solid !important;
@@ -316,7 +317,11 @@ button.shop-stock,
   color: #7d776c !important;
   text-shadow: none !important;
 }
-.home-bar .home-reason { color: var(--ink) !important; text-shadow: none !important; }
+.home-bar .home-reason {
+  color: var(--ink-light) !important;
+  text-shadow: var(--ink-shadow) !important;
+  margin-top: 12px !important;
+}
 .card.path .node.is-here { outline: 3px solid var(--ink); outline-offset: 2px; }
 
 /* Icon-Knöpfe: hell, dunkle Schrift, ohne Kontur. */
@@ -367,6 +372,8 @@ button.shop-stock,
 .kit-counter,
 .hud-gold,
 .hud-dex,
+.hud-clock,
+.hud-wx,
 .wallet {
   background: none !important;
   border-style: solid !important;
@@ -385,6 +392,7 @@ button.shop-stock,
 .home-hero,
 .filter-bar,
 .chat-form,
+.shop-head,
 .shop-sheet h2,
 .shop-confirm h2 {
   box-sizing: border-box;
@@ -759,6 +767,465 @@ select {
 .home:not(.is-door):not(.is-starter) .home-scroll { padding-bottom: 260px; }
 .home :focus-visible { outline: 6px solid #fff8e1; outline-offset: 4px; }
 
+/* Abnahme A/B/C. The fill sits on the padding box so a 1 px slice gap stays the center color. */
+.kit-panel,
+.card,
+.continue-card,
+button.log,
+.mon-card,
+.chest-tile,
+.chest-card,
+.shop-card,
+.expedition-card,
+.arena-card,
+.arena-replay,
+.beast-card,
+.trade-card,
+.starter-card {
+  background-color: #f9edd4 !important;
+  background-clip: padding-box !important;
+  border-radius: 24px !important;
+}
+.team-block,
+.synergy-board {
+  box-sizing: border-box;
+  background-color: #f9edd4 !important;
+  background-clip: padding-box !important;
+  border-style: solid !important;
+  border-color: transparent !important;
+  border-width: 16px !important;
+  border-radius: 24px !important;
+  border-image-source: var(--kit-panel-base) !important;
+  border-image-slice: 64 fill !important;
+  border-image-width: 32px !important;
+  border-image-repeat: stretch !important;
+  color: var(--ink) !important;
+}
+.kit-panel,
+.card,
+.continue-card,
+button.log,
+.chest-tile,
+.arena-replay,
+.trade-card.empty,
+.team-block,
+.synergy-board { border-image-width: 32px !important; }
+.kit-card,
+.continue-card,
+.mon-card,
+.chest-tile,
+.chest-card,
+.shop-card,
+.expedition-card,
+.arena-card,
+.beast-card,
+.trade-card:not(.empty) { border-image-width: 36px !important; }
+.kit-inset,
+.card.path,
+.look-preview,
+.reel,
+.stat,
+.dock,
+.mini,
+.mon-card.slot,
+.daily-day,
+[data-act="craft"],
+.arena-slot,
+.tree-detail,
+.tower-floor,
+.league-item,
+.trade-card.empty,
+.trade-escrow {
+  background-color: #efdcb6 !important;
+  background-clip: padding-box !important;
+  border-radius: 18px !important;
+  border-image-width: 32px !important;
+}
+.wx-chip,
+.battle-status,
+.victory,
+.name-banner,
+.boss-intro,
+.move-banner,
+.guard-card,
+.mech-row,
+.combo-tip,
+.status-tip,
+.shop-toast,
+.chest-stage {
+  background-color: #2b1b0f !important;
+  background-clip: padding-box !important;
+  border-radius: 16px !important;
+}
+.dock,
+.daily-day,
+[data-act="craft"],
+.tower-floor,
+.league-item {
+  background-color: #faf0d9 !important;
+}
+.kit-dialog,
+.sheet,
+.modal,
+.more-sheet,
+.lang-sheet,
+.filter-body,
+.map-sheet {
+  background-color: #f9edd4 !important;
+  background-clip: padding-box !important;
+  border-radius: 28px !important;
+  border-image-width: 36px !important;
+}
+.kit-row,
+.more-sheet button,
+.grip,
+.sight-row,
+.rate-list li,
+.rate-list summary,
+.achieve,
+.rank-row,
+.text-btn[data-act="travel"],
+button.shop-stock,
+.friend-row,
+.chat-line {
+  background-color: #faf2e1 !important;
+  background-clip: padding-box !important;
+  border-radius: 16px !important;
+}
+.mon-card.on,
+.mini.is-active,
+.daily-day.on,
+.synergy-pick.on,
+.synergy-auto.on,
+.daily-frame-btn.on,
+.forecast .now,
+.achieve.done,
+.rank-row.is-me,
+.text-btn.on[data-act="travel"],
+.expedition-card.on,
+.tower-floor.running {
+  background-color: #ffecb1 !important;
+}
+.kit-btn,
+.ghost,
+.danger,
+.home-back,
+.door-new,
+.starter-choose,
+.choice-row button,
+.menu button,
+.text-btn:not([data-act="travel"]),
+.challenge-fab,
+.chest-info,
+.filter-body button,
+.list-actions button,
+.shop-buy,
+.lang-sheet button,
+.friend-row button,
+.chat-line button,
+.expedition-card > button,
+.expedition-bench > button {
+  background-color: #61a8e5 !important;
+  background-clip: padding-box !important;
+  border-radius: 18px !important;
+}
+.primary,
+.lang-sheet button.primary,
+.home-bar .primary,
+.starter-card.is-on .starter-choose { background-color: #75c44f !important; }
+.kit-btn-gold,
+.challenge-fab,
+.menu-dock > .primary[data-act="spin"],
+.menu-dock > .primary[data-act="buy-hort"],
+.primary[data-act="chest-claim"],
+.shop-buy.can,
+.primary[data-act="coop-attempt"] { background-color: #f2c252 !important; }
+.danger,
+#cloud-layer .danger { background-color: #e66f5c !important; }
+.primary:disabled,
+.danger:disabled,
+.ghost:disabled,
+.home-back:disabled,
+.starter-choose:disabled,
+.shop-buy.blocked,
+.chest-tile button:disabled,
+.challenge-fab:disabled {
+  background-color: #cfcabf !important;
+}
+.shop-buy.blocked,
+.chest-tile button:disabled { color: #4a2c17 !important; opacity: 1 !important; }
+.hud,
+.kit-hud {
+  background-color: #a66b3a !important;
+  background-clip: padding-box !important;
+  border-radius: 0 0 28px 28px !important;
+  border-image-width: 12px 32px 36px !important;
+}
+.kit-header,
+.chapter-line,
+.home-hero,
+.filter-bar,
+.chat-form,
+.shop-head,
+.shop-sheet h2,
+.shop-confirm h2 {
+  background-color: #aa6f3d !important;
+  background-clip: padding-box !important;
+  border-radius: 18px !important;
+  border-image-width: 28px 30px 32px !important;
+}
+.shop-head h2,
+.chapter-line .chapter-text,
+.chapter-line .chev { color: var(--ink-light) !important; }
+.kit-tabbar,
+.tabbar,
+.home-bar,
+.menu-dock,
+.shop-tabs {
+  background-color: #ae7441 !important;
+  background-clip: padding-box !important;
+  border-radius: 28px 28px 0 0 !important;
+  border-image-width: 36px 32px 12px !important;
+}
+.kit-tab,
+.tab,
+[data-act="activity"]:not(.shop-stock):not(.shop-toast),
+.shop-tabs button,
+.rank-tabs button,
+[data-act="region"],
+[data-act="chat-channel"] {
+  background-color: #d7ab72 !important;
+  background-clip: padding-box !important;
+  border-radius: 12px !important;
+  border-image-width: 28px 28px 12px !important;
+}
+.tab.active,
+[data-act="activity"].primary,
+.shop-tabs button.on,
+.rank-tabs button.on,
+[data-act="region"].primary,
+[data-act="chat-channel"][aria-pressed="true"] { background-color: #fffaed !important; }
+.kit-chip,
+.look-choice,
+.look-dice,
+.starter-chip,
+.synergy-pick,
+.synergy-auto,
+.daily-frame-btn,
+.tree-node,
+.guild-phrases button,
+.forecast .now,
+.card.path .node {
+  background-color: #f9edd4 !important;
+  background-clip: padding-box !important;
+  border-radius: 12px !important;
+  border-image-width: 18px 20px !important;
+}
+.hud-gold,
+.hud-dex,
+.hud-clock,
+.hud-wx,
+.wallet {
+  background-color: #2f1e11 !important;
+  background-clip: padding-box !important;
+  border-radius: 14px !important;
+}
+.kit-input,
+input:not([type="checkbox"]):not([type="range"]):not([type="radio"]),
+textarea,
+select {
+  background-color: #f8eed9 !important;
+  background-clip: padding-box !important;
+  border-radius: 16px !important;
+}
+.kit-track,
+.boot-track,
+.starter-track,
+.progress-track,
+.bar-exp,
+.hp,
+.ult,
+.mini .bar,
+.hp-beast {
+  background-color: #4b2f1b !important;
+  background-clip: padding-box !important;
+  border-radius: 99px !important;
+}
+.starter-track { border-width: 0 4px !important; border-image-width: 4px !important; height: 18px !important; }
+.starter-track span { border-width: 0 3px !important; border-image-width: 3px !important; min-width: 6px !important; }
+.starter-card[data-species="m01"] .starter-track span { border-image-source: var(--kit-progress-fill-red) !important; }
+.starter-card[data-species="m02"] .starter-track span { border-image-source: var(--kit-progress-fill-blue) !important; }
+.starter-card[data-species="m03"] .starter-track span { border-image-source: var(--kit-progress-fill-green) !important; }
+.progress-track span[style*="width:0%"],
+.bar-exp span[style*="width:0%"] {
+  min-width: 0 !important;
+  border-image: none !important;
+  background: none !important;
+}
+.region-bar > div { flex: 1 1 auto; min-width: 0; }
+.region-bar .progress-track { width: 100%; }
+
+.starter-card { color: var(--ink) !important; overflow: hidden; }
+.starter-body { padding-bottom: 36px !important; }
+.starter-name,
+.starter-blurb,
+.starter-skill,
+.starter-match,
+.starter-bar > span { color: var(--ink) !important; text-shadow: none !important; }
+.starter-choose { border-width: 10px 14px 12px !important; border-image-width: 18px 20px 20px !important; }
+
+button.log {
+  display: grid;
+  grid-template-columns: auto minmax(0, 1fr);
+  align-items: center;
+  column-gap: 10px;
+  border-width: 10px 16px !important;
+  border-image-width: 22px 28px !important;
+}
+button.log .ui-icon { grid-column: 1; grid-row: 1 / span 3; }
+button.log div { grid-column: 2; }
+
+.menu-dock > button[data-act="activity"] { flex: 1 1 0 !important; min-width: 0; }
+.wx-chip,
+.battle-status {
+  border-width: 6px 10px !important;
+  border-image-width: 8px 12px !important;
+  border-image-outset: 0 !important;
+  padding: 2px 10px !important;
+}
+.battle-top { top: 8px; gap: 4px; }
+.combatant > b {
+  color: #4a2c17 !important;
+  background-color: #f9edd4 !important;
+  background-clip: padding-box !important;
+  border-style: solid !important;
+  border-color: transparent !important;
+  border-width: 2px 8px !important;
+  border-radius: 10px !important;
+  border-image-source: var(--kit-badge-chip) !important;
+  border-image-slice: 36 40 40 40 fill !important;
+  border-image-width: 8px 10px !important;
+  text-shadow: none !important;
+  padding: 0 6px;
+}
+.chest-stage {
+  isolation: isolate;
+  overflow: hidden;
+  min-height: 520px;
+  border-style: solid !important;
+  border-width: 16px !important;
+  border-color: transparent !important;
+  border-image-source: var(--kit-panel-glass) !important;
+  border-image-slice: 64 fill !important;
+  border-image-width: 24px !important;
+  background-image: var(--kit-bg-pattern-night) !important;
+  background-size: 512px 512px !important;
+}
+.chest-seal { mix-blend-mode: plus-lighter; }
+.chest-beam { mix-blend-mode: normal; box-shadow: 0 0 0 4px #2b1b0f, 0 0 28px currentColor; }
+.chest-tile .chest-info,
+.chest-tile .primary,
+.chest-tile .ghost {
+  min-height: 72px !important;
+  border-width: 8px 12px !important;
+  border-image-width: 14px 16px !important;
+  font-size: 26px !important;
+}
+.synergy-pick:disabled,
+.synergy-auto:disabled { opacity: 1 !important; color: var(--ink-soft) !important; }
+.synergy-note,
+.synergy-pick span,
+.synergy-purity { color: var(--ink-soft) !important; text-shadow: none !important; }
+.synergy-pick span { overflow-wrap: anywhere !important; font-size: 16px !important; }
+.list-row.achieve {
+  flex-direction: row !important;
+  align-items: center !important;
+  justify-content: flex-start !important;
+  gap: 12px !important;
+}
+.list-row.achieve > .ui-icon { flex: 0 0 auto; }
+.list-row.achieve > div:not(.list-actions) { flex: 1 1 auto; min-width: 0; text-align: left; }
+.list-row.achieve .list-actions { flex: 0 0 auto; justify-content: flex-end; max-width: 48%; }
+.achieve.done b { color: var(--ink) !important; }
+.achieve .list-actions button {
+  min-height: 64px !important;
+  border-width: 8px 10px !important;
+  border-image-width: 12px 14px !important;
+  font-size: 22px !important;
+}
+.is-shop .shop-head { margin: 8px 16px 0; min-height: 0; }
+.shop-head .wallet { min-height: 72px !important; height: auto !important; }
+.rank-tabs {
+  flex-wrap: wrap !important;
+  overflow: visible !important;
+  max-width: 100%;
+  background: none !important;
+  border-image: none !important;
+  border-width: 0 !important;
+  padding: 0 !important;
+}
+.rank-tabs button {
+  flex: 1 1 30%;
+  max-width: 32%;
+  min-width: 0;
+  white-space: normal !important;
+  text-align: center;
+  line-height: 1.1;
+  font-size: 24px !important;
+  border-width: 8px 8px 4px !important;
+  border-image-width: 14px 14px 8px !important;
+}
+.card.panel > button[data-act="rank-friends"]:not(.primary) {
+  align-self: flex-start;
+  width: auto !important;
+  min-height: 0 !important;
+  border-image-source: var(--kit-badge-chip) !important;
+  border-image-slice: 36 40 40 40 fill !important;
+  border-image-width: 12px 14px !important;
+  border-width: 6px 14px !important;
+  background-color: #f9edd4 !important;
+  color: var(--ink) !important;
+  text-shadow: none !important;
+}
+.card.panel > button[data-act="rank-friends"].on {
+  border-image-source: var(--kit-panel-row-selected) !important;
+  background-color: #ffecb1 !important;
+  color: var(--ink) !important;
+  text-shadow: none !important;
+}
+.map-sheet { top: 312px !important; max-height: calc(100% - 360px) !important; }
+.map-sheet .text-btn .muted { color: var(--ink-soft) !important; }
+.tower-pips {
+  display: grid !important;
+  grid-template-columns: repeat(10, minmax(0, 1fr));
+  gap: 3px;
+  height: 28px;
+  margin: 8px 0;
+  padding: 0;
+  border-style: solid !important;
+  border-width: 0 10px !important;
+  border-color: transparent !important;
+  border-image-source: var(--kit-progress-track) !important;
+  border-image-slice: 28 fill !important;
+  border-image-width: 10px !important;
+  background-color: #4b2f1b !important;
+  background-clip: padding-box !important;
+}
+.tower-pips i {
+  width: auto !important;
+  height: auto !important;
+  min-height: 14px;
+  border-radius: 3px !important;
+  background-color: transparent !important;
+  background-image: none !important;
+}
+.tower-pips i.on { background-color: #85ce5a !important; background-image: none !important; }
+.mon-card .m-stars { max-width: 100%; justify-content: center; }
+.mon-card img.m-star,
+.team-grid .mon-card img.m-star,
+.codex-grid .mon-card img.m-star,
+.vlist-window .mon-card img.m-star { width: 28px !important; height: 28px !important; }
+
 /* Retest: the friend row keeps the light kit fill, so the name stays readable. */
 .card .friend-row {
   background-color: #faf2e1 !important;
@@ -817,3 +1284,42 @@ select {
 .card.path .node img { width: 22px !important; height: 22px !important; }
 .card.path .node small { position: static !important; line-height: 1; }
 .card.path .node.is-here { outline: none !important; outline-offset: 0 !important; }
+
+/* Gold badges are 72 px. Chip slices of 40+40 overlap that file and paint semicircles. */
+.card.path .node.is-here,
+.konter-label,
+.tree-node.owned {
+  border-image-source: var(--kit-badge-gold) !important;
+  border-image-slice: 36 30 fill !important;
+  border-image-width: 14px 12px !important;
+  background-color: #f4c75c !important;
+}
+.card.path .node { border-width: 4px 8px !important; }
+.daily-day,
+.daily-day span { font-size: 16px !important; }
+.daily-day { background-image: none !important; }
+.daily-day.on {
+  border-image-source: var(--kit-panel-row-selected) !important;
+  background-color: #ffecb1 !important;
+  background-image: none !important;
+}
+.daily-frame-btn {
+  overflow: visible !important;
+  border-width: 6px !important;
+  border-image-width: 8px !important;
+  font-size: 18px !important;
+}
+.daily-frames { padding: 0 4px 4px; }
+@media (min-width: 900px) {
+  .home.is-starter .starter-card { height: 100% !important; overflow: hidden !important; }
+  .starter-body { min-height: 0; }
+  .starter-art { flex: 0 0 72px !important; max-height: 88px; }
+  .starter-copy { min-height: 0; overflow: auto; }
+  .starter-choose { min-height: 52px !important; flex: 0 0 auto; margin-top: auto; }
+  .starter-name,
+  .starter-blurb,
+  .starter-skill,
+  .starter-match,
+  .starter-chip { font-size: 22px !important; }
+  .starter-chip { min-height: 40px; }
+}

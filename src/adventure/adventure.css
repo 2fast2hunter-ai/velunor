@@ -100,7 +100,7 @@ body.is-landscape-phone #turn { display: grid; }
 .is-menu .anchor-top { grid-template-rows: minmax(160px, calc(160px * var(--font-scale, 1))); }
 .is-shop .anchor-top { display: none; }
 .is-shop .safe { grid-template-rows: minmax(0, 1fr) auto; }
-.is-shop .band-top { background: transparent; }
+.is-shop .band-top { flex: 0 0 16px; height: 16px; min-height: 0; background: transparent; }
 .band-bot { flex: 0 0 0; height: 0; min-height: 0; }
 .is-shop .shop-screen { flex: 1 1 auto; }
 .anchor-mid { overflow: hidden; }
@@ -432,7 +432,7 @@ textarea { width: 100%; box-sizing: border-box; background: #121a30; color: inhe
 .crest-row { display: flex; flex-wrap: wrap; gap: 8px; }
 .float-num.is-weather { box-shadow: 0 0 0 3px rgba(120, 190, 255, 0.85); border-radius: 12px; }
 #battle-fx canvas { width: 100% !important; height: 100% !important; }
-#floats { position: absolute; inset: 0; pointer-events: none; z-index: 4; }
+#floats { position: absolute; inset: 0; pointer-events: none; z-index: 8; overflow: visible; }
 .float-num {
   position: absolute;
   z-index: 6;
@@ -634,7 +634,7 @@ a.ghost { color: inherit; text-decoration: none; display: inline-block; }
   flex-direction: column;
   justify-content: flex-start;
   align-items: stretch;
-  z-index: 6;
+  z-index: 20;
   padding: 0;
   overflow: hidden;
 }
