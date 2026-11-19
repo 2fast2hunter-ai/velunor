@@ -9,6 +9,7 @@ import {
   REPORTS_PER_DAY,
   adultFromYear,
   canWrite,
+  channelVisible,
   chatErrorKey,
   filterChat,
   pauseUntil,
@@ -152,6 +153,18 @@ describe('chat filter', () => {
     expect(html).toContain('value="Barsch angeln"')
     expect(html).toContain('Das geht so nicht raus.')
     expect(html).toContain('Ada')
+  })
+
+  it('only shows a channel the account belongs to', () => {
+    expect(channelVisible('guild:abc', 'me', 'abc')).toBe(true)
+    expect(channelVisible('guild:abc', 'me', 'other')).toBe(false)
+    expect(channelVisible('guild:abc', 'me', null)).toBe(false)
+    expect(channelVisible('dm:a:b', 'a', null)).toBe(true)
+    expect(channelVisible('dm:a:b', 'c', null)).toBe(false)
+    const source = readFileSync(new URL('../../supabase/functions/chat-send/index.ts', import.meta.url), 'utf8')
+    expect(source).toContain('mayGuildMute')
+    expect(source).toContain('channelVisible')
+    expect(source).not.toContain("guild_id: action === 'guild-mute'")
   })
 
   it('keeps birth year out of the schema and limits retention', () => {

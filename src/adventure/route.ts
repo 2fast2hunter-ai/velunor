@@ -60,7 +60,7 @@ export interface ChapterDef {
   id: number
   name: string
   scene: 'wiese' | 'bach' | 'wald'
-  /** Recolour of an existing Grünmark plate. No extra image files. */
+  /** Own plate per tint (SCENE_FILES), no recolour. */
   tint?: SceneTint
   levelMin: number
   levelMax: number

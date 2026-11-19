@@ -2,15 +2,18 @@ import { admin, caller, cors, json } from '../_shared/admin.ts'
 import { crestCount } from '../../../src/adventure/arena.ts'
 import {
   CONTEXT,
+  DAY_LIMIT,
   REPORTS_PER_DAY,
   SEVERE_BAN_MS,
   SEVERE_HITS,
   canWrite,
+  channelVisible,
   filterChat,
   pauseUntil,
   rateReason,
   severeLock
 } from '../../../src/adventure/chat.ts'
+import { mayGuildMute, type GuildRole } from '../../../src/adventure/guild.ts'
 
 function channelOf(kind: string, mine: string, other: string, guild: string): string | null {
   if (kind === 'guild' && guild) return `guild:${guild}`
@@ -93,11 +96,38 @@ Deno.serve(async (req) => {
     if (gate === 'flag') return json({ error: gate }, 403)
     const hours = body.hours === 24 ? 24 : 1
     const target = String(body.target ?? '')
-    if (!target) return json({ error: 'target' }, 400)
+    if (!target || target === user.id) return json({ error: 'target' }, 400)
+    const mine = await db.from('guild_members').select('guild_id, role').eq('user_id', user.id).maybeSingle()
+    const myRole = mine.data?.role === 'lead' || mine.data?.role === 'deputy' || mine.data?.role === 'member'
+      ? mine.data.role as GuildRole
+      : null
+    if (action === 'guild-mute') {
+      if (!mine.data?.guild_id || !myRole) return json({ error: 'member' }, 403)
+      const other = await db.from('guild_members').select('role').eq('guild_id', mine.data.guild_id).eq('user_id', target).maybeSingle()
+      const targetRole = other.data?.role === 'lead' || other.data?.role === 'deputy' || other.data?.role === 'member'
+        ? other.data.role as GuildRole
+        : null
+      const allowed = mayGuildMute(myRole, targetRole)
+      if (allowed !== 'ok') return json({ error: allowed }, allowed === 'member' ? 404 : 403)
+      await db.from('chat_mutes').upsert({
+        owner: user.id,
+        target,
+        guild_id: mine.data.guild_id,
+        until: new Date(Date.now() + hours * 60 * 60 * 1000).toISOString()
+      }, { onConflict: 'owner,target' })
+      return json({ ok: true })
+    }
+    const sameGuild = mine.data?.guild_id
+      ? await db.from('guild_members').select('user_id').eq('guild_id', mine.data.guild_id).eq('user_id', target).maybeSingle()
+      : { data: null }
+    const pairA = user.id < target ? user.id : target
+    const pairB = user.id < target ? target : user.id
+    const friend = await db.from('friendships').select('user_a').eq('user_a', pairA).eq('user_b', pairB).maybeSingle()
+    if (!sameGuild.data && !friend.data) return json({ error: 'member' }, 403)
     await db.from('chat_mutes').upsert({
       owner: user.id,
       target,
-      guild_id: action === 'guild-mute' ? body.guild ?? null : null,
+      guild_id: null,
       until: new Date(Date.now() + hours * 60 * 60 * 1000).toISOString()
     }, { onConflict: 'owner,target' })
     return json({ ok: true })
@@ -111,6 +141,10 @@ Deno.serve(async (req) => {
     const messageId = String(body.message ?? '')
     const message = await db.from('messages').select('id, channel, created_at').eq('id', messageId).maybeSingle()
     if (!message.data) return json({ error: 'missing' }, 404)
+    const reporter = await db.from('guild_members').select('guild_id').eq('user_id', user.id).maybeSingle()
+    if (!channelVisible(String(message.data.channel), user.id, reporter.data?.guild_id ? String(reporter.data.guild_id) : null)) {
+      return json({ error: 'member' }, 403)
+    }
     const before = await db.from('messages').select('id, sender_label, body, created_at').eq('channel', message.data.channel).lt('created_at', message.data.created_at).order('created_at', { ascending: false }).limit(CONTEXT)
     const after = await db.from('messages').select('id, sender_label, body, created_at').eq('channel', message.data.channel).gt('created_at', message.data.created_at).order('created_at', { ascending: true }).limit(CONTEXT)
     const reason = String(body.reason ?? 'sonstiges')

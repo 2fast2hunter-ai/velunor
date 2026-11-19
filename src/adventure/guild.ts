@@ -111,3 +111,24 @@ export function rewardFor(contrib: number, done: boolean, claimed: boolean): { m
 export function phraseOk(id: string): boolean {
   return (PHRASES as readonly string[]).includes(id)
 }
+
+/** Guild mute: only the lead and the deputy, and never against the lead. */
+export function mayGuildMute(actor: GuildRole | null, target: GuildRole | null): 'ok' | 'member' | 'role' | 'lead' {
+  if (actor !== 'lead' && actor !== 'deputy') return actor ? 'role' : 'member'
+  if (!target) return 'member'
+  if (target === 'lead') return 'lead'
+  return 'ok'
+}
+
+/**
+ * Edge-level gate for guild actions. SQL repeats it inside guild_act.
+ * `state` and `search` stay open. Founding and joining require no current guild.
+ */
+export function guildActionDenial(action: string, role: GuildRole | null): 'missing' | 'member' | 'role' | null {
+  if (action === 'state' || action === 'search') return null
+  if (action === 'found' || action === 'join') return role ? 'member' : null
+  if (!role) return 'missing'
+  if (action === 'kick' || action === 'role' || action === 'emblem') return role === 'lead' ? null : 'role'
+  if (action === 'accept' || action === 'decline') return role === 'member' ? 'role' : null
+  return null
+}
