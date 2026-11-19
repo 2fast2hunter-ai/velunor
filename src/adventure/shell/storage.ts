@@ -22,6 +22,7 @@ function isKept(key: string): boolean {
 export function cacheStore(kv: Kv, seed: Record<string, string> = {}): ShellStorage {
   const box = new Map(Object.entries(seed))
   const pending: Promise<void>[] = []
+  const tails = new Map<string, Promise<void>>()
   const track = (job: Promise<void>) => {
     pending.push(job)
     void job.finally(() => {
@@ -29,17 +30,23 @@ export function cacheStore(kv: Kv, seed: Record<string, string> = {}): ShellStor
       if (index >= 0) pending.splice(index, 1)
     })
   }
+  const enqueue = (key: string, job: () => Promise<void>) => {
+    const prev = tails.get(key) ?? Promise.resolve()
+    const next = prev.then(job, job)
+    tails.set(key, next)
+    track(next)
+  }
   return {
     getItem(key) {
       return box.has(key) ? box.get(key) ?? null : null
     },
     setItem(key, value) {
       box.set(key, value)
-      track(kv.set(key, value))
+      enqueue(key, () => kv.set(key, value))
     },
     removeItem(key) {
       box.delete(key)
-      track(kv.remove(key))
+      enqueue(key, () => kv.remove(key))
     },
     async flush() {
       await Promise.all(pending)

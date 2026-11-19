@@ -1707,7 +1707,7 @@ a.ghost { color: inherit; text-decoration: none; display: inline-block; }
   border-radius: 18px;
 }
 .cloud-card .primary, #cloud-layer .primary { background: #f0c14a; color: #1a1208; }
-.cloud-card .danger, #cloud-layer .danger { background: #c62828; color: #fff8e1; }
+.cloud-card .danger, #cloud-layer .danger, .sheet .danger { background: #c62828; color: #fff8e1; }
 .cloud-block { width: 100%; margin-top: 8px; }
 .cloud-preview {
   margin: 12px 0;
