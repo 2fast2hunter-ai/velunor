@@ -746,6 +746,61 @@
         980
       ]
     },
+    "bg_gm_moor_p": {
+      "jpg": "backgrounds/bg_gm_moor_p.jpg",
+      "webp": "backgrounds/bg_gm_moor_p.webp",
+      "size": [1080, 980]
+    },
+    "bg_gm_fels_p": {
+      "jpg": "backgrounds/bg_gm_fels_p.jpg",
+      "webp": "backgrounds/bg_gm_fels_p.webp",
+      "size": [1080, 980]
+    },
+    "bg_gm_sturm_p": {
+      "jpg": "backgrounds/bg_gm_sturm_p.jpg",
+      "webp": "backgrounds/bg_gm_sturm_p.webp",
+      "size": [1080, 980]
+    },
+    "bg_gm_frost_p": {
+      "jpg": "backgrounds/bg_gm_frost_p.jpg",
+      "webp": "backgrounds/bg_gm_frost_p.webp",
+      "size": [1080, 980]
+    },
+    "bg_gm_schmiede_p": {
+      "jpg": "backgrounds/bg_gm_schmiede_p.jpg",
+      "webp": "backgrounds/bg_gm_schmiede_p.webp",
+      "size": [1080, 980]
+    },
+    "bg_gm_rat_p": {
+      "jpg": "backgrounds/bg_gm_rat_p.jpg",
+      "webp": "backgrounds/bg_gm_rat_p.webp",
+      "size": [1080, 980]
+    },
+    "bg_fk_kueste_p": {
+      "jpg": "backgrounds/bg_fk_kueste_p.jpg",
+      "webp": "backgrounds/bg_fk_kueste_p.webp",
+      "size": [1080, 980]
+    },
+    "bg_gg_glut_p": {
+      "jpg": "backgrounds/bg_gg_glut_p.jpg",
+      "webp": "backgrounds/bg_gg_glut_p.webp",
+      "size": [1080, 980]
+    },
+    "bg_sm_schatten_p": {
+      "jpg": "backgrounds/bg_sm_schatten_p.jpg",
+      "webp": "backgrounds/bg_sm_schatten_p.webp",
+      "size": [1080, 980]
+    },
+    "bg_ht_himmel_p": {
+      "jpg": "backgrounds/bg_ht_himmel_p.jpg",
+      "webp": "backgrounds/bg_ht_himmel_p.webp",
+      "size": [1080, 980]
+    },
+    "bg_ht_horst_p": {
+      "jpg": "backgrounds/bg_ht_horst_p.jpg",
+      "webp": "backgrounds/bg_ht_horst_p.webp",
+      "size": [1080, 980]
+    },
     "bg_frame_desktop": {
       "jpg": "backgrounds/bg_frame_desktop.jpg",
       "webp": "backgrounds/bg_frame_desktop.webp",

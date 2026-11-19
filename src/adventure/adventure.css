@@ -252,17 +252,6 @@ button, .primary, .ghost, .text-btn, .filter-bar, input, select, textarea {
   border-radius: 22px;
 }
 .battle picture, .battle img.plate { position: absolute; inset: 0; width: 100%; height: 100%; object-fit: cover; }
-.plate.tint-moor { filter: hue-rotate(78deg) saturate(0.75) brightness(0.72); }
-.plate.tint-fels { filter: sepia(0.55) saturate(0.65) brightness(0.86) contrast(1.05); }
-.plate.tint-sturm { filter: saturate(0.35) brightness(0.78) contrast(1.12); }
-.plate.tint-frost { filter: hue-rotate(176deg) saturate(0.55) brightness(1.08); }
-.plate.tint-schmiede { filter: hue-rotate(-18deg) saturate(1.35) brightness(0.68) contrast(1.12); }
-.plate.tint-rat { filter: sepia(0.25) saturate(0.7) brightness(0.62) hue-rotate(10deg); }
-.plate.tint-kueste { filter: hue-rotate(188deg) saturate(0.72) brightness(1.06); }
-.plate.tint-glut { filter: hue-rotate(-28deg) saturate(1.45) brightness(0.74) contrast(1.08); }
-.plate.tint-schatten { filter: hue-rotate(236deg) saturate(0.4) brightness(0.52); }
-.plate.tint-himmel { filter: hue-rotate(205deg) saturate(0.35) brightness(1.22); }
-.plate.tint-horst { filter: hue-rotate(18deg) saturate(1.15) brightness(0.62) contrast(1.1); }
 .battle-world.shake { animation: screen-shake 120ms linear; }
 .battle-world.shake-crit { animation: screen-shake-crit 120ms linear; }
 @keyframes screen-shake-crit { 25% { transform: translate(4px, 2px); } 75% { transform: translate(-4px, -2px); } }
@@ -1771,6 +1760,8 @@ a.ghost { color: inherit; text-decoration: none; display: inline-block; }
 .tower-pips i.on { background: #f0c14a; }
 .tower-run { margin: 6px 0 0; color: #f0c14a; font-weight: 800; }
 .tower-floor .primary { min-height: 72px; margin-top: 6px; }
+.screen-head { display: block; margin: 0 0 12px; }
+.screen-head img { display: block; width: 100%; height: auto; aspect-ratio: 9 / 4; object-fit: cover; border-radius: 18px; }
 .look-wrap { position: relative; display: inline-flex; flex: 0 0 auto; }
 .look-wrap .daily-frame { position: absolute; inset: -15%; width: 130%; height: 130%; pointer-events: none; object-fit: contain; }
 .look-face-clip { display: block; width: 100%; height: 100%; clip-path: circle(46.8%); }
