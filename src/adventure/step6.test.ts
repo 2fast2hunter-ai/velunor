@@ -22,6 +22,9 @@ describe('achievements', () => {
       expect(ids).toContain(id)
     }
     expect(GOALS.every((goal) => goal.gold > 0 && goal.title && goal.frame)).toBe(true)
+    expect(GOALS.find((goal) => goal.id === 'catch-10')).toMatchObject({ name: '10 Truhen geöffnet', title: 'Siegelbrecher' })
+    expect(GOALS.find((goal) => goal.id === 'catch-100')).toMatchObject({ name: '100 Truhen geöffnet', title: 'Truhenmeister' })
+    expect(GOALS.find((goal) => goal.id === 'catch-500')).toMatchObject({ name: '500 Truhen geöffnet', title: 'Siegelhüter' })
   })
 
   it('pays gold and a title once when a goal is met', () => {

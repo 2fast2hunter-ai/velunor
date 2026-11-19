@@ -54,6 +54,7 @@ describe('lootbox L1', () => {
 
   it('gives a new monster level 1 and a duplicate two levels of EP', () => {
     const save = beginAdventure('Ada', { skin: 0, hair: 0, color: 0 }, 'm01', 1_000)
+    save.stats.catches = 4
     save.mons[save.team[0]].lvl = 10
     save.mons[save.team[0]].exp = 0
     const added = duplicateExp(10)
@@ -74,6 +75,8 @@ describe('lootbox L1', () => {
     const parked = applyChest(save, { speciesId: 'm11', rarity: 0, isNew: true, gold: 10, pity: 0 }, 5_000)
     expect(parked.place).toBe('pc')
     expect(save.pc.some((uid) => save.mons[uid]?.species === 'm11')).toBe(true)
+    expect(save.stats.catches).toBe(7)
+    expect(save.stats.chestsOpened).toBe(3)
   })
 
   it('opens only the region-1 pool and stays within 0.1 points of the effective rates', () => {

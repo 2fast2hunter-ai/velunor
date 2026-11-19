@@ -85,6 +85,8 @@ export interface EncounterOutcome {
   scene: ChapterDef['scene']
   shiny: boolean
   masteryUps?: MasteryUp[]
+  /** Species that joined from wild traces on this encounter. */
+  unlock?: string
 }
 
 export interface OfflineSummary {
@@ -483,7 +485,6 @@ export function applyCatch(save: SaveV2, speciesId: string, level: number, shiny
     const dex = save.dex[speciesId] ?? { seen: 0, caught: 0 }
     dex.caught += 1
     save.dex[speciesId] = dex
-    save.stats.catches += 1
     if (shiny) save.stats.shinies += 1
     if (existing.length) save.stats.dupes += 1
     if (opts.summary) {
@@ -637,7 +638,10 @@ function doWild(save: SaveV2, chapter: ChapterDef, now: number, opts: ResolveOpt
   noteDaily(save, 'wild', 1, species(speciesId).type)
   if (trace.foeKo) {
     const traceDrop = rollWildShard(save, speciesId, rngOf(save), now)
-    if (traceDrop === 'unlock') say(save, outcome, now, line(save, 'say.spurUnlock', { name }), quiet)
+    if (traceDrop === 'unlock') {
+      outcome.unlock = speciesId
+      say(save, outcome, now, line(save, 'say.spurUnlock', { name }), quiet)
+    }
     else if (traceDrop === 'shard') say(save, outcome, now, line(save, 'say.spur', { name }), quiet)
   }
   advance(save, chapter)

@@ -1,6 +1,6 @@
 import { FLUSH_MS, QUEUE_MAX } from './config'
 
-/** The ten events the server accepts. No catch, gacha, ad, or payment events. */
+/** The eleven events the server accepts. No catch, gacha, ad, or payment events. */
 export const EVENT_NAMES = [
   'session_start',
   'tutorial_step',
@@ -11,7 +11,8 @@ export const EVENT_NAMES = [
   'guardian_fail',
   'lootbox_open',
   'shard_drop',
-  'star_up'
+  'star_up',
+  'species_unlock'
 ] as const
 
 export type EventName = (typeof EVENT_NAMES)[number]

@@ -61,7 +61,7 @@ import { createCloud, type CloudController } from './cloud/session'
 import type { CloudView } from './cloud/types'
 import { CONSENT_KEY, DEVICE_KEY, QUEUE_KEY, REPLACE_SERVER_KEY, RESET_SERVER_KEY } from './cloud/config'
 import { isEventName, type AnalyticsEvent, type Consent } from './cloud/analytics'
-import { eventsForEncounter, eventsForLoot, starEvent, teamProfile } from './cloud/playEvents'
+import { eventsForEncounter, eventsForLoot, starEvent, teamProfile, unlockEvent } from './cloud/playEvents'
 import { equipFrame, equipTitle, syncAchievements } from './achievements'
 import { HATCH_MS, buyHortSlot, moveFromHort, moveToHort } from './hort'
 import { expeditionBusy, settleExpeditions, startExpedition, takeExpeditionNotes } from './expedition'
@@ -3491,8 +3491,13 @@ function onClick(event: Event): void {
     return
   }
   if (act === 'craft') {
-    const reason = craftSpecies(save, node.getAttribute('data-id') ?? '', Date.now())
+    const crafted = node.getAttribute('data-id') ?? ''
+    const reason = craftSpecies(save, crafted, Date.now())
     if (reason) save.log.push({ t: Date.now(), text: reason })
+    else {
+      const event = unlockEvent(crafted, 'werkstatt')
+      if (event) cloud?.track(event.event, event.props)
+    }
     try { writeSave(gameStore, save) } catch { /* ignore */ }
     render()
     return
@@ -3529,7 +3534,7 @@ function onClick(event: Event): void {
     if (!grants.length) return
     showMastery(pullMasteryUps())
     syncAchievements(save)
-    for (const event of eventsForLoot(tier, grants.length, shardsBefore, save.shards)) cloud?.track(event.event, event.props)
+    for (const event of eventsForLoot(tier, grants, shardsBefore, save.shards)) cloud?.track(event.event, event.props)
     overlay = act === 'chest-all' ? { kind: 'chest-summary', grants } : { kind: 'chest-reveal', grant: grants[0] }
     try { writeSave(gameStore, save) } catch { /* ignore */ }
     render()

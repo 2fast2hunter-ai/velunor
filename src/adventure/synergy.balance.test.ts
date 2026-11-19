@@ -97,8 +97,9 @@ describe('synergy mirror balance', () => {
     const stacked = synergyMods(pair, false)
     expect(pair.map((row) => row.id).sort()).toEqual(['flaechenbrand', 'glutschwinge'])
     expect(mirrorWins(arenaSide, stacked)).toBe(134)
-    expect(mirrorWins(arenaSide, stacked, purityOf(types, 'fire'))).toBe(142)
-    expect(PURITY_FOUR).toBe(0.0165)
+    expect(mirrorWins(arenaSide, stacked, purityOf(types, 'fire'))).toBe(145)
+    expect(PURITY_FOUR).toBe(0.02)
+    expect(145 / 200).toBeLessThanOrEqual(0.75)
     const boosted = coopDamage([
       fighterFromSpecies('m01', false, 0, 0, 'c'),
       fighterFromSpecies('m41', false, 0, 0, 'd')

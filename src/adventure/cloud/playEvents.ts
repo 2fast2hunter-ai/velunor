@@ -38,7 +38,7 @@ export function teamProfile(save: SaveV2): { teamLevel: number; rarityAvg: numbe
 
 /** Live encounters only. Offline catch-up stays in the save and is not one event per node. */
 export function eventsForEncounter(input: {
-  outcome: Pick<EncounterOutcome, 'kind' | 'step' | 'win'>
+  outcome: Pick<EncounterOutcome, 'kind' | 'step' | 'win'> & { unlock?: string }
   region: number
   chapter: number
   teamLevel: number
@@ -67,21 +67,49 @@ export function eventsForEncounter(input: {
     })
   }
   for (const drop of shardGains(input.shardsBefore, input.shardsAfter)) {
-    events.push({ event: 'shard_drop', props: { species: drop.species, amount: drop.amount } })
+    events.push({ event: 'shard_drop', props: { species: drop.species, amount: drop.amount, source: 'wild' } })
+  }
+  const unlocked = input.outcome.unlock
+  if (typeof unlocked === 'string' && SPECIES_ID.test(unlocked)) {
+    events.push({ event: 'species_unlock', props: { species: unlocked, via: 'splitter' } })
   }
   return events
 }
 
-export function eventsForLoot(tier: string, count: number, before: Record<string, number>, after: Record<string, number>): AnalyticsEvent[] {
+export interface LootOpen {
+  speciesId: string
+  rarity: number
+  isNew: boolean
+  pityHit?: boolean
+}
+
+export function eventsForLoot(tier: string, grants: readonly LootOpen[], before: Record<string, number>, after: Record<string, number>): AnalyticsEvent[] {
   const events: AnalyticsEvent[] = []
-  const opened = Math.max(0, Math.floor(count))
-  if (opened > 0 && CHEST_TIER.has(tier)) {
-    events.push({ event: 'lootbox_open', props: { tier, count: opened } })
+  if (CHEST_TIER.has(tier)) {
+    for (const grant of grants) {
+      events.push({
+        event: 'lootbox_open',
+        props: {
+          tier,
+          rarity: Math.max(0, Math.floor(grant.rarity)),
+          isNew: Boolean(grant.isNew),
+          pityHit: Boolean(grant.pityHit)
+        }
+      })
+      if (grant.isNew && SPECIES_ID.test(grant.speciesId)) {
+        events.push({ event: 'species_unlock', props: { species: grant.speciesId, via: 'chest' } })
+      }
+    }
   }
   for (const drop of shardGains(before, after)) {
-    events.push({ event: 'shard_drop', props: { species: drop.species, amount: drop.amount } })
+    events.push({ event: 'shard_drop', props: { species: drop.species, amount: drop.amount, source: 'duplicate' } })
   }
   return events
+}
+
+export function unlockEvent(speciesId: string, via: 'chest' | 'splitter' | 'werkstatt'): AnalyticsEvent | null {
+  if (!SPECIES_ID.test(speciesId)) return null
+  return { event: 'species_unlock', props: { species: speciesId, via } }
 }
 
 export function starEvent(speciesId: string, star: number): AnalyticsEvent | null {

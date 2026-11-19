@@ -10573,8 +10573,8 @@ var SYNERGY_CAP = 2;
 var KNOWN = new Set(SYNERGY_IDS);
 
 // src/adventure/synergy.ts
-var PURITY_THREE = 0.02;
-var PURITY_FOUR = 0.0165;
+var PURITY_THREE = 0.0165;
+var PURITY_FOUR = 0.02;
 var SYNERGY_STAT_CAP = 0.06;
 var ROWS = [
   { id: "gewitter", name: "Gewitter", types: ["water", "lightning"], bonus: { crit: 0.194, atk: 0.013 }, power: 124 },
