@@ -65,7 +65,8 @@ import { eventsForEncounter, eventsForLoot, starEvent, teamProfile } from './clo
 import { equipFrame, equipTitle, syncAchievements } from './achievements'
 import { HATCH_MS, buyHortSlot, moveFromHort, moveToHort } from './hort'
 import { expeditionBusy, settleExpeditions, startExpedition, takeExpeditionNotes } from './expedition'
-import { foundCost } from './guild'
+import { foundCost, guildErrorKey, guildFoundBlock } from './guild'
+import { crestCount } from './arena'
 import { buyCrystal, buyFruit, sellCrystal, sellFruit, useCrystal, useFruit } from './shop'
 import { buyPrize, spinWheel, type Multiplier, type SymbolId } from './wheel'
 import { chapterCapNow } from './dex'
@@ -1707,35 +1708,120 @@ async function refreshGuild(): Promise<void> {
     return
   }
   const row = state.data.guild && typeof state.data.guild === 'object' ? state.data.guild as Record<string, unknown> : {}
+  const people = (value: unknown): { id: string, label: string, role?: 'lead' | 'deputy' | 'member' }[] => {
+    if (!Array.isArray(value)) return []
+    return value.flatMap((item) => {
+      if (!item || typeof item !== 'object') return []
+      const person = item as { id?: unknown, label?: unknown, role?: unknown }
+      if (typeof person.id !== 'string' || typeof person.label !== 'string') return []
+      const role = person.role === 'lead' || person.role === 'deputy' || person.role === 'member' ? person.role : undefined
+      return [{ id: person.id, label: person.label, role }]
+    })
+  }
+  const goals = Array.isArray(state.data.goals) ? state.data.goals.flatMap((item) => {
+    if (!item || typeof item !== 'object') return []
+    const goal = item as { goal?: unknown, progress?: unknown, target?: unknown }
+    if (typeof goal.goal !== 'string') return []
+    return [{ goal: goal.goal, progress: Math.max(0, Math.floor(Number(goal.progress)) || 0), target: Math.max(0, Math.floor(Number(goal.target)) || 0) }]
+  }) : []
   guildPanel = {
+    ...guildPanel,
     status: 'ready',
+    id: typeof row.id === 'string' ? row.id : '',
     name: typeof row.name === 'string' ? row.name : '',
     tag: typeof row.tag === 'string' ? row.tag : '',
     level: Math.max(1, Math.floor(Number(row.level)) || 1),
     points: Math.max(0, Math.floor(Number(row.points)) || 0),
+    role: state.data.role === 'lead' || state.data.role === 'deputy' || state.data.role === 'member' ? state.data.role : '',
+    code: typeof row.code === 'string' ? row.code : '',
     shape: typeof row.shape === 'string' ? row.shape : '',
     symbol: typeof row.symbol === 'string' ? row.symbol : '',
     color: typeof row.color === 'string' ? row.color : '',
-    note: ''
+    members: people(state.data.members),
+    requests: people(state.data.requests),
+    goals,
+    note: guildPanel.note
   }
   render()
 }
 
-async function guildAction(act: string, phrase = ''): Promise<void> {
+function guildNote(code: string): string {
+  return t(save?.settings.lang, guildErrorKey(code))
+}
+
+async function guildAction(act: string, node: Element): Promise<void> {
   if (!save) return
-  const action = act === 'guild-found' ? 'found' : act === 'guild-join' ? 'join' : act === 'guild-phrase' ? 'phrase' : 'leave'
+  const name = (document.getElementById('guild-name') as HTMLInputElement | null)?.value ?? guildPanel.draftName ?? ''
+  const tag = (document.getElementById('guild-tag') as HTMLInputElement | null)?.value ?? guildPanel.draftTag ?? ''
+  const query = (document.getElementById('guild-query') as HTMLInputElement | null)?.value ?? guildPanel.draftQuery ?? ''
+  const code = (document.getElementById('guild-code') as HTMLInputElement | null)?.value ?? guildPanel.draftCode ?? ''
+  guildPanel = { ...guildPanel, draftName: name, draftTag: tag, draftQuery: query, draftCode: code }
+  if (act === 'guild-search') {
+    const result = await callOnline('guild', { action: 'search', query })
+    const hits = Array.isArray(result.data.guilds) ? result.data.guilds.flatMap((item) => {
+      if (!item || typeof item !== 'object') return []
+      const row = item as { id?: unknown, name?: unknown, tag?: unknown }
+      if (typeof row.id !== 'string' || typeof row.name !== 'string' || typeof row.tag !== 'string') return []
+      return [{ id: row.id, name: row.name, tag: row.tag }]
+    }) : []
+    guildPanel = { ...guildPanel, hits, note: result.ok ? '' : guildNote(result.error) }
+    render()
+    return
+  }
+  if (act === 'guild-found') {
+    const block = guildFoundBlock(crestCount(save.badges), save.gold, save.region, name, tag)
+    if (block.disabled) {
+      guildPanel = { ...guildPanel, note: guildNote(block.reason) }
+      render()
+      return
+    }
+    const result = await callOnline('guild', { action: 'found', name: name.trim(), tag: tag.trim().toUpperCase() })
+    if (result.ok && !result.data.error) {
+      save.gold = Math.max(0, save.gold - foundCost(save.region))
+      try { writeSave(gameStore, save) } catch { /* the guild row already exists */ }
+      guildPanel = { ...guildPanel, note: '' }
+    } else guildPanel = { ...guildPanel, note: guildNote(String(result.data.error || result.error || 'missing')) }
+    await refreshGuild()
+    return
+  }
+  if (act === 'guild-join') {
+    const picked = node.getAttribute('data-name') || ''
+    const result = await callOnline('guild', {
+      action: 'join',
+      name: picked,
+      code: picked ? '' : code.trim().toUpperCase()
+    })
+    guildPanel = { ...guildPanel, note: result.ok && !result.data.error ? '' : guildNote(String(result.data.error || result.error || 'missing')) }
+    await refreshGuild()
+    return
+  }
+  if (act === 'guild-mute') {
+    const result = await callOnline('chat-send', {
+      action: 'guild-mute',
+      target: node.getAttribute('data-id') ?? '',
+      guild: guildPanel.id ?? '',
+      hours: 24
+    })
+    guildPanel = { ...guildPanel, note: result.ok ? '' : guildNote(result.error) }
+    render()
+    return
+  }
+  const named: Record<string, string> = {
+    'guild-phrase': 'phrase',
+    'guild-leave': 'leave',
+    'guild-accept': 'accept',
+    'guild-decline': 'decline',
+    'guild-kick': 'kick',
+    'guild-role': 'role'
+  }
+  const action = named[act]
+  if (!action) return
   const result = await callOnline('guild', {
     action,
-    name: save.name,
-    tag: save.name.slice(0, 3),
-    phrase,
-    region: save.region
+    phrase: node.getAttribute('data-id') ?? '',
+    target: node.getAttribute('data-id') ?? ''
   })
-  if (result.ok && action === 'found') {
-    save.gold = Math.max(0, save.gold - foundCost(save.region))
-    try { writeSave(gameStore, save) } catch { /* the guild row already exists */ }
-  }
-  guildPanel = { ...guildPanel, note: result.ok ? '' : result.error }
+  guildPanel = { ...guildPanel, note: result.ok && !result.data.error ? '' : guildNote(String(result.data.error || result.error || 'missing')) }
   await refreshGuild()
 }
 
@@ -3031,8 +3117,8 @@ function onClick(event: Event): void {
     void refreshChat()
     return
   }
-  if (act === 'guild-found' || act === 'guild-join' || act === 'guild-leave' || act === 'guild-phrase') {
-    void guildAction(act, node.getAttribute('data-id') ?? '')
+  if (act === 'guild-found' || act === 'guild-join' || act === 'guild-leave' || act === 'guild-phrase' || act === 'guild-search' || act === 'guild-accept' || act === 'guild-decline' || act === 'guild-kick' || act === 'guild-role' || act === 'guild-mute') {
+    void guildAction(act, node)
     return
   }
   if (act === 'trade-offer' || act === 'trade-lock' || act === 'trade-confirm' || act === 'trade-cancel') {
@@ -3536,6 +3622,26 @@ function onInput(event: Event): void {
   if (!(target instanceof HTMLInputElement)) return
   if (target.dataset.field === 'chat') {
     chatPanel = { ...chatPanel, draft: target.value }
+    return
+  }
+  if (target.dataset.field === 'guild-name' || target.dataset.field === 'guild-tag' || target.dataset.field === 'guild-query' || target.dataset.field === 'guild-code') {
+    if (target.dataset.field === 'guild-name') guildPanel = { ...guildPanel, draftName: target.value }
+    if (target.dataset.field === 'guild-tag') guildPanel = { ...guildPanel, draftTag: target.value }
+    if (target.dataset.field === 'guild-query') guildPanel = { ...guildPanel, draftQuery: target.value }
+    if (target.dataset.field === 'guild-code') guildPanel = { ...guildPanel, draftCode: target.value }
+    if (save && (target.dataset.field === 'guild-name' || target.dataset.field === 'guild-tag')) {
+      const block = guildFoundBlock(crestCount(save.badges), save.gold, save.region, guildPanel.draftName ?? '', guildPanel.draftTag ?? '')
+      const button = document.querySelector('[data-act="guild-found"]')
+      const reason = document.getElementById('guild-reason')
+      if (button instanceof HTMLButtonElement) button.disabled = block.disabled
+      if (reason) {
+        reason.textContent = block.reason === 'crests'
+          ? t(save.settings.lang, 'guild.reason.crests', { n: crestCount(save.badges) })
+          : block.reason === 'gold'
+            ? t(save.settings.lang, 'guild.reason.gold', { gold: foundCost(save.region).toLocaleString(save.settings.lang === 'en' ? 'en' : 'de-DE') })
+            : t(save.settings.lang, 'guild.reason.name')
+      }
+    }
     return
   }
   if (target.dataset.field === 'name') {
