@@ -43,7 +43,7 @@ const TYPES: TypeId[] = [
   'light', 'shadow', 'ghost', 'dragon', 'insect', 'beast', 'fighting', 'psychic', 'sound', 'crystal'
 ]
 
-const PLACES: Record<TypeId, { place: string, art: string }> = {
+export const PLACES: Record<TypeId, { place: string, art: string }> = {
   fire: { place: 'Glutkessel', art: 'expedition/glutkessel' },
   water: { place: 'Stillbucht', art: 'expedition/stillbucht' },
   plant: { place: 'Mooslichtung', art: 'expedition/mooslichtung' },
