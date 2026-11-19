@@ -1,4 +1,6 @@
 import './adventure.css'
+import './ui-kit.css'
+import { installKit } from './uiKit'
 import {
   AUTOSAVE_MS,
   BASE_ENCOUNTER_MS,
@@ -125,6 +127,8 @@ import {
   type Screen,
   type WheelPanel
 } from './view'
+
+installKit()
 
 const RESET_FLAG = 'velunor_v2_reset'
 const SHELL_SAVE_MS = 30_000
