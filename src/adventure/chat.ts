@@ -53,6 +53,16 @@ export function canWrite(input: {
   return 'ok'
 }
 
+/** A guild channel is visible to its members. A direct channel names both accounts. */
+export function channelVisible(channel: string, userId: string, guildId: string | null): boolean {
+  if (channel.startsWith('dm:')) {
+    const parts = channel.split(':')
+    return parts.length === 3 && parts.includes(userId)
+  }
+  if (channel.startsWith('guild:')) return Boolean(guildId) && channel === `guild:${guildId}`
+  return false
+}
+
 export function filterChat(raw: string): FilterResult {
   const text = raw.trim()
   if (!text || text.length > CHAT_MAX) return { kind: 'length' }

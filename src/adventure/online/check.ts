@@ -1,4 +1,4 @@
-import { BASE_ENCOUNTER_MS, OFFLINE_CAP_MS } from '../const'
+import { BASE_ENCOUNTER_MS, OFFLINE_CAP_MS, STARTERS } from '../const'
 import { arenaDayKey, lastDailyReset } from '../arena'
 import { DAILY_GOLD_CAP, DAILY_MARK_CAP } from '../daily'
 import { expeditionGold } from '../expedition'
@@ -13,6 +13,10 @@ export const LEARN_BONUS = 1.25
 export const TRAINER_PARTY = 3
 export const TRAINER_GOLD_PER_LEVEL = 25
 export const START_GOLD = 3000
+/** One crest this fast is still slower than a real chapter. A new account cannot arrive with a handful. */
+export const CREST_PACE_MS = 3 * 60 * 1000
+/** Eight crests in each of the five regions, plus the five council seals. */
+export const CREST_CAP = 45
 export const OBTAINED_HOW = ['Truhe', 'Splitter', 'Ei', 'Rad', 'Tausch'] as const
 export type ObtainedHow = (typeof OBTAINED_HOW)[number]
 
@@ -165,6 +169,24 @@ export function crestsInOrder(badges: readonly string[]): boolean {
   return unique.every((index, place) => index === place)
 }
 
+/** Crests and council seals. The pace check counts both, because either one opens a gate. */
+export function badgeProgress(badges: readonly string[]): number {
+  return new Set(badges.filter((badge) => badge.length > 0)).size
+}
+
+export function allowedCrests(elapsedMs: number): number {
+  return Math.min(CREST_CAP, Math.floor(Math.max(0, elapsedMs) / CREST_PACE_MS))
+}
+
+const STARTER_SPECIES = new Set<string>(STARTERS.map((starter) => starter.id))
+
+/** The starter and a migrated v1 row are not register monsters. Anything else with a private source is. */
+export function privateMonster(mon: AuditMon): boolean {
+  if (OBTAINED_HOW.includes(mon.obtainedHow as ObtainedHow)) return false
+  if (mon.obtainedHow === 'alt') return true
+  return STARTER_SPECIES.has(mon.species) && /^r\d+c\d+$/.test(mon.obtainedHow)
+}
+
 function bump(flag: 0 | 1 | 2, next: 0 | 1 | 2): 0 | 1 | 2 {
   return next > flag ? next : flag
 }
@@ -175,10 +197,6 @@ function gainFlag(gain: number, allowed: number): 0 | 1 | 2 {
   return 1
 }
 
-/**
- * Compare a new save with the last accepted one.
- * The first upload (no previous row) is the baseline and stays at flag 0.
- */
 /** While offline catch-up is still owed, the save must not be uploaded. */
 export function mayUploadSave(catchingUp: boolean): boolean {
   return !catchingUp
@@ -244,56 +262,68 @@ function researchVerdict(before: AuditState, after: AuditState, elapsedMs: numbe
   return 0
 }
 
+/**
+ * Compare a new save with the last accepted one.
+ * A missing row is a fresh account (start gold, no crests). The caller passes the
+ * account age as the window, the same way a later upload passes the time since the last audit.
+ */
 export function auditSync(before: AuditState | null, after: AuditState, elapsedMs?: number, bonusGold = 0, nowMs = Date.now()): AuditResult {
-  if (!before) return { flag: 0, reasons: [] }
+  const baseline = before ?? freshBaseline(nowMs - Math.max(0, elapsedMs ?? 0))
   const reasons: string[] = []
   let flag: 0 | 1 | 2 = 0
-  const elapsed = elapsedMs ?? (after.at - before.at)
+  const elapsed = elapsedMs ?? (after.at - baseline.at)
   if (elapsedMs == null && elapsed < 0) {
     reasons.push('clock')
     flag = 2
   }
-  const region = Math.max(before.region, after.region)
-  const chapter = Math.max(before.chapter, after.chapter)
-  const goldGain = after.gold - before.gold
+  const region = Math.max(baseline.region, after.region)
+  const chapter = Math.max(baseline.chapter, after.chapter)
+  const goldGain = after.gold - baseline.gold
   const windowMs = Math.max(0, elapsed)
-  const goldMult = Math.max(1, before.treeGold ?? 1, after.treeGold ?? 1) * Math.max(1, before.researchGold ?? 1, after.researchGold ?? 1)
+  const goldMult = Math.max(1, baseline.treeGold ?? 1, after.treeGold ?? 1) * Math.max(1, baseline.researchGold ?? 1, after.researchGold ?? 1)
   const serverDay = arenaDayKey(new Date(nowMs))
-  const sameDaily = before.dailyDay === serverDay
-  const marksGain = (after.dailyMarks ?? 0) - (before.dailyMarks ?? 0)
-  const dailyGoldGain = (after.dailyGold ?? 0) - (before.dailyGold ?? 0)
-  const marksAlready = sameDaily ? (before.dailyMarksToday ?? 0) : 0
-  const goldAlready = sameDaily ? (before.dailyGoldToday ?? 0) : 0
+  const sameDaily = baseline.dailyDay === serverDay
+  const marksGain = (after.dailyMarks ?? 0) - (baseline.dailyMarks ?? 0)
+  const dailyGoldGain = (after.dailyGold ?? 0) - (baseline.dailyGold ?? 0)
+  const marksAlready = sameDaily ? (baseline.dailyMarksToday ?? 0) : 0
+  const goldAlready = sameDaily ? (baseline.dailyGoldToday ?? 0) : 0
   const dailyGoldRoom = dailyGoldGain > 0 ? Math.max(0, Math.min(dailyGoldGain, DAILY_GOLD_CAP - goldAlready)) : 0
-  const capMs = Math.max(OFFLINE_CAP_MS, before.treeCapMs ?? 0, after.treeCapMs ?? 0)
+  const capMs = Math.max(OFFLINE_CAP_MS, baseline.treeCapMs ?? 0, after.treeCapMs ?? 0)
   const fightRoom = allowedGold(windowMs, region, chapter, goldMult) + Math.max(0, Math.floor(bonusGold))
   const day = lastDailyReset(new Date(nowMs)).toISOString()
-  const lootMult = Math.max(1, before.researchLoot ?? 1, after.researchLoot ?? 1)
+  const lootMult = Math.max(1, baseline.researchLoot ?? 1, after.researchLoot ?? 1)
   const dayCap = Math.ceil(expeditionGoldCap(region, chapter) * Math.max(1, Math.min(1.4, lootMult)))
-  const expeditionRoom = before.expeditionDay === day && typeof before.expeditionGoldLeft === 'number'
-    ? Math.max(0, Math.min(dayCap, before.expeditionGoldLeft))
+  const expeditionRoom = baseline.expeditionDay === day && typeof baseline.expeditionGoldLeft === 'number'
+    ? Math.max(0, Math.min(dayCap, baseline.expeditionGoldLeft))
     : dayCap
-  const spent = researchSpend(before.research ?? null, after.research ?? null)
+  const spent = researchSpend(baseline.research ?? null, after.research ?? null)
   const goldFlag = gainFlag(goldGain + spent, fightRoom + expeditionRoom + dailyGoldRoom)
   if (goldFlag) reasons.push('gold')
   flag = bump(flag, goldFlag)
-  const epGain = after.ep - before.ep
-  const epMult = Math.max(1, before.researchEp ?? 1, after.researchEp ?? 1)
+  const epGain = after.ep - baseline.ep
+  const epMult = Math.max(1, baseline.researchEp ?? 1, after.researchEp ?? 1)
   const epFlag = gainFlag(epGain, allowedEp(windowMs, region, chapter, epMult))
   if (epFlag) reasons.push('ep')
   flag = bump(flag, epFlag)
-  if (!crestsInOrder(after.badges)) {
+  const crestGain = badgeProgress(after.badges) - badgeProgress(baseline.badges)
+  if (!crestsInOrder(after.badges) || crestGain > allowedCrests(windowMs)) {
     reasons.push('crests')
     flag = 2
   }
-  const known = new Set(before.mons.map((mon) => mon.uid))
+  const known = new Set(baseline.mons.map((mon) => mon.uid))
   const fresh = after.mons.filter((mon) => !known.has(mon.uid))
+  const registered = fresh.filter((mon) => !privateMonster(mon))
   const allowed = new Set(after.speciesAllowed)
-  if (fresh.length > allowedNewMons(windowMs, capMs)) {
+  if (registered.length > allowedNewMons(windowMs, capMs)) {
     reasons.push('monsters')
     flag = 2
   }
-  for (const mon of fresh) {
+  const starters = fresh.filter((mon) => STARTER_SPECIES.has(mon.species) && /^r\d+c\d+$/.test(mon.obtainedHow))
+  if (starters.length > 1) {
+    reasons.push('source')
+    flag = 2
+  }
+  for (const mon of registered) {
     if (!OBTAINED_HOW.includes(mon.obtainedHow as ObtainedHow)) {
       reasons.push('source')
       flag = 2
@@ -303,22 +333,22 @@ export function auditSync(before: AuditState | null, after: AuditState, elapsedM
       flag = 2
     }
   }
-  const chestGain = after.chests - before.chests
+  const chestGain = after.chests - baseline.chests
   if (chestGain > allowedChests(windowMs, capMs)) {
     reasons.push('chests')
     flag = 2
   }
-  const shardGain = after.shards - before.shards
-  const shardYield = Math.max(1, before.researchShard ?? 1, after.researchShard ?? 1)
+  const shardGain = after.shards - baseline.shards
+  const shardYield = Math.max(1, baseline.researchShard ?? 1, after.researchShard ?? 1)
   if (shardGain > allowedShards(windowMs, capMs, shardYield)) {
     reasons.push('shards')
     flag = 2
   }
-  const masteryGain = (after.mastery ?? 0) - (before.mastery ?? 0)
+  const masteryGain = (after.mastery ?? 0) - (baseline.mastery ?? 0)
   const masteryFlag = gainFlag(masteryGain, allowedMastery(windowMs, capMs))
   if (masteryFlag) reasons.push('mastery')
   flag = bump(flag, masteryFlag)
-  const researchFlag = researchVerdict(before, after, windowMs, nowMs)
+  const researchFlag = researchVerdict(baseline, after, windowMs, nowMs)
   if (researchFlag) {
     reasons.push('research')
     flag = bump(flag, researchFlag)
@@ -337,4 +367,23 @@ export function auditSync(before: AuditState | null, after: AuditState, elapsedM
     after.expeditionGoldLeft = Math.max(0, expeditionRoom - extra)
   }
   return { flag, reasons }
+}
+
+function freshBaseline(at: number): AuditState {
+  return {
+    at,
+    gold: START_GOLD,
+    ep: 0,
+    region: 1,
+    chapter: 1,
+    badges: [],
+    chests: 0,
+    shards: 0,
+    mastery: 0,
+    masteryRanks: 0,
+    treeGold: 1,
+    treeCapMs: OFFLINE_CAP_MS,
+    mons: [],
+    speciesAllowed: []
+  }
 }

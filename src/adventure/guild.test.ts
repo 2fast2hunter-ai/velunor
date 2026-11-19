@@ -20,6 +20,8 @@ import {
   guildNameIssue,
   guildTagIssue,
   guildTextIssue,
+  guildActionDenial,
+  mayGuildMute,
   nextLeader,
   phraseOk,
   rewardFor,
@@ -80,6 +82,19 @@ describe('guilds', () => {
     expect(nextLeader(members, 'lead')).toBe('dep')
     expect(nextLeader(members.filter((member) => member.id !== 'dep'), 'lead')).toBe('old')
     expect(nextLeader([{ id: 'lead', role: 'lead', joinedAt: 1, contrib: 0 }], 'lead')).toBeNull()
+    expect(mayGuildMute(null, 'member')).toBe('member')
+    expect(mayGuildMute('member', 'member')).toBe('role')
+    expect(mayGuildMute('deputy', 'member')).toBe('ok')
+    expect(mayGuildMute('lead', 'deputy')).toBe('ok')
+    expect(mayGuildMute('lead', 'lead')).toBe('lead')
+    expect(mayGuildMute('deputy', null)).toBe('member')
+    expect(guildActionDenial('kick', null)).toBe('missing')
+    expect(guildActionDenial('kick', 'member')).toBe('role')
+    expect(guildActionDenial('kick', 'lead')).toBeNull()
+    expect(guildActionDenial('accept', 'deputy')).toBeNull()
+    expect(guildActionDenial('accept', 'member')).toBe('role')
+    expect(guildActionDenial('found', 'lead')).toBe('member')
+    expect(guildActionDenial('state', null)).toBeNull()
     const html = gameHtml(saveOf(), 'guild', now.getTime(), pc, dex, null, false, false, null, 1, undefined, {
       guild: { status: 'ready', name: 'Mooswacht', tag: 'MOS', level: 5, points: 1400, note: '' }
     })
