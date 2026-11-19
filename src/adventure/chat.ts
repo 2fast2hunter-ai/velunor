@@ -1,4 +1,4 @@
-import { bannedWord } from './online/name'
+import { bannedChat } from './online/name'
 
 export const CHAT_MAX = 200
 export const BURST_LIMIT = 5
@@ -67,15 +67,10 @@ export function filterChat(raw: string): FilterResult {
   const text = raw.trim()
   if (!text || text.length > CHAT_MAX) return { kind: 'length' }
   if (hasContact(text)) return { kind: 'contact' }
-  if (bannedWord(text) || extraSevere(text)) return { kind: 'severe' }
+  if (bannedChat(text)) return { kind: 'severe' }
   const masked = maskMild(text)
   if (masked !== text) return { kind: 'mask', text: masked }
   return { kind: 'ok', text }
-}
-
-function extraSevere(text: string): boolean {
-  const mapped = [...text.toLowerCase()].map((ch) => (ch === '0' ? 'o' : ch)).join('').replace(/[^a-z]/g, '')
-  return ['fck', 'porn', 'nsfw'].some((word) => mapped.includes(word))
 }
 
 function hasContact(text: string): boolean {
@@ -83,7 +78,14 @@ function hasContact(text: string): boolean {
   if (/(https?:\/\/|www\.)\S+/i.test(text)) return true
   if (/\b[a-z0-9-]+\.(com|de|net|org|gg|io)\b/i.test(text)) return true
   if (/\b\w+\s+at\s+\w+\s+dot\s+\w+\b/i.test(text)) return true
-  return /(\d[\s().+\-]*){8,}/.test(text)
+  if (/(\d[\s().+\-]*){8,}/.test(text)) return true
+  return /\b(?:insta|instagram|snapchat|snap|tiktok|telegram|whatsapp|discord|twitter|facebook|twitch|signal)\b\s*[:@]\s*@?[a-z0-9._]{2,}/i.test(text)
+}
+
+const CHAT_ERRORS = ['severe', 'contact', 'length', 'email', 'age', 'crests', 'flag', 'adult', 'off', 'ban', 'channel', 'burst', 'day', 'repeat', 'pause'] as const
+
+export function chatErrorKey(code: string): string {
+  return (CHAT_ERRORS as readonly string[]).includes(code) ? `chat.err.${code}` : 'chat.err.channel'
 }
 
 function maskMild(text: string): string {

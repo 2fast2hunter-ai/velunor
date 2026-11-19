@@ -147,11 +147,20 @@ export interface ChatLine {
   body: string
 }
 
+export interface ChatFriend {
+  code: string
+  label: string
+}
+
 export interface ChatPanel {
   status: 'offline' | 'ready' | 'loading' | 'age'
   lines: ChatLine[]
   note: string
   adult: boolean | null
+  channel?: 'guild' | 'dm'
+  friend?: string
+  friends?: ChatFriend[]
+  draft?: string
 }
 
 export interface GuildPerson {
@@ -1895,14 +1904,23 @@ function chatScreen(save: SaveV2, panel: ChatPanel | undefined): string {
     </div></div></div>`
   }
   const lines = view.lines.map((line) => `<p class="chat-line"><b>${esc(line.label)}</b> ${esc(line.body)} <button type="button" data-act="chat-report" data-id="${esc(line.label)}"><img class="chat-icon" src="${art('chat/report@2x.png')}" alt=""/>${tr(save, 'chat.report')}</button> <button type="button" data-act="chat-mute" data-id="${esc(line.label)}"><img class="chat-icon" src="${art('chat/mute@2x.png')}" alt=""/>${tr(save, 'chat.mute')}</button></p>`).join('')
+  const channel = view.channel === 'dm' ? 'dm' : 'guild'
+  const friends = view.friends ?? []
+  const friend = view.friend && friends.some((row) => row.code === view.friend) ? view.friend : (friends[0]?.code ?? '')
+  const options = friends.map((row) => `<option value="${esc(row.code)}"${row.code === friend ? ' selected' : ''}>${esc(row.label)}</option>`).join('')
   return `<div class="menu-screen chat-screen"><div class="menu-scroll"><div class="card panel">
     <h2>${tr(save, 'nav.chat')}</h2>
+    <div class="chat-channel">
+      <button type="button" data-act="chat-channel" data-id="guild" aria-pressed="${channel === 'guild' ? 'true' : 'false'}">${tr(save, 'chat.channel.guild')}</button>
+      <button type="button" data-act="chat-channel" data-id="dm" aria-pressed="${channel === 'dm' ? 'true' : 'false'}">${tr(save, 'chat.channel.friend')}</button>
+    </div>
+    ${channel === 'dm' ? (options ? `<label class="friend-search">${tr(save, 'chat.pickFriend')}<select id="chat-friend" data-act="chat-friend">${options}</select></label>` : `<p class="muted">${tr(save, 'chat.noFriend')}</p>`) : ''}
     ${lines || `<p class="muted">${tr(save, 'chat.empty')}</p>`}
-    ${view.note ? `<p class="muted">${esc(view.note)}</p>` : ''}
+    ${view.note ? `<p class="chat-error">${esc(view.note)}</p>` : ''}
   </div></div>
   <form class="chat-form" data-act="chat-form">
-    <input id="chat-text" maxlength="200" autocomplete="off"/>
-    <button type="submit" class="primary" data-act="chat-send"><img class="chat-icon" src="${art('chat/send@2x.png')}" alt=""/>${tr(save, 'chat.send')}</button>
+    <input id="chat-text" data-field="chat" maxlength="200" autocomplete="off" value="${esc(view.draft ?? '')}"/>
+    <button type="submit" class="primary"><img class="chat-icon" src="${art('chat/send@2x.png')}" alt=""/>${tr(save, 'chat.send')}</button>
   </form></div>`
 }
 

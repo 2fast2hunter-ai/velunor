@@ -19,6 +19,7 @@ import {
   tempoScale,
   type Speed
 } from './const'
+import { chatErrorKey } from './chat'
 import { t, type Lang } from './i18n'
 import { shotAt, shouldRecover } from './present'
 import { species, typeColor } from '../data'
@@ -438,6 +439,7 @@ export function bootAdventure(shell?: { storage: ShellStorage, native: boolean, 
   if (!root) return
   root.innerHTML = `<picture id="frame-bg"><source srcset="${art('backgrounds/bg_frame_desktop.webp')}" type="image/webp"/><img src="${art('backgrounds/bg_frame_desktop.jpg')}" alt=""/></picture><div id="fit"></div><div id="turn" hidden></div>`
   root.addEventListener('click', onClick)
+  root.addEventListener('submit', onSubmit)
   root.addEventListener('change', onChange)
   root.addEventListener('input', onInput)
   root.addEventListener('dragstart', onDragStart)
@@ -1639,7 +1641,11 @@ async function refreshChat(): Promise<void> {
     render()
     return
   }
-  const state = await callOnline('chat-send', { action: 'state' })
+  const state = await callOnline('chat-send', {
+    action: 'state',
+    kind: chatPanel.channel === 'dm' ? 'dm' : 'guild',
+    code: chatPanel.friend ?? ''
+  })
   if (!state.ok) {
     chatPanel = { ...chatPanel, status: 'offline' }
     render()
@@ -1651,13 +1657,41 @@ async function refreshChat(): Promise<void> {
     if (typeof row.label !== 'string' || typeof row.body !== 'string') return []
     return [{ label: row.label, body: row.body }]
   }) : []
+  const friends = Array.isArray(state.data.friends) ? state.data.friends.flatMap((friend) => {
+    if (!friend || typeof friend !== 'object') return []
+    const row = friend as { code?: unknown, label?: unknown }
+    if (typeof row.code !== 'string' || typeof row.label !== 'string') return []
+    return [{ code: row.code, label: row.label }]
+  }) : (chatPanel.friends ?? [])
   chatPanel = {
+    ...chatPanel,
     status: state.data.adult === true || state.data.adult === false ? 'ready' : 'age',
     adult: state.data.adult === true ? true : state.data.adult === false ? false : null,
     lines,
-    note: ''
+    friends,
+    channel: state.data.kind === 'dm' ? 'dm' : (chatPanel.channel === 'dm' ? 'dm' : 'guild')
   }
   render()
+}
+
+async function sendChat(): Promise<void> {
+  const input = document.getElementById('chat-text') as HTMLInputElement | null
+  const text = input?.value ?? chatPanel.draft ?? ''
+  const friend = (document.getElementById('chat-friend') as HTMLSelectElement | null)?.value || chatPanel.friend || ''
+  chatPanel = { ...chatPanel, draft: text, friend }
+  const result = await callOnline('chat-send', {
+    action: 'send',
+    kind: chatPanel.channel === 'dm' ? 'dm' : 'guild',
+    code: friend,
+    text
+  })
+  if (!result.ok) {
+    chatPanel = { ...chatPanel, draft: text, note: t(save?.settings.lang, chatErrorKey(result.error)) }
+    render()
+    return
+  }
+  chatPanel = { ...chatPanel, draft: '', note: '' }
+  await refreshChat()
 }
 
 async function refreshGuild(): Promise<void> {
@@ -2840,6 +2874,13 @@ async function deleteAccount(): Promise<void> {
   window.location.reload()
 }
 
+function onSubmit(event: Event): void {
+  const form = event.target
+  if (!(form instanceof HTMLFormElement) || form.dataset.act !== 'chat-form') return
+  event.preventDefault()
+  void sendChat()
+}
+
 function onClick(event: Event): void {
   if (ignoreClick) {
     ignoreClick = false
@@ -3070,13 +3111,10 @@ function onClick(event: Event): void {
     })
     return
   }
-  if (act === 'chat-send') {
-    const text = (document.getElementById('chat-text') as HTMLInputElement | null)?.value ?? ''
-    void callOnline('chat-send', { action: 'send', kind: 'guild', text }).then((result) => {
-      chatPanel = { ...chatPanel, note: result.ok ? '' : result.error }
-      if (result.ok) void refreshChat()
-      else render()
-    })
+  if (act === 'chat-channel') {
+    const next = node.getAttribute('data-id') === 'dm' ? 'dm' : 'guild'
+    chatPanel = { ...chatPanel, channel: next, note: '' }
+    void refreshChat()
     return
   }
   if (act === 'guild-found' || act === 'guild-join' || act === 'guild-leave' || act === 'guild-phrase' || act === 'guild-search' || act === 'guild-accept' || act === 'guild-decline' || act === 'guild-kick' || act === 'guild-role' || act === 'guild-mute') {
@@ -3570,12 +3608,22 @@ function onClick(event: Event): void {
 }
 
 function onChange(event: Event): void {
-  syncField(event.target)
+  const target = event.target
+  if (target instanceof HTMLSelectElement && target.dataset.act === 'chat-friend') {
+    chatPanel = { ...chatPanel, friend: target.value, channel: 'dm' }
+    void refreshChat()
+    return
+  }
+  syncField(target)
 }
 
 function onInput(event: Event): void {
   const target = event.target
   if (!(target instanceof HTMLInputElement)) return
+  if (target.dataset.field === 'chat') {
+    chatPanel = { ...chatPanel, draft: target.value }
+    return
+  }
   if (target.dataset.field === 'guild-name' || target.dataset.field === 'guild-tag' || target.dataset.field === 'guild-query' || target.dataset.field === 'guild-code') {
     if (target.dataset.field === 'guild-name') guildPanel = { ...guildPanel, draftName: target.value }
     if (target.dataset.field === 'guild-tag') guildPanel = { ...guildPanel, draftTag: target.value }

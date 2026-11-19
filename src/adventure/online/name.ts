@@ -52,6 +52,36 @@ export function bannedWord(raw: string): boolean {
   return forms.some((form) => BLOCKED.some((word) => form.includes(word)))
 }
 
+function tokenBlocked(form: string): boolean {
+  if (!form) return false
+  const forms = [form, collapseRepeats(form, 1)]
+  if (forms.some((item) => ALLOWED.has(item))) return false
+  return forms.some((item) => BLOCKED.some((word) => item.includes(word)) || ['fck', 'porn', 'nsfw'].some((word) => item.includes(word)))
+}
+
+/**
+ * Chat checks each word, plus a run of short fragments (`f u c k`, `fu ck`).
+ * Two ordinary words are not glued together, so "Barsch angeln" is not "arsch".
+ * Leetspeak is folded first, so "k1ll yourself" matches the phrase.
+ */
+export function bannedChat(raw: string): boolean {
+  const tokens = raw.split(/\s+/).map((token) => collapseRepeats(nameLetters(token), 2)).filter(Boolean)
+  if (tokens.some((token) => tokenBlocked(token))) return true
+  const pieces: string[] = []
+  let buf = ''
+  for (const token of tokens) {
+    if (token.length <= 2) buf += token
+    else {
+      if (buf) pieces.push(buf)
+      buf = ''
+    }
+  }
+  if (buf) pieces.push(buf)
+  if (pieces.some((piece) => tokenBlocked(piece))) return true
+  const phrase = tokens.join(' ')
+  return phrase.includes('kill yourself') || tokens.join('').includes('killyourself')
+}
+
 export function nameIssue(raw: string, max = NAME_MAX): 'short' | 'long' | 'chars' | 'word' | null {
   const name = raw.trim()
   if (name.length < NAME_MIN) return 'short'
