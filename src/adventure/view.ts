@@ -5,7 +5,7 @@ import {
   FEET_Y,
   FOE_X,
   FOE_Y,
-  SCENE_FILES,
+  sceneFile,
   SEAL_ADD,
   SEAL_FALLBACK,
   STARTERS,
@@ -435,7 +435,8 @@ function path(save: SaveV2, here: number): string {
 
 function battle(save: SaveV2, now: number, fighting = false, shadow = false): string {
   const chapter = chapterById(save.region, save.chapter)
-  const scene = SCENE_FILES[chapter.scene]
+  const scene = sceneFile(chapter.scene, chapter.tint)
+  const wide = scene.webp.replace('_p.webp', '.webp')
   const active = save.active && save.mons[save.active] ? save.active : save.team[0]
   const mon = active ? save.mons[active] : null
   const hp = mon ? realHp(mon) : { hp: 1, max: 1 }
@@ -444,8 +445,9 @@ function battle(save: SaveV2, now: number, fighting = false, shadow = false): st
   return `<div class="battle" id="battle">
     <div class="battle-world" id="battle-world">
       <picture>
+        <source media="(orientation: landscape) and (max-height: 520px)" srcset="${art(wide)}" type="image/webp"/>
         <source srcset="${art(scene.webp)}" type="image/webp"/>
-        <img class="plate ${chapter.tint ? `tint-${chapter.tint}` : ''}" src="${art(scene.jpg)}" alt=""/>
+        <img class="plate" src="${art(scene.jpg)}" alt=""/>
       </picture>
       <div class="parallax far" id="parallax-far"></div>
       <div class="parallax mid" id="parallax-mid"></div>
@@ -1492,14 +1494,18 @@ function leagueBadge(id: string, on: boolean): string {
   return `<svg class="league-badge ${on ? 'on' : ''}" viewBox="0 0 64 64" aria-hidden="true"><circle cx="32" cy="28" r="16" fill="${on ? color : 'none'}" stroke="${color}" stroke-width="3"/><path d="M22 42h20l-4 14h-12z" fill="${color}"/></svg>`
 }
 
+function screenHead(key: 'arena' | 'tower'): string {
+  return `<picture class="screen-head"><source type="image/webp" srcset="${art(`${key}/screen_540.webp`)} 540w, ${art(`${key}/screen.webp`)} 1080w" sizes="(max-width: 600px) 100vw, 600px"/><img src="${art(`${key}/screen.jpg`)}" alt="" width="1080" height="480" loading="lazy"/></picture>`
+}
+
 function arenaScreen(save: SaveV2, panel: ArenaPanel | undefined): string {
   const view = panel ?? { status: 'offline' as const, note: '', rating: 1000, league: 'Kiesel', attacks: 0, slots: [], suggestions: [], logs: [], frames: [], replay: null }
   const badges = ['kiesel', 'bronze', 'silber', 'gold', 'kristall', 'meister'].map((id) => `<div class="league-item">${leagueBadge(id, view.frames.includes(id) || view.league.toLowerCase().includes(id === 'meister' ? 'meister' : id))}<span>${esc(tr(save, `arena.league.${id}`))}</span></div>`).join('')
   if (view.status === 'loading') {
-    return `<div class="menu-screen"><div class="menu-scroll"><div class="card panel"><h2>${tr(save, 'nav.arena')}</h2><p class="muted">${tr(save, 'arena.loading')}</p></div></div></div>`
+    return `<div class="menu-screen"><div class="menu-scroll"><div class="card panel">${screenHead('arena')}<h2>${tr(save, 'nav.arena')}</h2><p class="muted">${tr(save, 'arena.loading')}</p></div></div></div>`
   }
   if (view.status !== 'ready' && view.status !== 'locked') {
-    return `<div class="menu-screen"><div class="menu-scroll"><div class="card panel"><h2>${tr(save, 'nav.arena')}</h2><p class="muted">${tr(save, 'arena.offline')}</p></div></div></div>`
+    return `<div class="menu-screen"><div class="menu-scroll"><div class="card panel">${screenHead('arena')}<h2>${tr(save, 'nav.arena')}</h2><p class="muted">${tr(save, 'arena.offline')}</p></div></div></div>`
   }
   const slots = Array.from({ length: 6 }, (_, index) => {
     const uid = view.slots[index]
@@ -1521,6 +1527,7 @@ function arenaScreen(save: SaveV2, panel: ArenaPanel | undefined): string {
   </article>` : ''
   const logs = view.logs.map((line) => `<p>${esc(line.label)} · ${tr(save, line.win ? 'arena.held' : 'arena.fell')} · ${line.delta}</p>`).join('')
   return `<div class="menu-screen"><div class="menu-scroll"><div class="card panel">
+    ${screenHead('arena')}
     <h2>${tr(save, 'nav.arena')}</h2>
     <p>${esc(view.league)} · ${view.rating} · ${tr(save, 'arena.attacks', { n: view.attacks })}</p>
     ${view.status === 'locked' ? `<p class="muted">${tr(save, 'arena.locked')}</p>` : ''}
@@ -1587,6 +1594,7 @@ function towerScreen(save: SaveV2, now: number): string {
     </article>`
   }).join('')
   return `<div class="menu-screen"><div class="menu-scroll"><div class="card panel tower-screen" data-art="tower/screen">
+    ${screenHead('tower')}
     <h2>${tr(save, 'nav.tower')}</h2>
     <p class="muted">${tr(save, unlocked ? 'research.note' : 'research.locked')}</p>
     ${job ? '' : `<p class="muted">${tr(save, 'research.one')}</p>`}
