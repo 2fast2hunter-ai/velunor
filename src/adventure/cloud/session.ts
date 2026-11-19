@@ -145,6 +145,9 @@ export function createCloud(api: CloudApi, ports: CloudPorts): CloudController {
     userId = auth.userId
     email = auth.email ?? ''
     if (ports.pendingReset()) {
+      // The account stays. deleteSave is the existing row delete, not a new function.
+      // Stop here: a later read would download the old cloud save, and loadSave can
+      // still hold the game that was in memory when the player confirmed the reset.
       const deleted = await api.deleteSave(userId)
       if (deleted.error) {
         status = 'online'
@@ -153,6 +156,11 @@ export function createCloud(api: CloudApi, ports: CloudPorts): CloudController {
         return
       }
       ports.clearReset()
+      status = 'online'
+      if (notice === 'write-fail') setNotice('')
+      emit()
+      await flush(reason === 'pause')
+      return
     }
     const local = ports.loadSave()
     const replace = ports.pendingReplace()

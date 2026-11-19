@@ -395,6 +395,20 @@ describe('cloud session', () => {
     await box.cloud.start()
     expect(box.calls.deleted).toBe(1)
     expect(box.calls.writes).toBe(0)
+    expect(box.calls.reads).toBe(0)
+    expect(box.stored()).toBeNull()
+
+    const memory = harness()
+    const old = game('Alt')
+    old.gold = 3560
+    memory.setRemote(old, 'device-a')
+    memory.setCurrent(old)
+    memory.setReset(true)
+    await memory.cloud.start()
+    expect(memory.calls.deleted).toBe(1)
+    expect(memory.calls.writes).toBe(0)
+    expect(memory.calls.reads).toBe(0)
+    expect(memory.stored()).toBeNull()
 
     const replaced = harness()
     const remote = game('Alt')
@@ -420,6 +434,14 @@ describe('account dialogs', () => {
     const yes = gameHtml(save, 'options', 1_000, pc, dex, null, false, false, null, save.step, wheel, { cloud: { ...cloud, consent: 'yes' } })
     expect(yes).toContain('class="primary" data-act="consent" data-consent="yes"')
     expect(yes).toContain('class="" data-act="consent" data-consent="no"')
+    const reset = gameHtml(save, 'options', 1_000, pc, dex, null, false, false, { kind: 'confirm-reset' }, save.step, wheel)
+    expect(reset).toContain('class="danger" data-act="reset-yes"')
+    expect(reset).toContain('class="ghost" data-act="close"')
+    const wipe = cloudLayerHtml({ ...cloud, consent: 'yes', deleteStep: 2 }, 'de')
+    expect(wipe).toContain('class="danger" data-act="delete-yes"')
+    expect(wipe).toContain('data-act="delete-no"')
+    expect(wipe).not.toContain('class="primary" data-act="delete-yes"')
+    expect(wipe).not.toContain('class="danger" data-act="delete-no"')
   })
 
   it('asks for consent with Ja and Nein and no preselected button', () => {

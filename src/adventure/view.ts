@@ -1386,10 +1386,10 @@ function previewLine(lang: Lang, preview: NonNullable<CloudView['conflict']>['lo
   }))}</p><p class="muted">${esc(t(lang, 'cloud.place', { region: preview.region, chapter: preview.chapter, step: preview.step }))}</p>`
 }
 
-function sheetButtons(lang: Lang, yesAct: string, yesKey: string, noAct: string): string {
+function sheetButtons(lang: Lang, yesAct: string, yesKey: string, noAct: string, danger = false): string {
   return `<div class="choice-row">
     <button type="button" data-act="${noAct}">${esc(t(lang, 'cloud.cancel'))}</button>
-    <button type="button" class="primary" data-act="${yesAct}">${esc(t(lang, yesKey))}</button>
+    <button type="button" class="${danger ? 'danger' : 'primary'}" data-act="${yesAct}">${esc(t(lang, yesKey))}</button>
   </div>`
 }
 
@@ -1400,7 +1400,7 @@ export function cloudLayerHtml(cloud: CloudView, lang: Lang): string {
     return `<div id="cloud-layer" class="overlay overlay-sheet"><div class="sheet" role="dialog" aria-labelledby="delete-title">${grab()}
       <h2 id="delete-title">${esc(t(lang, finalStep ? 'cloud.deleteFinal' : 'cloud.deleteTitle'))}</h2>
       <p>${esc(t(lang, finalStep ? 'cloud.deleteFinalBody' : 'cloud.deleteBody'))}</p>
-      ${sheetButtons(lang, finalStep ? 'delete-yes' : 'delete-next', finalStep ? 'cloud.deleteYes' : 'cloud.deleteNext', 'delete-no')}
+      ${sheetButtons(lang, finalStep ? 'delete-yes' : 'delete-next', finalStep ? 'cloud.deleteYes' : 'cloud.deleteNext', 'delete-no', finalStep)}
     </div></div>`
   }
   if (cloud.reportOpen) {
@@ -2067,7 +2067,7 @@ function overlayHtml(save: SaveV2, overlay: Overlay): string {
     return `<div class="sheet" data-sheet="swipe">${grab()}<h2>${tr(save, 'shell.quitTitle')}</h2><p>${tr(save, 'shell.quitBody')}</p><button class="primary" data-act="quit-yes">${tr(save, 'shell.quitYes')}</button> <button class="ghost" data-act="close">${tr(save, 'shell.quitNo')}</button></div>`
   }
   if (overlay.kind === 'confirm-reset') {
-    return `<div class="sheet" data-sheet="swipe">${grab()}<h2>${tr(save, 'reset.title')}</h2><p>${tr(save, 'reset.body')}</p><button class="primary" data-act="reset-yes">${tr(save, 'reset.yes')}</button> <button class="ghost" data-act="close">${tr(save, 'reset.no')}</button></div>`
+    return `<div class="sheet" data-sheet="swipe">${grab()}<h2>${tr(save, 'reset.title')}</h2><p>${tr(save, 'reset.body')}</p><button class="danger" data-act="reset-yes">${tr(save, 'reset.yes')}</button> <button class="ghost" data-act="close">${tr(save, 'reset.no')}</button></div>`
   }
   if (overlay.kind === 'awaken') {
     const mon = save.mons[overlay.uid]

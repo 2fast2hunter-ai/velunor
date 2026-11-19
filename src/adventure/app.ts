@@ -62,6 +62,7 @@ import { nameIssue } from './online/name'
 import { createCloud, type CloudController } from './cloud/session'
 import type { CloudView } from './cloud/types'
 import { CONSENT_KEY, DEVICE_KEY, QUEUE_KEY, REPLACE_SERVER_KEY, RESET_SERVER_KEY } from './cloud/config'
+import { applyLocalReset, blockSaves, RESET_FLAG, savesBlocked } from './reset'
 import { isEventName, type AnalyticsEvent, type Consent } from './cloud/analytics'
 import { eventsForEncounter, eventsForLoot, starEvent, teamProfile, unlockEvent } from './cloud/playEvents'
 import { equipFrame, equipTitle, syncAchievements } from './achievements'
@@ -130,7 +131,6 @@ import {
 
 installKit()
 
-const RESET_FLAG = 'velunor_v2_reset'
 const SHELL_SAVE_MS = 30_000
 
 function browserStore(): ShellStorage {
@@ -223,6 +223,18 @@ function cloudInputBusy(): boolean {
 }
 let lastInput = Date.now()
 let timer = 0
+let autosaveTimer = 0
+let watchdogTimer = 0
+let cloudSyncTimer = 0
+let cloudFlushTimer = 0
+
+function blockSaveWrites(): void {
+  window.clearInterval(autosaveTimer)
+  window.clearInterval(watchdogTimer)
+  window.clearInterval(cloudSyncTimer)
+  window.clearInterval(cloudFlushTimer)
+  window.clearTimeout(timer)
+}
 let animating = false
 let lastTick = 0
 let holdCounter = false
@@ -381,7 +393,7 @@ function attachCloud(): void {
       localStorage.setItem(QUEUE_KEY, JSON.stringify(events))
     },
     loadSave() {
-      if (!saveReady || catchingUp) return null
+      if (savesBlocked() || !saveReady || catchingUp) return null
       const live = save?.started ? save : keptSave?.started ? keptSave : null
       if (live) settleResearch(live, Date.now())
       return live
@@ -427,8 +439,8 @@ function attachCloud(): void {
   const minutes = existing ? Math.max(0, Math.round((Date.now() - existing.lastSeenAt) / 60000)) : 0
   cloud.noteSession(minutes)
   watchAuth(() => { void cloud?.sync('start') })
-  window.setInterval(() => { void cloud?.sync('interval') }, 5 * 60 * 1000)
-  window.setInterval(() => { void cloud?.flush() }, 60 * 1000)
+  cloudSyncTimer = window.setInterval(() => { void cloud?.sync('interval') }, 5 * 60 * 1000)
+  cloudFlushTimer = window.setInterval(() => { void cloud?.flush() }, 60 * 1000)
 }
 
 function releaseSync(): void {
@@ -468,6 +480,7 @@ export function bootAdventure(shell?: { storage: ShellStorage, native: boolean, 
       for (const key of clearVelunorKeys(Object.keys(localStorage))) localStorage.removeItem(key)
       return
     }
+    if (savesBlocked()) return
     if (!save) {
       void cloud?.pause()
       return
@@ -491,15 +504,16 @@ export function bootAdventure(shell?: { storage: ShellStorage, native: boolean, 
     screenLocked = false
     onPresence()
   })
-  window.setInterval(watchdog, 1000)
-  window.setInterval(() => {
-    if (!save?.started || overlay?.kind === 'offline') return
+  watchdogTimer = window.setInterval(watchdog, 1000)
+  autosaveTimer = window.setInterval(() => {
+    if (savesBlocked() || !save?.started || overlay?.kind === 'offline') return
     save.lastSeenAt = stampWhilePaused(save.lastSeenAt, Date.now(), away)
     try { writeSave(gameStore, save) } catch { /* keep playing */ }
   }, nativeShell ? SHELL_SAVE_MS : AUTOSAVE_MS)
 
   shell?.listen?.({
     onPause() {
+      if (savesBlocked()) return
       if (save) {
         save.lastSeenAt = Date.now()
         writeSave(gameStore, save)
@@ -1406,6 +1420,7 @@ function currentPresence(): Presence {
 }
 
 function onPresence(): void {
+  if (savesBlocked()) return
   if (document.hidden && !wipingAccount) void cloud?.pause()
   if (!save?.started) return
   const pause = batteryPause(save.settings.battery, currentPresence())
@@ -3629,10 +3644,13 @@ function onClick(event: Event): void {
     return
   }
   if (act === 'reset-yes') {
-    localStorage.removeItem(SAVE_KEY_V2)
-    localStorage.setItem(RESET_FLAG, '1')
-    localStorage.setItem(RESET_SERVER_KEY, '1')
-    localStorage.removeItem(REPLACE_SERVER_KEY)
+    blockSaves()
+    blockSaveWrites()
+    save = null
+    keptSave = null
+    applyLocalReset(localStorage)
+    applyLocalReset(gameStore)
+    void gameStore.flush()
     window.location.reload()
   }
 }
