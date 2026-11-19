@@ -7,7 +7,7 @@ export { SYNERGY_CAP, synergyKnown } from './synergyIds'
 /**
  * Team type synergies. At most two are active.
  * A missing choice means the two strongest that the six-monster team actually has.
- * Sturmlied is +4% SPD. The old banner-seal bonus does not fit the lootbox rules.
+ * Sturmlied is +3% dodge. Polarstrom is HP and DEF. Speed no longer decides a mirror by itself.
  * Crit is a fraction of the base crit chance (0.1). 0.3 is +3 percentage points.
  * `power` is the measured Arena-L100 mirror wins out of 200, not a formula.
  */
@@ -52,24 +52,24 @@ export interface SynergyMods {
   cooldown: number
 }
 
-export const PURITY_THREE = 0.03
-export const PURITY_FOUR = 0.05
+export const PURITY_THREE = 0.02
+export const PURITY_FOUR = 0.0165
 /** Both active synergies together stop at +6% on one of ATK, HP, DEF or speed. */
 export const SYNERGY_STAT_CAP = 0.06
 
 const ROWS: readonly Omit<SynergyDef, 'order'>[] = [
-  { id: 'gewitter', name: 'Gewitter', types: ['water', 'lightning'], bonus: { crit: 0.3, atk: 0.02 }, power: 123 },
-  { id: 'flaechenbrand', name: 'Flächenbrand', types: ['fire', 'wind'], bonus: { atk: 0.04 }, power: 130 },
-  { id: 'wurzelgrund', name: 'Wurzelgrund', types: ['plant', 'earth'], bonus: { hp: 0.05 }, power: 132 },
-  { id: 'polarstrom', name: 'Polarstrom', types: ['ice', 'water'], bonus: { foeSpd: 0.96 }, power: 176 },
-  { id: 'bollwerk', name: 'Bollwerk', types: ['stone', 'metal'], bonus: { def: 0.06 }, power: 115 },
-  { id: 'prisma', name: 'Prisma', types: ['light', 'crystal'], bonus: { atk: 0.03, crit: 0.1 }, power: 128 },
-  { id: 'zwielicht', name: 'Zwielicht', types: ['shadow', 'ghost'], bonus: { dodge: 0.04 }, power: 133 },
-  { id: 'rudelkraft', name: 'Rudelkraft', types: ['fighting', 'beast'], bonus: { wardenAtk: 0.06 }, power: 135 },
-  { id: 'schwarmgift', name: 'Schwarmgift', types: ['poison', 'insect'], bonus: { status: 1.15 }, power: 111 },
-  { id: 'resonanz', name: 'Resonanz', types: ['psychic', 'sound'], bonus: { cooldown: 0.92 }, power: 111 },
-  { id: 'glutschwinge', name: 'Glutschwinge', types: ['dragon', 'fire'], bonus: { atk: 0.02, hp: 0.03 }, power: 135 },
-  { id: 'sturmlied', name: 'Sturmlied', types: ['wind', 'sound'], bonus: { spd: 0.04 }, power: 176 }
+  { id: 'gewitter', name: 'Gewitter', types: ['water', 'lightning'], bonus: { crit: 0.194, atk: 0.013 }, power: 124 },
+  { id: 'flaechenbrand', name: 'Flächenbrand', types: ['fire', 'wind'], bonus: { atk: 0.0139 }, power: 129 },
+  { id: 'wurzelgrund', name: 'Wurzelgrund', types: ['plant', 'earth'], bonus: { hp: 0.022 }, power: 125 },
+  { id: 'polarstrom', name: 'Polarstrom', types: ['ice', 'water'], bonus: { hp: 0.019, def: 0.0125 }, power: 125 },
+  { id: 'bollwerk', name: 'Bollwerk', types: ['stone', 'metal'], bonus: { def: 0.06 }, power: 123 },
+  { id: 'prisma', name: 'Prisma', types: ['light', 'crystal'], bonus: { atk: 0.0105, crit: 0.0354 }, power: 124 },
+  { id: 'zwielicht', name: 'Zwielicht', types: ['shadow', 'ghost'], bonus: { dodge: 0.035 }, power: 124 },
+  { id: 'rudelkraft', name: 'Rudelkraft', types: ['fighting', 'beast'], bonus: { wardenAtk: 0.0168 }, power: 129 },
+  { id: 'schwarmgift', name: 'Schwarmgift', types: ['poison', 'insect'], bonus: { status: 1.15 }, power: 119 },
+  { id: 'resonanz', name: 'Resonanz', types: ['psychic', 'sound'], bonus: { cooldown: 0.92 }, power: 119 },
+  { id: 'glutschwinge', name: 'Glutschwinge', types: ['dragon', 'fire'], bonus: { atk: 0.011, hp: 0.011 }, power: 126 },
+  { id: 'sturmlied', name: 'Sturmlied', types: ['wind', 'sound'], bonus: { dodge: 0.03 }, power: 124 }
 ]
 
 export const SYNERGIES: readonly SynergyDef[] = ROWS.map((row, order) => ({
@@ -99,7 +99,7 @@ export function activeSynergies(types: readonly TypeId[], picked?: readonly stri
   return out
 }
 
-/** 3 of one type: +3% of that type's stats. 4 or more: +5%. */
+/** 3 of one type: +2% HP and DEF. 4 or more: +3%. Not attack or speed. */
 export function purityOf(types: readonly TypeId[], type: TypeId): number {
   let count = 0
   for (const row of types) if (row === type) count += 1
@@ -147,10 +147,10 @@ export function scaleSide<T extends { maxHp: number, hp: number, atk: number, de
   mods: SynergyMods,
   purity = 0
 ): T {
-  const hp = (1 + mods.hp) * (1 + purity)
-  const atk = (1 + mods.atk + mods.wardenAtk) * (1 + purity)
-  const def = (1 + mods.def) * (1 + purity)
-  const spd = (1 + mods.spd) * (1 + purity)
+  const hp = 1 + Math.min(SYNERGY_STAT_CAP, mods.hp + purity)
+  const atk = 1 + Math.min(SYNERGY_STAT_CAP, mods.atk + mods.wardenAtk)
+  const def = 1 + Math.min(SYNERGY_STAT_CAP, mods.def + purity)
+  const spd = 1 + Math.min(SYNERGY_STAT_CAP, mods.spd)
   if (hp === 1 && atk === 1 && def === 1 && spd === 1) return side
   const maxHp = Math.max(1, Math.round(side.maxHp * hp))
   const fraction = side.maxHp > 0 ? side.hp / side.maxHp : 1

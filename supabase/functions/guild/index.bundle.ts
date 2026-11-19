@@ -10234,6 +10234,12 @@ function withSpd(side, mul) {
   if (mul == null || mul === 1) return side;
   return { ...side, spd: Math.max(1, Math.round(side.spd * mul)) };
 }
+function allyStrikesFirst(allySpd, foeSpd, roll) {
+  const fast = Math.max(allySpd, foeSpd);
+  const slow = Math.min(allySpd, foeSpd);
+  if (!(fast > 0) || (fast - slow) / fast < 0.05) return roll < 0.5;
+  return allySpd > foeSpd;
+}
 function fight1v1(allyIn, foeIn, rng, trace, weather = null, mods = null) {
   const allySide = withSpd(allyIn, mods?.allySpd);
   const foeSide = withSpd(foeIn, mods?.foeSpd);
@@ -10522,7 +10528,12 @@ function fight1v1(allyIn, foeIn, rng, trace, weather = null, mods = null) {
     if (unit.wallFresh) unit.wallFresh = false;
     else if (unit.wallLeft > 0) unit.wallLeft -= 1;
   };
-  const allyFirst = ally.side.spd >= foe.side.spd;
+  const close = (() => {
+    const fast = Math.max(ally.side.spd, foe.side.spd);
+    const slow = Math.min(ally.side.spd, foe.side.spd);
+    return !(fast > 0) || (fast - slow) / fast < 0.05;
+  })();
+  const allyFirst = allyStrikesFirst(ally.side.spd, foe.side.spd, close ? rng() : 1);
   let actions = 0;
   let timeout = false;
   const actionCap = Math.max(1, Math.min(120, mods?.actionCap ?? ACTION_LIMIT));
@@ -10577,22 +10588,22 @@ var SYNERGY_CAP = 2;
 var KNOWN = new Set(SYNERGY_IDS);
 
 // src/adventure/synergy.ts
-var PURITY_THREE = 0.03;
-var PURITY_FOUR = 0.05;
+var PURITY_THREE = 0.02;
+var PURITY_FOUR = 0.0165;
 var SYNERGY_STAT_CAP = 0.06;
 var ROWS = [
-  { id: "gewitter", name: "Gewitter", types: ["water", "lightning"], bonus: { crit: 0.3, atk: 0.02 }, power: 123 },
-  { id: "flaechenbrand", name: "Fl\xE4chenbrand", types: ["fire", "wind"], bonus: { atk: 0.04 }, power: 130 },
-  { id: "wurzelgrund", name: "Wurzelgrund", types: ["plant", "earth"], bonus: { hp: 0.05 }, power: 132 },
-  { id: "polarstrom", name: "Polarstrom", types: ["ice", "water"], bonus: { foeSpd: 0.96 }, power: 176 },
-  { id: "bollwerk", name: "Bollwerk", types: ["stone", "metal"], bonus: { def: 0.06 }, power: 115 },
-  { id: "prisma", name: "Prisma", types: ["light", "crystal"], bonus: { atk: 0.03, crit: 0.1 }, power: 128 },
-  { id: "zwielicht", name: "Zwielicht", types: ["shadow", "ghost"], bonus: { dodge: 0.04 }, power: 133 },
-  { id: "rudelkraft", name: "Rudelkraft", types: ["fighting", "beast"], bonus: { wardenAtk: 0.06 }, power: 135 },
-  { id: "schwarmgift", name: "Schwarmgift", types: ["poison", "insect"], bonus: { status: 1.15 }, power: 111 },
-  { id: "resonanz", name: "Resonanz", types: ["psychic", "sound"], bonus: { cooldown: 0.92 }, power: 111 },
-  { id: "glutschwinge", name: "Glutschwinge", types: ["dragon", "fire"], bonus: { atk: 0.02, hp: 0.03 }, power: 135 },
-  { id: "sturmlied", name: "Sturmlied", types: ["wind", "sound"], bonus: { spd: 0.04 }, power: 176 }
+  { id: "gewitter", name: "Gewitter", types: ["water", "lightning"], bonus: { crit: 0.194, atk: 0.013 }, power: 124 },
+  { id: "flaechenbrand", name: "Fl\xE4chenbrand", types: ["fire", "wind"], bonus: { atk: 0.0139 }, power: 129 },
+  { id: "wurzelgrund", name: "Wurzelgrund", types: ["plant", "earth"], bonus: { hp: 0.022 }, power: 125 },
+  { id: "polarstrom", name: "Polarstrom", types: ["ice", "water"], bonus: { hp: 0.019, def: 0.0125 }, power: 125 },
+  { id: "bollwerk", name: "Bollwerk", types: ["stone", "metal"], bonus: { def: 0.06 }, power: 123 },
+  { id: "prisma", name: "Prisma", types: ["light", "crystal"], bonus: { atk: 0.0105, crit: 0.0354 }, power: 124 },
+  { id: "zwielicht", name: "Zwielicht", types: ["shadow", "ghost"], bonus: { dodge: 0.035 }, power: 124 },
+  { id: "rudelkraft", name: "Rudelkraft", types: ["fighting", "beast"], bonus: { wardenAtk: 0.0168 }, power: 129 },
+  { id: "schwarmgift", name: "Schwarmgift", types: ["poison", "insect"], bonus: { status: 1.15 }, power: 119 },
+  { id: "resonanz", name: "Resonanz", types: ["psychic", "sound"], bonus: { cooldown: 0.92 }, power: 119 },
+  { id: "glutschwinge", name: "Glutschwinge", types: ["dragon", "fire"], bonus: { atk: 0.011, hp: 0.011 }, power: 126 },
+  { id: "sturmlied", name: "Sturmlied", types: ["wind", "sound"], bonus: { dodge: 0.03 }, power: 124 }
 ];
 var SYNERGIES = ROWS.map((row, order) => ({
   ...row,
@@ -10658,10 +10669,10 @@ function synergyMods(active, warden) {
   return mods;
 }
 function scaleSide(side, mods, purity = 0) {
-  const hp = (1 + mods.hp) * (1 + purity);
-  const atk = (1 + mods.atk + mods.wardenAtk) * (1 + purity);
-  const def = (1 + mods.def) * (1 + purity);
-  const spd = (1 + mods.spd) * (1 + purity);
+  const hp = 1 + Math.min(SYNERGY_STAT_CAP, mods.hp + purity);
+  const atk = 1 + Math.min(SYNERGY_STAT_CAP, mods.atk + mods.wardenAtk);
+  const def = 1 + Math.min(SYNERGY_STAT_CAP, mods.def + purity);
+  const spd = 1 + Math.min(SYNERGY_STAT_CAP, mods.spd);
   if (hp === 1 && atk === 1 && def === 1 && spd === 1) return side;
   const maxHp = Math.max(1, Math.round(side.maxHp * hp));
   const fraction = side.maxHp > 0 ? side.hp / side.maxHp : 1;

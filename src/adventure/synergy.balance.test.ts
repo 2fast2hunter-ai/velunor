@@ -68,18 +68,18 @@ function mirrorWins(make: () => FightSide, mods: SynergyMods, purity = 0): numbe
 
 /** Arena level 100, identical monster, knockout wins out of 200. Power uses this column. */
 const ARENA_WINS: Record<string, number> = {
-  gewitter: 123,
-  flaechenbrand: 130,
-  wurzelgrund: 132,
-  polarstrom: 176,
-  bollwerk: 115,
-  prisma: 128,
-  zwielicht: 133,
-  rudelkraft: 135,
-  schwarmgift: 111,
-  resonanz: 111,
-  glutschwinge: 135,
-  sturmlied: 176
+  gewitter: 124,
+  flaechenbrand: 129,
+  wurzelgrund: 125,
+  polarstrom: 125,
+  bollwerk: 123,
+  prisma: 124,
+  zwielicht: 124,
+  rudelkraft: 129,
+  schwarmgift: 119,
+  resonanz: 119,
+  glutschwinge: 126,
+  sturmlied: 124
 }
 
 describe('synergy mirror balance', () => {
@@ -88,17 +88,17 @@ describe('synergy mirror balance', () => {
       const mods = synergyMods([row], row.id === 'rudelkraft')
       const arena = mirrorWins(arenaSide, mods)
       expect(arena, row.id).toBe(ARENA_WINS[row.id])
-      expect(arena, row.id).toBeGreaterThanOrEqual(104)
+      expect(arena, row.id).toBeGreaterThanOrEqual(110)
+      expect(arena, row.id).toBeLessThanOrEqual(130)
       expect(row.power).toBe(ARENA_WINS[row.id])
     }
     const types = ['fire', 'fire', 'fire', 'fire', 'wind', 'dragon'] as const
     const pair = activeSynergies(types)
-    expect(pair.map((row) => row.id).sort()).toEqual(['flaechenbrand', 'glutschwinge'])
     const stacked = synergyMods(pair, false)
-    expect(stacked.atk).toBeCloseTo(0.06)
-    expect(mirrorWins(arenaSide, stacked)).toBe(147)
-    expect(mirrorWins(arenaSide, stacked, purityOf(types, 'fire'))).toBe(200)
-    expect(PURITY_FOUR).toBe(0.05)
+    expect(pair.map((row) => row.id).sort()).toEqual(['flaechenbrand', 'glutschwinge'])
+    expect(mirrorWins(arenaSide, stacked)).toBe(134)
+    expect(mirrorWins(arenaSide, stacked, purityOf(types, 'fire'))).toBe(142)
+    expect(PURITY_FOUR).toBe(0.0165)
     const boosted = coopDamage([
       fighterFromSpecies('m01', false, 0, 0, 'c'),
       fighterFromSpecies('m41', false, 0, 0, 'd')

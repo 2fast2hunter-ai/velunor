@@ -9894,18 +9894,18 @@ var KNOWN = new Set(SYNERGY_IDS);
 
 // src/adventure/synergy.ts
 var ROWS = [
-  { id: "gewitter", name: "Gewitter", types: ["water", "lightning"], bonus: { crit: 0.3, atk: 0.02 }, power: 123 },
-  { id: "flaechenbrand", name: "Fl\xE4chenbrand", types: ["fire", "wind"], bonus: { atk: 0.04 }, power: 130 },
-  { id: "wurzelgrund", name: "Wurzelgrund", types: ["plant", "earth"], bonus: { hp: 0.05 }, power: 132 },
-  { id: "polarstrom", name: "Polarstrom", types: ["ice", "water"], bonus: { foeSpd: 0.96 }, power: 176 },
-  { id: "bollwerk", name: "Bollwerk", types: ["stone", "metal"], bonus: { def: 0.06 }, power: 115 },
-  { id: "prisma", name: "Prisma", types: ["light", "crystal"], bonus: { atk: 0.03, crit: 0.1 }, power: 128 },
-  { id: "zwielicht", name: "Zwielicht", types: ["shadow", "ghost"], bonus: { dodge: 0.04 }, power: 133 },
-  { id: "rudelkraft", name: "Rudelkraft", types: ["fighting", "beast"], bonus: { wardenAtk: 0.06 }, power: 135 },
-  { id: "schwarmgift", name: "Schwarmgift", types: ["poison", "insect"], bonus: { status: 1.15 }, power: 111 },
-  { id: "resonanz", name: "Resonanz", types: ["psychic", "sound"], bonus: { cooldown: 0.92 }, power: 111 },
-  { id: "glutschwinge", name: "Glutschwinge", types: ["dragon", "fire"], bonus: { atk: 0.02, hp: 0.03 }, power: 135 },
-  { id: "sturmlied", name: "Sturmlied", types: ["wind", "sound"], bonus: { spd: 0.04 }, power: 176 }
+  { id: "gewitter", name: "Gewitter", types: ["water", "lightning"], bonus: { crit: 0.194, atk: 0.013 }, power: 124 },
+  { id: "flaechenbrand", name: "Fl\xE4chenbrand", types: ["fire", "wind"], bonus: { atk: 0.0139 }, power: 129 },
+  { id: "wurzelgrund", name: "Wurzelgrund", types: ["plant", "earth"], bonus: { hp: 0.022 }, power: 125 },
+  { id: "polarstrom", name: "Polarstrom", types: ["ice", "water"], bonus: { hp: 0.019, def: 0.0125 }, power: 125 },
+  { id: "bollwerk", name: "Bollwerk", types: ["stone", "metal"], bonus: { def: 0.06 }, power: 123 },
+  { id: "prisma", name: "Prisma", types: ["light", "crystal"], bonus: { atk: 0.0105, crit: 0.0354 }, power: 124 },
+  { id: "zwielicht", name: "Zwielicht", types: ["shadow", "ghost"], bonus: { dodge: 0.035 }, power: 124 },
+  { id: "rudelkraft", name: "Rudelkraft", types: ["fighting", "beast"], bonus: { wardenAtk: 0.0168 }, power: 129 },
+  { id: "schwarmgift", name: "Schwarmgift", types: ["poison", "insect"], bonus: { status: 1.15 }, power: 119 },
+  { id: "resonanz", name: "Resonanz", types: ["psychic", "sound"], bonus: { cooldown: 0.92 }, power: 119 },
+  { id: "glutschwinge", name: "Glutschwinge", types: ["dragon", "fire"], bonus: { atk: 0.011, hp: 0.011 }, power: 126 },
+  { id: "sturmlied", name: "Sturmlied", types: ["wind", "sound"], bonus: { dodge: 0.03 }, power: 124 }
 ];
 var SYNERGIES = ROWS.map((row2, order) => ({
   ...row2,

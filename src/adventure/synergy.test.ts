@@ -1,6 +1,6 @@
 import { describe, expect, it } from 'vitest'
 import type { SkillDef } from '../types'
-import { fight1v1, type FightSide } from './battle'
+import { allyStrikesFirst, fight1v1, type FightSide } from './battle'
 import { arenaMatch, fighterFromSpecies, bakeTeam } from './arena'
 import { SAVE_VERSION } from './const'
 import { beginAdventure, loadAdventure, writeSave } from './save'
@@ -65,39 +65,39 @@ describe('type synergies', () => {
     expect(presentSynergies(types).map((row) => row.id)).toEqual(['gewitter', 'flaechenbrand', 'wurzelgrund'])
     const chosen = activeSynergies(types)
     expect(chosen).toHaveLength(SYNERGY_CAP)
-    expect(chosen.map((row) => row.id)).toEqual(['wurzelgrund', 'flaechenbrand'])
+    expect(chosen.map((row) => row.id)).toEqual(['flaechenbrand', 'wurzelgrund'])
     expect(activeSynergies(types, ['flaechenbrand', 'gewitter', 'wurzelgrund']).map((row) => row.id)).toEqual(['flaechenbrand', 'gewitter'])
     expect(activeSynergies(types, [])).toEqual([])
     expect(activeSynergies(['fire'], ['flaechenbrand'])).toEqual([])
   })
 
-  it('maps the table onto the existing types, with Sturmlied as speed', () => {
+  it('maps the table onto the existing types, with Sturmlied as dodge', () => {
     const byId = new Map(SYNERGIES.map((row) => [row.id, row]))
-    expect(byId.get('gewitter')?.bonus).toMatchObject({ crit: 0.3, atk: 0.02 })
-    expect(byId.get('flaechenbrand')?.bonus.atk).toBe(0.04)
-    expect(byId.get('wurzelgrund')?.bonus.hp).toBe(0.05)
-    expect(byId.get('polarstrom')?.bonus.foeSpd).toBe(0.96)
+    expect(byId.get('gewitter')?.bonus).toMatchObject({ crit: 0.194, atk: 0.013 })
+    expect(byId.get('flaechenbrand')?.bonus.atk).toBe(0.0139)
+    expect(byId.get('wurzelgrund')?.bonus.hp).toBe(0.022)
+    expect(byId.get('polarstrom')?.bonus).toMatchObject({ hp: 0.019, def: 0.0125 })
     expect(byId.get('bollwerk')?.bonus.def).toBe(0.06)
-    expect(byId.get('prisma')?.bonus).toMatchObject({ atk: 0.03, crit: 0.1 })
-    expect(byId.get('zwielicht')?.bonus.dodge).toBe(0.04)
-    expect(byId.get('rudelkraft')?.bonus.wardenAtk).toBe(0.06)
+    expect(byId.get('prisma')?.bonus).toMatchObject({ atk: 0.0105, crit: 0.0354 })
+    expect(byId.get('zwielicht')?.bonus.dodge).toBe(0.035)
+    expect(byId.get('rudelkraft')?.bonus.wardenAtk).toBe(0.0168)
     expect(byId.get('schwarmgift')?.bonus.status).toBe(1.15)
     expect(byId.get('resonanz')?.bonus.cooldown).toBe(0.92)
-    expect(byId.get('glutschwinge')?.bonus).toMatchObject({ atk: 0.02, hp: 0.03 })
-    expect(byId.get('sturmlied')?.bonus.spd).toBe(0.04)
+    expect(byId.get('glutschwinge')?.bonus).toMatchObject({ atk: 0.011, hp: 0.011 })
+    expect(byId.get('sturmlied')?.bonus.dodge).toBe(0.03)
     expect(byId.get('flaechenbrand')?.power).toBeGreaterThan(byId.get('gewitter')?.power ?? 0)
     expect(byId.get('sturmlied')?.bonus).not.toHaveProperty('crit')
     const wild = synergyMods(activeSynergies(['fighting', 'beast']), false)
     const warden = synergyMods(activeSynergies(['fighting', 'beast']), true)
     expect(wild.wardenAtk).toBe(0)
     expect(wild.atk).toBe(0)
-    expect(warden.wardenAtk).toBe(0.06)
-    expect(synergyMods(activeSynergies(['water', 'lightning']), false).critAdd).toBeCloseTo(0.03)
+    expect(warden.wardenAtk).toBeCloseTo(0.0168)
+    expect(synergyMods(activeSynergies(['water', 'lightning']), false).critAdd).toBeCloseTo(0.0194)
     const stacked = synergyMods(activeSynergies(['fire', 'wind', 'light', 'crystal']), false)
-    expect(stacked.atk).toBeCloseTo(0.06)
+    expect(stacked.atk).toBeCloseTo(0.0244)
   })
 
-  it('gives three of a type 3% and four of a type 5%', () => {
+  it('gives three of a type 2% HP and DEF, and four of a type 3%', () => {
     const three = ['fire', 'fire', 'fire', 'water', 'wind', 'plant'] as const
     const four = ['fire', 'fire', 'fire', 'fire', 'water', 'wind'] as const
     expect(purityOf(three, 'fire')).toBe(PURITY_THREE)
@@ -106,20 +106,29 @@ describe('type synergies', () => {
     expect(purityOf(['fire', 'fire', 'fire', 'fire', 'fire', 'fire'], 'fire')).toBe(PURITY_FOUR)
     const plain = fighter(100, 100)
     const typed = scaleSide(plain, synergyMods([], false), PURITY_THREE)
-    expect(typed.atk).toBe(103)
-    expect(typed.maxHp).toBe(927)
+    expect(typed.atk).toBe(100)
+    expect(typed.def).toBe(31)
+    expect(typed.maxHp).toBe(918)
+    expect(typed.spd).toBe(100)
+  })
+
+  it('uses the fight seed when the speeds are within 5 percent', () => {
+    expect(allyStrikesFirst(100, 100, 0.2)).toBe(true)
+    expect(allyStrikesFirst(100, 104, 0.8)).toBe(false)
+    expect(allyStrikesFirst(110, 100, 0.9)).toBe(true)
+    expect(allyStrikesFirst(100, 110, 0.1)).toBe(false)
   })
 
   it('slows the foe, dodges, and shortens a cooldown only when the mod is on', () => {
-    const ally = fighter(80, 96)
+    const ally = fighter(80, 80)
     ally.maxHp = 80
     ally.hp = 80
-    const foe = fighter(80, 100)
+    const foe = fighter(80, 120)
     foe.name = 'Frost'
     foe.maxHp = 80
     foe.hp = 80
     expect(fight1v1(ally, foe, () => 0.4, false).win).toBe(false)
-    expect(fight1v1({ ...ally }, { ...foe }, () => 0.4, false, null, { foeSpd: 0.95 }).win).toBe(true)
+    expect(fight1v1({ ...ally }, { ...foe }, () => 0.4, false, null, { foeSpd: 0.6 }).win).toBe(true)
     const sturdy = fighter(20, 10)
     sturdy.maxHp = 400
     sturdy.hp = 400
@@ -155,7 +164,7 @@ describe('type synergies', () => {
     expect(html).toContain('data-art="synergy/board"')
     expect(html).toContain('data-act="synergy-auto"')
     expect(html).not.toContain('combo_synergy')
-    expect(html).toContain('+4 % Tempo')
+    expect(html).toContain('+3 % Ausweichen')
   })
 
   it('changes an arena replay when the team actually has the pair', () => {

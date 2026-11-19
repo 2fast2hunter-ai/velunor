@@ -317,6 +317,14 @@ function withSpd(side: FightSide, mul: number | undefined): FightSide {
   return { ...side, spd: Math.max(1, Math.round(side.spd * mul)) }
 }
 
+/** Under a 5 % speed gap the fight seed's coin picks the first strike. A wider gap keeps the faster side. */
+export function allyStrikesFirst(allySpd: number, foeSpd: number, roll: number): boolean {
+  const fast = Math.max(allySpd, foeSpd)
+  const slow = Math.min(allySpd, foeSpd)
+  if (!(fast > 0) || (fast - slow) / fast < 0.05) return roll < 0.5
+  return allySpd > foeSpd
+}
+
 export function fight1v1(allyIn: FightSide, foeIn: FightSide, rng: () => number, trace: boolean, weather: WeatherId | null = null, mods: FightMods | null = null): FightTrace {
   const allySide = withSpd(allyIn, mods?.allySpd)
   const foeSide = withSpd(foeIn, mods?.foeSpd)
@@ -612,7 +620,12 @@ export function fight1v1(allyIn: FightSide, foeIn: FightSide, rng: () => number,
     else if (unit.wallLeft > 0) unit.wallLeft -= 1
   }
 
-  const allyFirst = ally.side.spd >= foe.side.spd
+  const close = (() => {
+    const fast = Math.max(ally.side.spd, foe.side.spd)
+    const slow = Math.min(ally.side.spd, foe.side.spd)
+    return !(fast > 0) || (fast - slow) / fast < 0.05
+  })()
+  const allyFirst = allyStrikesFirst(ally.side.spd, foe.side.spd, close ? rng() : 1)
   let actions = 0
   let timeout = false
   const actionCap = Math.max(1, Math.min(120, mods?.actionCap ?? ACTION_LIMIT))

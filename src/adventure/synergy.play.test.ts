@@ -69,7 +69,7 @@ describe.skipIf(!hasChrome)('synergy team screen', () => {
         const pressed = () => page.locator('.synergy-pick[aria-pressed="true"]').evaluateAll((nodes) => nodes.map((node) => node.getAttribute('data-id')))
         expect(await pressed()).toEqual(['flaechenbrand', 'wurzelgrund'])
         await page.locator('[data-id="gewitter"]').click()
-        expect(await pressed()).toEqual(['gewitter', 'flaechenbrand'])
+        expect(await pressed()).toEqual(['gewitter', 'wurzelgrund'])
         await page.locator('[data-act="synergy-auto"]').click()
         expect(await pressed()).toEqual(['flaechenbrand', 'wurzelgrund'])
         expect(errors).toEqual([])
