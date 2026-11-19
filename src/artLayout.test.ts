@@ -49,7 +49,10 @@ describe('art manifest', () => {
     expect(Object.keys(manifest.icons).length).toBeGreaterThan(20)
     expect(Object.keys(manifest.backgrounds)).toEqual([
       'bg_city', 'bg_arena', 'bg_portal',
-      'bg_gm_wiese_p', 'bg_gm_bach_p', 'bg_gm_wald_p', 'bg_frame_desktop'
+      'bg_gm_wiese_p', 'bg_gm_bach_p', 'bg_gm_wald_p',
+      'bg_gm_moor_p', 'bg_gm_fels_p', 'bg_gm_sturm_p', 'bg_gm_frost_p', 'bg_gm_schmiede_p', 'bg_gm_rat_p',
+      'bg_fk_kueste_p', 'bg_gg_glut_p', 'bg_sm_schatten_p', 'bg_ht_himmel_p', 'bg_ht_horst_p',
+      'bg_frame_desktop'
     ])
     expect(manifest.backgrounds.bg_gm_wiese_p).toEqual({
       jpg: 'backgrounds/bg_gm_wiese_p.jpg',
