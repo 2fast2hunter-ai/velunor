@@ -1015,6 +1015,108 @@
    "use": "Innen-Muster für Dialoge/Laden-Kopf (optional als background-image auf .sheet-body)",
    "repeat": "repeat",
    "tile": "512px"
+  },
+  {
+   "file": "ui_kit/mastery/ring_bronze.png",
+   "size": [
+    160,
+    160
+   ],
+   "kind": "9slice",
+   "slice": {
+    "top": 56,
+    "right": 56,
+    "bottom": 56,
+    "left": 56
+   },
+   "outset": 6,
+   "use": "Meisterschaftsring bronze um .m-plate.m-bronze (Mitte transparent, Porträt bleibt sichtbar)",
+   "css": ".m-plate.m-bronze { border: 18px solid transparent; border-image: var(--kit-mastery-ring-bronze) 56 fill / 28px / 3px stretch; box-shadow: none; } (fill weglassen = Mitte leer)"
+  },
+  {
+   "file": "ui_kit/mastery/ring_silver.png",
+   "size": [
+    160,
+    160
+   ],
+   "kind": "9slice",
+   "slice": {
+    "top": 56,
+    "right": 56,
+    "bottom": 56,
+    "left": 56
+   },
+   "outset": 6,
+   "use": "Meisterschaftsring silver um .m-plate.m-silver (Mitte transparent, Porträt bleibt sichtbar)",
+   "css": ".m-plate.m-silver { border: 18px solid transparent; border-image: var(--kit-mastery-ring-silver) 56 fill / 28px / 3px stretch; box-shadow: none; } (fill weglassen = Mitte leer)"
+  },
+  {
+   "file": "ui_kit/mastery/ring_gold.png",
+   "size": [
+    160,
+    160
+   ],
+   "kind": "9slice",
+   "slice": {
+    "top": 56,
+    "right": 56,
+    "bottom": 56,
+    "left": 56
+   },
+   "outset": 6,
+   "use": "Meisterschaftsring gold um .m-plate.m-gold (Mitte transparent, Porträt bleibt sichtbar)",
+   "css": ".m-plate.m-gold { border: 18px solid transparent; border-image: var(--kit-mastery-ring-gold) 56 fill / 28px / 3px stretch; box-shadow: none; } (fill weglassen = Mitte leer)"
+  },
+  {
+   "file": "ui_kit/starter/starter_fire.png",
+   "size": [
+    200,
+    200
+   ],
+   "kind": "9slice",
+   "slice": {
+    "top": 72,
+    "right": 72,
+    "bottom": 72,
+    "left": 72
+   },
+   "outset": 6,
+   "use": "Starter-Typrahmen fire (.starter-card[data-type=fire] / ersetzt .starter-frame), Mitte transparent über Kit-Karte",
+   "css": ".starter-card[data-species=…] { border-image: var(--kit-starter-fire) 72 / 36px / 3px stretch; }"
+  },
+  {
+   "file": "ui_kit/starter/starter_water.png",
+   "size": [
+    200,
+    200
+   ],
+   "kind": "9slice",
+   "slice": {
+    "top": 72,
+    "right": 72,
+    "bottom": 72,
+    "left": 72
+   },
+   "outset": 6,
+   "use": "Starter-Typrahmen water (.starter-card[data-type=water] / ersetzt .starter-frame), Mitte transparent über Kit-Karte",
+   "css": ".starter-card[data-species=…] { border-image: var(--kit-starter-water) 72 / 36px / 3px stretch; }"
+  },
+  {
+   "file": "ui_kit/starter/starter_plant.png",
+   "size": [
+    200,
+    200
+   ],
+   "kind": "9slice",
+   "slice": {
+    "top": 72,
+    "right": 72,
+    "bottom": 72,
+    "left": 72
+   },
+   "outset": 6,
+   "use": "Starter-Typrahmen plant (.starter-card[data-type=plant] / ersetzt .starter-frame), Mitte transparent über Kit-Karte",
+   "css": ".starter-card[data-species=…] { border-image: var(--kit-starter-plant) 72 / 36px / 3px stretch; }"
   }
  ]
 }

@@ -1051,8 +1051,8 @@ select {
   background-clip: padding-box !important;
   border-radius: 99px !important;
 }
-.starter-track { border-width: 0 4px !important; border-image-width: 4px !important; height: 18px !important; }
-.starter-track span { border-width: 0 3px !important; border-image-width: 3px !important; min-width: 6px !important; }
+.starter-track { border-width: 0 8px !important; border-image-width: 8px !important; height: 32px !important; }
+.starter-track span { border-width: 0 8px !important; border-image-width: 8px !important; min-width: 16px !important; }
 .starter-card[data-species="m01"] .starter-track span { border-image-source: var(--kit-progress-fill-red) !important; }
 .starter-card[data-species="m02"] .starter-track span { border-image-source: var(--kit-progress-fill-blue) !important; }
 .starter-card[data-species="m03"] .starter-track span { border-image-source: var(--kit-progress-fill-green) !important; }
@@ -1145,7 +1145,7 @@ button.log div { grid-column: 2; }
 }
 .list-row.achieve > .ui-icon { flex: 0 0 auto; }
 .list-row.achieve > div:not(.list-actions) { flex: 1 1 auto; min-width: 0; text-align: left; }
-.list-row.achieve .list-actions { flex: 0 0 auto; justify-content: flex-end; max-width: 48%; }
+.list-row.achieve .list-actions { flex: 0 0 auto; justify-content: flex-end; max-width: none; }
 .achieve.done b { color: var(--ink) !important; }
 .achieve .list-actions button {
   min-height: 64px !important;
@@ -1258,7 +1258,7 @@ button.log div { grid-column: 2; }
 }
 
 /* Team dock: the label wraps whole instead of being cut off. */
-.menu-dock > button:not([data-act="activity"]) {
+.menu-dock > button:not([data-act="activity"]):not(.dock-primary) {
   overflow: visible !important;
   white-space: normal !important;
   text-overflow: clip !important;
@@ -1414,7 +1414,7 @@ button.log div { grid-column: 2; }
   color: var(--ink) !important;
   text-shadow: none !important;
 }
-.sheet h2,
+.sheet > h2,
 #cloud-layer h2,
 .overwrite-card h2,
 .kicker {
@@ -1498,3 +1498,93 @@ button.log div { grid-column: 2; }
   margin: 0 !important;
   flex: 0 0 auto;
 }
+
+/* Paket 9 Rest: Ringe, Starter-Rahmen und die Abnahme D/E. */
+.m-plate.m-bronze,
+.m-plate.m-silver,
+.m-plate.m-gold {
+  border-style: solid !important;
+  border-color: transparent !important;
+  border-width: 14px !important;
+  border-image-slice: 56 !important;
+  border-image-width: 20px !important;
+  border-image-outset: 3px !important;
+  border-image-repeat: stretch !important;
+  box-shadow: none !important;
+}
+.m-plate.m-bronze { border-image-source: var(--kit-mastery-ring-bronze) !important; }
+.m-plate.m-silver { border-image-source: var(--kit-mastery-ring-silver) !important; }
+.m-plate.m-gold { border-image-source: var(--kit-mastery-ring-gold) !important; }
+.starter-frame { display: none !important; }
+.starter-card[data-species="m01"],
+.starter-card[data-species="m02"],
+.starter-card[data-species="m03"] {
+  border-style: solid !important;
+  border-color: transparent !important;
+  border-width: 28px !important;
+  border-image-slice: 72 !important;
+  border-image-width: 36px !important;
+  border-image-outset: 0 !important;
+  border-image-repeat: stretch !important;
+  background-color: #faf4e7 !important;
+}
+.starter-card[data-species="m01"] { border-image-source: var(--kit-starter-fire) !important; }
+.starter-card[data-species="m02"] { border-image-source: var(--kit-starter-water) !important; }
+.starter-card[data-species="m03"] { border-image-source: var(--kit-starter-plant) !important; }
+.starter-body { padding-bottom: 20px !important; }
+.starter-choose { position: relative; z-index: 3; }
+.menu-dock > .dock-primary {
+  font-size: 34px !important;
+  line-height: 1.15 !important;
+}
+.menu-dock[data-dock="hort"] > button[data-act="activity"],
+.menu-dock[data-dock="chests"] > button[data-act="activity"],
+.menu-dock[data-dock="wheel"] > button[data-act="activity"] {
+  flex: 1 1 calc(33.33% - 12px) !important;
+  min-width: calc(33.33% - 12px);
+  max-width: calc(33.33% - 8px);
+}
+.home-bar {
+  border-width: 34px 18px 10px !important;
+  padding-top: 10px !important;
+}
+.home-bar .home-reason {
+  display: block;
+  margin-top: 6px !important;
+  padding-top: 2px;
+  line-height: 1.2;
+}
+.is-adventure .dock {
+  border-image-outset: 0 !important;
+  border-image-width: 14px !important;
+  border-width: 10px !important;
+  z-index: 1;
+}
+.is-adventure button.log {
+  position: relative;
+  z-index: 2;
+  border-width: 14px 16px !important;
+  border-image-width: 14px 18px !important;
+}
+.pc-block {
+  flex: 1 1 auto;
+  min-height: 0;
+  display: flex;
+  flex-direction: column;
+  margin: 8px 12px 0;
+  color: var(--ink) !important;
+}
+.pc-block .pc-label { margin: 0 0 8px; color: var(--ink) !important; }
+.pc-block .vlist { flex: 1 1 auto; }
+.card.panel > button[data-act="rank-friends"] { margin-top: 14px !important; }
+.achieve .list-actions button {
+  display: inline-flex !important;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  gap: 2px;
+  line-height: 1.05;
+  white-space: nowrap !important;
+  min-width: 132px;
+}
+.achieve .list-actions button .ui-icon { width: 36px !important; height: 36px !important; }

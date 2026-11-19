@@ -866,8 +866,10 @@ function team(save: SaveV2, query: PcQuery, selected: string | null, shell: Shel
       <div class="team-grid" id="team-grid" data-cols="3">${roster}</div>
     </div>
     ${synergyBoard(save)}
-    <h2 class="pc-label">${tr(save, 'team.pc')} · ${list.length}</h2>
-    <div id="pc-viewport" class="vlist" data-cols="4" data-count="${list.length}" data-start="${win.start}" data-end="${win.end}">${body}</div>
+    <div class="card panel pc-block">
+      <h2 class="pc-label">${tr(save, 'team.pc')} · ${list.length}</h2>
+      <div id="pc-viewport" class="vlist" data-cols="4" data-count="${list.length}" data-start="${win.start}" data-end="${win.end}">${body}</div>
+    </div>
     <div class="menu-dock" data-dock="team">
       <button type="button" data-act="nudge" data-dir="-1">${ui('forward')}${tr(save, 'team.forward')}</button>
       <button type="button" data-act="nudge" data-dir="1">${ui('back')}${tr(save, 'team.back')}</button>
