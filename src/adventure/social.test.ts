@@ -1,7 +1,7 @@
-import { readFileSync } from 'node:fs'
+import { existsSync, readFileSync } from 'node:fs'
 import { describe, expect, it } from 'vitest'
 import { practiceTeam } from './arena'
-import { LEVEL_HP, addGroupDamage, claimOnce, coopDamage, coopErrorKey, coopRoster, freshTrack, levelReward, weeklyBeast } from './coop'
+import { LEVEL_HP, addGroupDamage, claimOnce, coopDamage, coopErrorKey, coopRoster, coopTeamIssue, freshTrack, levelReward, weeklyBeast } from './coop'
 import { auditSync } from './online/check'
 import { auditFromSave } from './online/snapshot'
 import { beginAdventure } from './save'
@@ -126,6 +126,20 @@ describe('co-op beast', () => {
     expect(track.level).toBe(10)
   })
 
+  it('adds two players damage onto the same beast', () => {
+    const start = freshTrack()
+    const first = 400_000
+    const second = 700_000
+    const stepped = addGroupDamage(addGroupDamage(start, first).track, second)
+    const summed = addGroupDamage(start, first + second)
+    expect(stepped.track).toEqual(summed.track)
+    expect(stepped.cleared).toEqual(summed.cleared)
+    const sql = readFileSync(new URL('../../supabase/migrations/20261118230000_schritt10_freunde.sql', import.meta.url), 'utf8')
+    expect(sql).toContain('update public.coop_groups set level = lvl, hp = hp_left where id = gid')
+    expect(sql).toContain("return jsonb_build_object('error', 'busy')")
+    expect(sql).toContain('from public.coop_attempts where group_id = old_group')
+  })
+
   it('accepts one road starter beside five registered monsters and names the team error', () => {
     const save = beginAdventure('Ada', { skin: 0, hair: 0, color: 0 }, 'm01', 1_000)
     const starter = save.team[0]
@@ -136,8 +150,14 @@ describe('co-op beast', () => {
     expect(coopRoster([starter, 'y', 'b', 'c', 'd', 'e'], owned.slice(0, 4), save)).toBeNull()
     save.mons.x = { ...save.mons[starter], species: 'm09', caughtWhere: 'truhe' }
     expect(coopRoster(['x', ...owned.map((row) => row.uid)], owned, save)).toBeNull()
+    expect(coopTeamIssue([starter], [], save)).toBe('count')
+    expect(coopTeamIssue([starter, 'y', 'b', 'c', 'd', 'e'], owned.slice(0, 4), save)).toBe('starter')
+    expect(coopTeamIssue(['x', ...owned.map((row) => row.uid)], owned, save)).toBe('register')
     expect(coopErrorKey('team')).toBe('social.err.team')
+    expect(coopErrorKey('count')).toBe('social.err.count')
+    expect(coopErrorKey('busy')).toBe('social.err.busy')
     expect(coopErrorKey('attempts')).toBe('social.err.attempts')
+    expect(existsSync(new URL('../../public/assets/battle/proj_fire.png', import.meta.url))).toBe(true)
     const app = readFileSync(new URL('./app.ts', import.meta.url), 'utf8')
     expect(app).toContain("coopErrorKey(String(result.data.error || result.error || 'team'))")
   })

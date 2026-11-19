@@ -11125,6 +11125,12 @@ function guildLevel(points) {
 function phraseOk(id) {
   return PHRASES.includes(id);
 }
+function guildHttpStatus(code) {
+  if (code === "missing") return 404;
+  if (code === "role" || code === "lead" || code === "flag") return 403;
+  if (code === "full" || code === "member") return 409;
+  return 400;
+}
 function guildActionDenial(action, role) {
   if (action === "state" || action === "search") return null;
   if (action === "found" || action === "join") return role ? "member" : null;
@@ -11240,5 +11246,8 @@ Deno.serve(async (req) => {
     });
   }
   const acted = await db.rpc("guild_act", { p_user: user.id, p_body: { ...body, action } });
-  return json(acted.data ?? { error: "guild" });
+  if (acted.error || !acted.data || typeof acted.data !== "object") return json({ error: "guild" }, 500);
+  const payload = acted.data;
+  if (typeof payload.error === "string" && payload.error) return json({ error: payload.error }, guildHttpStatus(payload.error));
+  return json(acted.data);
 });

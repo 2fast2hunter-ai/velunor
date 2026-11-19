@@ -66,6 +66,7 @@ import { equipFrame, equipTitle, syncAchievements } from './achievements'
 import { HATCH_MS, buyHortSlot, moveFromHort, moveToHort } from './hort'
 import { expeditionBusy, settleExpeditions, startExpedition, takeExpeditionNotes } from './expedition'
 import { coopErrorKey } from './coop'
+import { fieldSkipsRender } from './fields'
 import { foundCost, guildErrorKey, guildFoundBlock } from './guild'
 import { crestCount } from './arena'
 import { buyCrystal, buyFruit, sellCrystal, sellFruit, useCrystal, useFruit } from './shop'
@@ -1897,18 +1898,19 @@ async function tradeAction(act: string): Promise<void> {
   await refreshTrade()
 }
 
-async function refreshSocial(): Promise<void> {
+async function refreshSocial(keepNote = false): Promise<void> {
+  const note = keepNote ? socialPanel.note : ''
   if (!lineUp()) {
-    socialPanel = { ...socialPanel, status: 'offline', note: '' }
+    socialPanel = { ...socialPanel, status: 'offline', note }
     render()
     return
   }
-  socialPanel = { ...socialPanel, status: 'loading' }
+  socialPanel = { ...socialPanel, status: 'loading', note }
   render()
   const friends = await callOnline('friends', { action: 'state' })
   const beast = await callOnline('coop-boss', { action: 'state' })
   if (!friends.ok || !beast.ok) {
-    socialPanel = { ...socialPanel, status: 'offline', note: '' }
+    socialPanel = { ...socialPanel, status: 'offline', note }
     render()
     return
   }
@@ -1917,7 +1919,7 @@ async function refreshSocial(): Promise<void> {
     code: typeof friends.data.code === 'string' ? friends.data.code : '',
     friends: asFriends(friends.data.friends),
     requests: asFriends(friends.data.requests),
-    note: '',
+    note,
     showOnline: friends.data.showOnline !== false,
     gifts: Math.floor(Number(friends.data.gifts)) || 0,
     beast: typeof beast.data.beast === 'string' ? beast.data.beast : 'weltenwurm',
@@ -1939,7 +1941,7 @@ async function socialAction(act: string, code: string | null): Promise<void> {
     const query = (document.getElementById('friend-query') as HTMLInputElement | null)?.value ?? ''
     const result = await callOnline('friends', { action: 'request', query })
     socialPanel = { ...socialPanel, note: result.ok ? '' : t(current.settings.lang, 'social.noFriends') }
-    await refreshSocial()
+    await refreshSocial(true)
     return
   }
   if (act === 'friend-online') {
@@ -1966,7 +1968,7 @@ async function socialAction(act: string, code: string | null): Promise<void> {
           : t(current.settings.lang, 'social.noFriends'))
         : ''
     }
-    await refreshSocial()
+    await refreshSocial(true)
     return
   }
   if (act === 'friend-claim' || act === 'coop-claim') {
@@ -1982,7 +1984,7 @@ async function socialAction(act: string, code: string | null): Promise<void> {
     const failed = !result.ok || Boolean(result.data.error)
     if (!failed) noteDaily(current, 'coop', 1)
     socialPanel = { ...socialPanel, note: failed ? t(current.settings.lang, coopErrorKey(String(result.data.error || result.error || 'team'))) : '' }
-    await refreshSocial()
+    await refreshSocial(true)
   }
 }
 
@@ -3645,11 +3647,13 @@ function onInput(event: Event): void {
       const reason = document.getElementById('guild-reason')
       if (button instanceof HTMLButtonElement) button.disabled = block.disabled
       if (reason) {
-        reason.textContent = block.reason === 'crests'
-          ? t(save.settings.lang, 'guild.reason.crests', { n: crestCount(save.badges) })
-          : block.reason === 'gold'
-            ? t(save.settings.lang, 'guild.reason.gold', { gold: foundCost(save.region).toLocaleString(save.settings.lang === 'en' ? 'en' : 'de-DE') })
-            : t(save.settings.lang, 'guild.reason.name')
+        reason.textContent = !block.disabled
+          ? ''
+          : block.reason === 'crests'
+            ? t(save.settings.lang, 'guild.reason.crests', { n: crestCount(save.badges) })
+            : block.reason === 'gold'
+              ? t(save.settings.lang, 'guild.reason.gold', { gold: foundCost(save.region).toLocaleString(save.settings.lang === 'en' ? 'en' : 'de-DE') })
+              : t(save.settings.lang, 'guild.reason.name')
       }
     }
     return
@@ -3689,7 +3693,7 @@ function onInput(event: Event): void {
 function syncField(target: EventTarget | null): void {
   if (!save || !(target instanceof HTMLInputElement || target instanceof HTMLSelectElement)) return
   const field = target.dataset.field
-  if (!field || field === 'q' || field === 'name') return
+  if (fieldSkipsRender(field)) return
   if (field === 'loop') setLoop(save, target instanceof HTMLInputElement ? target.checked : save.loop)
   if (field === 'auto' && target instanceof HTMLInputElement) save.settings.autoSwitch = target.checked
   if (field === 'card' && target instanceof HTMLInputElement) save.settings.catchCard = target.checked

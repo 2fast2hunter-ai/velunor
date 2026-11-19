@@ -1873,7 +1873,7 @@ function guildFoundScreen(save: SaveV2, view: GuildPanel): string {
     <label class="friend-search">${tr(save, 'guild.name')}<input id="guild-name" data-field="guild-name" maxlength="20" value="${esc(view.draftName ?? '')}"/></label>
     <label class="friend-search">${tr(save, 'guild.tag')}<input id="guild-tag" data-field="guild-tag" maxlength="3" value="${esc(view.draftTag ?? '')}"/></label>
     <button type="button" class="primary" data-act="guild-found" ${block.disabled ? 'disabled' : ''}>${tr(save, 'guild.found')}</button>
-    <p id="guild-reason" class="muted">${esc(reason)}</p>
+    <p id="guild-reason" class="muted">${block.disabled ? esc(reason) : ''}</p>
     <label class="friend-search">${tr(save, 'guild.search')}<input id="guild-query" data-field="guild-query" maxlength="20" value="${esc(view.draftQuery ?? '')}"/></label>
     <button type="button" data-act="guild-search">${tr(save, 'guild.search')}</button>
     ${hits}
@@ -1903,7 +1903,7 @@ function chatScreen(save: SaveV2, panel: ChatPanel | undefined): string {
       <button type="button" data-act="guild-phrase" data-id="hallo">${tr(save, 'guild.phrase')}</button>
     </div></div></div>`
   }
-  const lines = view.lines.map((line) => `<p class="chat-line"><b>${esc(line.label)}</b> ${esc(line.body)} <button type="button" data-act="chat-report" data-id="${esc(line.label)}"><img class="chat-icon" src="${art('chat/report@2x.png')}" alt=""/>${tr(save, 'chat.report')}</button> <button type="button" data-act="chat-mute" data-id="${esc(line.label)}"><img class="chat-icon" src="${art('chat/mute@2x.png')}" alt=""/>${tr(save, 'chat.mute')}</button></p>`).join('')
+  const lines = view.lines.map((line) => `<p class="chat-line"><b>${esc(line.label)}</b> ${esc(line.body)} <button type="button" data-act="chat-report" data-id="${esc(line.label)}"><img class="chat-icon" src="${art('chat/report@2x.png')}" alt="" onerror="this.style.visibility='hidden'"/>${tr(save, 'chat.report')}</button> <button type="button" data-act="chat-mute" data-id="${esc(line.label)}"><img class="chat-icon" src="${art('chat/mute@2x.png')}" alt="" onerror="this.style.visibility='hidden'"/>${tr(save, 'chat.mute')}</button></p>`).join('')
   const channel = view.channel === 'dm' ? 'dm' : 'guild'
   const friends = view.friends ?? []
   const friend = view.friend && friends.some((row) => row.code === view.friend) ? view.friend : (friends[0]?.code ?? '')
@@ -1920,7 +1920,7 @@ function chatScreen(save: SaveV2, panel: ChatPanel | undefined): string {
   </div></div>
   <form class="chat-form" data-act="chat-form">
     <input id="chat-text" data-field="chat" maxlength="200" autocomplete="off" value="${esc(view.draft ?? '')}"/>
-    <button type="submit" class="primary"><img class="chat-icon" src="${art('chat/send@2x.png')}" alt=""/>${tr(save, 'chat.send')}</button>
+    <button type="submit" class="primary"><img class="chat-icon" src="${art('chat/send@2x.png')}" alt="" onerror="this.style.visibility='hidden'"/>${tr(save, 'chat.send')}</button>
   </form></div>`
 }
 

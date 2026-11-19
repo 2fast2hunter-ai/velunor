@@ -1751,9 +1751,9 @@ a.ghost { color: inherit; text-decoration: none; display: inline-block; }
 .rank-badge { width: 112px; height: 112px; position: relative; flex: 0 0 auto; }
 .rank-badge.plain img { width: 100%; height: 100%; }
 .rank-badge.plain b { position: absolute; left: 0; right: 0; top: 52%; text-align: center; font: 800 40px Fredoka, sans-serif; color: #4a2c17; }
-.card.panel > button:not(.primary),
-.expedition-card > button:not(.primary),
-.expedition-bench > button:not(.primary) {
+.card.panel button:not(.primary):not(.tree-node),
+.expedition-card button:not(.primary),
+.expedition-bench button:not(.primary) {
   border: 0;
   border-radius: 18px;
   background: #1b2744;
@@ -1763,7 +1763,8 @@ a.ghost { color: inherit; text-decoration: none; display: inline-block; }
   font-weight: 800;
   cursor: pointer;
 }
-.card.panel > button.on { box-shadow: inset 0 0 0 4px #f0c14a; }
+.card.panel .rank-tabs button.on { background: #f0c14a; color: #1a1208; }
+.card.panel button.on { box-shadow: inset 0 0 0 4px #f0c14a; }
 .rank-frames { display: grid; grid-template-columns: repeat(3, 1fr); gap: 12px; }
 .rank-honor { display: flex; flex-direction: column; align-items: center; gap: 6px; text-align: center; }
 .rank-frame { width: 128px; height: 128px; object-fit: contain; opacity: 0.85; }
@@ -1860,9 +1861,11 @@ a.ghost { color: inherit; text-decoration: none; display: inline-block; }
   .trade-escrow .escrow-art { animation: trade-slide 1.6s ease-in-out infinite; }
 }
 @keyframes trade-slide { 0%, 100% { transform: translateY(0); } 50% { transform: translateY(6px); } }
-.guild-board { display: flex; flex-direction: column; gap: 12px; align-items: flex-start; }
-.guild-emblem { position: relative; width: 120px; height: 140px; display: inline-block; }
-.guild-form, .guild-symbol { position: absolute; inset: 0; width: 100%; height: 100%; object-fit: contain; }
+.guild-board { display: flex; flex-direction: column; gap: 12px; align-items: stretch; }
+.guild-emblem { position: relative; width: 120px; height: 140px; display: block; overflow: hidden; align-self: flex-start; flex: 0 0 auto; }
+.guild-form, .guild-symbol { position: absolute; inset: 0; width: 120px; height: 140px; pointer-events: none; }
+.guild-form img, .guild-symbol { width: 120px; height: 140px; object-fit: contain; pointer-events: none; }
+.guild-board .friend-search { position: relative; z-index: 1; width: 100%; }
 .guild-form::after {
   content: "";
   position: absolute;

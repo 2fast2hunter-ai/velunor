@@ -18,6 +18,7 @@ import {
   guildBeastHp,
   guildErrorKey,
   guildFoundBlock,
+  guildHttpStatus,
   guildLevel,
   guildNameIssue,
   guildTagIssue,
@@ -120,6 +121,24 @@ describe('guilds', () => {
     expect(guildFoundBlock(8, 50_000, 1, 'Mo', 'MOS').reason).toBe('name')
     expect(guildFoundBlock(8, 50_000, 1, 'Mooswacht', 'MOS').disabled).toBe(false)
     expect(guildErrorKey('crests')).toBe('guild.err.crests')
+    expect(guildErrorKey('lead')).toBe('guild.err.lead')
+    expect(guildHttpStatus('lead')).toBe(403)
+    expect(guildHttpStatus('role')).toBe(403)
+    expect(guildHttpStatus('missing')).toBe(404)
+    expect(guildHttpStatus('full')).toBe(409)
+    expect(guildHttpStatus('name')).toBe(400)
+    const founded = saveOf()
+    founded.gold = 200_000
+    founded.badges = ['a', 'b', 'c', 'd', 'e', 'f', 'g', 'h']
+    const ready = gameHtml(founded, 'guild', now.getTime(), pc, dex, null, false, false, null, 1, undefined, {
+      guild: { status: 'ready', name: '', tag: '', level: 1, points: 0, note: '', draftName: 'Mooswacht', draftTag: 'MOS' }
+    })
+    expect(ready).toContain('value="Mooswacht"')
+    expect(ready).toContain('data-act="guild-found" >')
+    expect(ready).not.toContain('Name mit 3 bis 20')
+    const css = readFileSync(new URL('./adventure.css', import.meta.url), 'utf8')
+    expect(css).toContain('.guild-form img, .guild-symbol { width: 120px; height: 140px; object-fit: contain; pointer-events: none; }')
+    expect(css).toContain('.card.panel button:not(.primary):not(.tree-node)')
     const lead = gameHtml(saveOf(), 'guild', now.getTime(), pc, dex, null, false, false, null, 1, undefined, {
       guild: {
         status: 'ready', name: 'Mooswacht', tag: 'MOS', level: 2, points: 10, note: '',
@@ -163,6 +182,16 @@ describe('guilds', () => {
     expect(fix).toContain('order by joined_at, user_id')
     expect(fix).toContain('delete from public.guilds g')
     expect(fix).not.toMatch(/delete from public\.guild_members m where m\.user_id/i)
+    const one = readFileSync(new URL('../../supabase/migrations/20261119150000_guild_one_lead.sql', import.meta.url), 'utf8')
+    expect(one).toContain('actor text')
+    expect(one).not.toMatch(/^\s*role text;/m)
+    expect(one).toContain('guild_one_lead')
+    expect(one).toContain("target_role = 'lead'")
+    expect(one).toContain("jsonb_build_object('error', 'lead')")
+    expect(one).toContain("set role = 'member' where guild_id = gid and user_id = p_user")
+    const edge = readFileSync(new URL('../../supabase/functions/guild/index.ts', import.meta.url), 'utf8')
+    expect(edge).toContain('guildHttpStatus(payload.error)')
+    expect(edge).not.toContain("acted.data ?? { error: 'guild' }")
   })
 })
 
