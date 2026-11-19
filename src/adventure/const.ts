@@ -62,8 +62,26 @@ export const SAVE_VERSION = 12
 export const SCENE_FILES = {
   wiese: { webp: 'backgrounds/bg_gm_wiese_p.webp', jpg: 'backgrounds/bg_gm_wiese_p.jpg' },
   bach: { webp: 'backgrounds/bg_gm_bach_p.webp', jpg: 'backgrounds/bg_gm_bach_p.jpg' },
-  wald: { webp: 'backgrounds/bg_gm_wald_p.webp', jpg: 'backgrounds/bg_gm_wald_p.jpg' }
+  wald: { webp: 'backgrounds/bg_gm_wald_p.webp', jpg: 'backgrounds/bg_gm_wald_p.jpg' },
+  moor: { webp: 'backgrounds/bg_gm_moor_p.webp', jpg: 'backgrounds/bg_gm_moor_p.jpg' },
+  fels: { webp: 'backgrounds/bg_gm_fels_p.webp', jpg: 'backgrounds/bg_gm_fels_p.jpg' },
+  sturm: { webp: 'backgrounds/bg_gm_sturm_p.webp', jpg: 'backgrounds/bg_gm_sturm_p.jpg' },
+  frost: { webp: 'backgrounds/bg_gm_frost_p.webp', jpg: 'backgrounds/bg_gm_frost_p.jpg' },
+  schmiede: { webp: 'backgrounds/bg_gm_schmiede_p.webp', jpg: 'backgrounds/bg_gm_schmiede_p.jpg' },
+  rat: { webp: 'backgrounds/bg_gm_rat_p.webp', jpg: 'backgrounds/bg_gm_rat_p.jpg' },
+  kueste: { webp: 'backgrounds/bg_fk_kueste_p.webp', jpg: 'backgrounds/bg_fk_kueste_p.jpg' },
+  glut: { webp: 'backgrounds/bg_gg_glut_p.webp', jpg: 'backgrounds/bg_gg_glut_p.jpg' },
+  schatten: { webp: 'backgrounds/bg_sm_schatten_p.webp', jpg: 'backgrounds/bg_sm_schatten_p.jpg' },
+  himmel: { webp: 'backgrounds/bg_ht_himmel_p.webp', jpg: 'backgrounds/bg_ht_himmel_p.jpg' },
+  horst: { webp: 'backgrounds/bg_ht_horst_p.webp', jpg: 'backgrounds/bg_ht_horst_p.jpg' }
 } as const
+
+/** Portrait plate for a chapter. An unknown key keeps the meadow plate so a missing picture cannot stop the screen. */
+export function sceneFile(scene: string, tint?: string): { readonly webp: string, readonly jpg: string } {
+  const files: Record<string, { readonly webp: string, readonly jpg: string }> = SCENE_FILES
+  if (tint && files[tint]) return files[tint]
+  return files[scene] ?? SCENE_FILES.wiese
+}
 
 /** A handset held sideways. A desktop window stays in the portrait frame. */
 export function phoneLandscape(width: number, height: number): boolean {

@@ -12,6 +12,7 @@ import {
   TOUCH_MIN,
   fitScale,
   phoneLandscape,
+  sceneFile,
   tabBarBottomGap
 } from './const'
 import { t } from './i18n'
@@ -98,6 +99,7 @@ describe('portrait shell', () => {
     expect(html).toContain('>Anleitung<')
     expect(html).toContain('Kodex 1/100')
     expect(html).toContain('bg_gm_wiese_p.webp')
+    expect(html).not.toContain('tint-')
     expect(html).toContain('top:44%')
     expect(html).toContain('top:86%')
     expect(html.match(/class="path-row"/g)).toHaveLength(2)
@@ -214,5 +216,30 @@ describe('portrait shell', () => {
     expect(css).toMatch(/\.m-plate \{[^}]*inline-flex/)
     expect(css).toMatch(/\.arena-slot \{[^}]*min-width: 96px/)
     expect(css).not.toMatch(/\.portrait, \.hero/)
+  })
+
+  it('paints each tint with its own plate and keeps a missing key on the meadow', () => {
+    expect(sceneFile('wiese', 'moor')).toEqual({
+      webp: 'backgrounds/bg_gm_moor_p.webp',
+      jpg: 'backgrounds/bg_gm_moor_p.jpg'
+    })
+    expect(sceneFile('bach', 'missing').jpg).toBe('backgrounds/bg_gm_bach_p.jpg')
+    expect(sceneFile('missing').webp).toBe('backgrounds/bg_gm_wiese_p.webp')
+    const save = beginAdventure('Ada', { skin: 0, hair: 0, color: 0 }, 'm01', 1_000)
+    save.chapter = 4
+    const road = gameHtml(save, 'adventure', 1_000, pc, dex, null, false, false, null)
+    expect(road).toContain('bg_gm_moor_p.webp')
+    expect(road).toContain('bg_gm_moor.webp')
+    expect(road).not.toContain('tint-')
+    const arena = gameHtml(save, 'arena', 1_000, pc, dex, null, false, false, null)
+    expect(arena).toContain('class="screen-head"')
+    expect(arena).toContain('arena/screen_540.webp')
+    expect(arena).toContain('arena/screen.webp')
+    expect(arena).toContain('arena/screen.jpg')
+    const tower = gameHtml(save, 'tower', 1_000, pc, dex, null, false, false, null)
+    expect(tower).toContain('tower/screen_540.webp')
+    expect(tower).toContain('tower/screen.webp')
+    expect(tower).toContain('tower/screen.jpg')
+    expect(tower).toContain('data-art="tower/screen"')
   })
 })
