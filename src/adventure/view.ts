@@ -46,6 +46,7 @@ import {
   type ShopTab
 } from './shopOffer'
 import { UI_ART, type UiArtId } from './uiArt'
+import { crestArt } from './crestArt'
 import { fightsHere } from './origin'
 import { chapterById, councilOf, gateBadge, placeLabel, regionById, regions, routeOf, type NodeKind } from './route'
 import { chapterUnlocked, dexCaughtCount, hereSightings, rarityName } from './sim'
@@ -688,8 +689,12 @@ function progress(save: SaveV2): string {
         ? `Vier Räte und der Großwächter, Cap ${chapter.council.members.map((member) => member.cap).join('/')}`
         : `Lv ${chapter.levelMin}–${chapter.levelMax}, Cap ${chapter.cap}`
     const mark = chapter.special ? 'Urgrund' : (save.badges.includes(chapter.guardian.badge) ? chapter.guardian.badge : 'Wappen fehlt')
+    const badge = gateBadge(region.id, chapter)
+    const crest = chapter.special || !badge
+      ? ''
+      : `<img class="crest-mini${save.badges.includes(badge) ? '' : ' off'}" src="${art(crestArt(badge))}" alt=""/>`
     return `<button class="text-btn" data-act="travel" data-region="${region.id}" data-chapter="${chapter.id}" ${open ? '' : 'disabled'}>
-      ${ui('chapterMark')}<b>${esc(chapter.name)}</b> ${here ? '· hier' : ''}
+      ${crest || ui('chapterMark')}<b>${esc(chapter.name)}</b> ${here ? '· hier' : ''}
       <div class="muted">${range}, ${esc(mark)}</div>
     </button>`
   }).join('')
@@ -1455,18 +1460,7 @@ function ranksScreen(save: SaveV2, model: RankModel | undefined): string {
 }
 
 function treeGlyph(branch: BranchId, index: number, on: boolean): string {
-  const color = branch === 'chest' ? '#f0c14a' : branch === 'fight' ? '#ef9a9a' : '#90caf9'
-  const shapes = [
-    '<circle cx="32" cy="32" r="14"/>',
-    '<rect x="18" y="18" width="28" height="28" rx="8"/>',
-    '<polygon points="32,14 50,46 14,46"/>',
-    '<path d="M16 42c8-18 24-18 32 0" fill="none"/>',
-    '<circle cx="32" cy="32" r="8"/><circle cx="32" cy="32" r="18" fill="none"/>',
-    '<path d="M18 46 L32 16 L46 46"/>',
-    '<rect x="16" y="22" width="32" height="22" rx="8"/>',
-    '<polygon points="32,8 37,24 54,24 40,34 45,50 32,40 19,50 24,34 10,24 27,24"/>'
-  ]
-  return `<svg class="tree-glyph" viewBox="0 0 64 64" aria-hidden="true"><g fill="${on ? color : 'none'}" stroke="${color}" stroke-width="3">${shapes[index] ?? shapes[0]}</g></svg>`
+  return `<img class="tree-glyph${on ? '' : ' off'}" src="${art(`tree/${branch}-${index + 1}.webp`)}" alt=""/>`
 }
 
 function leagueBadge(id: string, on: boolean): string {
@@ -1526,16 +1520,7 @@ function arenaScreen(save: SaveV2, panel: ArenaPanel | undefined): string {
 }
 
 function towerGlyph(line: ResearchLine): string {
-  const art = `tower/${line}`
-  const body: Record<ResearchLine, string> = {
-    gold: '<circle cx="32" cy="32" r="18" fill="#f0c14a"/><circle cx="32" cy="32" r="10" fill="none" stroke="#8a6a12" stroke-width="4"/>',
-    ep: '<path d="M32 8l6 16h16l-13 10 5 16-14-10-14 10 5-16-13-10h16z" fill="#f2d27a"/>',
-    offline: '<path d="M40 14a16 16 0 1 0 0 36 12 12 0 1 1 0-36z" fill="#9eb6e0"/>',
-    expedition: '<path d="M16 50V14h22l-6 10 6 10H16" fill="#7dcea0"/><path d="M16 50v-8" stroke="#243044" stroke-width="4" stroke-linecap="round"/>',
-    egg: '<ellipse cx="32" cy="36" rx="16" ry="20" fill="#f4efe4"/><path d="M22 34c6 2 14 2 20 0" fill="none" stroke="#d7c7a2" stroke-width="3"/>',
-    shard: '<path d="M32 8l14 18-14 30L18 26z" fill="#8fd0ea"/><path d="M32 8l6 18-6 30-6-30z" fill="#d7f3ff"/>'
-  }
-  return `<svg class="tower-svg" data-art="${art}" viewBox="0 0 64 64" aria-hidden="true">${body[line]}</svg>`
+  return `<img class="tower-svg" data-art="tower/${line}" src="${art(`tower/${line}.webp`)}" alt=""/>`
 }
 
 function towerTime(ms: number): string {
@@ -1876,7 +1861,7 @@ export function gameHtml(save: SaveV2, screen: Screen, now: number, pc: PcQuery,
   const chapter = chapterById(save.region, save.chapter)
   const map = mapOpen ? `<div class="map-sheet card">
       <label class="switch">${ui('optLoop')}<input type="checkbox" data-field="loop" ${save.loop ? 'checked' : ''}/> ${tr(save, 'nav.loop')}</label>
-      <p class="muted">${tr(save, 'nav.crest', { name: save.badges.includes(chapter.guardian.badge) ? chapter.guardian.badge : '—' })}</p>
+      <p class="muted">${save.badges.includes(chapter.guardian.badge) && chapter.guardian.badge ? `<img class="crest-mini" src="${art(crestArt(chapter.guardian.badge))}" alt=""/>` : ''}${tr(save, 'nav.crest', { name: save.badges.includes(chapter.guardian.badge) && chapter.guardian.badge ? chapter.guardian.badge : '—' })}</p>
       ${progress(save)}
     </div>` : ''
   const typeScale = fontFactor(save.settings.font)
@@ -2006,6 +1991,7 @@ function overlayHtml(save: SaveV2, overlay: Overlay): string {
       <div class="catches">${sprites || `<span class="muted">${tr(save, 'welcome.none')}</span>`}</div>
       ${levels || `<p class="muted">${tr(save, 'welcome.levels')}</p>`}
       <p>${tr(save, 'welcome.mastery', { names: overlay.summary.mastery.length ? overlay.summary.mastery.map((row) => `${species(row.speciesId).name} ${row.level}`).join(', ') : '—' })}</p>
+      ${overlay.summary.badges.length ? `<p class="crest-row">${overlay.summary.badges.map((name) => `<img class="crest-mini" src="${art(crestArt(name))}" alt="${esc(name)}"/>`).join('')}</p>` : ''}
       <p>${tr(save, 'welcome.badges', { names: overlay.summary.badges.length ? overlay.summary.badges.join(', ') : '—' })}</p>
     </div>
     <button type="button" class="primary" data-act="close">${tr(save, 'welcome.next')}</button>
@@ -2014,7 +2000,7 @@ function overlayHtml(save: SaveV2, overlay: Overlay): string {
   if (overlay.kind === 'guard') {
     return `<div class="sheet" data-sheet="swipe">${grab()}<div class="sheet-body"><div class="kicker">${tr(save, 'guard.title')}</div><h2>${tr(save, overlay.win ? 'guard.win' : 'guard.loss')}</h2>
       <p>${esc(overlay.text)}</p>
-      ${overlay.badge ? `<p>${tr(save, 'guard.badge', { name: esc(overlay.badge) })}</p>` : ''}
+      ${overlay.badge ? `<p><img class="crest-mini" src="${art(crestArt(overlay.badge))}" alt=""/>${tr(save, 'guard.badge', { name: esc(overlay.badge) })}</p>` : ''}
       ${overlay.gold ? `<p>${tr(save, 'guard.gold', { gold: overlay.gold.toLocaleString(L(save) === 'en' ? 'en' : 'de-DE') })}</p>` : ''}
     </div>
       <button type="button" class="primary" data-act="close">${tr(save, 'welcome.next')}</button>
