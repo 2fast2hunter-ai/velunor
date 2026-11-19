@@ -1,7 +1,7 @@
 import { readFileSync } from 'node:fs'
 import { describe, expect, it } from 'vitest'
 import { practiceTeam } from './arena'
-import { LEVEL_HP, addGroupDamage, claimOnce, coopDamage, freshTrack, levelReward, weeklyBeast } from './coop'
+import { LEVEL_HP, addGroupDamage, claimOnce, coopDamage, coopErrorKey, coopRoster, freshTrack, levelReward, weeklyBeast } from './coop'
 import { auditSync } from './online/check'
 import { auditFromSave } from './online/snapshot'
 import { beginAdventure } from './save'
@@ -124,5 +124,21 @@ describe('co-op beast', () => {
     }
     expect(track.hp).toBe(0)
     expect(track.level).toBe(10)
+  })
+
+  it('accepts one road starter beside five registered monsters and names the team error', () => {
+    const save = beginAdventure('Ada', { skin: 0, hair: 0, color: 0 }, 'm01', 1_000)
+    const starter = save.team[0]
+    const owned = ['b', 'c', 'd', 'e', 'f'].map((uid, index) => ({ uid, species: `m${index + 2}`, schimmer: false }))
+    const rows = coopRoster([starter, ...owned.map((row) => row.uid)], owned, save)
+    expect(rows?.map((row) => row.uid)).toEqual([starter, 'b', 'c', 'd', 'e', 'f'])
+    save.mons.y = { ...save.mons[starter], species: 'm02', caughtWhere: 'r1c1' }
+    expect(coopRoster([starter, 'y', 'b', 'c', 'd', 'e'], owned.slice(0, 4), save)).toBeNull()
+    save.mons.x = { ...save.mons[starter], species: 'm09', caughtWhere: 'truhe' }
+    expect(coopRoster(['x', ...owned.map((row) => row.uid)], owned, save)).toBeNull()
+    expect(coopErrorKey('team')).toBe('social.err.team')
+    expect(coopErrorKey('attempts')).toBe('social.err.attempts')
+    const app = readFileSync(new URL('./app.ts', import.meta.url), 'utf8')
+    expect(app).toContain("coopErrorKey(String(result.data.error || result.error || 'team'))")
   })
 })

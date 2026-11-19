@@ -1,8 +1,10 @@
 import { fight1v1, type FightSide } from './battle'
 import { activeSynergies, purityOf, scaleSide, synergyMods } from './synergy'
 import { boardWeek } from './online/ranks'
+import { STARTERS } from './const'
 import { mulberry32 } from '../rng'
 import type { ArenaFighter } from './arena'
+import type { SaveV2 } from './types'
 import type { TypeId } from '../types'
 
 export const COOP_ACTIONS = 60
@@ -10,6 +12,41 @@ export const COOP_ATTEMPTS = 3
 export const GROUP_MAX = 4
 export const EGG_CHANCE = 0.02
 export const WEEK_ATTEMPTS = COOP_ATTEMPTS * 7 * GROUP_MAX
+
+export interface RegisterRow {
+  uid: string
+  species: string
+  schimmer: boolean
+}
+
+/**
+ * Six fighters from the register. One road starter may fill a missing row,
+ * because the starter is not written into monsters_owned.
+ */
+export function coopRoster(uids: readonly string[], owned: readonly RegisterRow[], save: SaveV2): RegisterRow[] | null {
+  if (uids.length !== 6 || new Set(uids).size !== 6) return null
+  const starterIds = new Set<string>(STARTERS.map((starter) => starter.id))
+  const byUid = new Map(owned.map((row) => [row.uid, row]))
+  let starters = 0
+  const rows: RegisterRow[] = []
+  for (const uid of uids) {
+    const known = byUid.get(uid)
+    if (known) {
+      rows.push(known)
+      continue
+    }
+    const mon = save.mons[uid]
+    if (!mon || !starterIds.has(mon.species) || !/^r\d+c\d+$/.test(mon.caughtWhere) || starters >= 1) return null
+    starters += 1
+    rows.push({ uid, species: mon.species, schimmer: Boolean(mon.shiny) })
+  }
+  return rows
+}
+
+export function coopErrorKey(code: string): string {
+  const known = ['team', 'attempts', 'flag', 'none', 'join', 'group', 'strike']
+  return known.includes(code) ? `social.err.${code}` : 'social.err.team'
+}
 
 /**
  * HP for levels 1–10. Tuned so four players using every daily attempt
