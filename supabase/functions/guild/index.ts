@@ -4,12 +4,14 @@ import { coopDamage, weeklyBeast } from '../../../src/adventure/coop.ts'
 import { teamFromRegister } from '../../../src/adventure/arena.ts'
 import {
   foundCost,
+  guildActionDenial,
   guildNameIssue,
   guildTagIssue,
   guildLevel,
   guildTextIssue,
   phraseOk,
-  weekGoals
+  weekGoals,
+  type GuildRole
 } from '../../../src/adventure/guild.ts'
 import type { SaveV2 } from '../../../src/adventure/types.ts'
 
@@ -26,7 +28,13 @@ Deno.serve(async (req) => {
   const db = admin()
   const profile = await db.from('profiles').select('flag_level, last_audit').eq('user_id', user.id).maybeSingle()
   if (profile.data?.flag_level === 2 && action !== 'state' && action !== 'leave') return json({ error: 'flag' }, 403)
-  const badges = Array.isArray(profile.data?.last_audit?.badges) ? profile.data?.last_audit?.badges as string[] : []
+  const membership = await db.from('guild_members').select('guild_id, role').eq('user_id', user.id).maybeSingle()
+  const role = membership.data?.role === 'lead' || membership.data?.role === 'deputy' || membership.data?.role === 'member'
+    ? membership.data.role as GuildRole
+    : null
+  const denied = guildActionDenial(action, role)
+  if (denied) return json({ error: denied }, denied === 'missing' ? 404 : 403)
+  const badges = profile.data?.flag_level === 2 ? [] : (Array.isArray(profile.data?.last_audit?.badges) ? profile.data?.last_audit?.badges as string[] : [])
   const saved = await db.from('saves').select('save_json').eq('user_id', user.id).maybeSingle()
   const adventure = (saved.data?.save_json ?? null) as SaveV2 | null
 

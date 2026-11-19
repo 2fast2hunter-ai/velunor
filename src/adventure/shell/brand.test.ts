@@ -27,10 +27,14 @@ describe('brand assets', () => {
     expect(pngSize('assets/splash-light.png')).toEqual({ width: 2732, height: 2732 })
     expect(pngSize('public/favicon-512.png')).toEqual({ width: 512, height: 512 })
     expect(pngSize('store/entwuerfe/feature-1024x500.png')).toEqual({ width: 1024, height: 500 })
-    for (const name of ['abenteuer', 'truhen', 'team', 'kodex', 'baum', 'expedition']) {
-      expect(pngSize(`store/entwuerfe/rahmen-${name}.png`)).toEqual({ width: 1080, height: 1920 })
-      expect(pngSize(`store/entwuerfe/rahmen-${name}-ios.png`)).toEqual({ width: 1290, height: 2796 })
+    expect(pngSize('store/entwuerfe/icon-512-play.png')).toEqual({ width: 512, height: 512 })
+    for (const name of ['01_abenteuer', '02_team', '03_truhen', '04_kodex', '05_expedition', '06_laden']) {
+      expect(pngSize(`store/screenshots/play/${name}.png`)).toEqual({ width: 1080, height: 1920 })
+      expect(pngSize(`store/screenshots/ios/${name}.png`)).toEqual({ width: 1290, height: 2796 })
     }
+    const adaptive = readFileSync('android/app/src/main/res/mipmap-anydpi-v26/ic_launcher.xml', 'utf8')
+    expect(adaptive).not.toContain('inset')
+    expect(adaptive).toContain('monochrome')
     const icon = readFileSync('assets/quellen/icon-foreground.svg', 'utf8')
     expect(icon.toLowerCase()).not.toContain('pokemon')
     expect(icon.toLowerCase()).not.toContain('bannsiegel')

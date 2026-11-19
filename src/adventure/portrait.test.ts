@@ -193,6 +193,31 @@ describe('portrait shell', () => {
     expect(storage.getItem(SAVE_KEY_V2)).toContain('"v":2')
   })
 
+  it('wraps portraits in a frame and keeps the old plate selectors on the inner image', () => {
+    const save = beginAdventure('Ada', { skin: 0, hair: 0, color: 0 }, 'm01', 1_000)
+    const road = gameHtml(save, 'adventure', 1_000, pc, dex, null, false, false, null)
+    expect(road).toContain('class="pframe"')
+    expect(road).toContain('frames/rarity_')
+    expect(road).toContain('ui/node_wild.webp')
+    expect(road).toContain('ui/node_guardian.webp')
+    expect(road).toContain('ui/cloud_offline.webp')
+    const codex = gameHtml(save, 'codex', 1_000, pc, dex, null, false, false, null)
+    expect(codex).toContain('frames/ghost_overlay_256.png')
+    expect(codex).toContain('opacity:.25')
+    save.badges = ['Kieselwappen', 'Wellenwappen', 'Funkenwappen']
+    const wheel = gameHtml(save, 'activities', 1_000, pc, dex, null, false, false, null, save.step, { tab: 'wheel', mult: 1, symbols: null, note: '' })
+    expect(wheel).toContain('ui/wheel_funke.webp')
+    expect(wheel).toContain('ui/wheel_funke@2x.webp')
+    const card = gameHtml(save, 'team', 1_000, pc, dex, null, false, false, { kind: 'card', uid: save.team[0] })
+    expect(card).toContain('ui/shard_64.webp')
+    expect(card).toContain('class="m-plate')
+    const css = readFileSync(new URL('./adventure.css', import.meta.url), 'utf8')
+    expect(css).toMatch(/\.prize-line img \{[^}]*width: 96px/)
+    expect(css).toMatch(/\.m-plate \{[^}]*inline-flex/)
+    expect(css).toMatch(/\.arena-slot \{[^}]*min-width: 96px/)
+    expect(css).not.toMatch(/\.portrait, \.hero/)
+  })
+
   it('paints each tint with its own plate and keeps a missing key on the meadow', () => {
     expect(sceneFile('wiese', 'moor')).toEqual({
       webp: 'backgrounds/bg_gm_moor_p.webp',

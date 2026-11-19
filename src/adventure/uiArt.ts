@@ -72,7 +72,16 @@ export const UI_ART = {
   achRegion: 'ui/ach_region.webp',
   achTypes: 'ui/ach_types.webp',
   achCodex: 'ui/ach_codex.webp',
-  achCare: 'ui/ach_care.webp'
+  achCare: 'ui/ach_care.webp',
+  moreRanks: 'ui/nav_ranks.webp',
+  moreTree: 'ui/nav_tree.webp',
+  moreTower: 'ui/nav_tower.webp',
+  moreArena: 'ui/nav_arena.webp',
+  moreFriends: 'ui/nav_friends.webp',
+  moreExpedition: 'ui/nav_expedition.webp',
+  moreTrade: 'ui/nav_trade.webp',
+  moreGuild: 'ui/nav_guild.webp',
+  moreChat: 'ui/nav_chat.webp'
 } as const
 
 export type UiArtId = keyof typeof UI_ART

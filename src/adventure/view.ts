@@ -252,9 +252,16 @@ function ui(id: UiArtId): string {
   return `<img class="ui-icon" src="${art(UI_ART[id])}" alt=""/>`
 }
 
+function typeIcon(type: TypeId, cls = 'type-icon'): string {
+  return `<img class="${cls}" src="${art(`icons/type_${type}_128.png`)}" alt=""/>`
+}
+
 function portrait(speciesId: string, large = false, extra = ''): string {
-  const color = rarityInfo(species(speciesId).baseRarity).color
-  return `<img class="portrait ${extra}" style="--rarity:${color}" src="${monsterArt(speciesId, large)}" alt=""/>`
+  const rarity = species(speciesId).baseRarity
+  const color = rarityInfo(rarity).color
+  const sil = extra.split(' ').includes('sil')
+  const frame = sil ? `frames/ghost_overlay${large ? '' : '_256'}.png` : `frames/rarity_${rarity}${large ? '' : '_256'}.png`
+  return `<span class="pframe" style="--rarity:${color};--frame:url('${art(frame)}')"><img class="portrait ${extra}" src="${monsterArt(speciesId, large)}" alt=""/></span>`
 }
 
 function masteryPlate(save: SaveV2, speciesId: string, extra = ''): string {
@@ -286,12 +293,7 @@ function tr(save: SaveV2, key: string, vars?: Record<string, string | number>): 
 }
 
 function icon(kind: NodeKind): string {
-  const common = 'fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round"'
-  if (kind === 'wild') return `<svg viewBox="0 0 24 24" ${common}><path d="M4 16c2-6 4-6 6 0M10 16c2-6 4-6 6 0M8 10c1.2-3 2.4-3 4 0"/></svg>`
-  if (kind === 'trainer') return `<svg viewBox="0 0 24 24" ${common}><circle cx="12" cy="8" r="3"/><path d="M6 19c1.2-3 3.2-4.5 6-4.5S16.8 16 18 19"/></svg>`
-  if (kind === 'find') return `<svg viewBox="0 0 24 24" ${common}><path d="M12 3l3 6 6 .5-4.5 4 1.4 6.5L12 17l-6 3 1.4-6.5L3 9.5 9 9z"/></svg>`
-  if (kind === 'spring') return `<svg viewBox="0 0 24 24" ${common}><path d="M12 3s5 6 5 10a5 5 0 0 1-10 0c0-4 5-10 5-10z"/></svg>`
-  return `<svg viewBox="0 0 24 24" ${common}><path d="M12 3l7 3v6c0 5-3.2 7.6-7 9-3.8-1.4-7-4-7-9V6z"/></svg>`
+  return `<img class="node-ico" src="${art(`ui/node_${kind}.webp`)}" alt=""/>`
 }
 
 function clockLabel(save: SaveV2, now: number): { time: string; part: string } {
@@ -324,11 +326,7 @@ function cloudStatusKey(status: CloudView['status']): string {
 }
 
 function cloudGlyph(kind: 'online' | 'offline' | 'sync'): string {
-  if (kind === 'sync') {
-    return '<svg viewBox="0 0 24 24" aria-hidden="true"><path fill="currentColor" d="M12 5V2L7 7l5 5V8a4 4 0 1 1-3.9 4.8l-1.9.6A6 6 0 1 0 12 5z"/></svg>'
-  }
-  const slash = kind === 'offline' ? '<path fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" d="M5 19L19 5"/>' : ''
-  return `<svg viewBox="0 0 24 24" aria-hidden="true"><path fill="currentColor" d="M7 18h10.2a3.8 3.8 0 0 0 .5-7.6A6 6 0 0 0 6.2 8.2 4.2 4.2 0 0 0 7 18z"/>${slash}</svg>`
+  return `<img src="${art(`ui/cloud_${kind}.webp`)}" alt="" aria-hidden="true"/>`
 }
 
 function cloudChip(save: SaveV2, cloud: CloudView): string {
@@ -394,26 +392,21 @@ function moreSheet(save: SaveV2, open: boolean): string {
   const items: [Screen, UiArtId, string][] = [
     ['shop', 'moreShop', 'nav.shop'],
     ['achievements', 'moreAchievements', 'nav.achievements'],
+    ['ranks', 'moreRanks', 'nav.ranks'],
+    ['tree', 'moreTree', 'nav.tree'],
+    ['tower', 'moreTower', 'nav.tower'],
+    ['arena', 'moreArena', 'nav.arena'],
+    ['social', 'moreFriends', 'nav.friends'],
+    ['expedition', 'moreExpedition', 'nav.expedition'],
+    ['trade', 'moreTrade', 'nav.trade'],
+    ['guild', 'moreGuild', 'nav.guild'],
+    ['chat', 'moreChat', 'nav.chat'],
     ['options', 'moreOptions', 'nav.options'],
     ['guide', 'moreGuide', 'nav.guide']
   ]
-  const ranks = `<button type="button" data-act="screen" data-screen="ranks"><svg class="ui-icon" viewBox="0 0 24 24" aria-hidden="true"><path fill="currentColor" d="M4 20V9h4v11H4zm6 0V4h4v16h-4zm6 0v-7h4v7h-4z"/></svg>${tr(save, 'nav.ranks')}</button>`
-  const treeBtn = `<button type="button" data-act="screen" data-screen="tree"><svg class="ui-icon" viewBox="0 0 24 24" aria-hidden="true"><path fill="none" stroke="currentColor" stroke-width="2" d="M12 22V8M7 22V12M17 22V12M12 8l-5 4M12 8l5 4"/></svg>${tr(save, 'nav.tree')}</button>`
-  const arenaBtn = `<button type="button" data-act="screen" data-screen="arena"><svg class="ui-icon" viewBox="0 0 24 24" aria-hidden="true"><circle cx="12" cy="12" r="8" fill="none" stroke="currentColor" stroke-width="2"/><path fill="currentColor" d="M12 6l1.6 3.4L17 11l-3.4 1.6L12 16l-1.6-3.4L7 11l3.4-1.6z"/></svg>${tr(save, 'nav.arena')}</button>`
-  const socialBtn = `<button type="button" data-act="screen" data-screen="social"><svg class="ui-icon" viewBox="0 0 24 24" aria-hidden="true"><circle cx="8" cy="9" r="3" fill="currentColor"/><circle cx="16" cy="9" r="3" fill="currentColor"/><path fill="currentColor" d="M3 19c.4-3 2.4-4.5 5-4.5s4.6 1.5 5 4.5H3zm8 0c.3-2 1.6-3.4 3.5-4 1.2.6 2.2 1.6 2.5 4H11z"/></svg>${tr(save, 'nav.friends')}</button>`
   return `<div class="more-sheet card" ${open ? '' : 'hidden'}>
     <div class="more-who">${lookFace(save.look, save.equippedFrame ?? '')}<b>${esc(save.name)}</b></div>
-    ${items.slice(0, 2).map(([id, icon, label]) => `<button type="button" data-act="screen" data-screen="${id}">${ui(icon)}${tr(save, label)}</button>`).join('')}
-    ${ranks}
-    ${treeBtn}
-    <button type="button" data-act="screen" data-screen="tower"><svg class="ui-icon" viewBox="0 0 24 24" aria-hidden="true"><path fill="currentColor" d="M10 2h4v4h3v4h2v12H5V10h2V6h3z"/></svg>${tr(save, 'nav.tower')}</button>
-    ${arenaBtn}
-    ${socialBtn}
-    <button type="button" data-act="screen" data-screen="expedition"><svg class="ui-icon" viewBox="0 0 24 24" aria-hidden="true"><path fill="currentColor" d="M4 16c3-6 6-6 8-2s5-4 8-2v6H4z"/><circle cx="16" cy="7" r="2.4" fill="currentColor"/></svg>${tr(save, 'nav.expedition')}</button>
-    <button type="button" data-act="screen" data-screen="trade"><svg class="ui-icon" viewBox="0 0 24 24" aria-hidden="true"><rect x="4" y="6" width="7" height="12" rx="2" fill="currentColor"/><rect x="13" y="6" width="7" height="12" rx="2" fill="currentColor" opacity=".7"/></svg>${tr(save, 'nav.trade')}</button>
-    <button type="button" data-act="screen" data-screen="guild"><svg class="ui-icon" viewBox="0 0 24 24" aria-hidden="true"><path fill="currentColor" d="M12 3l7 4v5c0 4.5-3 7.5-7 9-4-1.5-7-4.5-7-9V7z"/></svg>${tr(save, 'nav.guild')}</button>
-    <button type="button" data-act="screen" data-screen="chat"><svg class="ui-icon" viewBox="0 0 24 24" aria-hidden="true"><path fill="currentColor" d="M5 6h14a2 2 0 0 1 2 2v7a2 2 0 0 1-2 2H9l-4 3v-3H5a2 2 0 0 1-2-2V8a2 2 0 0 1 2-2z"/></svg>${tr(save, 'nav.chat')}</button>
-    ${items.slice(2).map(([id, icon, label]) => `<button type="button" data-act="screen" data-screen="${id}">${ui(icon)}${tr(save, label)}</button>`).join('')}
+    ${items.map(([id, icon, label]) => `<button type="button" data-act="screen" data-screen="${id}">${ui(icon)}${tr(save, label)}</button>`).join('')}
   </div>`
 }
 
@@ -498,7 +491,7 @@ function battle(save: SaveV2, now: number, fighting = false, shadow = false): st
     <div class="battle-top">
       <p id="battle-text" class="battle-status">${tr(save, 'battle.place', { part: clock.part, weather: weatherLabel(L(save), weatherForecast(now)[0].weather), place: chapter.name, state: tr(save, save.hold ? 'battle.waiting' : 'battle.walking') })}</p>
       <div class="wx-stack"><div class="wx-chip" id="wx-chip">${weatherChip(save, now)}</div></div>
-      ${bossAhead(save) ? `<p class="wx-preview">${esc(weatherPreview(save, now))}</p>` : ''}
+      ${bossAhead(save) ? `<p class="wx-preview">${weatherPreview(save, now)}</p>` : ''}
     </div>
     ${sealed ? '' : `<div class="guard-dock">${fighting ? '' : guardCard(save)}<button type="button" class="primary challenge-fab" data-act="challenge">${ui('challenge')}${tr(save, chapter.council || chapter.foyer ? 'battle.resume' : 'battle.challenge')}</button></div>`}
     ${shadow ? `<p class="shadow-note shadow-battle" role="status">${esc(tr(save, 'cloud.shadow'))}</p>` : ''}
@@ -549,7 +542,7 @@ function logBox(save: SaveV2): string {
 function weatherChip(save: SaveV2, now: number): string {
   const weather = weatherForecast(now)[0].weather
   const row = WEATHER_SHIFTS[weather]
-  const bit = (type: TypeId, pct: number, sign: string) => `${esc(typeLabel(L(save), type, typeName(type)))} ${sign}${pct} %`
+  const bit = (type: TypeId, pct: number, sign: string) => `${typeIcon(type)}${esc(typeLabel(L(save), type, typeName(type)))} ${sign}${pct} %`
   const parts = [...row.up.map((shift) => bit(shift.type, shift.pct, '+')), ...row.down.map((shift) => bit(shift.type, shift.pct, '−'))]
   return `<img src="${art(`battle/weather_icon_${weather}.png`)}" alt=""/> ${esc(weatherLabel(L(save), weather))} · ${parts.join(' · ')}`
 }
@@ -576,15 +569,15 @@ function guardCard(save: SaveV2): string {
     if (!mon) return []
     const arrow = typeArrow(species(mon.species).type, foeType)
     const mark = arrow === 'up'
-      ? `<b class="up">▲</b>`
+      ? `<img class="arrow up" src="${art('battle/stat_up.png')}" alt="▲"/>`
       : arrow === 'down'
-        ? `<b class="down">▼</b>`
+        ? `<img class="arrow down" src="${art('battle/stat_down.png')}" alt="▼"/>`
         : ''
     return [`<span>${esc(species(mon.species).name)}${mark}</span>`]
   }).join('')
   const lead = bossLead(save)
   const preview = lead ? bossPreview(lead.speciesId, lead.level, lead.mechs) : ''
-  return `<div class="guard-card"><div class="guard-title">Gegen ${esc(typeName(foeType))}</div><div class="guard-names">${bits}</div>${preview}</div>`
+  return `<div class="guard-card"><div class="guard-title">Gegen ${typeIcon(foeType)} ${esc(typeName(foeType))}</div><div class="guard-names">${bits}</div>${preview}</div>`
 }
 
 function bossLead(save: SaveV2): { speciesId: string; level: number; mechs: MechId[] } | null {
@@ -619,17 +612,13 @@ function weatherPreview(save: SaveV2, now: number): string {
     return mon ? [species(mon.species).type] : []
   })
   const marks = teamWeatherMarks(types, weather)
-  return `Jetzt: ${weatherLabel(L(save), weather)}. Dein Team: ${marks.up} ▲, ${marks.down} ▼`
+  const up = `<img class="arrow" src="${art('battle/stat_up.png')}" alt="▲"/>`
+  const down = `<img class="arrow" src="${art('battle/stat_down.png')}" alt="▼"/>`
+  return `Jetzt: ${esc(weatherLabel(L(save), weather))}. Dein Team: ${marks.up} ${up}, ${marks.down} ${down}`
 }
 
 function weatherIcon(id: WeatherId): string {
-  const common = 'fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"'
-  if (id === 'klar') return `<svg viewBox="0 0 24 24" ${common}><circle cx="12" cy="12" r="4"/><path d="M12 2v3M12 19v3M2 12h3M19 12h3M4.9 4.9l2 2M17.1 17.1l2 2M19.1 4.9l-2 2M6.9 17.1l-2 2"/></svg>`
-  if (id === 'regen') return `<svg viewBox="0 0 24 24" ${common}><path d="M7 15c-2 0-3-1.4-3-3 0-2 2-3 3.2-2.2C8 7 10 6 12 6c2.4 0 4 1.6 4.4 3.6 1.8.2 3.6 1.6 3.6 3.6 0 1.8-1.4 2.8-3 2.8"/><path d="M8 18v3M12 18v3M16 18v3"/></svg>`
-  if (id === 'gewitter') return `<svg viewBox="0 0 24 24" ${common}><path d="M7 14c-2 0-3-1.4-3-3 0-2 2-3 3.2-2.2C8 6 10 5 12 5c2.4 0 4 1.6 4.4 3.6 1.8.2 3.6 1.6 3.6 3.6 0 1.6-1.2 2.6-2.6 2.8"/><path d="M13 14l-3 5h3l-1 4 5-6h-3l2-3z"/></svg>`
-  if (id === 'schnee') return `<svg viewBox="0 0 24 24" ${common}><path d="M12 3v18M5 7l14 10M19 7L5 17"/><path d="M12 7l-1.5-1M12 7l1.5-1M12 17l-1.5 1M12 17l1.5 1"/></svg>`
-  if (id === 'nebel') return `<svg viewBox="0 0 24 24" ${common}><path d="M4 9h16M3 13h18M5 17h14"/></svg>`
-  return `<svg viewBox="0 0 24 24" ${common}><path d="M3 8c3 0 3 3 6 3s3-3 6-3 3 3 6 3M3 14c3 0 3 3 6 3s3-3 6-3 3 3 6 3"/></svg>`
+  return `<img class="wx-icon" src="${art(`battle/weather_icon_${id}_128.png`)}" alt=""/>`
 }
 
 function drawerSheet(save: SaveV2, now: number): string {
@@ -798,14 +787,15 @@ function synergyBoard(save: SaveV2): string {
   const purity = [...counts].flatMap(([type, count]) => {
     const bonus = purityOf(types, type)
     if (bonus <= 0) return []
-    return [tr(save, 'synergy.purity', { count, type: typeLabel(L(save), type, typeName(type)), pct: Math.round(bonus * 100) })]
+    const text = tr(save, 'synergy.purity', { count, type: typeLabel(L(save), type, typeName(type)), pct: Math.round(bonus * 100) })
+    return [`${typeIcon(type)}${esc(text)}`]
   }).join(' · ')
   return `<section class="synergy-board" data-art="synergy/board">
     <h3>${tr(save, 'synergy.title')}</h3>
     <p class="synergy-note">${tr(save, 'synergy.note')}</p>
     <div class="synergy-grid">${buttons}</div>
     <button type="button" class="synergy-auto${save.synergy == null ? ' on' : ''}" data-act="synergy-auto">${tr(save, 'synergy.auto')}</button>
-    ${purity ? `<p class="synergy-purity">${esc(purity)}</p>` : ''}
+    ${purity ? `<p class="synergy-purity">${purity}</p>` : ''}
   </section>`
 }
 
@@ -964,13 +954,7 @@ function shop(save: SaveV2, now: number, tab: ShopTab, hint: boolean): string {
 }
 
 function glyph(id: SymbolId): string {
-  const box = 'viewBox="0 0 64 64" width="72" height="72" aria-hidden="true"'
-  if (id === 'stern') return `<svg ${box}><polygon points="32,6 38,24 58,24 42,36 48,56 32,44 16,56 22,36 6,24 26,24" fill="#f0c14a"/></svg>`
-  if (id === 'mond') return `<svg ${box}><path d="M42 8a22 22 0 1 0 0 48 16 16 0 1 1 0-48z" fill="#d6e4ff"/></svg>`
-  if (id === 'krone') return `<svg ${box}><path d="M8 48 L14 22 L26 34 L32 12 L38 34 L50 22 L56 48 Z" fill="#f0c14a"/></svg>`
-  if (id === 'blatt') return `<svg ${box}><ellipse cx="32" cy="36" rx="14" ry="22" transform="rotate(-28 32 36)" fill="#7dcea0"/></svg>`
-  if (id === 'tropfen') return `<svg ${box}><path d="M32 8 C32 8 14 30 14 42 a18 18 0 0 0 36 0 C50 30 32 8 32 8Z" fill="#4fc3f7"/></svg>`
-  return `<svg ${box}><polygon points="32,4 38,26 60,32 38,38 32,60 26,38 4,32 26,26" fill="#fff176"/></svg>`
+  return `<img class="reel-sym" src="${art(`ui/wheel_${id}.webp`)}" srcset="${art(`ui/wheel_${id}.webp`)} 1x, ${art(`ui/wheel_${id}@2x.webp`)} 2x" width="72" height="72" alt=""/>`
 }
 
 function activityTabs(save: SaveV2, wheel: WheelPanel): string {
@@ -1115,8 +1099,9 @@ function dailyCard(save: SaveV2): string {
     const type = task.type ? typeLabel(L(save), task.type, typeName(task.type)) : ''
     const name = tr(save, `daily.task.${task.kind}`, { n: task.need, type })
     const fruit = reward.fruit ? ` · ${tr(save, `fruit.${reward.fruit}`)}` : ''
+    const mark = task.type ? typeIcon(task.type) : ''
     return `<li class="daily-task${task.claimed ? ' done' : ''}">
-      <b>${esc(name)}</b>
+      ${mark}<b>${esc(name)}</b>
       <span>${task.have}/${task.need}</span>
       <span class="muted">${tr(save, 'daily.pay', { marks: reward.marks, gold: reward.gold })}${fruit}</span>
     </li>`
@@ -1158,7 +1143,7 @@ function hortView(save: SaveV2, now: number, selected: string | null, wheel: Whe
     return `<button type="button" class="mon-card ${selected === uid ? 'on' : ''}" data-act="select" data-uid="${uid}">
       ${portrait(sp.id)}
       <div>${esc(sp.name)}${mon.shiny ? ' · Schimmer' : ''}</div>
-      <div class="muted">Lv ${mon.lvl} · ${esc(typeName(sp.type))}</div>
+      <div class="muted">Lv ${mon.lvl} · ${typeIcon(sp.type)} ${esc(typeName(sp.type))}</div>
     </button>`
   }).join('')
   const eggs = save.eggs.map((egg) => {
@@ -1211,8 +1196,9 @@ function achievementsView(save: SaveV2): string {
     const typeBit = typeId ? typeLabel(L(save), typeId, typeName(typeId as TypeId)) : ''
     const name = goalName(L(save), goal.id, goal.name, typeBit)
     const title = goalTitle(L(save), goal.id, goal.title, typeBit)
+    const mark = typeId ? typeIcon(typeId as TypeId) : ''
     return `<article class="list-row achieve ${have ? 'done' : ''}">
-      ${ui(achieveArt(goal.id))}<div><b>${esc(name)}</b><div class="muted">${have ? tr(save, 'ach.have', { title, frame: goal.frame }) : tr(save, 'ach.open')} · ${goal.gold.toLocaleString(L(save) === 'en' ? 'en' : 'de-DE')} G</div></div>
+      ${ui(achieveArt(goal.id))}<div>${mark}<b>${esc(name)}</b><div class="muted">${have ? tr(save, 'ach.have', { title, frame: goal.frame }) : tr(save, 'ach.open')} · ${goal.gold.toLocaleString(L(save) === 'en' ? 'en' : 'de-DE')} G</div></div>
       ${have ? `<div class="list-actions"><button type="button" data-act="equip-title" data-id="${goal.id}">${ui('equipTitle')}${tr(save, 'ach.titleBtn')}</button><button type="button" data-act="equip-frame" data-id="${goal.id}">${ui('equipFrame')}${tr(save, 'ach.frameBtn')}</button></div>` : ''}
     </article>`
   }).join('')
@@ -1709,7 +1695,7 @@ function expeditionScreen(save: SaveV2, now: number, pick: string | undefined, g
     return `<article class="expedition-card${selected ? ' on' : ''}" data-art="${esc(quest.art)}">
       ${placeArt(quest.art, quest.place)}
       <h3>${esc(quest.place)}</h3>
-      <p>${esc(tr(save, 'expedition.wish', { type: typeLabel(L(save), quest.type, typeName(quest.type)), rarity: quest.rarity }))}</p>
+      <p>${typeIcon(quest.type)}${esc(tr(save, 'expedition.wish', { type: typeLabel(L(save), quest.type, typeName(quest.type)), rarity: quest.rarity }))}</p>
       <p>${tr(save, 'expedition.hours', { n: quest.hours })}</p>
       <div class="tier-row">${marks}</div>
       <p class="muted">${tr(save, 'expedition.egg', { n: 2 })} · ${tr(save, 'expedition.egg', { n: 4 })} · ${tr(save, 'expedition.egg', { n: 8 })}</p>
@@ -2023,7 +2009,7 @@ function overlayHtml(save: SaveV2, overlay: Overlay): string {
     const sp = species(overlay.species)
     return `<div class="sheet" data-sheet="swipe">${grab()}<div class="sheet-body"><div class="kicker">${tr(save, 'catch.got')}</div><h2>${esc(sp.name)}</h2>
       <img class="hero" src="${monsterArt(sp.id, true)}" alt=""/>
-      <p>${esc(typeLabel(L(save), sp.type, typeName(sp.type)))} · ${esc(rarityLabel(L(save), sp.baseRarity, rarityName(sp.id)))} · Lv ${overlay.level}</p>
+      <p>${typeIcon(sp.type)}${esc(typeLabel(L(save), sp.type, typeName(sp.type)))} · ${esc(rarityLabel(L(save), sp.baseRarity, rarityName(sp.id)))} · Lv ${overlay.level}</p>
       <p>${esc(sp.blurb)}</p>
       <p>${tr(save, overlay.place === 'team' ? 'catch.team' : 'catch.pc')}</p>
     </div>
@@ -2047,7 +2033,7 @@ function dexEntry(save: SaveV2, id: string): string {
     <div class="kicker">Nr. ${speciesNumber(id)} · ${dexStatusLabel(status)}</div>
     <h2>${esc(sp.name)}</h2>
     ${masteryStarRow(masteryLevel(save.mastery?.[id] ?? 0))}
-    <p>${esc(typeName(sp.type))} · ${esc(rarityInfo(sp.baseRarity).name)} · ${tr(save, 'codex.catches', { n: (save.dex[id]?.caught ?? 0).toLocaleString('de-DE') })}</p>
+    <p>${typeIcon(sp.type)}${esc(typeName(sp.type))} · ${esc(rarityInfo(sp.baseRarity).name)} · ${tr(save, 'codex.catches', { n: (save.dex[id]?.caught ?? 0).toLocaleString('de-DE') })}</p>
     <div class="stats">
       <div class="stat">HP<br/>${base.hp}</div>
       <div class="stat">ATK<br/>${base.atk}</div>
@@ -2080,7 +2066,7 @@ function card(save: SaveV2, uid: string): string {
     ${masteryPlate(save, sp.id)}
     <div class="bar-exp m-bar"><span style="width:${goal.pct}%"></span></div>
     <p class="muted">${goal.done ? tr(save, 'mastery.max') : tr(save, 'mastery.ep', { have: goal.into.toLocaleString('de-DE'), need: goal.span.toLocaleString('de-DE') })} · ${tr(save, 'mastery.bonus', { pct: rank * 2 })}</p>
-    <p>${esc(typeLabel(L(save), sp.type, typeName(sp.type)))} · ${esc(rarityLabel(L(save), sp.baseRarity, rarityInfo(sp.baseRarity).name))} · Lv ${mon.lvl} · ${tr(save, 'card.awaken', { n: mon.lvl >= 50 ? 2 : mon.lvl >= 25 ? 1 : 0 })}</p>
+    <p>${typeIcon(sp.type)}${esc(typeLabel(L(save), sp.type, typeName(sp.type)))} · ${esc(rarityLabel(L(save), sp.baseRarity, rarityInfo(sp.baseRarity).name))} · Lv ${mon.lvl} · ${tr(save, 'card.awaken', { n: mon.lvl >= 50 ? 2 : mon.lvl >= 25 ? 1 : 0 })}</p>
     <div class="bar-exp"><span style="width:${pct}%"></span></div>
     <p class="muted">EP ${mon.exp.toLocaleString('de-DE')} / ${need.toLocaleString('de-DE')}</p>
     <div class="stats">
@@ -2094,7 +2080,7 @@ function card(save: SaveV2, uid: string): string {
     <p class="muted">${tr(save, 'card.caught', { when, where: placeLabel(mon.caughtWhere, L(save)) })}</p>
     <label class="switch"><input type="checkbox" data-field="buddy" data-uid="${uid}" ${save.buddy === uid ? 'checked' : ''}/> ${tr(save, 'team.buddy')}</label>
     <label class="switch"><input type="checkbox" data-field="keep" data-uid="${uid}" ${mon.keepDupes ? 'checked' : ''}/> ${tr(save, 'card.keep')}</label>
-    <p>${tr(save, 'chest.star', { n: save.stars[sp.id] ?? 0 })} · ${save.shards[sp.id] ?? 0}</p>
+    <p>${tr(save, 'chest.star', { n: save.stars[sp.id] ?? 0 })} · <img class="shard-ico" src="${art('ui/shard_64.webp')}" alt="Splitter" width="28" height="28"/> ${save.shards[sp.id] ?? 0}</p>
     ${(save.stars[sp.id] ?? 0) < 5 ? `<button type="button" class="primary" data-act="star" data-id="${sp.id}">${tr(save, 'chest.starUp')} (${starCost(sp.baseRarity, (save.stars[sp.id] ?? 0) + 1)})</button>` : ''}
     ${Object.values(save.mons).filter((row) => row.species === sp.id).length > 1 ? `<button type="button" data-act="melt" data-uid="${uid}">Einschmelzen</button>` : ''}
     </div>
