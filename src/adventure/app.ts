@@ -2683,12 +2683,19 @@ function spawnFloat(host: HTMLElement | null, hit: { amount: number; crit: boole
   if (node.parentElement !== host) host.appendChild(node)
   const style = numberStyle(hit.band, hit.crit, Boolean(hit.awaken), base)
   const label = style.label
+  const text = label ? `${label} ${hit.amount}` : String(hit.amount)
+  const size = Math.round(36 * style.scale)
+  const hostWidth = host.clientWidth || 1080
+  const center = (Number.parseFloat(left) / 100) * hostWidth
+  const half = text.length * size * 0.34 + 12
+  const clamped = Math.min(hostWidth - half, Math.max(half, Number.isFinite(center) ? center : hostWidth * 0.5))
   node.hidden = false
-  node.textContent = label ? `${label} ${hit.amount}` : String(hit.amount)
-  node.style.left = left
-  node.style.top = '38%'
+  node.textContent = text
+  node.style.left = `${Math.round(clamped)}px`
+  node.style.transform = 'translateX(-50%)'
+  node.style.top = '46%'
   node.style.color = style.color
-  node.style.fontSize = `${Math.round(36 * style.scale)}px`
+  node.style.fontSize = `${size}px`
   node.style.opacity = hit.band === 'weak' ? '0.5' : '1'
   const shown = node
   window.setTimeout(() => { shown.hidden = true }, holdMs)
