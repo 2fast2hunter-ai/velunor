@@ -9935,11 +9935,28 @@ function nameLetters(raw) {
 function collapseRepeats(letters, keep) {
   return letters.replace(/(.)\1+/g, (run, ch) => ch.repeat(Math.min(keep, run.length)));
 }
-function bannedWord(raw) {
-  const letters = nameLetters(raw);
-  const forms = [collapseRepeats(letters, 2), collapseRepeats(letters, 1)];
-  if (forms.some((form) => ALLOWED.has(form))) return false;
-  return forms.some((form) => BLOCKED.some((word) => form.includes(word)));
+function tokenBlocked(form) {
+  if (!form) return false;
+  const forms = [form, collapseRepeats(form, 1)];
+  if (forms.some((item) => ALLOWED.has(item))) return false;
+  return forms.some((item) => BLOCKED.some((word) => item.includes(word)) || ["fck", "porn", "nsfw"].some((word) => item.includes(word)));
+}
+function bannedChat(raw) {
+  const tokens = raw.split(/\s+/).map((token) => collapseRepeats(nameLetters(token), 2)).filter(Boolean);
+  if (tokens.some((token) => tokenBlocked(token))) return true;
+  const pieces = [];
+  let buf = "";
+  for (const token of tokens) {
+    if (token.length <= 2) buf += token;
+    else {
+      if (buf) pieces.push(buf);
+      buf = "";
+    }
+  }
+  if (buf) pieces.push(buf);
+  if (pieces.some((piece) => tokenBlocked(piece))) return true;
+  const phrase = tokens.join(" ");
+  return phrase.includes("kill yourself") || tokens.join("").includes("killyourself");
 }
 
 // src/adventure/chat.ts
@@ -9974,21 +9991,18 @@ function filterChat(raw) {
   const text = raw.trim();
   if (!text || text.length > CHAT_MAX) return { kind: "length" };
   if (hasContact(text)) return { kind: "contact" };
-  if (bannedWord(text) || extraSevere(text)) return { kind: "severe" };
+  if (bannedChat(text)) return { kind: "severe" };
   const masked = maskMild(text);
   if (masked !== text) return { kind: "mask", text: masked };
   return { kind: "ok", text };
-}
-function extraSevere(text) {
-  const mapped = [...text.toLowerCase()].map((ch) => ch === "0" ? "o" : ch).join("").replace(/[^a-z]/g, "");
-  return ["fck", "porn", "nsfw"].some((word) => mapped.includes(word));
 }
 function hasContact(text) {
   if (/[a-z0-9._%+-]+@[a-z0-9.-]+\.[a-z]{2,}/i.test(text)) return true;
   if (/(https?:\/\/|www\.)\S+/i.test(text)) return true;
   if (/\b[a-z0-9-]+\.(com|de|net|org|gg|io)\b/i.test(text)) return true;
   if (/\b\w+\s+at\s+\w+\s+dot\s+\w+\b/i.test(text)) return true;
-  return /(\d[\s().+\-]*){8,}/.test(text);
+  if (/(\d[\s().+\-]*){8,}/.test(text)) return true;
+  return /\b(?:insta|instagram|snapchat|snap|tiktok|telegram|whatsapp|discord|twitter|facebook|twitch|signal)\b\s*[:@]\s*@?[a-z0-9._]{2,}/i.test(text);
 }
 function maskMild(text) {
   return text.replace(/[A-Za-zÄÖÜäöüß]+/g, (word) => {
@@ -10042,10 +10056,29 @@ Deno.serve(async (req) => {
   }
   if (action === "state") {
     const member2 = await db.from("guild_members").select("guild_id").eq("user_id", user.id).maybeSingle();
-    const channel2 = member2.data?.guild_id ? `guild:${member2.data.guild_id}` : "";
+    const links = await db.from("friendships").select("user_a, user_b").or(`user_a.eq.${user.id},user_b.eq.${user.id}`);
+    const ids = (links.data ?? []).map((row) => row.user_a === user.id ? String(row.user_b) : String(row.user_a));
+    const codes = ids.length ? await db.from("friend_codes").select("user_id, code").in("user_id", ids) : { data: [] };
+    const names = ids.length ? await db.from("player_names").select("user_id, hidden, display, name, tag").in("user_id", ids) : { data: [] };
+    const codeOf = new Map((codes.data ?? []).map((row) => [String(row.user_id), String(row.code)]));
+    const nameOf = new Map((names.data ?? []).map((row) => [String(row.user_id), row]));
+    const friends = ids.flatMap((id) => {
+      const code = codeOf.get(id);
+      if (!code) return [];
+      const row = nameOf.get(id);
+      const label2 = row?.hidden ? `Spieler#${row.tag ?? "0000"}` : row?.display || "Spieler";
+      return [{ code, label: label2 }];
+    });
+    const kind = body.kind === "dm" ? "dm" : "guild";
+    const wanted = String(body.code ?? "").trim().toUpperCase();
+    const other2 = kind === "dm" ? String((codes.data ?? []).find((row) => String(row.code) === wanted)?.user_id ?? "") : "";
+    const linked = other2 ? await db.from("friendships").select("user_a").eq("user_a", user.id < other2 ? user.id : other2).eq("user_b", user.id < other2 ? other2 : user.id).maybeSingle() : { data: null };
+    const channel2 = kind === "dm" ? channelOf("dm", user.id, linked.data ? other2 : "", "") : member2.data?.guild_id ? `guild:${member2.data.guild_id}` : "";
     const lines = channel2 ? await db.from("messages").select("sender_label, body").eq("channel", channel2).order("created_at", { ascending: false }).limit(30) : { data: [] };
     return json({
       adult: flags.data?.adult ?? null,
+      kind,
+      friends,
       lines: (lines.data ?? []).map((row) => ({ label: row.sender_label, body: row.body })).reverse()
     });
   }

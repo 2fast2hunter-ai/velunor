@@ -9,6 +9,7 @@ import {
   REPORTS_PER_DAY,
   adultFromYear,
   canWrite,
+  chatErrorKey,
   filterChat,
   pauseUntil,
   rateReason,
@@ -16,6 +17,8 @@ import {
   severeLock,
   triageReport
 } from './chat'
+import { beginAdventure } from './save'
+import { gameHtml, type CodexQuery, type PcQuery } from './view'
 
 const cases: { text: string, kind: 'ok' | 'mask' | 'severe' | 'contact' | 'length' }[] = [
   { text: 'Arsch', kind: 'severe' },
@@ -107,6 +110,48 @@ describe('chat filter', () => {
     expect(suggestion.priority).toBe('hoch')
     expect(suggestion.note).toContain('Keine Entscheidung')
     expect(suggestion).not.toHaveProperty('decision')
+  })
+
+  it('respects word boundaries, folds leetspeak and blocks a handle without a strike', () => {
+    expect(filterChat('Barsch angeln').kind).toBe('ok')
+    expect(filterChat('Shitake Pilze').kind).toBe('ok')
+    expect(filterChat('barsch').kind).toBe('ok')
+    expect(filterChat('shitake').kind).toBe('ok')
+    expect(filterChat('k1ll yourself').kind).toBe('severe')
+    expect(filterChat('k1ll y0urself').kind).toBe('severe')
+    expect(filterChat('a r s c h l o c h').kind).toBe('severe')
+    expect(filterChat('insta: @name').kind).toBe('contact')
+    expect(filterChat('insta: @name').kind).not.toBe('severe')
+    expect(chatErrorKey('contact')).toBe('chat.err.contact')
+    expect(chatErrorKey('severe')).toBe('chat.err.severe')
+    expect(chatErrorKey('mystery')).toBe('chat.err.channel')
+    const app = readFileSync(new URL('./app.ts', import.meta.url), 'utf8')
+    expect(app).toMatch(/form\.dataset\.act !== 'chat-form'[\s\S]{0,120}preventDefault/)
+    expect(app).toContain("kind: chatPanel.channel === 'dm' ? 'dm' : 'guild'")
+    expect(app).toMatch(/if \(!result\.ok\) \{[\s\S]{0,220}draft: text[\s\S]{0,160}draft: ''/)
+    const send = readFileSync(new URL('../../supabase/functions/chat-send/index.ts', import.meta.url), 'utf8')
+    expect(send).toContain("kind === 'dm'")
+    const pc: PcQuery = { q: '', type: '', rarity: '', shiny: '', sort: 'newest', dir: -1 }
+    const dex: CodexQuery = { q: '', type: '', rarity: '', shiny: '' }
+    const save = beginAdventure('Ada', { skin: 0, hair: 0, color: 0 }, 'm01', 1_700_000_000_000)
+    const html = gameHtml(save, 'chat', 1_700_000_000_000, pc, dex, null, false, false, null, 1, undefined, {
+      chat: {
+        status: 'ready',
+        lines: [],
+        note: 'Das geht so nicht raus.',
+        adult: true,
+        channel: 'dm',
+        friend: 'ABCD2345',
+        friends: [{ code: 'ABCD2345', label: 'Ada' }],
+        draft: 'Barsch angeln'
+      }
+    })
+    expect(html).toContain('data-act="chat-form"')
+    expect(html).toContain('data-act="chat-channel"')
+    expect(html).toContain('data-id="dm"')
+    expect(html).toContain('value="Barsch angeln"')
+    expect(html).toContain('Das geht so nicht raus.')
+    expect(html).toContain('Ada')
   })
 
   it('keeps birth year out of the schema and limits retention', () => {

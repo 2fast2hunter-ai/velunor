@@ -39,12 +39,35 @@ Deno.serve(async (req) => {
   }
   if (action === 'state') {
     const member = await db.from('guild_members').select('guild_id').eq('user_id', user.id).maybeSingle()
-    const channel = member.data?.guild_id ? `guild:${member.data.guild_id}` : ''
+    const links = await db.from('friendships').select('user_a, user_b').or(`user_a.eq.${user.id},user_b.eq.${user.id}`)
+    const ids = (links.data ?? []).map((row) => row.user_a === user.id ? String(row.user_b) : String(row.user_a))
+    const codes = ids.length ? await db.from('friend_codes').select('user_id, code').in('user_id', ids) : { data: [] }
+    const names = ids.length ? await db.from('player_names').select('user_id, hidden, display, name, tag').in('user_id', ids) : { data: [] }
+    const codeOf = new Map((codes.data ?? []).map((row) => [String(row.user_id), String(row.code)]))
+    const nameOf = new Map((names.data ?? []).map((row) => [String(row.user_id), row]))
+    const friends = ids.flatMap((id) => {
+      const code = codeOf.get(id)
+      if (!code) return []
+      const row = nameOf.get(id)
+      const label = row?.hidden ? `Spieler#${row.tag ?? '0000'}` : (row?.display || 'Spieler')
+      return [{ code, label }]
+    })
+    const kind = body.kind === 'dm' ? 'dm' : 'guild'
+    const wanted = String(body.code ?? '').trim().toUpperCase()
+    const other = kind === 'dm' ? String((codes.data ?? []).find((row) => String(row.code) === wanted)?.user_id ?? '') : ''
+    const linked = other
+      ? await db.from('friendships').select('user_a').eq('user_a', user.id < other ? user.id : other).eq('user_b', user.id < other ? other : user.id).maybeSingle()
+      : { data: null }
+    const channel = kind === 'dm'
+      ? channelOf('dm', user.id, linked.data ? other : '', '')
+      : (member.data?.guild_id ? `guild:${member.data.guild_id}` : '')
     const lines = channel
       ? await db.from('messages').select('sender_label, body').eq('channel', channel).order('created_at', { ascending: false }).limit(30)
       : { data: [] }
     return json({
       adult: flags.data?.adult ?? null,
+      kind,
+      friends,
       lines: (lines.data ?? []).map((row) => ({ label: row.sender_label, body: row.body })).reverse()
     })
   }
