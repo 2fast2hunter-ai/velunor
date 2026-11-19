@@ -833,11 +833,12 @@
    "kind": "3slice",
    "use": "Fortschritts-Bahn (.progress-track, HP-Balken, EP, Kapitel, Expedition)",
    "slice": {
-    "top": 28,
+    "top": 0,
     "right": 28,
-    "bottom": 28,
+    "bottom": 0,
     "left": 28
-   }
+   },
+   "note": "Nur links/rechts schneiden (slice 0 N fill), Höhe streckt: sonst bleibt bei Balken höher als 2×border-image-width die Mitte leer (Fix2 19.11.)."
   },
   {
    "file": "ui_kit/progress/fill_green.png",
@@ -848,11 +849,12 @@
    "kind": "3slice",
    "use": "Füllung green (in Bahn mit 8px Innenabstand)",
    "slice": {
-    "top": 20,
+    "top": 0,
     "right": 20,
-    "bottom": 20,
+    "bottom": 0,
     "left": 20
-   }
+   },
+   "note": "Nur links/rechts schneiden (slice 0 N fill), Höhe streckt: sonst bleibt bei Balken höher als 2×border-image-width die Mitte leer (Fix2 19.11.)."
   },
   {
    "file": "ui_kit/progress/fill_gold.png",
@@ -863,11 +865,12 @@
    "kind": "3slice",
    "use": "Füllung gold (in Bahn mit 8px Innenabstand)",
    "slice": {
-    "top": 20,
+    "top": 0,
     "right": 20,
-    "bottom": 20,
+    "bottom": 0,
     "left": 20
-   }
+   },
+   "note": "Nur links/rechts schneiden (slice 0 N fill), Höhe streckt: sonst bleibt bei Balken höher als 2×border-image-width die Mitte leer (Fix2 19.11.)."
   },
   {
    "file": "ui_kit/progress/fill_blue.png",
@@ -878,11 +881,12 @@
    "kind": "3slice",
    "use": "Füllung blue (in Bahn mit 8px Innenabstand)",
    "slice": {
-    "top": 20,
+    "top": 0,
     "right": 20,
-    "bottom": 20,
+    "bottom": 0,
     "left": 20
-   }
+   },
+   "note": "Nur links/rechts schneiden (slice 0 N fill), Höhe streckt: sonst bleibt bei Balken höher als 2×border-image-width die Mitte leer (Fix2 19.11.)."
   },
   {
    "file": "ui_kit/progress/fill_red.png",
@@ -893,11 +897,12 @@
    "kind": "3slice",
    "use": "Füllung red (in Bahn mit 8px Innenabstand)",
    "slice": {
-    "top": 20,
+    "top": 0,
     "right": 20,
-    "bottom": 20,
+    "bottom": 0,
     "left": 20
-   }
+   },
+   "note": "Nur links/rechts schneiden (slice 0 N fill), Höhe streckt: sonst bleibt bei Balken höher als 2×border-image-width die Mitte leer (Fix2 19.11.)."
   },
   {
    "file": "ui_kit/progress/fill_purple.png",
@@ -908,11 +913,12 @@
    "kind": "3slice",
    "use": "Füllung purple (in Bahn mit 8px Innenabstand)",
    "slice": {
-    "top": 20,
+    "top": 0,
     "right": 20,
-    "bottom": 20,
+    "bottom": 0,
     "left": 20
-   }
+   },
+   "note": "Nur links/rechts schneiden (slice 0 N fill), Höhe streckt: sonst bleibt bei Balken höher als 2×border-image-width die Mitte leer (Fix2 19.11.)."
   },
   {
    "file": "ui_kit/divider/line.png",
