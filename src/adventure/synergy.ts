@@ -52,8 +52,8 @@ export interface SynergyMods {
   cooldown: number
 }
 
-export const PURITY_THREE = 0.02
-export const PURITY_FOUR = 0.0165
+export const PURITY_THREE = 0.0165
+export const PURITY_FOUR = 0.02
 /** Both active synergies together stop at +6% on one of ATK, HP, DEF or speed. */
 export const SYNERGY_STAT_CAP = 0.06
 
@@ -99,7 +99,7 @@ export function activeSynergies(types: readonly TypeId[], picked?: readonly stri
   return out
 }
 
-/** 3 of one type: +2% HP and DEF. 4 or more: +3%. Not attack or speed. */
+/** 3 of one type: +1.65% HP and DEF. 4 or more: +2%. Not attack or speed. Counts toward the 6% cap. */
 export function purityOf(types: readonly TypeId[], type: TypeId): number {
   let count = 0
   for (const row of types) if (row === type) count += 1

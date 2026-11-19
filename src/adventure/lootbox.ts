@@ -37,6 +37,8 @@ export interface ChestRoll {
   gold: number
   /** Pity counter after this open. Kiesel stays at the incoming value. */
   pity: number
+  /** Hard pity forced this open, or an active pity counter cleared. */
+  pityHit?: boolean
 }
 
 export interface ChestGrant extends ChestRoll {
@@ -339,7 +341,8 @@ export function openChest(tier: ChestTier, state: OpenChestState, rng: () => num
   const pool = poolFor(state.unlockedRegions)
   const prepared = prepare(tier, pool)
   if (prepared.total <= 0) throw new Error('Die Truhe hat keinen Pool.')
-  const push = pityPush(tier, state.pity ?? 0)
+  const pityBefore = state.pity ?? 0
+  const push = pityPush(tier, pityBefore)
   const weights = withSoftBonus(withSoftBonus(prepared.weights, push.minRarity, push.bonusPp), 5, state.luckPp ?? 0)
   const rarity = push.force
     ? pickWeightedRarity(prepared.weights, prepared.lists, rng, push.minRarity)
@@ -354,12 +357,14 @@ export function openChest(tier: ChestTier, state: OpenChestState, rng: () => num
       isNew = true
     }
   }
+  const pity = pityAfter(tier, rarity, pityBefore)
   return {
     speciesId,
     rarity,
     isNew,
     gold: rollGold(tier, state.region, rng),
-    pity: pityAfter(tier, rarity, state.pity ?? 0)
+    pity,
+    pityHit: push.force || (pityBefore > 0 && pity === 0)
   }
 }
 

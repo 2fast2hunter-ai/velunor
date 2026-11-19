@@ -826,7 +826,9 @@ function synergyBoard(save: SaveV2): string {
   const purity = [...counts].flatMap(([type, count]) => {
     const bonus = purityOf(types, type)
     if (bonus <= 0) return []
-    const text = tr(save, 'synergy.purity', { count, type: typeLabel(L(save), type, typeName(type)), pct: Math.round(bonus * 100) })
+    const pct = Math.round(bonus * 10000) / 100
+    const shown = Number.isInteger(pct) ? String(pct) : (L(save) === 'en' ? pct.toFixed(2) : pct.toFixed(2).replace('.', ','))
+    const text = tr(save, 'synergy.purity', { count, type: typeLabel(L(save), type, typeName(type)), pct: shown })
     return [`${typeIcon(type)}${esc(text)}`]
   }).join(' · ')
   return `<section class="synergy-board" data-art="synergy/board">

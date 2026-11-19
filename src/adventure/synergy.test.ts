@@ -97,7 +97,7 @@ describe('type synergies', () => {
     expect(stacked.atk).toBeCloseTo(0.0244)
   })
 
-  it('gives three of a type 2% HP and DEF, and four of a type 3%', () => {
+  it('gives three of a type 1.65% HP and DEF, and four or more 2%', () => {
     const three = ['fire', 'fire', 'fire', 'water', 'wind', 'plant'] as const
     const four = ['fire', 'fire', 'fire', 'fire', 'water', 'wind'] as const
     expect(purityOf(three, 'fire')).toBe(PURITY_THREE)
@@ -107,9 +107,10 @@ describe('type synergies', () => {
     const plain = fighter(100, 100)
     const typed = scaleSide(plain, synergyMods([], false), PURITY_THREE)
     expect(typed.atk).toBe(100)
-    expect(typed.def).toBe(31)
-    expect(typed.maxHp).toBe(918)
+    expect(typed.def).toBe(30)
+    expect(typed.maxHp).toBe(915)
     expect(typed.spd).toBe(100)
+    expect(PURITY_FOUR).toBe(0.02)
   })
 
   it('uses the fight seed when the speeds are within 5 percent', () => {

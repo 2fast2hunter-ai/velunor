@@ -204,6 +204,7 @@ describe('acceptance loop', () => {
     const kept = applyCatch(save, 'm01', 4, false, 3_000, 'r1c1', chapter, { offline: false, trace: false })
     expect(kept.place).toBe('kept')
     expect(save.pc.filter((id) => save.mons[id].species === 'm01').length).toBeGreaterThan(1)
+    expect(save.stats.catches).toBe(0)
   })
 
   it('puts a new species in the PC when the team is full', () => {
