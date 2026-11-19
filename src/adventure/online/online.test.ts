@@ -5,7 +5,7 @@ import { describe, expect, it } from 'vitest'
 import { fitScale } from '../const'
 import { beginAdventure } from '../save'
 import { simulateOffline } from '../sim'
-import { auditSync, mayUploadSave, saveOwesCatchUp, stickAudit } from './check'
+import { CREST_PACE_MS, auditSync, mayUploadSave, saveOwesCatchUp, stickAudit } from './check'
 import { WELCOME_AFTER_MS } from '../const'
 import { clearVelunorKeys, functionFailure } from './calls'
 import { foldName, nameChangeAllowed, nameIssue, pickTag, planNameSave, publicLabel, NAME_CHANGE_MS } from './name'
@@ -70,6 +70,32 @@ describe('sync check', () => {
       const rushed = stickAudit(0, baseline, earnedSnap, 2_000)
       expect(rushed.flag, `${minutes} rushed`).toBe(2)
     }
+  })
+
+  it('judges the first upload against a fresh account and the account age', () => {
+    const start = 1_700_000_000_000
+    const fresh = beginAdventure('Mira', { skin: 0, hair: 0, color: 0 }, 'm01', start)
+    expect(auditSync(null, auditFromSave(fresh), 60_000, 0, start + 60_000).flag).toBe(0)
+    const cheated = beginAdventure('Mira', { skin: 0, hair: 0, color: 0 }, 'm01', start)
+    cheated.gold = 600_000
+    cheated.badges = [
+      'Kieselwappen', 'Wellenwappen', 'Funkenwappen', 'Moorwappen',
+      'Felswappen', 'Sturmwappen', 'Frostwappen', 'Klingenwappen'
+    ]
+    const dumped = auditSync(null, auditFromSave(cheated), 60_000, 0, start + 60_000)
+    expect(dumped.flag).toBe(2)
+    expect(dumped.reasons).toEqual(expect.arrayContaining(['crests', 'gold']))
+    const stuck = stickAudit(0, null, auditFromSave(cheated), 60_000)
+    expect(stuck.flag).toBe(2)
+    expect(stuck.advanceClock).toBe(false)
+    expect(stuck.audit).toBeNull()
+    const sql = readFileSync(new URL('../../../supabase/migrations/20261119010000_first_upload_audit.sql', import.meta.url), 'utf8')
+    expect(sql).toContain('audit_implausible')
+    expect(sql).toContain('set flag_level = 2')
+    expect(sql).toContain(String(CREST_PACE_MS))
+    expect(sql).not.toMatch(/delete from public\.profiles/i)
+    expect(sql).not.toMatch(/delete from auth\.users/i)
+    expect(sql).toContain('refresh materialized view public.leaderboard_rows')
   })
 
   it('rejects a clock turned back and a crest taken out of order', () => {

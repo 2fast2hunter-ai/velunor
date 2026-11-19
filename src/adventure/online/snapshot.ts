@@ -60,7 +60,7 @@ export function auditFromSave(save: SaveV2): AuditState {
   }
 }
 
-/** A missing server row. The first upload is measured against this only by the caller. */
+/** A missing server row. sync-check measures the first upload against this, using the account age as the window. */
 export function emptyAudit(at: number): AuditState {
   return {
     at,

@@ -9946,7 +9946,7 @@ function bannedWord(raw) {
 var CHAT_MAX = 200;
 var BURST_LIMIT = 5;
 var BURST_MS = 1e4;
-var DAY_LIMIT2 = 200;
+var DAY_LIMIT = 200;
 var REPEAT_LIMIT = 2;
 var REPEAT_MS = 6e4;
 var PAUSE_MS = 6e4;
@@ -9969,6 +9969,14 @@ function canWrite(input) {
   if (input.ageMs < WRITE_AGE_MS) return "age";
   if (input.crests < WRITE_CRESTS) return "crests";
   return "ok";
+}
+function channelVisible(channel, userId, guildId) {
+  if (channel.startsWith("dm:")) {
+    const parts = channel.split(":");
+    return parts.length === 3 && parts.includes(userId);
+  }
+  if (channel.startsWith("guild:")) return Boolean(guildId) && channel === `guild:${guildId}`;
+  return false;
 }
 function filterChat(raw) {
   const text = raw.trim();
@@ -10001,7 +10009,7 @@ function rateReason(input) {
   const burst = input.stamps.filter((stamp) => input.now - stamp < BURST_MS).length;
   if (burst >= BURST_LIMIT) return "burst";
   const day = input.stamps.filter((stamp) => input.now - stamp < 24 * 60 * 60 * 1e3).length;
-  if (day >= DAY_LIMIT2) return "day";
+  if (day >= DAY_LIMIT) return "day";
   const same = input.bodies.filter((body, index) => body === input.text && input.now - input.stamps[index] < REPEAT_MS).length;
   if (same >= REPEAT_LIMIT) return "repeat";
   return "ok";
@@ -10011,6 +10019,19 @@ function pauseUntil(now) {
 }
 function severeLock(hitsIn24h) {
   return hitsIn24h >= SEVERE_HITS;
+}
+
+// src/adventure/coop.ts
+var COOP_ATTEMPTS = 3;
+var GROUP_MAX = 4;
+var WEEK_ATTEMPTS = COOP_ATTEMPTS * 7 * GROUP_MAX;
+
+// src/adventure/guild.ts
+function mayGuildMute(actor, target) {
+  if (actor !== "lead" && actor !== "deputy") return actor ? "role" : "member";
+  if (!target) return "member";
+  if (target === "lead") return "lead";
+  return "ok";
 }
 
 // supabase/functions/chat-send/index.ts
@@ -10071,11 +10092,32 @@ Deno.serve(async (req) => {
     if (gate === "flag") return json({ error: gate }, 403);
     const hours = body.hours === 24 ? 24 : 1;
     const target = String(body.target ?? "");
-    if (!target) return json({ error: "target" }, 400);
+    if (!target || target === user.id) return json({ error: "target" }, 400);
+    const mine = await db.from("guild_members").select("guild_id, role").eq("user_id", user.id).maybeSingle();
+    const myRole = mine.data?.role === "lead" || mine.data?.role === "deputy" || mine.data?.role === "member" ? mine.data.role : null;
+    if (action === "guild-mute") {
+      if (!mine.data?.guild_id || !myRole) return json({ error: "member" }, 403);
+      const other2 = await db.from("guild_members").select("role").eq("guild_id", mine.data.guild_id).eq("user_id", target).maybeSingle();
+      const targetRole = other2.data?.role === "lead" || other2.data?.role === "deputy" || other2.data?.role === "member" ? other2.data.role : null;
+      const allowed = mayGuildMute(myRole, targetRole);
+      if (allowed !== "ok") return json({ error: allowed }, allowed === "member" ? 404 : 403);
+      await db.from("chat_mutes").upsert({
+        owner: user.id,
+        target,
+        guild_id: mine.data.guild_id,
+        until: new Date(Date.now() + hours * 60 * 60 * 1e3).toISOString()
+      }, { onConflict: "owner,target" });
+      return json({ ok: true });
+    }
+    const sameGuild = mine.data?.guild_id ? await db.from("guild_members").select("user_id").eq("guild_id", mine.data.guild_id).eq("user_id", target).maybeSingle() : { data: null };
+    const pairA = user.id < target ? user.id : target;
+    const pairB = user.id < target ? target : user.id;
+    const friend2 = await db.from("friendships").select("user_a").eq("user_a", pairA).eq("user_b", pairB).maybeSingle();
+    if (!sameGuild.data && !friend2.data) return json({ error: "member" }, 403);
     await db.from("chat_mutes").upsert({
       owner: user.id,
       target,
-      guild_id: action === "guild-mute" ? body.guild ?? null : null,
+      guild_id: null,
       until: new Date(Date.now() + hours * 60 * 60 * 1e3).toISOString()
     }, { onConflict: "owner,target" });
     return json({ ok: true });
@@ -10088,6 +10130,10 @@ Deno.serve(async (req) => {
     const messageId = String(body.message ?? "");
     const message = await db.from("messages").select("id, channel, created_at").eq("id", messageId).maybeSingle();
     if (!message.data) return json({ error: "missing" }, 404);
+    const reporter = await db.from("guild_members").select("guild_id").eq("user_id", user.id).maybeSingle();
+    if (!channelVisible(String(message.data.channel), user.id, reporter.data?.guild_id ? String(reporter.data.guild_id) : null)) {
+      return json({ error: "member" }, 403);
+    }
     const before = await db.from("messages").select("id, sender_label, body, created_at").eq("channel", message.data.channel).lt("created_at", message.data.created_at).order("created_at", { ascending: false }).limit(CONTEXT);
     const after = await db.from("messages").select("id, sender_label, body, created_at").eq("channel", message.data.channel).gt("created_at", message.data.created_at).order("created_at", { ascending: true }).limit(CONTEXT);
     const reason = String(body.reason ?? "sonstiges");
