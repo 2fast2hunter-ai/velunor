@@ -1,5 +1,5 @@
 import { stickAudit, type AuditState } from '../../../src/adventure/online/check.ts'
-import { auditFromSave } from '../../../src/adventure/online/snapshot.ts'
+import { auditFromSave, emptyAudit } from '../../../src/adventure/online/snapshot.ts'
 import type { SaveV2 } from '../../../src/adventure/types.ts'
 import { admin, caller, cors, json } from '../_shared/admin.ts'
 
@@ -20,11 +20,15 @@ Deno.serve(async (req) => {
   const before = (profile.data?.last_audit ?? null) as AuditState | null
   const previousFlag = profile.data?.flag_level === 2 ? 2 : profile.data?.flag_level === 1 ? 1 : 0
   const auditedAt = Date.parse(String(profile.data?.audited_at ?? profile.data?.updated_at ?? ''))
-  const elapsed = before && Number.isFinite(auditedAt) ? Date.now() - auditedAt : 0
+  const authUser = await db.auth.admin.getUserById(user.id)
+  const createdAt = Date.parse(String(authUser.data.user?.created_at ?? ''))
+  const accountAge = Number.isFinite(createdAt) ? Math.max(0, Date.now() - createdAt) : 0
+  const elapsed = before && Number.isFinite(auditedAt) ? Date.now() - auditedAt : accountAge
+  const baseline = before ?? emptyAudit(Date.now() - elapsed)
   const bonusNow = Number(profile.data?.bonus_gold) || 0
   after.bonusGold = bonusNow
   const bonusGold = Math.max(0, bonusNow - Number(before?.bonusGold ?? 0))
-  const stuck = stickAudit(previousFlag, before, after, elapsed, bonusGold)
+  const stuck = stickAudit(previousFlag, baseline, after, elapsed, bonusGold)
   const nowIso = new Date().toISOString()
   const generation = Number(profile.data?.audit_generation) || 0
   if (!profile.data) {

@@ -5,7 +5,7 @@ import {
   FEET_Y,
   FOE_X,
   FOE_Y,
-  SCENE_FILES,
+  sceneFile,
   SEAL_ADD,
   SEAL_FALLBACK,
   STARTERS,
@@ -34,7 +34,7 @@ import {
 import type { ChestGrant } from './chests'
 import { expeditionBusy, expeditionSlots, expeditionTier } from './expedition'
 import { crestCount } from './arena'
-import { foundCost, guildFoundBlock } from './guild'
+import { COLORS, SHAPES, SYMBOLS, foundCost, guildFoundBlock } from './guild'
 import { tradedOnly } from './trade'
 import { workshopCost } from './sources'
 import {
@@ -47,6 +47,7 @@ import {
   type ShopTab
 } from './shopOffer'
 import { UI_ART, type UiArtId } from './uiArt'
+import { crestArt } from './crestArt'
 import { fightsHere } from './origin'
 import { chapterById, councilOf, gateBadge, placeLabel, regionById, regions, routeOf, type NodeKind } from './route'
 import { chapterUnlocked, dexCaughtCount, hereSightings, rarityName } from './sim'
@@ -189,6 +190,9 @@ export interface GuildPanel {
   draftTag?: string
   draftQuery?: string
   draftCode?: string
+  shape?: string
+  symbol?: string
+  color?: string
 }
 
 export interface TradeCard {
@@ -269,13 +273,25 @@ export function art(path: string): string {
   return assetPath(path, base())
 }
 
+/** A missing file hides the image. The surrounding layout stays. */
+function artImg(file: string, className: string, dataArt: string): string {
+  return `<img class="${className}" data-art="${esc(dataArt)}" src="${art(file)}" alt="" onerror="this.style.visibility='hidden'">`
+}
+
 function ui(id: UiArtId): string {
   return `<img class="ui-icon" src="${art(UI_ART[id])}" alt=""/>`
 }
 
+function typeIcon(type: TypeId, cls = 'type-icon'): string {
+  return `<img class="${cls}" src="${art(`icons/type_${type}_128.png`)}" alt=""/>`
+}
+
 function portrait(speciesId: string, large = false, extra = ''): string {
-  const color = rarityInfo(species(speciesId).baseRarity).color
-  return `<img class="portrait ${extra}" style="--rarity:${color}" src="${monsterArt(speciesId, large)}" alt=""/>`
+  const rarity = species(speciesId).baseRarity
+  const color = rarityInfo(rarity).color
+  const sil = extra.split(' ').includes('sil')
+  const frame = sil ? `frames/ghost_overlay${large ? '' : '_256'}.png` : `frames/rarity_${rarity}${large ? '' : '_256'}.png`
+  return `<span class="pframe" style="--rarity:${color};--frame:url('${art(frame)}')"><img class="portrait ${extra}" src="${monsterArt(speciesId, large)}" alt=""/></span>`
 }
 
 function masteryPlate(save: SaveV2, speciesId: string, extra = ''): string {
@@ -307,12 +323,7 @@ function tr(save: SaveV2, key: string, vars?: Record<string, string | number>): 
 }
 
 function icon(kind: NodeKind): string {
-  const common = 'fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round"'
-  if (kind === 'wild') return `<svg viewBox="0 0 24 24" ${common}><path d="M4 16c2-6 4-6 6 0M10 16c2-6 4-6 6 0M8 10c1.2-3 2.4-3 4 0"/></svg>`
-  if (kind === 'trainer') return `<svg viewBox="0 0 24 24" ${common}><circle cx="12" cy="8" r="3"/><path d="M6 19c1.2-3 3.2-4.5 6-4.5S16.8 16 18 19"/></svg>`
-  if (kind === 'find') return `<svg viewBox="0 0 24 24" ${common}><path d="M12 3l3 6 6 .5-4.5 4 1.4 6.5L12 17l-6 3 1.4-6.5L3 9.5 9 9z"/></svg>`
-  if (kind === 'spring') return `<svg viewBox="0 0 24 24" ${common}><path d="M12 3s5 6 5 10a5 5 0 0 1-10 0c0-4 5-10 5-10z"/></svg>`
-  return `<svg viewBox="0 0 24 24" ${common}><path d="M12 3l7 3v6c0 5-3.2 7.6-7 9-3.8-1.4-7-4-7-9V6z"/></svg>`
+  return `<img class="node-ico" src="${art(`ui/node_${kind}.webp`)}" alt=""/>`
 }
 
 function clockLabel(save: SaveV2, now: number): { time: string; part: string } {
@@ -345,11 +356,7 @@ function cloudStatusKey(status: CloudView['status']): string {
 }
 
 function cloudGlyph(kind: 'online' | 'offline' | 'sync'): string {
-  if (kind === 'sync') {
-    return '<svg viewBox="0 0 24 24" aria-hidden="true"><path fill="currentColor" d="M12 5V2L7 7l5 5V8a4 4 0 1 1-3.9 4.8l-1.9.6A6 6 0 1 0 12 5z"/></svg>'
-  }
-  const slash = kind === 'offline' ? '<path fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" d="M5 19L19 5"/>' : ''
-  return `<svg viewBox="0 0 24 24" aria-hidden="true"><path fill="currentColor" d="M7 18h10.2a3.8 3.8 0 0 0 .5-7.6A6 6 0 0 0 6.2 8.2 4.2 4.2 0 0 0 7 18z"/>${slash}</svg>`
+  return `<img src="${art(`ui/cloud_${kind}.webp`)}" alt="" aria-hidden="true"/>`
 }
 
 function cloudChip(save: SaveV2, cloud: CloudView): string {
@@ -415,26 +422,21 @@ function moreSheet(save: SaveV2, open: boolean): string {
   const items: [Screen, UiArtId, string][] = [
     ['shop', 'moreShop', 'nav.shop'],
     ['achievements', 'moreAchievements', 'nav.achievements'],
+    ['ranks', 'moreRanks', 'nav.ranks'],
+    ['tree', 'moreTree', 'nav.tree'],
+    ['tower', 'moreTower', 'nav.tower'],
+    ['arena', 'moreArena', 'nav.arena'],
+    ['social', 'moreFriends', 'nav.friends'],
+    ['expedition', 'moreExpedition', 'nav.expedition'],
+    ['trade', 'moreTrade', 'nav.trade'],
+    ['guild', 'moreGuild', 'nav.guild'],
+    ['chat', 'moreChat', 'nav.chat'],
     ['options', 'moreOptions', 'nav.options'],
     ['guide', 'moreGuide', 'nav.guide']
   ]
-  const ranks = `<button type="button" data-act="screen" data-screen="ranks"><svg class="ui-icon" viewBox="0 0 24 24" aria-hidden="true"><path fill="currentColor" d="M4 20V9h4v11H4zm6 0V4h4v16h-4zm6 0v-7h4v7h-4z"/></svg>${tr(save, 'nav.ranks')}</button>`
-  const treeBtn = `<button type="button" data-act="screen" data-screen="tree"><svg class="ui-icon" viewBox="0 0 24 24" aria-hidden="true"><path fill="none" stroke="currentColor" stroke-width="2" d="M12 22V8M7 22V12M17 22V12M12 8l-5 4M12 8l5 4"/></svg>${tr(save, 'nav.tree')}</button>`
-  const arenaBtn = `<button type="button" data-act="screen" data-screen="arena"><svg class="ui-icon" viewBox="0 0 24 24" aria-hidden="true"><circle cx="12" cy="12" r="8" fill="none" stroke="currentColor" stroke-width="2"/><path fill="currentColor" d="M12 6l1.6 3.4L17 11l-3.4 1.6L12 16l-1.6-3.4L7 11l3.4-1.6z"/></svg>${tr(save, 'nav.arena')}</button>`
-  const socialBtn = `<button type="button" data-act="screen" data-screen="social"><svg class="ui-icon" viewBox="0 0 24 24" aria-hidden="true"><circle cx="8" cy="9" r="3" fill="currentColor"/><circle cx="16" cy="9" r="3" fill="currentColor"/><path fill="currentColor" d="M3 19c.4-3 2.4-4.5 5-4.5s4.6 1.5 5 4.5H3zm8 0c.3-2 1.6-3.4 3.5-4 1.2.6 2.2 1.6 2.5 4H11z"/></svg>${tr(save, 'nav.friends')}</button>`
   return `<div class="more-sheet card" ${open ? '' : 'hidden'}>
     <div class="more-who">${lookFace(save.look, save.equippedFrame ?? '')}<b>${esc(save.name)}</b></div>
-    ${items.slice(0, 2).map(([id, icon, label]) => `<button type="button" data-act="screen" data-screen="${id}">${ui(icon)}${tr(save, label)}</button>`).join('')}
-    ${ranks}
-    ${treeBtn}
-    <button type="button" data-act="screen" data-screen="tower"><svg class="ui-icon" viewBox="0 0 24 24" aria-hidden="true"><path fill="currentColor" d="M10 2h4v4h3v4h2v12H5V10h2V6h3z"/></svg>${tr(save, 'nav.tower')}</button>
-    ${arenaBtn}
-    ${socialBtn}
-    <button type="button" data-act="screen" data-screen="expedition"><svg class="ui-icon" viewBox="0 0 24 24" aria-hidden="true"><path fill="currentColor" d="M4 16c3-6 6-6 8-2s5-4 8-2v6H4z"/><circle cx="16" cy="7" r="2.4" fill="currentColor"/></svg>${tr(save, 'nav.expedition')}</button>
-    <button type="button" data-act="screen" data-screen="trade"><svg class="ui-icon" viewBox="0 0 24 24" aria-hidden="true"><rect x="4" y="6" width="7" height="12" rx="2" fill="currentColor"/><rect x="13" y="6" width="7" height="12" rx="2" fill="currentColor" opacity=".7"/></svg>${tr(save, 'nav.trade')}</button>
-    <button type="button" data-act="screen" data-screen="guild"><svg class="ui-icon" viewBox="0 0 24 24" aria-hidden="true"><path fill="currentColor" d="M12 3l7 4v5c0 4.5-3 7.5-7 9-4-1.5-7-4.5-7-9V7z"/></svg>${tr(save, 'nav.guild')}</button>
-    <button type="button" data-act="screen" data-screen="chat"><svg class="ui-icon" viewBox="0 0 24 24" aria-hidden="true"><path fill="currentColor" d="M5 6h14a2 2 0 0 1 2 2v7a2 2 0 0 1-2 2H9l-4 3v-3H5a2 2 0 0 1-2-2V8a2 2 0 0 1 2-2z"/></svg>${tr(save, 'nav.chat')}</button>
-    ${items.slice(2).map(([id, icon, label]) => `<button type="button" data-act="screen" data-screen="${id}">${ui(icon)}${tr(save, label)}</button>`).join('')}
+    ${items.map(([id, icon, label]) => `<button type="button" data-act="screen" data-screen="${id}">${ui(icon)}${tr(save, label)}</button>`).join('')}
   </div>`
 }
 
@@ -466,7 +468,8 @@ function path(save: SaveV2, here: number): string {
 
 function battle(save: SaveV2, now: number, fighting = false, shadow = false): string {
   const chapter = chapterById(save.region, save.chapter)
-  const scene = SCENE_FILES[chapter.scene]
+  const scene = sceneFile(chapter.scene, chapter.tint)
+  const wide = scene.webp.replace('_p.webp', '.webp')
   const active = save.active && save.mons[save.active] ? save.active : save.team[0]
   const mon = active ? save.mons[active] : null
   const hp = mon ? realHp(mon) : { hp: 1, max: 1 }
@@ -475,8 +478,9 @@ function battle(save: SaveV2, now: number, fighting = false, shadow = false): st
   return `<div class="battle" id="battle">
     <div class="battle-world" id="battle-world">
       <picture>
+        <source media="(orientation: landscape) and (max-height: 520px)" srcset="${art(wide)}" type="image/webp"/>
         <source srcset="${art(scene.webp)}" type="image/webp"/>
-        <img class="plate ${chapter.tint ? `tint-${chapter.tint}` : ''}" src="${art(scene.jpg)}" alt=""/>
+        <img class="plate" src="${art(scene.jpg)}" alt=""/>
       </picture>
       <div class="parallax far" id="parallax-far"></div>
       <div class="parallax mid" id="parallax-mid"></div>
@@ -517,7 +521,7 @@ function battle(save: SaveV2, now: number, fighting = false, shadow = false): st
     <div class="battle-top">
       <p id="battle-text" class="battle-status">${tr(save, 'battle.place', { part: clock.part, weather: weatherLabel(L(save), weatherForecast(now)[0].weather), place: chapter.name, state: tr(save, save.hold ? 'battle.waiting' : 'battle.walking') })}</p>
       <div class="wx-stack"><div class="wx-chip" id="wx-chip">${weatherChip(save, now)}</div></div>
-      ${bossAhead(save) ? `<p class="wx-preview">${esc(weatherPreview(save, now))}</p>` : ''}
+      ${bossAhead(save) ? `<p class="wx-preview">${weatherPreview(save, now)}</p>` : ''}
     </div>
     ${sealed ? '' : `<div class="guard-dock">${fighting ? '' : guardCard(save)}<button type="button" class="primary challenge-fab" data-act="challenge">${ui('challenge')}${tr(save, chapter.council || chapter.foyer ? 'battle.resume' : 'battle.challenge')}</button></div>`}
     ${shadow ? `<p class="shadow-note shadow-battle" role="status">${esc(tr(save, 'cloud.shadow'))}</p>` : ''}
@@ -568,7 +572,7 @@ function logBox(save: SaveV2): string {
 function weatherChip(save: SaveV2, now: number): string {
   const weather = weatherForecast(now)[0].weather
   const row = WEATHER_SHIFTS[weather]
-  const bit = (type: TypeId, pct: number, sign: string) => `${esc(typeLabel(L(save), type, typeName(type)))} ${sign}${pct} %`
+  const bit = (type: TypeId, pct: number, sign: string) => `${typeIcon(type)}${esc(typeLabel(L(save), type, typeName(type)))} ${sign}${pct} %`
   const parts = [...row.up.map((shift) => bit(shift.type, shift.pct, '+')), ...row.down.map((shift) => bit(shift.type, shift.pct, '−'))]
   return `<img src="${art(`battle/weather_icon_${weather}.png`)}" alt=""/> ${esc(weatherLabel(L(save), weather))} · ${parts.join(' · ')}`
 }
@@ -595,15 +599,15 @@ function guardCard(save: SaveV2): string {
     if (!mon) return []
     const arrow = typeArrow(species(mon.species).type, foeType)
     const mark = arrow === 'up'
-      ? `<b class="up">▲</b>`
+      ? `<img class="arrow up" src="${art('battle/stat_up.png')}" alt="▲"/>`
       : arrow === 'down'
-        ? `<b class="down">▼</b>`
+        ? `<img class="arrow down" src="${art('battle/stat_down.png')}" alt="▼"/>`
         : ''
     return [`<span>${esc(species(mon.species).name)}${mark}</span>`]
   }).join('')
   const lead = bossLead(save)
   const preview = lead ? bossPreview(lead.speciesId, lead.level, lead.mechs) : ''
-  return `<div class="guard-card"><div class="guard-title">Gegen ${esc(typeName(foeType))}</div><div class="guard-names">${bits}</div>${preview}</div>`
+  return `<div class="guard-card"><div class="guard-title">Gegen ${typeIcon(foeType)} ${esc(typeName(foeType))}</div><div class="guard-names">${bits}</div>${preview}</div>`
 }
 
 function bossLead(save: SaveV2): { speciesId: string; level: number; mechs: MechId[] } | null {
@@ -638,17 +642,13 @@ function weatherPreview(save: SaveV2, now: number): string {
     return mon ? [species(mon.species).type] : []
   })
   const marks = teamWeatherMarks(types, weather)
-  return `Jetzt: ${weatherLabel(L(save), weather)}. Dein Team: ${marks.up} ▲, ${marks.down} ▼`
+  const up = `<img class="arrow" src="${art('battle/stat_up.png')}" alt="▲"/>`
+  const down = `<img class="arrow" src="${art('battle/stat_down.png')}" alt="▼"/>`
+  return `Jetzt: ${esc(weatherLabel(L(save), weather))}. Dein Team: ${marks.up} ${up}, ${marks.down} ${down}`
 }
 
 function weatherIcon(id: WeatherId): string {
-  const common = 'fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"'
-  if (id === 'klar') return `<svg viewBox="0 0 24 24" ${common}><circle cx="12" cy="12" r="4"/><path d="M12 2v3M12 19v3M2 12h3M19 12h3M4.9 4.9l2 2M17.1 17.1l2 2M19.1 4.9l-2 2M6.9 17.1l-2 2"/></svg>`
-  if (id === 'regen') return `<svg viewBox="0 0 24 24" ${common}><path d="M7 15c-2 0-3-1.4-3-3 0-2 2-3 3.2-2.2C8 7 10 6 12 6c2.4 0 4 1.6 4.4 3.6 1.8.2 3.6 1.6 3.6 3.6 0 1.8-1.4 2.8-3 2.8"/><path d="M8 18v3M12 18v3M16 18v3"/></svg>`
-  if (id === 'gewitter') return `<svg viewBox="0 0 24 24" ${common}><path d="M7 14c-2 0-3-1.4-3-3 0-2 2-3 3.2-2.2C8 6 10 5 12 5c2.4 0 4 1.6 4.4 3.6 1.8.2 3.6 1.6 3.6 3.6 0 1.6-1.2 2.6-2.6 2.8"/><path d="M13 14l-3 5h3l-1 4 5-6h-3l2-3z"/></svg>`
-  if (id === 'schnee') return `<svg viewBox="0 0 24 24" ${common}><path d="M12 3v18M5 7l14 10M19 7L5 17"/><path d="M12 7l-1.5-1M12 7l1.5-1M12 17l-1.5 1M12 17l1.5 1"/></svg>`
-  if (id === 'nebel') return `<svg viewBox="0 0 24 24" ${common}><path d="M4 9h16M3 13h18M5 17h14"/></svg>`
-  return `<svg viewBox="0 0 24 24" ${common}><path d="M3 8c3 0 3 3 6 3s3-3 6-3 3 3 6 3M3 14c3 0 3 3 6 3s3-3 6-3 3 3 6 3"/></svg>`
+  return `<img class="wx-icon" src="${art(`battle/weather_icon_${id}_128.png`)}" alt=""/>`
 }
 
 function drawerSheet(save: SaveV2, now: number): string {
@@ -708,8 +708,12 @@ function progress(save: SaveV2): string {
         ? `Vier Räte und der Großwächter, Cap ${chapter.council.members.map((member) => member.cap).join('/')}`
         : `Lv ${chapter.levelMin}–${chapter.levelMax}, Cap ${chapter.cap}`
     const mark = chapter.special ? 'Urgrund' : (save.badges.includes(chapter.guardian.badge) ? chapter.guardian.badge : 'Wappen fehlt')
+    const badge = gateBadge(region.id, chapter)
+    const crest = chapter.special || !badge
+      ? ''
+      : `<img class="crest-mini${save.badges.includes(badge) ? '' : ' off'}" src="${art(crestArt(badge))}" alt=""/>`
     return `<button class="text-btn" data-act="travel" data-region="${region.id}" data-chapter="${chapter.id}" ${open ? '' : 'disabled'}>
-      ${ui('chapterMark')}<b>${esc(chapter.name)}</b> ${here ? '· hier' : ''}
+      ${crest || ui('chapterMark')}<b>${esc(chapter.name)}</b> ${here ? '· hier' : ''}
       <div class="muted">${range}, ${esc(mark)}</div>
     </button>`
   }).join('')
@@ -787,22 +791,7 @@ function shinyOptions(save: SaveV2, current: string, have: boolean): string {
 }
 
 function synergyGlyph(id: string): string {
-  const artId = `synergy/${id}`
-  const body: Record<string, string> = {
-    gewitter: '<ellipse cx="28" cy="30" rx="16" ry="10" fill="#7eb6ff"/><ellipse cx="40" cy="28" rx="12" ry="9" fill="#d6e8ff"/><path d="M34 36l-8 14h8l-4 10 16-18h-9l7-6z" fill="#f0c14a"/>',
-    flaechenbrand: '<path d="M32 8c8 10 14 16 14 28a14 14 0 0 1-28 0c0-8 4-12 8-16 2 6 6 8 6 8s2-10 0-20z" fill="#e86a33"/><path d="M32 28c4 4 6 8 4 14a6 6 0 0 1-8 0c-2-6 0-10 4-14z" fill="#f0c14a"/>',
-    wurzelgrund: '<path d="M10 42h44" stroke="#8d6a43" stroke-width="4" stroke-linecap="round"/><path d="M32 42c-2 8-10 10-16 8M32 42c2 8 10 10 16 8M32 42V18" fill="none" stroke="#3d8f5a" stroke-width="4" stroke-linecap="round"/>',
-    polarstrom: '<path d="M32 8v48M12 20l40 24M12 44l40-24" stroke="#9fd7ff" stroke-width="4" stroke-linecap="round"/><circle cx="32" cy="32" r="6" fill="#e8f6ff"/>',
-    bollwerk: '<path d="M32 8l18 8v16c0 12-8 20-18 24C22 52 14 44 14 32V16z" fill="#9aa7b8"/><path d="M32 20v22" stroke="#f0c14a" stroke-width="4" stroke-linecap="round"/>',
-    prisma: '<path d="M32 8l20 40H12z" fill="#d7c4ff"/><path d="M32 8l8 40H24z" fill="#fff6"/>',
-    zwielicht: '<path d="M42 12a18 18 0 1 0 0 40 14 14 0 1 1 0-40z" fill="#6d5a9a"/>',
-    rudelkraft: '<path d="M16 50l10-30M32 50l8-34M48 50l-4-24" stroke="#e07a5f" stroke-width="5" stroke-linecap="round"/>',
-    schwarmgift: '<circle cx="22" cy="26" r="7" fill="#7dce6a"/><circle cx="42" cy="22" r="5" fill="#b07cc6"/><circle cx="34" cy="42" r="8" fill="#5e8f4a"/>',
-    resonanz: '<path d="M16 24c8 6 8 12 0 18M30 16c12 10 12 22 0 32M44 24c8 6 8 12 0 18" fill="none" stroke="#c4b5fd" stroke-width="4" stroke-linecap="round"/>',
-    glutschwinge: '<path d="M10 42c12-20 24-26 44-24-10 8-12 16-8 28-14-2-24-2-36-4z" fill="#e25b3a"/><path d="M20 36c10-6 18-8 26-6" fill="none" stroke="#f0c14a" stroke-width="3" stroke-linecap="round"/>',
-    sturmlied: '<path d="M14 42c8-18 18-18 18-4s-10 8-4 16 18 4 22-8" fill="none" stroke="#7ec8c3" stroke-width="4" stroke-linecap="round"/><circle cx="48" cy="20" r="5" fill="#f0c14a"/>'
-  }
-  return `<svg class="synergy-svg" data-art="${artId}" viewBox="0 0 64 64" aria-hidden="true">${body[id] ?? ''}</svg>`
+  return artImg(`synergy/${id}_64.png`, 'synergy-svg', `synergy/${id}`)
 }
 
 function synergyBoard(save: SaveV2): string {
@@ -828,14 +817,15 @@ function synergyBoard(save: SaveV2): string {
   const purity = [...counts].flatMap(([type, count]) => {
     const bonus = purityOf(types, type)
     if (bonus <= 0) return []
-    return [tr(save, 'synergy.purity', { count, type: typeLabel(L(save), type, typeName(type)), pct: Math.round(bonus * 100) })]
+    const text = tr(save, 'synergy.purity', { count, type: typeLabel(L(save), type, typeName(type)), pct: Math.round(bonus * 100) })
+    return [`${typeIcon(type)}${esc(text)}`]
   }).join(' · ')
   return `<section class="synergy-board" data-art="synergy/board">
     <h3>${tr(save, 'synergy.title')}</h3>
     <p class="synergy-note">${tr(save, 'synergy.note')}</p>
     <div class="synergy-grid">${buttons}</div>
     <button type="button" class="synergy-auto${save.synergy == null ? ' on' : ''}" data-act="synergy-auto">${tr(save, 'synergy.auto')}</button>
-    ${purity ? `<p class="synergy-purity">${esc(purity)}</p>` : ''}
+    ${purity ? `<p class="synergy-purity">${purity}</p>` : ''}
   </section>`
 }
 
@@ -994,13 +984,7 @@ function shop(save: SaveV2, now: number, tab: ShopTab, hint: boolean): string {
 }
 
 function glyph(id: SymbolId): string {
-  const box = 'viewBox="0 0 64 64" width="72" height="72" aria-hidden="true"'
-  if (id === 'stern') return `<svg ${box}><polygon points="32,6 38,24 58,24 42,36 48,56 32,44 16,56 22,36 6,24 26,24" fill="#f0c14a"/></svg>`
-  if (id === 'mond') return `<svg ${box}><path d="M42 8a22 22 0 1 0 0 48 16 16 0 1 1 0-48z" fill="#d6e4ff"/></svg>`
-  if (id === 'krone') return `<svg ${box}><path d="M8 48 L14 22 L26 34 L32 12 L38 34 L50 22 L56 48 Z" fill="#f0c14a"/></svg>`
-  if (id === 'blatt') return `<svg ${box}><ellipse cx="32" cy="36" rx="14" ry="22" transform="rotate(-28 32 36)" fill="#7dcea0"/></svg>`
-  if (id === 'tropfen') return `<svg ${box}><path d="M32 8 C32 8 14 30 14 42 a18 18 0 0 0 36 0 C50 30 32 8 32 8Z" fill="#4fc3f7"/></svg>`
-  return `<svg ${box}><polygon points="32,4 38,26 60,32 38,38 32,60 26,38 4,32 26,26" fill="#fff176"/></svg>`
+  return `<img class="reel-sym" src="${art(`ui/wheel_${id}.webp`)}" srcset="${art(`ui/wheel_${id}.webp`)} 1x, ${art(`ui/wheel_${id}@2x.webp`)} 2x" width="72" height="72" alt=""/>`
 }
 
 function activityTabs(save: SaveV2, wheel: WheelPanel): string {
@@ -1134,14 +1118,8 @@ function wheelView(save: SaveV2, wheel: WheelPanel): string {
 }
 
 function dailyFrameSvg(id: DailyFrameId): string {
-  const art = `daily/frame-${id.slice('daily-'.length)}`
-  const body: Record<DailyFrameId, string> = {
-    'daily-dawn': '<circle cx="32" cy="32" r="26" fill="none" stroke="#f0c14a" stroke-width="6"/><path d="M32 6v8M32 50v8M6 32h8M50 32h8" stroke="#f2d27a" stroke-width="4" stroke-linecap="round"/>',
-    'daily-tide': '<circle cx="32" cy="32" r="26" fill="none" stroke="#7eb6ff" stroke-width="6"/><path d="M14 36c6-8 12-8 18 0s12 8 18 0" fill="none" stroke="#d6e8ff" stroke-width="3" stroke-linecap="round"/>',
-    'daily-leaf': '<circle cx="32" cy="32" r="26" fill="none" stroke="#7dcea0" stroke-width="6"/><path d="M32 16c10 8 12 16 8 26-10-2-16-10-16-18 2-4 5-6 8-8z" fill="#1c3b2e"/>',
-    'daily-ember': '<circle cx="32" cy="32" r="26" fill="none" stroke="#e07a5f" stroke-width="6"/><path d="M32 14c6 8 10 12 10 20a10 10 0 0 1-20 0c0-6 4-8 6-12 1 4 3 5 4 5s1-6 0-13z" fill="#f0c14a"/>'
-  }
-  return `<svg class="daily-frame" data-art="${art}" viewBox="0 0 64 64" aria-hidden="true">${body[id]}</svg>`
+  const name = id.slice('daily-'.length)
+  return artImg(`daily/frame-${name}_128.png`, 'daily-frame', `daily/frame-${name}`)
 }
 
 function dailyCard(save: SaveV2): string {
@@ -1151,8 +1129,9 @@ function dailyCard(save: SaveV2): string {
     const type = task.type ? typeLabel(L(save), task.type, typeName(task.type)) : ''
     const name = tr(save, `daily.task.${task.kind}`, { n: task.need, type })
     const fruit = reward.fruit ? ` · ${tr(save, `fruit.${reward.fruit}`)}` : ''
+    const mark = task.type ? typeIcon(task.type) : ''
     return `<li class="daily-task${task.claimed ? ' done' : ''}">
-      <b>${esc(name)}</b>
+      ${mark}<b>${esc(name)}</b>
       <span>${task.have}/${task.need}</span>
       <span class="muted">${tr(save, 'daily.pay', { marks: reward.marks, gold: reward.gold })}${fruit}</span>
     </li>`
@@ -1193,7 +1172,7 @@ function hortView(save: SaveV2, now: number, selected: string | null, wheel: Whe
     return `<button type="button" class="mon-card ${selected === uid ? 'on' : ''}" data-act="select" data-uid="${uid}">
       ${portrait(sp.id)}
       <div>${esc(sp.name)}${mon.shiny ? ' · Schimmer' : ''}</div>
-      <div class="muted">Lv ${mon.lvl} · ${esc(typeName(sp.type))}</div>
+      <div class="muted">Lv ${mon.lvl} · ${typeIcon(sp.type)} ${esc(typeName(sp.type))}</div>
     </button>`
   }).join('')
   const eggs = save.eggs.map((egg) => {
@@ -1235,8 +1214,9 @@ function achievementsView(save: SaveV2): string {
     const typeBit = typeId ? typeLabel(L(save), typeId, typeName(typeId as TypeId)) : ''
     const name = goalName(L(save), goal.id, goal.name, typeBit)
     const title = goalTitle(L(save), goal.id, goal.title, typeBit)
+    const mark = typeId ? typeIcon(typeId as TypeId) : ''
     return `<article class="list-row achieve ${have ? 'done' : ''}">
-      ${ui('achieve')}<div><b>${esc(name)}</b><div class="muted">${have ? tr(save, 'ach.have', { title, frame: goal.frame }) : tr(save, 'ach.open')} · ${goal.gold.toLocaleString(L(save) === 'en' ? 'en' : 'de-DE')} G</div></div>
+      ${ui('achieve')}<div>${mark}<b>${esc(name)}</b><div class="muted">${have ? tr(save, 'ach.have', { title, frame: goal.frame }) : tr(save, 'ach.open')} · ${goal.gold.toLocaleString(L(save) === 'en' ? 'en' : 'de-DE')} G</div></div>
       ${have ? `<div class="list-actions"><button type="button" data-act="equip-title" data-id="${goal.id}">${ui('equipTitle')}${tr(save, 'ach.titleBtn')}</button><button type="button" data-act="equip-frame" data-id="${goal.id}">${ui('equipFrame')}${tr(save, 'ach.frameBtn')}</button></div>` : ''}
     </article>`
   }).join('')
@@ -1455,15 +1435,8 @@ function placeBadge(place: number): string {
 }
 
 function frameGlyph(id: string, on: boolean): string {
-  const paths: Record<string, string> = {
-    codex: '<rect x="6" y="8" width="52" height="48" rx="14"/>',
-    progress: '<path d="M32 6l22 10v16c0 14-10 22-22 26C20 54 10 46 10 32V16z"/>',
-    week: '<circle cx="32" cy="32" r="22"/><path d="M32 16v16l10 6" fill="none"/>',
-    shimmer: '<path d="M32 8l6 14 16 2-12 10 4 16-14-8-14 8 4-16L10 24l16-2z"/>',
-    mastery: '<path d="M12 46l8-22 12 14 12-14 8 22z"/><path d="M18 50h28"/>',
-    ehren: '<circle cx="32" cy="32" r="20"/><circle cx="32" cy="32" r="10"/>'
-  }
-  return `<svg class="rank-frame ${on ? 'on' : ''}" viewBox="0 0 64 64" aria-hidden="true">${paths[id] ?? paths.codex}</svg>`
+  const key = `ranks/frame-${id}`
+  return artImg(`${key}_128.png`, `rank-frame${on ? ' on' : ''}`, key)
 }
 
 function rankRows(rows: RankLine[]): string {
@@ -1503,34 +1476,26 @@ function ranksScreen(save: SaveV2, model: RankModel | undefined): string {
 }
 
 function treeGlyph(branch: BranchId, index: number, on: boolean): string {
-  const color = branch === 'chest' ? '#f0c14a' : branch === 'fight' ? '#ef9a9a' : '#90caf9'
-  const shapes = [
-    '<circle cx="32" cy="32" r="14"/>',
-    '<rect x="18" y="18" width="28" height="28" rx="8"/>',
-    '<polygon points="32,14 50,46 14,46"/>',
-    '<path d="M16 42c8-18 24-18 32 0" fill="none"/>',
-    '<circle cx="32" cy="32" r="8"/><circle cx="32" cy="32" r="18" fill="none"/>',
-    '<path d="M18 46 L32 16 L46 46"/>',
-    '<rect x="16" y="22" width="32" height="22" rx="8"/>',
-    '<polygon points="32,8 37,24 54,24 40,34 45,50 32,40 19,50 24,34 10,24 27,24"/>'
-  ]
-  return `<svg class="tree-glyph" viewBox="0 0 64 64" aria-hidden="true"><g fill="${on ? color : 'none'}" stroke="${color}" stroke-width="3">${shapes[index] ?? shapes[0]}</g></svg>`
+  return `<img class="tree-glyph${on ? '' : ' off'}" src="${art(`tree/${branch}-${index + 1}.webp`)}" alt=""/>`
 }
 
 function leagueBadge(id: string, on: boolean): string {
-  const tones: Record<string, string> = { kiesel: '#c8b48a', bronze: '#b87333', silber: '#d5dee8', gold: '#f0c14a', kristall: '#9ad7ff', meister: '#e6d6ff' }
-  const color = tones[id] ?? '#f0c14a'
-  return `<svg class="league-badge ${on ? 'on' : ''}" viewBox="0 0 64 64" aria-hidden="true"><circle cx="32" cy="28" r="16" fill="${on ? color : 'none'}" stroke="${color}" stroke-width="3"/><path d="M22 42h20l-4 14h-12z" fill="${color}"/></svg>`
+  const key = `arena/league_${id}`
+  return artImg(`${key}_64.png`, `league-badge${on ? ' on' : ''}`, key)
+}
+
+function screenHead(key: 'arena' | 'tower'): string {
+  return `<picture class="screen-head"><source type="image/webp" srcset="${art(`${key}/screen_540.webp`)} 540w, ${art(`${key}/screen.webp`)} 1080w" sizes="(max-width: 600px) 100vw, 600px"/><img src="${art(`${key}/screen.jpg`)}" alt="" width="1080" height="480" loading="lazy"/></picture>`
 }
 
 function arenaScreen(save: SaveV2, panel: ArenaPanel | undefined): string {
   const view = panel ?? { status: 'offline' as const, note: '', rating: 1000, league: 'Kiesel', attacks: 0, slots: [], suggestions: [], logs: [], frames: [], replay: null }
   const badges = ['kiesel', 'bronze', 'silber', 'gold', 'kristall', 'meister'].map((id) => `<div class="league-item">${leagueBadge(id, view.frames.includes(id) || view.league.toLowerCase().includes(id === 'meister' ? 'meister' : id))}<span>${esc(tr(save, `arena.league.${id}`))}</span></div>`).join('')
   if (view.status === 'loading') {
-    return `<div class="menu-screen"><div class="menu-scroll"><div class="card panel"><h2>${tr(save, 'nav.arena')}</h2><p class="muted">${tr(save, 'arena.loading')}</p></div></div></div>`
+    return `<div class="menu-screen"><div class="menu-scroll"><div class="card panel">${screenHead('arena')}<h2>${tr(save, 'nav.arena')}</h2><p class="muted">${tr(save, 'arena.loading')}</p></div></div></div>`
   }
   if (view.status !== 'ready' && view.status !== 'locked') {
-    return `<div class="menu-screen"><div class="menu-scroll"><div class="card panel"><h2>${tr(save, 'nav.arena')}</h2><p class="muted">${tr(save, 'arena.offline')}</p></div></div></div>`
+    return `<div class="menu-screen"><div class="menu-scroll"><div class="card panel">${screenHead('arena')}<h2>${tr(save, 'nav.arena')}</h2><p class="muted">${tr(save, 'arena.offline')}</p></div></div></div>`
   }
   const slots = Array.from({ length: 6 }, (_, index) => {
     const uid = view.slots[index]
@@ -1552,6 +1517,7 @@ function arenaScreen(save: SaveV2, panel: ArenaPanel | undefined): string {
   </article>` : ''
   const logs = view.logs.map((line) => `<p>${esc(line.label)} · ${tr(save, line.win ? 'arena.held' : 'arena.fell')} · ${line.delta}</p>`).join('')
   return `<div class="menu-screen"><div class="menu-scroll"><div class="card panel">
+    ${screenHead('arena')}
     <h2>${tr(save, 'nav.arena')}</h2>
     <p>${esc(view.league)} · ${view.rating} · ${tr(save, 'arena.attacks', { n: view.attacks })}</p>
     ${view.status === 'locked' ? `<p class="muted">${tr(save, 'arena.locked')}</p>` : ''}
@@ -1570,16 +1536,7 @@ function arenaScreen(save: SaveV2, panel: ArenaPanel | undefined): string {
 }
 
 function towerGlyph(line: ResearchLine): string {
-  const art = `tower/${line}`
-  const body: Record<ResearchLine, string> = {
-    gold: '<circle cx="32" cy="32" r="18" fill="#f0c14a"/><circle cx="32" cy="32" r="10" fill="none" stroke="#8a6a12" stroke-width="4"/>',
-    ep: '<path d="M32 8l6 16h16l-13 10 5 16-14-10-14 10 5-16-13-10h16z" fill="#f2d27a"/>',
-    offline: '<path d="M40 14a16 16 0 1 0 0 36 12 12 0 1 1 0-36z" fill="#9eb6e0"/>',
-    expedition: '<path d="M16 50V14h22l-6 10 6 10H16" fill="#7dcea0"/><path d="M16 50v-8" stroke="#243044" stroke-width="4" stroke-linecap="round"/>',
-    egg: '<ellipse cx="32" cy="36" rx="16" ry="20" fill="#f4efe4"/><path d="M22 34c6 2 14 2 20 0" fill="none" stroke="#d7c7a2" stroke-width="3"/>',
-    shard: '<path d="M32 8l14 18-14 30L18 26z" fill="#8fd0ea"/><path d="M32 8l6 18-6 30-6-30z" fill="#d7f3ff"/>'
-  }
-  return `<svg class="tower-svg" data-art="${art}" viewBox="0 0 64 64" aria-hidden="true">${body[line]}</svg>`
+  return `<img class="tower-svg" data-art="tower/${line}" src="${art(`tower/${line}.webp`)}" alt=""/>`
 }
 
 function towerTime(ms: number): string {
@@ -1618,6 +1575,7 @@ function towerScreen(save: SaveV2, now: number): string {
     </article>`
   }).join('')
   return `<div class="menu-screen"><div class="menu-scroll"><div class="card panel tower-screen" data-art="tower/screen">
+    ${screenHead('tower')}
     <h2>${tr(save, 'nav.tower')}</h2>
     <p class="muted">${tr(save, unlocked ? 'research.note' : 'research.locked')}</p>
     ${job ? '' : `<p class="muted">${tr(save, 'research.one')}</p>`}
@@ -1661,24 +1619,12 @@ function treeScreen(save: SaveV2, pick: string | undefined, now: number): string
 }
 
 function beastArt(id: string): string {
-  if (id === 'himmelswal') {
-    return `<svg class="beast-art" data-art="beasts/himmelswal" viewBox="0 0 240 140" role="img" aria-label="Himmelswal">
-      <ellipse cx="128" cy="78" rx="78" ry="36" fill="#d7ecf7"/>
-      <ellipse cx="118" cy="86" rx="62" ry="22" fill="#f7fbfe"/>
-      <path d="M40 78c18-28 46-36 70-28" fill="none" stroke="#8fb8d4" stroke-width="10" stroke-linecap="round"/>
-      <circle cx="168" cy="68" r="6" fill="#243044"/>
-      <path d="M196 70c16 8 22 18 18 28" fill="none" stroke="#9fd0ea" stroke-width="8" stroke-linecap="round"/>
-      <path d="M150 108c10 16 28 18 42 8" fill="none" stroke="#b7d7ea" stroke-width="8" stroke-linecap="round"/>
-    </svg>`
-  }
-  return `<svg class="beast-art" data-art="beasts/weltenwurm" viewBox="0 0 240 140" role="img" aria-label="Weltenwurm">
-    <path d="M28 92c24-36 48-20 64-36s28-8 40 10 34 18 52-4 28 8 28 22-20 28-46 16-40 8-58 20-48 6-80-28z" fill="#c9844a"/>
-    <circle cx="46" cy="78" r="16" fill="#e0b07a"/>
-    <circle cx="40" cy="74" r="3" fill="#243044"/>
-    <path d="M34 64c6-12 16-12 20-2" fill="none" stroke="#8d5a32" stroke-width="4" stroke-linecap="round"/>
-    <circle cx="108" cy="70" r="7" fill="#d7a36a"/>
-    <circle cx="154" cy="78" r="7" fill="#d7a36a"/>
-  </svg>`
+  const key = id === 'himmelswal' ? 'himmelswal' : 'weltenwurm'
+  const label = key === 'himmelswal' ? 'Himmelswal' : 'Weltenwurm'
+  return `<picture class="beast-art" data-art="beasts/${key}">
+    <source type="image/webp" srcset="${art(`beasts/${key}.webp`)}">
+    <img src="${art(`beasts/${key}.png`)}" alt="${label}" onerror="this.style.visibility='hidden'">
+  </picture>`
 }
 
 function friendName(id: string): string {
@@ -1717,7 +1663,7 @@ function socialScreen(save: SaveV2, panel: SocialPanel | undefined): string {
   const hpWidth = Math.max(0, Math.min(100, Math.round(((view.hp ?? 0) / hpMax) * 100)))
   return `<div class="menu-screen"><div class="menu-scroll"><div class="card panel">
     <h2>${tr(save, 'nav.friends')}</h2>
-    <article class="friend-code" data-art="friends/code">
+    <article class="friend-code" data-art="friends/code" style="background-image:url('${art('friends/code.png')}')">
       <p>${tr(save, 'social.code')}</p>
       <b>${esc(view.code)}</b>
     </article>
@@ -1743,19 +1689,16 @@ function socialScreen(save: SaveV2, panel: SocialPanel | undefined): string {
   </div></div></div>`
 }
 
-function placeArt(art: string, place: string): string {
-  const shift = [...art].reduce((sum, char) => sum + char.charCodeAt(0), 0) % 36
-  return `<svg class="expedition-art" data-art="${esc(art)}" viewBox="0 0 320 120" role="img" aria-label="${esc(place)}">
-    <rect width="320" height="120" rx="28" fill="hsl(${188 + shift} 42% 76%)"/>
-    <circle cx="248" cy="34" r="16" fill="#fff4cc"/>
-    <path d="M0 80c48-30 78-6 118-22s62-4 96 12 62 10 106-14v64H0z" fill="hsl(${24 + shift} 38% 58%)"/>
-    <ellipse cx="92" cy="90" rx="18" ry="8" fill="#ffffff55"/>
-  </svg>`
+function placeArt(path: string, place: string): string {
+  const key = path.replace(/\.(webp|jpe?g|png)$/i, '')
+  return `<picture class="expedition-art" data-art="${esc(key)}">
+    <source type="image/webp" srcset="${art(`${key}.webp`)}">
+    <img src="${art(`${key}.jpg`)}" alt="${esc(place)}" onerror="this.style.visibility='hidden'">
+  </picture>`
 }
 
 function tierMark(tier: 'bronze' | 'silber' | 'gold', on: boolean): string {
-  const fill = tier === 'gold' ? '#f0c14a' : tier === 'silber' ? '#d9e2ec' : '#d08a4c'
-  return `<svg class="tier-mark${on ? ' on' : ''}" data-art="expedition/tier-${tier}" viewBox="0 0 48 48" aria-hidden="true"><circle cx="24" cy="24" r="18" fill="${fill}"/><circle cx="24" cy="24" r="7" fill="#fff8"/></svg>`
+  return artImg(`expedition/tier-${tier}_48.png`, `tier-mark${on ? ' on' : ''}`, `expedition/tier-${tier}`)
 }
 
 function expeditionScreen(save: SaveV2, now: number, pick: string | undefined, guildLevel = 0): string {
@@ -1770,7 +1713,7 @@ function expeditionScreen(save: SaveV2, now: number, pick: string | undefined, g
     return `<article class="expedition-card${selected ? ' on' : ''}" data-art="${esc(quest.art)}">
       ${placeArt(quest.art, quest.place)}
       <h3>${esc(quest.place)}</h3>
-      <p>${esc(tr(save, 'expedition.wish', { type: typeLabel(L(save), quest.type, typeName(quest.type)), rarity: quest.rarity }))}</p>
+      <p>${typeIcon(quest.type)}${esc(tr(save, 'expedition.wish', { type: typeLabel(L(save), quest.type, typeName(quest.type)), rarity: quest.rarity }))}</p>
       <p>${tr(save, 'expedition.hours', { n: quest.hours })}</p>
       <div class="tier-row">${marks}</div>
       <p class="muted">${tr(save, 'expedition.egg', { n: 2 })} · ${tr(save, 'expedition.egg', { n: 4 })} · ${tr(save, 'expedition.egg', { n: 8 })}</p>
@@ -1831,12 +1774,25 @@ function tradeScreen(save: SaveV2, panel: TradePanel | undefined): string {
   </div></div></div>`
 }
 
-function guildEmblem(): string {
-  return `<svg class="guild-emblem" viewBox="0 0 120 140" role="img" aria-label="Wappen">
-    <path data-art="guild/shape-shield" d="M60 8l44 18v36c0 28-18 46-44 58C34 108 16 90 16 62V26z" fill="#7dcea0"/>
-    <path data-art="guild/symbol-leaf" d="M60 46c16 8 22 24 18 40-16-4-28-16-32-32 6-6 10-8 14-8z" fill="#1c2744"/>
-    <circle data-art="guild/color-moss" cx="78" cy="58" r="6" fill="#f0c14a"/>
-  </svg>`
+const GUILD_TINT: Record<(typeof COLORS)[number], string> = {
+  moss: '#8fd27a',
+  gold: '#f5c64a',
+  sky: '#7cc0f0',
+  berry: '#ec7aa4'
+}
+
+function guildEmblem(panel?: GuildPanel): string {
+  const shape = (SHAPES as readonly string[]).includes(panel?.shape ?? '') ? panel?.shape ?? 'shield' : 'shield'
+  const symbol = (SYMBOLS as readonly string[]).includes(panel?.symbol ?? '') ? panel?.symbol ?? 'leaf' : 'leaf'
+  const color = (COLORS as readonly string[]).includes(panel?.color ?? '') ? panel?.color ?? 'moss' : 'moss'
+  const tint = GUILD_TINT[color as (typeof COLORS)[number]]
+  const shapeFile = `guild/shape-${shape}.png`
+  return `<span class="guild-emblem" role="img" aria-label="Wappen" data-art="guild/color-${color}">
+    <span class="guild-form" data-art="guild/shape-${shape}" style="--guild-color:${tint};--guild-shape:url('${art(shapeFile)}')">
+      <img src="${art(shapeFile)}" alt="" onerror="this.style.visibility='hidden'">
+    </span>
+    <img class="guild-symbol" data-art="guild/symbol-${symbol}" src="${art(`guild/symbol-${symbol}.png`)}" alt="" onerror="this.style.visibility='hidden'">
+  </span>`
 }
 
 function guildScreen(save: SaveV2, panel: GuildPanel | undefined): string {
@@ -1862,7 +1818,7 @@ function guildScreen(save: SaveV2, panel: GuildPanel | undefined): string {
   const requests = officer ? (view.requests ?? []).map((request) => `<article class="friend-row"><b>${esc(request.label)}</b><button type="button" data-act="guild-accept" data-id="${esc(request.id)}">${tr(save, 'guild.accept')}</button><button type="button" data-act="guild-decline" data-id="${esc(request.id)}">${tr(save, 'guild.decline')}</button></article>`).join('') : ''
   return `<div class="menu-screen"><div class="menu-scroll"><div class="card panel guild-board">
     <h2>${tr(save, 'nav.guild')}</h2>
-    ${guildEmblem()}
+    ${guildEmblem(view)}
     <h3>${esc(view.name)} ${view.tag ? `· ${esc(view.tag)}` : ''}</h3>
     <p>${tr(save, 'guild.level', { n: view.level })} · ${tr(save, 'guild.points', { n: view.points })}</p>
     ${officer && view.code ? `<p>${tr(save, 'guild.code')}: <b>${esc(view.code)}</b></p>` : ''}
@@ -1965,7 +1921,7 @@ export function gameHtml(save: SaveV2, screen: Screen, now: number, pc: PcQuery,
   const chapter = chapterById(save.region, save.chapter)
   const map = mapOpen ? `<div class="map-sheet card">
       <label class="switch">${ui('optLoop')}<input type="checkbox" data-field="loop" ${save.loop ? 'checked' : ''}/> ${tr(save, 'nav.loop')}</label>
-      <p class="muted">${tr(save, 'nav.crest', { name: save.badges.includes(chapter.guardian.badge) ? chapter.guardian.badge : '—' })}</p>
+      <p class="muted">${save.badges.includes(chapter.guardian.badge) && chapter.guardian.badge ? `<img class="crest-mini" src="${art(crestArt(chapter.guardian.badge))}" alt=""/>` : ''}${tr(save, 'nav.crest', { name: save.badges.includes(chapter.guardian.badge) && chapter.guardian.badge ? chapter.guardian.badge : '—' })}</p>
       ${progress(save)}
     </div>` : ''
   const typeScale = fontFactor(save.settings.font)
@@ -2095,6 +2051,7 @@ function overlayHtml(save: SaveV2, overlay: Overlay): string {
       <div class="catches">${sprites || `<span class="muted">${tr(save, 'welcome.none')}</span>`}</div>
       ${levels || `<p class="muted">${tr(save, 'welcome.levels')}</p>`}
       <p>${tr(save, 'welcome.mastery', { names: overlay.summary.mastery.length ? overlay.summary.mastery.map((row) => `${species(row.speciesId).name} ${row.level}`).join(', ') : '—' })}</p>
+      ${overlay.summary.badges.length ? `<p class="crest-row">${overlay.summary.badges.map((name) => `<img class="crest-mini" src="${art(crestArt(name))}" alt="${esc(name)}"/>`).join('')}</p>` : ''}
       <p>${tr(save, 'welcome.badges', { names: overlay.summary.badges.length ? overlay.summary.badges.join(', ') : '—' })}</p>
     </div>
     <button type="button" class="primary" data-act="close">${tr(save, 'welcome.next')}</button>
@@ -2103,7 +2060,7 @@ function overlayHtml(save: SaveV2, overlay: Overlay): string {
   if (overlay.kind === 'guard') {
     return `<div class="sheet" data-sheet="swipe">${grab()}<div class="sheet-body"><div class="kicker">${tr(save, 'guard.title')}</div><h2>${tr(save, overlay.win ? 'guard.win' : 'guard.loss')}</h2>
       <p>${esc(overlay.text)}</p>
-      ${overlay.badge ? `<p>${tr(save, 'guard.badge', { name: esc(overlay.badge) })}</p>` : ''}
+      ${overlay.badge ? `<p><img class="crest-mini" src="${art(crestArt(overlay.badge))}" alt=""/>${tr(save, 'guard.badge', { name: esc(overlay.badge) })}</p>` : ''}
       ${overlay.gold ? `<p>${tr(save, 'guard.gold', { gold: overlay.gold.toLocaleString(L(save) === 'en' ? 'en' : 'de-DE') })}</p>` : ''}
     </div>
       <button type="button" class="primary" data-act="close">${tr(save, 'welcome.next')}</button>
@@ -2114,7 +2071,7 @@ function overlayHtml(save: SaveV2, overlay: Overlay): string {
     const sp = species(overlay.species)
     return `<div class="sheet" data-sheet="swipe">${grab()}<div class="sheet-body"><div class="kicker">${tr(save, 'catch.got')}</div><h2>${esc(sp.name)}</h2>
       <img class="hero" src="${monsterArt(sp.id, true)}" alt=""/>
-      <p>${esc(typeLabel(L(save), sp.type, typeName(sp.type)))} · ${esc(rarityLabel(L(save), sp.baseRarity, rarityName(sp.id)))} · Lv ${overlay.level}</p>
+      <p>${typeIcon(sp.type)}${esc(typeLabel(L(save), sp.type, typeName(sp.type)))} · ${esc(rarityLabel(L(save), sp.baseRarity, rarityName(sp.id)))} · Lv ${overlay.level}</p>
       <p>${esc(sp.blurb)}</p>
       <p>${tr(save, overlay.place === 'team' ? 'catch.team' : 'catch.pc')}</p>
     </div>
@@ -2138,7 +2095,7 @@ function dexEntry(save: SaveV2, id: string): string {
     <div class="kicker">Nr. ${speciesNumber(id)} · ${dexStatusLabel(status)}</div>
     <h2>${esc(sp.name)}</h2>
     ${masteryStarRow(masteryLevel(save.mastery?.[id] ?? 0))}
-    <p>${esc(typeName(sp.type))} · ${esc(rarityInfo(sp.baseRarity).name)} · ${tr(save, 'codex.catches', { n: (save.dex[id]?.caught ?? 0).toLocaleString('de-DE') })}</p>
+    <p>${typeIcon(sp.type)}${esc(typeName(sp.type))} · ${esc(rarityInfo(sp.baseRarity).name)} · ${tr(save, 'codex.catches', { n: (save.dex[id]?.caught ?? 0).toLocaleString('de-DE') })}</p>
     <div class="stats">
       <div class="stat">HP<br/>${base.hp}</div>
       <div class="stat">ATK<br/>${base.atk}</div>
@@ -2171,7 +2128,7 @@ function card(save: SaveV2, uid: string): string {
     ${masteryPlate(save, sp.id)}
     <div class="bar-exp m-bar"><span style="width:${goal.pct}%"></span></div>
     <p class="muted">${goal.done ? tr(save, 'mastery.max') : tr(save, 'mastery.ep', { have: goal.into.toLocaleString('de-DE'), need: goal.span.toLocaleString('de-DE') })} · ${tr(save, 'mastery.bonus', { pct: rank * 2 })}</p>
-    <p>${esc(typeLabel(L(save), sp.type, typeName(sp.type)))} · ${esc(rarityLabel(L(save), sp.baseRarity, rarityInfo(sp.baseRarity).name))} · Lv ${mon.lvl} · ${tr(save, 'card.awaken', { n: mon.lvl >= 50 ? 2 : mon.lvl >= 25 ? 1 : 0 })}</p>
+    <p>${typeIcon(sp.type)}${esc(typeLabel(L(save), sp.type, typeName(sp.type)))} · ${esc(rarityLabel(L(save), sp.baseRarity, rarityInfo(sp.baseRarity).name))} · Lv ${mon.lvl} · ${tr(save, 'card.awaken', { n: mon.lvl >= 50 ? 2 : mon.lvl >= 25 ? 1 : 0 })}</p>
     <div class="bar-exp"><span style="width:${pct}%"></span></div>
     <p class="muted">EP ${mon.exp.toLocaleString('de-DE')} / ${need.toLocaleString('de-DE')}</p>
     <div class="stats">
@@ -2185,7 +2142,7 @@ function card(save: SaveV2, uid: string): string {
     <p class="muted">${tr(save, 'card.caught', { when, where: placeLabel(mon.caughtWhere, L(save)) })}</p>
     <label class="switch"><input type="checkbox" data-field="buddy" data-uid="${uid}" ${save.buddy === uid ? 'checked' : ''}/> ${tr(save, 'team.buddy')}</label>
     <label class="switch"><input type="checkbox" data-field="keep" data-uid="${uid}" ${mon.keepDupes ? 'checked' : ''}/> ${tr(save, 'card.keep')}</label>
-    <p>${tr(save, 'chest.star', { n: save.stars[sp.id] ?? 0 })} · ${save.shards[sp.id] ?? 0}</p>
+    <p>${tr(save, 'chest.star', { n: save.stars[sp.id] ?? 0 })} · <img class="shard-ico" src="${art('ui/shard_64.webp')}" alt="Splitter" width="28" height="28"/> ${save.shards[sp.id] ?? 0}</p>
     ${(save.stars[sp.id] ?? 0) < 5 ? `<button type="button" class="primary" data-act="star" data-id="${sp.id}">${tr(save, 'chest.starUp')} (${starCost(sp.baseRarity, (save.stars[sp.id] ?? 0) + 1)})</button>` : ''}
     ${Object.values(save.mons).filter((row) => row.species === sp.id).length > 1 ? `<button type="button" data-act="melt" data-uid="${uid}">Einschmelzen</button>` : ''}
     </div>

@@ -11125,6 +11125,14 @@ function guildLevel(points) {
 function phraseOk(id) {
   return PHRASES.includes(id);
 }
+function guildActionDenial(action, role) {
+  if (action === "state" || action === "search") return null;
+  if (action === "found" || action === "join") return role ? "member" : null;
+  if (!role) return "missing";
+  if (action === "kick" || action === "role" || action === "emblem") return role === "lead" ? null : "role";
+  if (action === "accept" || action === "decline") return role === "member" ? "role" : null;
+  return null;
+}
 
 // supabase/functions/guild/index.ts
 Deno.serve(async (req) => {
@@ -11148,7 +11156,11 @@ Deno.serve(async (req) => {
   }
   const profile = await db.from("profiles").select("flag_level, last_audit").eq("user_id", user.id).maybeSingle();
   if (profile.data?.flag_level === 2 && action !== "state" && action !== "leave") return json({ error: "flag" }, 403);
-  const badges = Array.isArray(profile.data?.last_audit?.badges) ? profile.data?.last_audit?.badges : [];
+  const membership = await db.from("guild_members").select("guild_id, role").eq("user_id", user.id).maybeSingle();
+  const role = membership.data?.role === "lead" || membership.data?.role === "deputy" || membership.data?.role === "member" ? membership.data.role : null;
+  const denied = guildActionDenial(action, role);
+  if (denied) return json({ error: denied }, denied === "missing" ? 404 : 403);
+  const badges = profile.data?.flag_level === 2 ? [] : Array.isArray(profile.data?.last_audit?.badges) ? profile.data?.last_audit?.badges : [];
   const saved = await db.from("saves").select("save_json").eq("user_id", user.id).maybeSingle();
   const adventure = saved.data?.save_json ?? null;
   if (action === "found") {
