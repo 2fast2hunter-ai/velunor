@@ -68,7 +68,7 @@ import { expeditionBusy, settleExpeditions, startExpedition, takeExpeditionNotes
 import { coopErrorKey } from './coop'
 import { fieldSkipsRender } from './fields'
 import { foundCost, guildErrorKey, guildFoundBlock } from './guild'
-import { crestCount } from './arena'
+import { arenaFightErrorKey, crestCount } from './arena'
 import { buyCrystal, buyFruit, sellCrystal, sellFruit, useCrystal, useFruit } from './shop'
 import { buyPrize, spinWheel, type Multiplier, type SymbolId } from './wheel'
 import { chapterCapNow } from './dex'
@@ -2019,7 +2019,9 @@ async function arenaAction(act: string, index: string | null): Promise<void> {
   }
   const result = await callOnline('arena-fight', { index: Math.floor(Number(index)) || 0 })
   if (!result.ok || !result.data.replay || typeof result.data.replay !== 'object') {
-    arenaPanel = { ...arenaPanel, note: result.error === 'limit' ? t(save.settings.lang, 'arena.attacks', { n: 0 }) : t(save.settings.lang, 'arena.offline') }
+    const code = String(result.data.error || result.error || '')
+    const key = arenaFightErrorKey(code)
+    arenaPanel = { ...arenaPanel, note: t(save.settings.lang, key, key === 'arena.attacks' ? { n: 0 } : undefined) }
     render()
     return
   }

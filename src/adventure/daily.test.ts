@@ -1,3 +1,4 @@
+import { readFileSync } from 'node:fs'
 import { describe, expect, it } from 'vitest'
 import { SAVE_VERSION } from './const'
 import { auditSync } from './online/check'
@@ -141,6 +142,11 @@ describe('daily tasks and the calendar', () => {
     expect(html).toContain('data-art="daily/board"')
     for (const id of DAILY_FRAMES) expect(html).toContain(`data-art="daily/frame-${id.slice('daily-'.length)}"`)
     expect(html).toContain('Tagesaufgaben')
+    expect(html).toContain('Spur\u00ADfrucht')
+    expect(html).toContain('Neugier\u00ADfrucht')
+    expect(html).not.toContain('Spurfrucht')
+    const css = readFileSync(new URL('./adventure.css', import.meta.url), 'utf8')
+    expect(css).toContain('.daily-day span { display: block; max-width: 100%; overflow-wrap: normal; word-break: normal; hyphens: manual; line-height: 1.15; }')
     expect(html.match(/<li class="daily-task/g)?.length).toBe(3)
   })
 })

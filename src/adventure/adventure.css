@@ -1807,7 +1807,8 @@ a.ghost { color: inherit; text-decoration: none; display: inline-block; }
 }
 .daily-task.done b { color: #7dcea0; }
 .daily-days { display: grid; grid-template-columns: repeat(7, minmax(0, 1fr)); gap: 6px; }
-.daily-day { flex-direction: column; align-items: center; border: 0; border-radius: 16px; background: #121a30; padding: 8px 4px; text-align: center; }
+.daily-day { flex-direction: column; align-items: center; border: 0; border-radius: 16px; background: #121a30; padding: 8px 4px; text-align: center; overflow-wrap: normal; word-break: normal; hyphens: manual; }
+.daily-day span { display: block; max-width: 100%; overflow-wrap: normal; word-break: normal; hyphens: manual; line-height: 1.15; }
 .daily-day.on { background: #243156; }
 .daily-frames { display: grid; grid-template-columns: repeat(4, minmax(0, 1fr)); gap: 8px; margin-top: 12px; }
 .daily-frame-btn {

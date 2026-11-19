@@ -1133,6 +1133,13 @@ function dailyFrameSvg(id: DailyFrameId): string {
   return artImg(`daily/frame-${name}_128.png`, 'daily-frame', `daily/frame-${name}`)
 }
 
+/** Break a German compound at „frucht“ only when the calendar cell is too narrow. */
+function calendarFruit(save: SaveV2, fruit: string): string {
+  const name = tr(save, `fruit.${fruit}`)
+  if (name.includes(' ') || !name.endsWith('frucht')) return name
+  return `${name.slice(0, -'frucht'.length)}\u00ADfrucht`
+}
+
 function dailyCard(save: SaveV2): string {
   const board = save.daily
   const tasks = (board?.tasks ?? []).map((task, index) => {
@@ -1151,7 +1158,7 @@ function dailyCard(save: SaveV2): string {
     const day = index + 1
     const on = (board?.credited ?? 0) >= day
     const reward = calendarReward(day)
-    const label = reward.frame ? tr(save, 'daily.frameDay') : reward.fruit ? tr(save, `fruit.${reward.fruit}`) : `${reward.gold} G`
+    const label = reward.frame ? tr(save, 'daily.frameDay') : reward.fruit ? calendarFruit(save, reward.fruit) : `${reward.gold} G`
     return `<li class="daily-day${on ? ' on' : ''}"><b>${day}</b><span>${esc(label)}</span></li>`
   }).join('')
   const frames = DAILY_FRAMES.map((id) => {
