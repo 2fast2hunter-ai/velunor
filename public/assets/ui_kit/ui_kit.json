@@ -1,0 +1,1020 @@
+{
+ "raster": "UI-px, 1080 breit (@1x, #stage)",
+ "outline": "#4a2c17",
+ "font": "Fredoka (OFL)",
+ "text": {
+  "auf_hell": "#4a2c17",
+  "auf_dunkel": "#fff3dc",
+  "kontur": "#4a2c17"
+ },
+ "parts": [
+  {
+   "file": "ui_kit/panel/base.png",
+   "size": [
+    192,
+    192
+   ],
+   "kind": "9slice",
+   "use": "Grundfläche: Inhaltsblöcke, Listen-Container (.card)",
+   "slice": {
+    "top": 64,
+    "right": 64,
+    "bottom": 64,
+    "left": 64
+   },
+   "outset": 16
+  },
+  {
+   "file": "ui_kit/panel/raised.png",
+   "size": [
+    192,
+    192
+   ],
+   "kind": "9slice",
+   "use": "Erhabene Fläche: Kacheln, Gruppen, Aktivitäts-Kacheln (.chest-tile, .side-card)",
+   "slice": {
+    "top": 64,
+    "right": 64,
+    "bottom": 64,
+    "left": 64
+   },
+   "outset": 16
+  },
+  {
+   "file": "ui_kit/panel/inset.png",
+   "size": [
+    192,
+    192
+   ],
+   "kind": "9slice",
+   "use": "Eingelassene Fläche: Werte-Felder, Slots, Log, Statistik-Kästen (.log, .stat)",
+   "slice": {
+    "top": 64,
+    "right": 64,
+    "bottom": 64,
+    "left": 64
+   },
+   "outset": 16
+  },
+  {
+   "file": "ui_kit/panel/dialog.png",
+   "size": [
+    192,
+    192
+   ],
+   "kind": "9slice",
+   "use": "Dialog/Sheet-Körper mit Goldband (.sheet, .more-sheet, .map-sheet)",
+   "slice": {
+    "top": 72,
+    "right": 72,
+    "bottom": 72,
+    "left": 72
+   },
+   "outset": 16
+  },
+  {
+   "file": "ui_kit/panel/card.png",
+   "size": [
+    192,
+    192
+   ],
+   "kind": "9slice",
+   "use": "Karte: Monster-, Angebots-, Erfolgs-Karte (.mon-card, .shop-card-Inhalt)",
+   "slice": {
+    "top": 72,
+    "right": 72,
+    "bottom": 72,
+    "left": 72
+   },
+   "outset": 16
+  },
+  {
+   "file": "ui_kit/panel/glass.png",
+   "size": [
+    192,
+    192
+   ],
+   "kind": "9slice",
+   "use": "Dunkle Glas-Fläche über Szenen: Kampf-HUD, Log über Bild, Chips (.wx-chip, .battle .log)",
+   "slice": {
+    "top": 64,
+    "right": 64,
+    "bottom": 64,
+    "left": 64
+   },
+   "outset": 16
+  },
+  {
+   "file": "ui_kit/panel/row.png",
+   "size": [
+    256,
+    112
+   ],
+   "kind": "9slice",
+   "use": "Listen-Zeile (Ranglisten, Freunde, Chat, Gilde, Truhenquote)",
+   "slice": {
+    "top": 44,
+    "right": 48,
+    "bottom": 50,
+    "left": 48
+   },
+   "outset": 10
+  },
+  {
+   "file": "ui_kit/panel/row_selected.png",
+   "size": [
+    256,
+    112
+   ],
+   "kind": "9slice",
+   "use": "Gewählte/eigene Zeile (eigener Rang, gewähltes Monster)",
+   "slice": {
+    "top": 44,
+    "right": 48,
+    "bottom": 50,
+    "left": 48
+   },
+   "outset": 10
+  },
+  {
+   "file": "ui_kit/panel/row_alt.png",
+   "size": [
+    256,
+    112
+   ],
+   "kind": "9slice",
+   "use": "Zweite Zeilenfarbe (Zebra)",
+   "slice": {
+    "top": 44,
+    "right": 48,
+    "bottom": 50,
+    "left": 48
+   },
+   "outset": 10
+  },
+  {
+   "file": "ui_kit/bar/header.png",
+   "size": [
+    256,
+    160
+   ],
+   "kind": "9slice",
+   "use": "Leiste/Header: Screen-Titel, Kapitel-Leiste (.chapter, .screen-head, h2-Leisten)",
+   "slice": {
+    "top": 56,
+    "right": 60,
+    "bottom": 64,
+    "left": 60
+   },
+   "outset": 12
+  },
+  {
+   "file": "ui_kit/bar/hud_top.png",
+   "size": [
+    256,
+    160
+   ],
+   "kind": "9slice",
+   "use": "Obere HUD-Leiste, unten abgerundet (.hud)",
+   "slice": {
+    "top": 24,
+    "right": 64,
+    "bottom": 72,
+    "left": 64
+   }
+  },
+  {
+   "file": "ui_kit/bar/tabbar.png",
+   "size": [
+    256,
+    160
+   ],
+   "kind": "9slice",
+   "use": "Untere Tab-Leiste, oben abgerundet (.tabbar)",
+   "slice": {
+    "top": 72,
+    "right": 64,
+    "bottom": 24,
+    "left": 64
+   }
+  },
+  {
+   "file": "ui_kit/panel/tooltip.png",
+   "size": [
+    192,
+    128
+   ],
+   "kind": "9slice",
+   "use": "Tooltip/Hinweisblase (.hint, .shop-toast, Info-Popover); Text #fff3dc",
+   "slice": {
+    "top": 44,
+    "right": 44,
+    "bottom": 48,
+    "left": 44
+   },
+   "outset": 12
+  },
+  {
+   "file": "ui_kit/panel/tooltip_tail.png",
+   "size": [
+    56,
+    36
+   ],
+   "kind": "image",
+   "use": "Spitze unter dem Tooltip (zentriert, ::after)"
+  },
+  {
+   "file": "ui_kit/button/primary_normal.png",
+   "size": [
+    256,
+    168
+   ],
+   "kind": "9slice",
+   "use": "Button primary – normal",
+   "slice": {
+    "top": 60,
+    "right": 64,
+    "bottom": 70,
+    "left": 64
+   },
+   "outset": 12,
+   "states_of": "button/primary",
+   "text": "#ffffff mit 4px Kontur #4a2c17"
+  },
+  {
+   "file": "ui_kit/button/primary_hover.png",
+   "size": [
+    256,
+    168
+   ],
+   "kind": "9slice",
+   "use": "Button primary – hover",
+   "slice": {
+    "top": 60,
+    "right": 64,
+    "bottom": 70,
+    "left": 64
+   },
+   "outset": 12,
+   "states_of": "button/primary",
+   "text": "#ffffff mit 4px Kontur #4a2c17"
+  },
+  {
+   "file": "ui_kit/button/primary_pressed.png",
+   "size": [
+    256,
+    168
+   ],
+   "kind": "9slice",
+   "use": "Button primary – pressed",
+   "slice": {
+    "top": 60,
+    "right": 64,
+    "bottom": 70,
+    "left": 64
+   },
+   "outset": 12,
+   "states_of": "button/primary",
+   "text": "#ffffff mit 4px Kontur #4a2c17"
+  },
+  {
+   "file": "ui_kit/button/primary_disabled.png",
+   "size": [
+    256,
+    168
+   ],
+   "kind": "9slice",
+   "use": "Button primary – disabled",
+   "slice": {
+    "top": 60,
+    "right": 64,
+    "bottom": 70,
+    "left": 64
+   },
+   "outset": 12,
+   "states_of": "button/primary",
+   "text": "#7d776c"
+  },
+  {
+   "file": "ui_kit/button/secondary_normal.png",
+   "size": [
+    256,
+    168
+   ],
+   "kind": "9slice",
+   "use": "Button secondary – normal",
+   "slice": {
+    "top": 60,
+    "right": 64,
+    "bottom": 70,
+    "left": 64
+   },
+   "outset": 12,
+   "states_of": "button/secondary",
+   "text": "#ffffff mit 4px Kontur #4a2c17"
+  },
+  {
+   "file": "ui_kit/button/secondary_hover.png",
+   "size": [
+    256,
+    168
+   ],
+   "kind": "9slice",
+   "use": "Button secondary – hover",
+   "slice": {
+    "top": 60,
+    "right": 64,
+    "bottom": 70,
+    "left": 64
+   },
+   "outset": 12,
+   "states_of": "button/secondary",
+   "text": "#ffffff mit 4px Kontur #4a2c17"
+  },
+  {
+   "file": "ui_kit/button/secondary_pressed.png",
+   "size": [
+    256,
+    168
+   ],
+   "kind": "9slice",
+   "use": "Button secondary – pressed",
+   "slice": {
+    "top": 60,
+    "right": 64,
+    "bottom": 70,
+    "left": 64
+   },
+   "outset": 12,
+   "states_of": "button/secondary",
+   "text": "#ffffff mit 4px Kontur #4a2c17"
+  },
+  {
+   "file": "ui_kit/button/secondary_disabled.png",
+   "size": [
+    256,
+    168
+   ],
+   "kind": "9slice",
+   "use": "Button secondary – disabled",
+   "slice": {
+    "top": 60,
+    "right": 64,
+    "bottom": 70,
+    "left": 64
+   },
+   "outset": 12,
+   "states_of": "button/secondary",
+   "text": "#7d776c"
+  },
+  {
+   "file": "ui_kit/button/danger_normal.png",
+   "size": [
+    256,
+    168
+   ],
+   "kind": "9slice",
+   "use": "Button danger – normal",
+   "slice": {
+    "top": 60,
+    "right": 64,
+    "bottom": 70,
+    "left": 64
+   },
+   "outset": 12,
+   "states_of": "button/danger",
+   "text": "#ffffff mit 4px Kontur #4a2c17"
+  },
+  {
+   "file": "ui_kit/button/danger_hover.png",
+   "size": [
+    256,
+    168
+   ],
+   "kind": "9slice",
+   "use": "Button danger – hover",
+   "slice": {
+    "top": 60,
+    "right": 64,
+    "bottom": 70,
+    "left": 64
+   },
+   "outset": 12,
+   "states_of": "button/danger",
+   "text": "#ffffff mit 4px Kontur #4a2c17"
+  },
+  {
+   "file": "ui_kit/button/danger_pressed.png",
+   "size": [
+    256,
+    168
+   ],
+   "kind": "9slice",
+   "use": "Button danger – pressed",
+   "slice": {
+    "top": 60,
+    "right": 64,
+    "bottom": 70,
+    "left": 64
+   },
+   "outset": 12,
+   "states_of": "button/danger",
+   "text": "#ffffff mit 4px Kontur #4a2c17"
+  },
+  {
+   "file": "ui_kit/button/danger_disabled.png",
+   "size": [
+    256,
+    168
+   ],
+   "kind": "9slice",
+   "use": "Button danger – disabled",
+   "slice": {
+    "top": 60,
+    "right": 64,
+    "bottom": 70,
+    "left": 64
+   },
+   "outset": 12,
+   "states_of": "button/danger",
+   "text": "#7d776c"
+  },
+  {
+   "file": "ui_kit/button/gold_normal.png",
+   "size": [
+    256,
+    168
+   ],
+   "kind": "9slice",
+   "use": "Button gold – normal",
+   "slice": {
+    "top": 60,
+    "right": 64,
+    "bottom": 70,
+    "left": 64
+   },
+   "outset": 12,
+   "states_of": "button/gold",
+   "text": "#ffffff mit 4px Kontur #4a2c17"
+  },
+  {
+   "file": "ui_kit/button/gold_hover.png",
+   "size": [
+    256,
+    168
+   ],
+   "kind": "9slice",
+   "use": "Button gold – hover",
+   "slice": {
+    "top": 60,
+    "right": 64,
+    "bottom": 70,
+    "left": 64
+   },
+   "outset": 12,
+   "states_of": "button/gold",
+   "text": "#ffffff mit 4px Kontur #4a2c17"
+  },
+  {
+   "file": "ui_kit/button/gold_pressed.png",
+   "size": [
+    256,
+    168
+   ],
+   "kind": "9slice",
+   "use": "Button gold – pressed",
+   "slice": {
+    "top": 60,
+    "right": 64,
+    "bottom": 70,
+    "left": 64
+   },
+   "outset": 12,
+   "states_of": "button/gold",
+   "text": "#ffffff mit 4px Kontur #4a2c17"
+  },
+  {
+   "file": "ui_kit/button/gold_disabled.png",
+   "size": [
+    256,
+    168
+   ],
+   "kind": "9slice",
+   "use": "Button gold – disabled",
+   "slice": {
+    "top": 60,
+    "right": 64,
+    "bottom": 70,
+    "left": 64
+   },
+   "outset": 12,
+   "states_of": "button/gold",
+   "text": "#7d776c"
+  },
+  {
+   "file": "ui_kit/button/close_normal.png",
+   "size": [
+    128,
+    128
+   ],
+   "kind": "image",
+   "use": "Schließen-Knopf (Dialog-Kopf, [data-act=close])"
+  },
+  {
+   "file": "ui_kit/button/icon_normal.png",
+   "size": [
+    128,
+    128
+   ],
+   "kind": "image",
+   "use": "Runder Icon-Knopf (Speed, Filter, Sprache, Log); Icon 64px mittig"
+  },
+  {
+   "file": "ui_kit/button/close_pressed.png",
+   "size": [
+    128,
+    128
+   ],
+   "kind": "image",
+   "use": "Schließen-Knopf (Dialog-Kopf, [data-act=close])"
+  },
+  {
+   "file": "ui_kit/button/icon_pressed.png",
+   "size": [
+    128,
+    128
+   ],
+   "kind": "image",
+   "use": "Runder Icon-Knopf (Speed, Filter, Sprache, Log); Icon 64px mittig"
+  },
+  {
+   "file": "ui_kit/tab/active.png",
+   "size": [
+    240,
+    136
+   ],
+   "kind": "9slice",
+   "use": "Tab active (.tab, .shop-tabs button, Ranglisten-/Chat-/Aktivitäten-Tabs)",
+   "slice": {
+    "top": 56,
+    "right": 56,
+    "bottom": 24,
+    "left": 56
+   },
+   "text": "#4a2c17"
+  },
+  {
+   "file": "ui_kit/tab/inactive.png",
+   "size": [
+    240,
+    136
+   ],
+   "kind": "9slice",
+   "use": "Tab inactive (.tab, .shop-tabs button, Ranglisten-/Chat-/Aktivitäten-Tabs)",
+   "slice": {
+    "top": 56,
+    "right": 56,
+    "bottom": 24,
+    "left": 56
+   },
+   "text": "#fff3dc mit Kontur #4a2c17"
+  },
+  {
+   "file": "ui_kit/tab/bar.png",
+   "size": [
+    256,
+    128
+   ],
+   "kind": "9slice",
+   "use": "Tab-Leiste hinter den Tabs (Hintergrund der Tab-Zeile)",
+   "slice": {
+    "top": 24,
+    "right": 16,
+    "bottom": 24,
+    "left": 16
+   }
+  },
+  {
+   "file": "ui_kit/badge/red.png",
+   "size": [
+    72,
+    72
+   ],
+   "kind": "9slice",
+   "use": "Badge/Zähler red (Neu-Punkt, Anzahl; dehnt sich zur Pille)",
+   "slice": {
+    "top": 36,
+    "right": 30,
+    "bottom": 36,
+    "left": 30
+   },
+   "text": "#ffffff fett, Kontur #4a2c17"
+  },
+  {
+   "file": "ui_kit/badge/gold.png",
+   "size": [
+    72,
+    72
+   ],
+   "kind": "9slice",
+   "use": "Badge/Zähler gold (Neu-Punkt, Anzahl; dehnt sich zur Pille)",
+   "slice": {
+    "top": 36,
+    "right": 30,
+    "bottom": 36,
+    "left": 30
+   },
+   "text": "#ffffff fett, Kontur #4a2c17"
+  },
+  {
+   "file": "ui_kit/badge/green.png",
+   "size": [
+    72,
+    72
+   ],
+   "kind": "9slice",
+   "use": "Badge/Zähler green (Neu-Punkt, Anzahl; dehnt sich zur Pille)",
+   "slice": {
+    "top": 36,
+    "right": 30,
+    "bottom": 36,
+    "left": 30
+   },
+   "text": "#ffffff fett, Kontur #4a2c17"
+  },
+  {
+   "file": "ui_kit/badge/blue.png",
+   "size": [
+    72,
+    72
+   ],
+   "kind": "9slice",
+   "use": "Badge/Zähler blue (Neu-Punkt, Anzahl; dehnt sich zur Pille)",
+   "slice": {
+    "top": 36,
+    "right": 30,
+    "bottom": 36,
+    "left": 30
+   },
+   "text": "#ffffff fett, Kontur #4a2c17"
+  },
+  {
+   "file": "ui_kit/badge/counter.png",
+   "size": [
+    160,
+    80
+   ],
+   "kind": "9slice",
+   "use": "Zähler-Pille dunkel (Gold, Marken, Kodex 12/100, Wallet)",
+   "slice": {
+    "top": 36,
+    "right": 40,
+    "bottom": 40,
+    "left": 40
+   },
+   "outset": 6,
+   "text": "#ffe9b0"
+  },
+  {
+   "file": "ui_kit/badge/chip.png",
+   "size": [
+    160,
+    80
+   ],
+   "kind": "9slice",
+   "use": "Chip hell (Typ-Chip, Filter-Chip, Wetter-Chip im Menü)",
+   "slice": {
+    "top": 36,
+    "right": 40,
+    "bottom": 40,
+    "left": 40
+   },
+   "outset": 6,
+   "text": "#4a2c17"
+  },
+  {
+   "file": "ui_kit/input/normal.png",
+   "size": [
+    256,
+    136
+   ],
+   "kind": "9slice",
+   "use": "Eingabefeld normal (input, select, textarea; Chat, Name, Gildensuche)",
+   "slice": {
+    "top": 52,
+    "right": 52,
+    "bottom": 52,
+    "left": 52
+   },
+   "text": "#4a2c17, Platzhalter #a58a66"
+  },
+  {
+   "file": "ui_kit/input/focus.png",
+   "size": [
+    256,
+    136
+   ],
+   "kind": "9slice",
+   "use": "Eingabefeld focus (input, select, textarea; Chat, Name, Gildensuche)",
+   "slice": {
+    "top": 52,
+    "right": 52,
+    "bottom": 52,
+    "left": 52
+   },
+   "text": "#4a2c17, Platzhalter #a58a66"
+  },
+  {
+   "file": "ui_kit/input/error.png",
+   "size": [
+    256,
+    136
+   ],
+   "kind": "9slice",
+   "use": "Eingabefeld error (input, select, textarea; Chat, Name, Gildensuche)",
+   "slice": {
+    "top": 52,
+    "right": 52,
+    "bottom": 52,
+    "left": 52
+   },
+   "text": "#4a2c17, Platzhalter #a58a66"
+  },
+  {
+   "file": "ui_kit/input/select_arrow.png",
+   "size": [
+    64,
+    64
+   ],
+   "kind": "image",
+   "use": "Pfeil für select (rechts im Feld)"
+  },
+  {
+   "file": "ui_kit/control/slider_track.png",
+   "size": [
+    256,
+    56
+   ],
+   "kind": "3slice",
+   "use": "Schieberegler-Bahn (input[type=range] Lautstärke, Schriftgröße, Mengen)",
+   "slice": {
+    "top": 28,
+    "right": 28,
+    "bottom": 28,
+    "left": 28
+   }
+  },
+  {
+   "file": "ui_kit/control/slider_fill.png",
+   "size": [
+    256,
+    56
+   ],
+   "kind": "3slice",
+   "use": "Gefüllter Teil der Bahn",
+   "slice": {
+    "top": 28,
+    "right": 28,
+    "bottom": 28,
+    "left": 28
+   }
+  },
+  {
+   "file": "ui_kit/control/slider_knob.png",
+   "size": [
+    80,
+    96
+   ],
+   "kind": "image",
+   "use": "Regler-Griff (::-webkit-slider-thumb / ::-moz-range-thumb)"
+  },
+  {
+   "file": "ui_kit/control/toggle_off.png",
+   "size": [
+    144,
+    88
+   ],
+   "kind": "image",
+   "use": "Schalter off (Einstellungen: Ton, Animationen, Benachrichtigung)"
+  },
+  {
+   "file": "ui_kit/control/toggle_on.png",
+   "size": [
+    144,
+    88
+   ],
+   "kind": "image",
+   "use": "Schalter on (Einstellungen: Ton, Animationen, Benachrichtigung)"
+  },
+  {
+   "file": "ui_kit/control/check_off.png",
+   "size": [
+    88,
+    88
+   ],
+   "kind": "image",
+   "use": "Checkbox off (Zustimmung, Filter, Auto-Synergie)"
+  },
+  {
+   "file": "ui_kit/control/check_on.png",
+   "size": [
+    88,
+    88
+   ],
+   "kind": "image",
+   "use": "Checkbox on (Zustimmung, Filter, Auto-Synergie)"
+  },
+  {
+   "file": "ui_kit/progress/track.png",
+   "size": [
+    256,
+    56
+   ],
+   "kind": "3slice",
+   "use": "Fortschritts-Bahn (.progress-track, HP-Balken, EP, Kapitel, Expedition)",
+   "slice": {
+    "top": 28,
+    "right": 28,
+    "bottom": 28,
+    "left": 28
+   }
+  },
+  {
+   "file": "ui_kit/progress/fill_green.png",
+   "size": [
+    256,
+    40
+   ],
+   "kind": "3slice",
+   "use": "Füllung green (in Bahn mit 8px Innenabstand)",
+   "slice": {
+    "top": 20,
+    "right": 20,
+    "bottom": 20,
+    "left": 20
+   }
+  },
+  {
+   "file": "ui_kit/progress/fill_gold.png",
+   "size": [
+    256,
+    40
+   ],
+   "kind": "3slice",
+   "use": "Füllung gold (in Bahn mit 8px Innenabstand)",
+   "slice": {
+    "top": 20,
+    "right": 20,
+    "bottom": 20,
+    "left": 20
+   }
+  },
+  {
+   "file": "ui_kit/progress/fill_blue.png",
+   "size": [
+    256,
+    40
+   ],
+   "kind": "3slice",
+   "use": "Füllung blue (in Bahn mit 8px Innenabstand)",
+   "slice": {
+    "top": 20,
+    "right": 20,
+    "bottom": 20,
+    "left": 20
+   }
+  },
+  {
+   "file": "ui_kit/progress/fill_red.png",
+   "size": [
+    256,
+    40
+   ],
+   "kind": "3slice",
+   "use": "Füllung red (in Bahn mit 8px Innenabstand)",
+   "slice": {
+    "top": 20,
+    "right": 20,
+    "bottom": 20,
+    "left": 20
+   }
+  },
+  {
+   "file": "ui_kit/progress/fill_purple.png",
+   "size": [
+    256,
+    40
+   ],
+   "kind": "3slice",
+   "use": "Füllung purple (in Bahn mit 8px Innenabstand)",
+   "slice": {
+    "top": 20,
+    "right": 20,
+    "bottom": 20,
+    "left": 20
+   }
+  },
+  {
+   "file": "ui_kit/divider/line.png",
+   "size": [
+    512,
+    32
+   ],
+   "kind": "3slice",
+   "use": "Trenner horizontal (hr, Abschnitts-Trennung in Sheets/Listen)",
+   "slice": {
+    "top": 0,
+    "right": 32,
+    "bottom": 0,
+    "left": 32
+   }
+  },
+  {
+   "file": "ui_kit/divider/star.png",
+   "size": [
+    64,
+    64
+   ],
+   "kind": "image",
+   "use": "Ziermitte für den Trenner (optional, ::after zentriert)"
+  },
+  {
+   "file": "ui_kit/scroll/track.png",
+   "size": [
+    32,
+    128
+   ],
+   "kind": "3slice",
+   "use": "Scrollbar-Bahn vertikal (::-webkit-scrollbar-track)",
+   "slice": {
+    "top": 16,
+    "right": 0,
+    "bottom": 16,
+    "left": 0
+   }
+  },
+  {
+   "file": "ui_kit/scroll/thumb.png",
+   "size": [
+    32,
+    128
+   ],
+   "kind": "3slice",
+   "use": "Scrollbar-Griff (::-webkit-scrollbar-thumb)",
+   "slice": {
+    "top": 16,
+    "right": 0,
+    "bottom": 16,
+    "left": 0
+   }
+  },
+  {
+   "file": "ui_kit/dialog/head.png",
+   "size": [
+    512,
+    152
+   ],
+   "kind": "9slice",
+   "use": "Dialog-Kopf (Titelband oben im Sheet, feste Höhe 152 – dehnt nur in der Breite; Schließen-Knopf rechts)",
+   "slice": {
+    "top": 76,
+    "right": 80,
+    "bottom": 76,
+    "left": 80
+   },
+   "outset": 14,
+   "text": "#ffffff 900, Kontur 5px #4a2c17"
+  },
+  {
+   "file": "ui_kit/dialog/grab.png",
+   "size": [
+    128,
+    48
+   ],
+   "kind": "image",
+   "use": "Zieh-Griff oben im Sheet (.sheet-grab .sheet-handle)"
+  },
+  {
+   "file": "ui_kit/bg/pattern_night.png",
+   "size": [
+    512,
+    512
+   ],
+   "kind": "tile",
+   "use": "Bildschirm-Hintergrund Menüs (#stage, .menu-scroll) – nahtlos kachelbar",
+   "repeat": "repeat",
+   "tile": "512px"
+  },
+  {
+   "file": "ui_kit/bg/pattern_warm.png",
+   "size": [
+    512,
+    512
+   ],
+   "kind": "tile",
+   "use": "Innen-Muster für Dialoge/Laden-Kopf (optional als background-image auf .sheet-body)",
+   "repeat": "repeat",
+   "tile": "512px"
+  }
+ ]
+}
