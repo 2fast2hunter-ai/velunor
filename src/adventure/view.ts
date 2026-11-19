@@ -33,6 +33,7 @@ import {
 } from './lootbox'
 import type { ChestGrant } from './chests'
 import { expeditionBusy, expeditionSlots, expeditionTier } from './expedition'
+import { COLORS, SHAPES, SYMBOLS } from './guild'
 import { tradedOnly } from './trade'
 import { workshopCost } from './sources'
 import {
@@ -158,6 +159,9 @@ export interface GuildPanel {
   level: number
   points: number
   note: string
+  shape?: string
+  symbol?: string
+  color?: string
 }
 
 export interface TradeCard {
@@ -236,6 +240,11 @@ const base = (): string => import.meta.env.BASE_URL || '/'
 
 export function art(path: string): string {
   return assetPath(path, base())
+}
+
+/** A missing file hides the image. The surrounding layout stays. */
+function artImg(file: string, className: string, dataArt: string): string {
+  return `<img class="${className}" data-art="${esc(dataArt)}" src="${art(file)}" alt="" onerror="this.style.visibility='hidden'">`
 }
 
 function ui(id: UiArtId): string {
@@ -756,22 +765,7 @@ function shinyOptions(save: SaveV2, current: string, have: boolean): string {
 }
 
 function synergyGlyph(id: string): string {
-  const artId = `synergy/${id}`
-  const body: Record<string, string> = {
-    gewitter: '<ellipse cx="28" cy="30" rx="16" ry="10" fill="#7eb6ff"/><ellipse cx="40" cy="28" rx="12" ry="9" fill="#d6e8ff"/><path d="M34 36l-8 14h8l-4 10 16-18h-9l7-6z" fill="#f0c14a"/>',
-    flaechenbrand: '<path d="M32 8c8 10 14 16 14 28a14 14 0 0 1-28 0c0-8 4-12 8-16 2 6 6 8 6 8s2-10 0-20z" fill="#e86a33"/><path d="M32 28c4 4 6 8 4 14a6 6 0 0 1-8 0c-2-6 0-10 4-14z" fill="#f0c14a"/>',
-    wurzelgrund: '<path d="M10 42h44" stroke="#8d6a43" stroke-width="4" stroke-linecap="round"/><path d="M32 42c-2 8-10 10-16 8M32 42c2 8 10 10 16 8M32 42V18" fill="none" stroke="#3d8f5a" stroke-width="4" stroke-linecap="round"/>',
-    polarstrom: '<path d="M32 8v48M12 20l40 24M12 44l40-24" stroke="#9fd7ff" stroke-width="4" stroke-linecap="round"/><circle cx="32" cy="32" r="6" fill="#e8f6ff"/>',
-    bollwerk: '<path d="M32 8l18 8v16c0 12-8 20-18 24C22 52 14 44 14 32V16z" fill="#9aa7b8"/><path d="M32 20v22" stroke="#f0c14a" stroke-width="4" stroke-linecap="round"/>',
-    prisma: '<path d="M32 8l20 40H12z" fill="#d7c4ff"/><path d="M32 8l8 40H24z" fill="#fff6"/>',
-    zwielicht: '<path d="M42 12a18 18 0 1 0 0 40 14 14 0 1 1 0-40z" fill="#6d5a9a"/>',
-    rudelkraft: '<path d="M16 50l10-30M32 50l8-34M48 50l-4-24" stroke="#e07a5f" stroke-width="5" stroke-linecap="round"/>',
-    schwarmgift: '<circle cx="22" cy="26" r="7" fill="#7dce6a"/><circle cx="42" cy="22" r="5" fill="#b07cc6"/><circle cx="34" cy="42" r="8" fill="#5e8f4a"/>',
-    resonanz: '<path d="M16 24c8 6 8 12 0 18M30 16c12 10 12 22 0 32M44 24c8 6 8 12 0 18" fill="none" stroke="#c4b5fd" stroke-width="4" stroke-linecap="round"/>',
-    glutschwinge: '<path d="M10 42c12-20 24-26 44-24-10 8-12 16-8 28-14-2-24-2-36-4z" fill="#e25b3a"/><path d="M20 36c10-6 18-8 26-6" fill="none" stroke="#f0c14a" stroke-width="3" stroke-linecap="round"/>',
-    sturmlied: '<path d="M14 42c8-18 18-18 18-4s-10 8-4 16 18 4 22-8" fill="none" stroke="#7ec8c3" stroke-width="4" stroke-linecap="round"/><circle cx="48" cy="20" r="5" fill="#f0c14a"/>'
-  }
-  return `<svg class="synergy-svg" data-art="${artId}" viewBox="0 0 64 64" aria-hidden="true">${body[id] ?? ''}</svg>`
+  return artImg(`synergy/${id}_64.png`, 'synergy-svg', `synergy/${id}`)
 }
 
 function synergyBoard(save: SaveV2): string {
@@ -1103,14 +1097,8 @@ function wheelView(save: SaveV2, wheel: WheelPanel): string {
 }
 
 function dailyFrameSvg(id: DailyFrameId): string {
-  const art = `daily/frame-${id.slice('daily-'.length)}`
-  const body: Record<DailyFrameId, string> = {
-    'daily-dawn': '<circle cx="32" cy="32" r="26" fill="none" stroke="#f0c14a" stroke-width="6"/><path d="M32 6v8M32 50v8M6 32h8M50 32h8" stroke="#f2d27a" stroke-width="4" stroke-linecap="round"/>',
-    'daily-tide': '<circle cx="32" cy="32" r="26" fill="none" stroke="#7eb6ff" stroke-width="6"/><path d="M14 36c6-8 12-8 18 0s12 8 18 0" fill="none" stroke="#d6e8ff" stroke-width="3" stroke-linecap="round"/>',
-    'daily-leaf': '<circle cx="32" cy="32" r="26" fill="none" stroke="#7dcea0" stroke-width="6"/><path d="M32 16c10 8 12 16 8 26-10-2-16-10-16-18 2-4 5-6 8-8z" fill="#1c3b2e"/>',
-    'daily-ember': '<circle cx="32" cy="32" r="26" fill="none" stroke="#e07a5f" stroke-width="6"/><path d="M32 14c6 8 10 12 10 20a10 10 0 0 1-20 0c0-6 4-8 6-12 1 4 3 5 4 5s1-6 0-13z" fill="#f0c14a"/>'
-  }
-  return `<svg class="daily-frame" data-art="${art}" viewBox="0 0 64 64" aria-hidden="true">${body[id]}</svg>`
+  const name = id.slice('daily-'.length)
+  return artImg(`daily/frame-${name}_128.png`, 'daily-frame', `daily/frame-${name}`)
 }
 
 function dailyCard(save: SaveV2): string {
@@ -1424,15 +1412,8 @@ function placeBadge(place: number): string {
 }
 
 function frameGlyph(id: string, on: boolean): string {
-  const paths: Record<string, string> = {
-    codex: '<rect x="6" y="8" width="52" height="48" rx="14"/>',
-    progress: '<path d="M32 6l22 10v16c0 14-10 22-22 26C20 54 10 46 10 32V16z"/>',
-    week: '<circle cx="32" cy="32" r="22"/><path d="M32 16v16l10 6" fill="none"/>',
-    shimmer: '<path d="M32 8l6 14 16 2-12 10 4 16-14-8-14 8 4-16L10 24l16-2z"/>',
-    mastery: '<path d="M12 46l8-22 12 14 12-14 8 22z"/><path d="M18 50h28"/>',
-    ehren: '<circle cx="32" cy="32" r="20"/><circle cx="32" cy="32" r="10"/>'
-  }
-  return `<svg class="rank-frame ${on ? 'on' : ''}" viewBox="0 0 64 64" aria-hidden="true">${paths[id] ?? paths.codex}</svg>`
+  const key = `ranks/frame-${id}`
+  return artImg(`${key}_128.png`, `rank-frame${on ? ' on' : ''}`, key)
 }
 
 function rankRows(rows: RankLine[]): string {
@@ -1487,9 +1468,8 @@ function treeGlyph(branch: BranchId, index: number, on: boolean): string {
 }
 
 function leagueBadge(id: string, on: boolean): string {
-  const tones: Record<string, string> = { kiesel: '#c8b48a', bronze: '#b87333', silber: '#d5dee8', gold: '#f0c14a', kristall: '#9ad7ff', meister: '#e6d6ff' }
-  const color = tones[id] ?? '#f0c14a'
-  return `<svg class="league-badge ${on ? 'on' : ''}" viewBox="0 0 64 64" aria-hidden="true"><circle cx="32" cy="28" r="16" fill="${on ? color : 'none'}" stroke="${color}" stroke-width="3"/><path d="M22 42h20l-4 14h-12z" fill="${color}"/></svg>`
+  const key = `arena/league_${id}`
+  return artImg(`${key}_64.png`, `league-badge${on ? ' on' : ''}`, key)
 }
 
 function arenaScreen(save: SaveV2, panel: ArenaPanel | undefined): string {
@@ -1630,24 +1610,12 @@ function treeScreen(save: SaveV2, pick: string | undefined, now: number): string
 }
 
 function beastArt(id: string): string {
-  if (id === 'himmelswal') {
-    return `<svg class="beast-art" data-art="beasts/himmelswal" viewBox="0 0 240 140" role="img" aria-label="Himmelswal">
-      <ellipse cx="128" cy="78" rx="78" ry="36" fill="#d7ecf7"/>
-      <ellipse cx="118" cy="86" rx="62" ry="22" fill="#f7fbfe"/>
-      <path d="M40 78c18-28 46-36 70-28" fill="none" stroke="#8fb8d4" stroke-width="10" stroke-linecap="round"/>
-      <circle cx="168" cy="68" r="6" fill="#243044"/>
-      <path d="M196 70c16 8 22 18 18 28" fill="none" stroke="#9fd0ea" stroke-width="8" stroke-linecap="round"/>
-      <path d="M150 108c10 16 28 18 42 8" fill="none" stroke="#b7d7ea" stroke-width="8" stroke-linecap="round"/>
-    </svg>`
-  }
-  return `<svg class="beast-art" data-art="beasts/weltenwurm" viewBox="0 0 240 140" role="img" aria-label="Weltenwurm">
-    <path d="M28 92c24-36 48-20 64-36s28-8 40 10 34 18 52-4 28 8 28 22-20 28-46 16-40 8-58 20-48 6-80-28z" fill="#c9844a"/>
-    <circle cx="46" cy="78" r="16" fill="#e0b07a"/>
-    <circle cx="40" cy="74" r="3" fill="#243044"/>
-    <path d="M34 64c6-12 16-12 20-2" fill="none" stroke="#8d5a32" stroke-width="4" stroke-linecap="round"/>
-    <circle cx="108" cy="70" r="7" fill="#d7a36a"/>
-    <circle cx="154" cy="78" r="7" fill="#d7a36a"/>
-  </svg>`
+  const key = id === 'himmelswal' ? 'himmelswal' : 'weltenwurm'
+  const label = key === 'himmelswal' ? 'Himmelswal' : 'Weltenwurm'
+  return `<picture class="beast-art" data-art="beasts/${key}">
+    <source type="image/webp" srcset="${art(`beasts/${key}.webp`)}">
+    <img src="${art(`beasts/${key}.png`)}" alt="${label}" onerror="this.style.visibility='hidden'">
+  </picture>`
 }
 
 function friendName(id: string): string {
@@ -1686,7 +1654,7 @@ function socialScreen(save: SaveV2, panel: SocialPanel | undefined): string {
   const hpWidth = Math.max(0, Math.min(100, Math.round(((view.hp ?? 0) / hpMax) * 100)))
   return `<div class="menu-screen"><div class="menu-scroll"><div class="card panel">
     <h2>${tr(save, 'nav.friends')}</h2>
-    <article class="friend-code" data-art="friends/code">
+    <article class="friend-code" data-art="friends/code" style="background-image:url('${art('friends/code.png')}')">
       <p>${tr(save, 'social.code')}</p>
       <b>${esc(view.code)}</b>
     </article>
@@ -1712,19 +1680,16 @@ function socialScreen(save: SaveV2, panel: SocialPanel | undefined): string {
   </div></div></div>`
 }
 
-function placeArt(art: string, place: string): string {
-  const shift = [...art].reduce((sum, char) => sum + char.charCodeAt(0), 0) % 36
-  return `<svg class="expedition-art" data-art="${esc(art)}" viewBox="0 0 320 120" role="img" aria-label="${esc(place)}">
-    <rect width="320" height="120" rx="28" fill="hsl(${188 + shift} 42% 76%)"/>
-    <circle cx="248" cy="34" r="16" fill="#fff4cc"/>
-    <path d="M0 80c48-30 78-6 118-22s62-4 96 12 62 10 106-14v64H0z" fill="hsl(${24 + shift} 38% 58%)"/>
-    <ellipse cx="92" cy="90" rx="18" ry="8" fill="#ffffff55"/>
-  </svg>`
+function placeArt(path: string, place: string): string {
+  const key = path.replace(/\.(webp|jpe?g|png)$/i, '')
+  return `<picture class="expedition-art" data-art="${esc(key)}">
+    <source type="image/webp" srcset="${art(`${key}.webp`)}">
+    <img src="${art(`${key}.jpg`)}" alt="${esc(place)}" onerror="this.style.visibility='hidden'">
+  </picture>`
 }
 
 function tierMark(tier: 'bronze' | 'silber' | 'gold', on: boolean): string {
-  const fill = tier === 'gold' ? '#f0c14a' : tier === 'silber' ? '#d9e2ec' : '#d08a4c'
-  return `<svg class="tier-mark${on ? ' on' : ''}" data-art="expedition/tier-${tier}" viewBox="0 0 48 48" aria-hidden="true"><circle cx="24" cy="24" r="18" fill="${fill}"/><circle cx="24" cy="24" r="7" fill="#fff8"/></svg>`
+  return artImg(`expedition/tier-${tier}_48.png`, `tier-mark${on ? ' on' : ''}`, `expedition/tier-${tier}`)
 }
 
 function expeditionScreen(save: SaveV2, now: number, pick: string | undefined, guildLevel = 0): string {
@@ -1800,12 +1765,25 @@ function tradeScreen(save: SaveV2, panel: TradePanel | undefined): string {
   </div></div></div>`
 }
 
-function guildEmblem(): string {
-  return `<svg class="guild-emblem" viewBox="0 0 120 140" role="img" aria-label="Wappen">
-    <path data-art="guild/shape-shield" d="M60 8l44 18v36c0 28-18 46-44 58C34 108 16 90 16 62V26z" fill="#7dcea0"/>
-    <path data-art="guild/symbol-leaf" d="M60 46c16 8 22 24 18 40-16-4-28-16-32-32 6-6 10-8 14-8z" fill="#1c2744"/>
-    <circle data-art="guild/color-moss" cx="78" cy="58" r="6" fill="#f0c14a"/>
-  </svg>`
+const GUILD_TINT: Record<(typeof COLORS)[number], string> = {
+  moss: '#8fd27a',
+  gold: '#f5c64a',
+  sky: '#7cc0f0',
+  berry: '#ec7aa4'
+}
+
+function guildEmblem(panel?: GuildPanel): string {
+  const shape = (SHAPES as readonly string[]).includes(panel?.shape ?? '') ? panel?.shape ?? 'shield' : 'shield'
+  const symbol = (SYMBOLS as readonly string[]).includes(panel?.symbol ?? '') ? panel?.symbol ?? 'leaf' : 'leaf'
+  const color = (COLORS as readonly string[]).includes(panel?.color ?? '') ? panel?.color ?? 'moss' : 'moss'
+  const tint = GUILD_TINT[color as (typeof COLORS)[number]]
+  const shapeFile = `guild/shape-${shape}.png`
+  return `<span class="guild-emblem" role="img" aria-label="Wappen" data-art="guild/color-${color}">
+    <span class="guild-form" data-art="guild/shape-${shape}" style="--guild-color:${tint};--guild-shape:url('${art(shapeFile)}')">
+      <img src="${art(shapeFile)}" alt="" onerror="this.style.visibility='hidden'">
+    </span>
+    <img class="guild-symbol" data-art="guild/symbol-${symbol}" src="${art(`guild/symbol-${symbol}.png`)}" alt="" onerror="this.style.visibility='hidden'">
+  </span>`
 }
 
 function guildScreen(save: SaveV2, panel: GuildPanel | undefined): string {
@@ -1815,7 +1793,7 @@ function guildScreen(save: SaveV2, panel: GuildPanel | undefined): string {
   }
   return `<div class="menu-screen"><div class="menu-scroll"><div class="card panel guild-board">
     <h2>${tr(save, 'nav.guild')}</h2>
-    ${guildEmblem()}
+    ${guildEmblem(view)}
     <h3>${esc(view.name || tr(save, 'guild.found'))} ${view.tag ? `· ${esc(view.tag)}` : ''}</h3>
     <p>${tr(save, 'guild.level', { n: view.level })} · ${tr(save, 'guild.points', { n: view.points })}</p>
     <p class="muted">${tr(save, 'guild.lead')}</p>

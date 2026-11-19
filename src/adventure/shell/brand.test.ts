@@ -28,7 +28,8 @@ describe('brand assets', () => {
     expect(pngSize('public/favicon-512.png')).toEqual({ width: 512, height: 512 })
     expect(pngSize('store/entwuerfe/feature-1024x500.png')).toEqual({ width: 1024, height: 500 })
     for (const name of ['abenteuer', 'truhen', 'team', 'kodex', 'baum', 'expedition']) {
-      expect(pngSize(`store/entwuerfe/rahmen-${name}.png`)).toEqual({ width: 1080, height: 2340 })
+      expect(pngSize(`store/entwuerfe/rahmen-${name}.png`)).toEqual({ width: 1080, height: 1920 })
+      expect(pngSize(`store/entwuerfe/rahmen-${name}-ios.png`)).toEqual({ width: 1290, height: 2796 })
     }
     const icon = readFileSync('assets/quellen/icon-foreground.svg', 'utf8')
     expect(icon.toLowerCase()).not.toContain('pokemon')

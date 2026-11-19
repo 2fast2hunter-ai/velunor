@@ -1678,6 +1678,9 @@ async function refreshGuild(): Promise<void> {
     tag: typeof row.tag === 'string' ? row.tag : '',
     level: Math.max(1, Math.floor(Number(row.level)) || 1),
     points: Math.max(0, Math.floor(Number(row.points)) || 0),
+    shape: typeof row.shape === 'string' ? row.shape : '',
+    symbol: typeof row.symbol === 'string' ? row.symbol : '',
+    color: typeof row.color === 'string' ? row.color : '',
     note: ''
   }
   render()
