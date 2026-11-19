@@ -1461,3 +1461,40 @@ button.log div { grid-column: 2; }
   background-size: 100% 12px;
   padding-bottom: 12px;
 }
+
+/* Retest: activity tabs keep the whole label, and Send keeps the word beside the plane. */
+.menu-dock > button[data-act="activity"] {
+  flex: 1 1 auto !important;
+  min-width: min-content;
+  overflow: visible !important;
+  white-space: nowrap !important;
+  text-overflow: clip !important;
+  font-size: 22px !important;
+  line-height: 1.1 !important;
+  border-width: 8px 8px 6px !important;
+  border-image-width: 10px 10px 8px !important;
+  padding: 2px 4px !important;
+}
+.menu-dock > button[data-act="activity"] .ui-icon {
+  width: 28px !important;
+  height: 28px !important;
+}
+.chat-form .chat-send {
+  display: inline-flex !important;
+  align-items: center;
+  justify-content: center;
+  gap: 8px;
+  flex: 0 0 auto;
+  min-width: max-content;
+  padding: 8px 18px !important;
+  overflow: visible;
+  white-space: nowrap;
+  font-size: 28px;
+  line-height: 1;
+}
+.chat-form .chat-icon {
+  width: 36px !important;
+  height: 36px !important;
+  margin: 0 !important;
+  flex: 0 0 auto;
+}
