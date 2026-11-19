@@ -1,5 +1,5 @@
 import { species } from '../data'
-import { OFFLINE_EXP_FACTOR } from './const'
+import { OFFLINE_EXP_FACTOR, assetPath } from './const'
 import { t } from './i18n'
 import type { SaveV2 } from './types'
 
@@ -89,7 +89,8 @@ export function masteryStarRow(level: number): string {
   const lit = Math.max(0, Math.min(5, Math.floor(level) || 0))
   const stars = Array.from({ length: 5 }, (_, index) => {
     const on = index < lit ? ' on' : ''
-    return `<svg class="m-star${on}" viewBox="0 0 24 24" aria-hidden="true"><path d="M12 2.6l2.7 5.6 6.1.7-4.6 4.1 1.3 6.1L12 16.2 6.5 19.1l1.3-6.1L3.2 8.9l6.1-.7z"/></svg>`
+    const src = assetPath(index < lit ? 'mastery/star_on@2x.png' : 'mastery/star_off@2x.png', import.meta.env.BASE_URL || '/')
+    return `<img class="m-star${on}" src="${src}" alt=""/>`
   }).join('')
   return `<span class="m-stars" data-level="${lit}" aria-hidden="true">${stars}</span>`
 }

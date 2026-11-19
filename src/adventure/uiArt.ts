@@ -64,7 +64,15 @@ export const UI_ART = {
   importCode: 'ui/import.webp',
   reset: 'ui/reset.webp',
   guide: 'ui/guide.webp',
-  close: 'ui/close.webp'
+  close: 'ui/close.webp',
+  achWins: 'ui/ach_wins.webp',
+  achFinds: 'ui/ach_finds.webp',
+  achCollect: 'ui/ach_collect.webp',
+  achBadges: 'ui/ach_badges.webp',
+  achRegion: 'ui/ach_region.webp',
+  achTypes: 'ui/ach_types.webp',
+  achCodex: 'ui/ach_codex.webp',
+  achCare: 'ui/ach_care.webp'
 } as const
 
 export type UiArtId = keyof typeof UI_ART

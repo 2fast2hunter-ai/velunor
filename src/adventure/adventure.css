@@ -1714,8 +1714,12 @@ a.ghost { color: inherit; text-decoration: none; display: inline-block; }
 .m-plate.m-gold { box-shadow: inset 0 0 0 4px #f0c14a; }
 .m-plate.m-shine { background: radial-gradient(circle, rgba(255, 228, 150, 0.55), transparent 72%); }
 .m-stars { display: flex; gap: 2px; height: 18px; margin-top: 2px; }
-.m-star { width: 16px; height: 16px; fill: #d9d0c3; }
-.m-star.on { fill: #f0c14a; }
+.m-star { width: 16px; height: 16px; }
+.mon-card img.m-star,
+.team-grid .mon-card img.m-star,
+.hort-grid .mon-card img.m-star,
+.vlist-window .mon-card img.m-star,
+.codex-grid .mon-card img.m-star { width: 16px; height: 16px; object-fit: contain; }
 .m-bar { margin-top: 8px; }
 .mastery-toast {
   position: absolute;
@@ -1737,12 +1741,9 @@ a.ghost { color: inherit; text-decoration: none; display: inline-block; }
 .rank-tabs button.on { background: #f0c14a; color: #1a1208; }
 .rank-row { display: flex; gap: 16px; align-items: center; border-radius: 22px; padding: 12px 16px; background: #121a30; margin: 8px 0; }
 .rank-row.is-me { box-shadow: inset 0 0 0 4px #f0c14a; background: #243156; }
-.rank-badge { width: 64px; height: 64px; flex: 0 0 auto; }
-.rank-badge circle, .rank-badge path { fill: #8d97ad; }
-.rank-badge.bronze circle, .rank-badge.bronze path { fill: #b87333; }
-.rank-badge.silver circle, .rank-badge.silver path { fill: #d5dee8; }
-.rank-badge.gold circle, .rank-badge.gold path { fill: #f0c14a; }
-.rank-badge text { fill: #1a1208; font-size: 16px; font-weight: 800; }
+.rank-badge { width: 64px; height: 64px; position: relative; flex: 0 0 auto; }
+.rank-badge.plain img { width: 100%; height: 100%; }
+.rank-badge.plain b { position: absolute; left: 0; right: 0; top: 52%; text-align: center; font: 800 16px Fredoka, sans-serif; color: #4a2c17; }
 .rank-frames { display: grid; grid-template-columns: repeat(3, 1fr); gap: 12px; }
 .rank-honor { display: flex; flex-direction: column; align-items: center; gap: 6px; text-align: center; }
 .rank-frame { width: 88px; height: 88px; fill: none; stroke: #8d97ad; stroke-width: 3; opacity: 0.35; }
@@ -1774,6 +1775,7 @@ a.ghost { color: inherit; text-decoration: none; display: inline-block; }
 .look-wrap { position: relative; display: inline-flex; flex: 0 0 auto; }
 .look-wrap .daily-frame { position: absolute; inset: -10px; width: calc(100% + 20px); height: calc(100% + 20px); pointer-events: none; }
 .daily-card { margin-bottom: 12px; }
+.daily-board { display: block; width: 100%; max-width: 360px; height: auto; margin: 4px auto 8px; }
 .daily-tasks, .daily-days { list-style: none; margin: 0; padding: 0; }
 .daily-task, .daily-day {
   display: flex; flex-wrap: wrap; gap: 8px; align-items: baseline;
@@ -1820,12 +1822,14 @@ a.ghost { color: inherit; text-decoration: none; display: inline-block; }
 .trade-card { border-radius: 28px; background: #121a30; padding: 16px; }
 .trade-card.empty { min-height: 88px; }
 .trade-escrow { display: flex; flex-direction: column; align-items: center; }
-.trade-escrow svg { width: 160px; height: 48px; }
+.trade-escrow .escrow-art { width: 160px; height: 48px; }
 .trade-lock, .trade-escrow p { display: flex; align-items: center; gap: 8px; }
-.trade-lock svg, .trade-escrow p svg { width: 28px; height: 28px; }
+.trade-lock img, .trade-escrow p img { width: 28px; height: 28px; }
 .trade-mark { width: 18px; height: 18px; vertical-align: middle; }
+.codex-grid .mon-card img.trade-mark,
+.mon-card img.trade-mark { width: 18px; height: 18px; object-fit: contain; }
 @media (prefers-reduced-motion: no-preference) {
-  .trade-escrow svg { animation: trade-slide 1.6s ease-in-out infinite; }
+  .trade-escrow .escrow-art { animation: trade-slide 1.6s ease-in-out infinite; }
 }
 @keyframes trade-slide { 0%, 100% { transform: translateY(0); } 50% { transform: translateY(6px); } }
 .guild-board { display: flex; flex-direction: column; gap: 12px; align-items: flex-start; }
@@ -1835,3 +1839,5 @@ a.ghost { color: inherit; text-decoration: none; display: inline-block; }
 .chat-form { display: flex; gap: 8px; padding: 12px; }
 .chat-form input { flex: 1; border: 0; border-radius: 18px; padding: 12px 14px; background: #10182c; color: inherit; }
 .chat-line { border-radius: 18px; background: #121a30; padding: 10px 12px; }
+.chat-icon { width: 20px; height: 20px; vertical-align: -4px; margin-right: 4px; }
+.chat-form .chat-icon { width: 24px; height: 24px; }
