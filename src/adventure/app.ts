@@ -64,6 +64,7 @@ import { eventsForEncounter, eventsForLoot, starEvent, teamProfile } from './clo
 import { equipFrame, equipTitle, syncAchievements } from './achievements'
 import { HATCH_MS, buyHortSlot, moveFromHort, moveToHort } from './hort'
 import { expeditionBusy, settleExpeditions, startExpedition, takeExpeditionNotes } from './expedition'
+import { coopErrorKey } from './coop'
 import { foundCost } from './guild'
 import { buyCrystal, buyFruit, sellCrystal, sellFruit, useCrystal, useFruit } from './shop'
 import { buyPrize, spinWheel, type Multiplier, type SymbolId } from './wheel'
@@ -1832,7 +1833,15 @@ async function socialAction(act: string, code: string | null): Promise<void> {
   if (named[act] && code) {
     const target = named[act] === 'invite' ? 'coop-boss' : 'friends'
     const result = await callOnline(target, { action: named[act], code })
-    socialPanel = { ...socialPanel, note: result.ok ? '' : String(result.error || '') }
+    const failed = !result.ok || Boolean(result.data.error)
+    socialPanel = {
+      ...socialPanel,
+      note: failed
+        ? (target === 'coop-boss'
+          ? t(current.settings.lang, coopErrorKey(String(result.data.error || result.error || 'join')))
+          : t(current.settings.lang, 'social.noFriends'))
+        : ''
+    }
     await refreshSocial()
     return
   }
@@ -1846,8 +1855,9 @@ async function socialAction(act: string, code: string | null): Promise<void> {
   if (act === 'coop-attempt') {
     const roster = [...current.team, ...Object.keys(current.mons)].filter((uid, index, all) => current.mons[uid] && !expeditionBusy(current, uid) && all.indexOf(uid) === index).slice(0, 6)
     const result = await callOnline('coop-boss', { action: 'attempt', uids: roster })
-    if (result.ok) noteDaily(current, 'coop', 1)
-    socialPanel = { ...socialPanel, note: result.ok ? '' : t(current.settings.lang, 'social.noFriends') }
+    const failed = !result.ok || Boolean(result.data.error)
+    if (!failed) noteDaily(current, 'coop', 1)
+    socialPanel = { ...socialPanel, note: failed ? t(current.settings.lang, coopErrorKey(String(result.data.error || result.error || 'team'))) : '' }
     await refreshSocial()
   }
 }

@@ -5251,6 +5251,11 @@ var WELCOME_AFTER_MS = 5 * 60 * 1e3;
 var SHELL_H = 2340;
 var SAFE_H = 1920;
 var SHELL_BAND = (SHELL_H - SAFE_H) / 2;
+var STARTERS = [
+  { id: "m01", label: "Funkfuchs" },
+  { id: "m02", label: "Tropfmolch" },
+  { id: "m03", label: "Knospling" }
+];
 
 // data/lootbox.json
 var lootbox_default = {
@@ -10928,6 +10933,25 @@ var COOP_ATTEMPTS = 3;
 var GROUP_MAX = 4;
 var EGG_CHANCE = 0.02;
 var WEEK_ATTEMPTS = COOP_ATTEMPTS * 7 * GROUP_MAX;
+function coopRoster(uids, owned2, save) {
+  if (uids.length !== 6 || new Set(uids).size !== 6) return null;
+  const starterIds = new Set(STARTERS.map((starter) => starter.id));
+  const byUid = new Map(owned2.map((row2) => [row2.uid, row2]));
+  let starters = 0;
+  const rows = [];
+  for (const uid of uids) {
+    const known = byUid.get(uid);
+    if (known) {
+      rows.push(known);
+      continue;
+    }
+    const mon = save.mons[uid];
+    if (!mon || !starterIds.has(mon.species) || !/^r\d+c\d+$/.test(mon.caughtWhere) || starters >= 1) return null;
+    starters += 1;
+    rows.push({ uid, species: mon.species, schimmer: Boolean(mon.shiny) });
+  }
+  return rows;
+}
 var BEASTS = [
   { id: "weltenwurm", name: "Weltenwurm", type: "earth", egg: "m18" },
   { id: "himmelswal", name: "Himmelswal", type: "wind", egg: "m24" }
@@ -11146,15 +11170,13 @@ Deno.serve(async (req) => {
   }
   if (action === "attempt") {
     const uids = Array.isArray(body.uids) ? body.uids.filter((id) => typeof id === "string") : [];
-    if (new Set(uids).size !== 6) return json({ error: "team" }, 400);
     const owned2 = await db.from("monsters_owned").select("uid, species, schimmer").eq("owner", user.id);
-    const byUid = new Map((owned2.data ?? []).map((mon) => [mon.uid, mon]));
-    const rows = uids.map((uid) => byUid.get(uid)).filter((mon) => Boolean(mon));
-    if (rows.length !== 6) return json({ error: "team" }, 400);
     const saved = await db.from("saves").select("save_json").eq("user_id", user.id).maybeSingle();
     if (!saved.data?.save_json) return json({ error: "team" }, 400);
     const adventure = saved.data.save_json;
     if (uids.some((uid) => expeditionBusy(adventure, uid))) return json({ error: "team" }, 400);
+    const rows = coopRoster(uids, owned2.data ?? [], adventure);
+    if (!rows) return json({ error: "team" }, 400);
     const team = teamFromRegister(rows, adventure);
     if (!team) return json({ error: "team" }, 400);
     const ensured2 = await db.rpc("coop_ensure", { p_user: user.id, p_day: day });

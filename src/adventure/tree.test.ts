@@ -80,6 +80,7 @@ describe('mastery tree', () => {
 
   it('applies each of the 24 nodes and refunds them on respec', () => {
     expect(TREE_NODES).toHaveLength(24)
+    expect([...NODE_COSTS]).toEqual([1, 2, 3, 4, 5, 6, 7, 9])
     expect(NODE_COSTS.reduce((sum, cost) => sum + cost, 0) * 3).toBe(111)
     const save = beginAdventure('Ada', { skin: 0, hair: 0, color: 0 }, 'm01', 1_000)
     save.badges = ['Kieselwappen', 'Wellenwappen', 'Funkenwappen']

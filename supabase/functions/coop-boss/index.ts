@@ -1,6 +1,6 @@
 import { admin, caller, cors, json } from '../_shared/admin.ts'
 import { arenaDayKey, teamFromRegister } from '../../../src/adventure/arena.ts'
-import { EGG_CHANCE, coopDamage, weeklyBeast } from '../../../src/adventure/coop.ts'
+import { EGG_CHANCE, coopDamage, coopRoster, weeklyBeast } from '../../../src/adventure/coop.ts'
 import { expeditionBusy } from '../../../src/adventure/expedition.ts'
 import { validFriendCode } from '../../../src/adventure/social.ts'
 import type { SaveV2 } from '../../../src/adventure/types.ts'
@@ -38,15 +38,13 @@ Deno.serve(async (req) => {
 
   if (action === 'attempt') {
     const uids = Array.isArray(body.uids) ? body.uids.filter((id): id is string => typeof id === 'string') : []
-    if (new Set(uids).size !== 6) return json({ error: 'team' }, 400)
     const owned = await db.from('monsters_owned').select('uid, species, schimmer').eq('owner', user.id)
-    const byUid = new Map((owned.data ?? []).map((mon) => [mon.uid, mon]))
-    const rows = uids.map((uid) => byUid.get(uid)).filter((mon): mon is { uid: string, species: string, schimmer: boolean } => Boolean(mon))
-    if (rows.length !== 6) return json({ error: 'team' }, 400)
     const saved = await db.from('saves').select('save_json').eq('user_id', user.id).maybeSingle()
     if (!saved.data?.save_json) return json({ error: 'team' }, 400)
     const adventure = saved.data.save_json as SaveV2
     if (uids.some((uid) => expeditionBusy(adventure, uid))) return json({ error: 'team' }, 400)
+    const rows = coopRoster(uids, owned.data ?? [], adventure)
+    if (!rows) return json({ error: 'team' }, 400)
     const team = teamFromRegister(rows, adventure)
     if (!team) return json({ error: 'team' }, 400)
     const ensured = await db.rpc('coop_ensure', { p_user: user.id, p_day: day })
