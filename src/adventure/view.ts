@@ -1085,7 +1085,7 @@ function wheelView(save: SaveV2, wheel: WheelPanel): string {
   const shown = wheel.symbols ?? (['funke', 'blatt', 'tropfen'] as [SymbolId, SymbolId, SymbolId])
   const reels = shown.map((id) => `<div class="reel">${glyph(id)}<span>${esc(faceById(id).name)}</span></div>`).join('')
   const bets = MULTIPLIERS.map((mult) => `<button type="button" data-act="wheel-mult" data-mult="${mult}" class="${wheel.mult === mult ? 'primary' : ''}">×${mult}</button>`).join('')
-  const pay = FACES.map((face) => `<div class="shop-row"><div>3 ${esc(face.name)}</div><span>${face.triple.toLocaleString('de-DE')}</span></div>`).join('')
+  const pay = FACES.map((face) => `<div class="shop-row"><div>${glyph(face.id)} 3 ${esc(face.name)}</div><span>${face.triple.toLocaleString('de-DE')}</span></div>`).join('')
   const zones = [...new Set(PRIZES.map((prize) => prize.region))]
   const shop = zones.map((region) => {
     const rows = PRIZES.filter((prize) => prize.region === region).map((prize) => {

@@ -28,7 +28,7 @@ describe('brand assets', () => {
     expect(pngSize('public/favicon-512.png')).toEqual({ width: 512, height: 512 })
     expect(pngSize('store/entwuerfe/feature-1024x500.png')).toEqual({ width: 1024, height: 500 })
     expect(pngSize('store/entwuerfe/icon-512-play.png')).toEqual({ width: 512, height: 512 })
-    for (const name of ['01_abenteuer', '02_team', '03_truhen', '04_kodex', '05_expedition', '06_laden']) {
+    for (const name of ['01_abenteuer', '02_team', '03_truhen', '04_expedition', '05_erfolge', '06_laden']) {
       expect(pngSize(`store/screenshots/play/${name}.png`)).toEqual({ width: 1080, height: 1920 })
       expect(pngSize(`store/screenshots/ios/${name}.png`)).toEqual({ width: 1290, height: 2796 })
     }
