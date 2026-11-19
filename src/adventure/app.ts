@@ -103,6 +103,7 @@ import {
   type HapticKind,
   type Presence
 } from './touch'
+import { crestArt } from './crestArt'
 import {
   art,
   brokenHtml,
@@ -819,7 +820,7 @@ function showK3Demo(part: string | null): void {
     const crest = document.getElementById('crest-fly')
     if (crest instanceof HTMLImageElement) {
       crest.hidden = false
-      crest.src = art('ui/achieve.webp')
+      paintCrest(crest, 'Kieselwappen')
     }
     onBattleFxReady(() => {
       beginBattleMood('regen', false, 1)
@@ -1678,6 +1679,9 @@ async function refreshGuild(): Promise<void> {
     tag: typeof row.tag === 'string' ? row.tag : '',
     level: Math.max(1, Math.floor(Number(row.level)) || 1),
     points: Math.max(0, Math.floor(Number(row.points)) || 0),
+    shape: typeof row.shape === 'string' ? row.shape : '',
+    symbol: typeof row.symbol === 'string' ? row.symbol : '',
+    color: typeof row.color === 'string' ? row.color : '',
     note: ''
   }
   render()
@@ -2423,6 +2427,21 @@ function showBossIntro(boss: { name: string; title: string; species: string }, d
   window.setTimeout(close, 1000)
 }
 
+function paintCrest(node: HTMLImageElement, badge: string): void {
+  const file = crestArt(badge)
+  node.onerror = () => {
+    if (node.src.includes('achieve.webp')) {
+      node.hidden = true
+      return
+    }
+    node.onerror = () => { node.hidden = true }
+    node.removeAttribute('srcset')
+    node.src = art('ui/achieve.webp')
+  }
+  node.srcset = file.startsWith('crests/') ? `${art(file)} 1x, ${art(file.replace('.webp', '@2x.webp'))} 2x` : ''
+  node.src = art(file)
+}
+
 function showVictory(outcome: EncounterOutcome, speed: Speed, reduced: boolean, tint: number, badge: string | null, done: () => void): void {
   const world = document.getElementById('battle-world')
   world?.classList.add('is-zoom')
@@ -2435,7 +2454,7 @@ function showVictory(outcome: EncounterOutcome, speed: Speed, reduced: boolean, 
   const crest = document.getElementById('crest-fly')
   if (badge && crest instanceof HTMLImageElement) {
     crest.hidden = false
-    crest.src = art('ui/achieve.webp')
+    paintCrest(crest, badge)
     crest.animate([{ transform: 'translate(-50%, 0)' }, { transform: 'translate(-50%, -280px) scale(0.6)' }], { duration: 900, easing: 'ease-in' })
   }
   let closed = false
