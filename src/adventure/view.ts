@@ -253,8 +253,11 @@ function ui(id: UiArtId): string {
 }
 
 function portrait(speciesId: string, large = false, extra = ''): string {
-  const color = rarityInfo(species(speciesId).baseRarity).color
-  return `<img class="portrait ${extra}" style="--rarity:${color}" src="${monsterArt(speciesId, large)}" alt=""/>`
+  const rarity = species(speciesId).baseRarity
+  const color = rarityInfo(rarity).color
+  const sil = extra.split(' ').includes('sil')
+  const frame = sil ? `frames/ghost_overlay${large ? '' : '_256'}.png` : `frames/rarity_${rarity}${large ? '' : '_256'}.png`
+  return `<span class="pframe" style="--rarity:${color};--frame:url('${art(frame)}')"><img class="portrait ${extra}" src="${monsterArt(speciesId, large)}" alt=""/></span>`
 }
 
 function masteryPlate(save: SaveV2, speciesId: string, extra = ''): string {
@@ -286,12 +289,7 @@ function tr(save: SaveV2, key: string, vars?: Record<string, string | number>): 
 }
 
 function icon(kind: NodeKind): string {
-  const common = 'fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round"'
-  if (kind === 'wild') return `<svg viewBox="0 0 24 24" ${common}><path d="M4 16c2-6 4-6 6 0M10 16c2-6 4-6 6 0M8 10c1.2-3 2.4-3 4 0"/></svg>`
-  if (kind === 'trainer') return `<svg viewBox="0 0 24 24" ${common}><circle cx="12" cy="8" r="3"/><path d="M6 19c1.2-3 3.2-4.5 6-4.5S16.8 16 18 19"/></svg>`
-  if (kind === 'find') return `<svg viewBox="0 0 24 24" ${common}><path d="M12 3l3 6 6 .5-4.5 4 1.4 6.5L12 17l-6 3 1.4-6.5L3 9.5 9 9z"/></svg>`
-  if (kind === 'spring') return `<svg viewBox="0 0 24 24" ${common}><path d="M12 3s5 6 5 10a5 5 0 0 1-10 0c0-4 5-10 5-10z"/></svg>`
-  return `<svg viewBox="0 0 24 24" ${common}><path d="M12 3l7 3v6c0 5-3.2 7.6-7 9-3.8-1.4-7-4-7-9V6z"/></svg>`
+  return `<img class="node-ico" src="${art(`ui/node_${kind}.webp`)}" alt=""/>`
 }
 
 function clockLabel(save: SaveV2, now: number): { time: string; part: string } {
@@ -324,11 +322,7 @@ function cloudStatusKey(status: CloudView['status']): string {
 }
 
 function cloudGlyph(kind: 'online' | 'offline' | 'sync'): string {
-  if (kind === 'sync') {
-    return '<svg viewBox="0 0 24 24" aria-hidden="true"><path fill="currentColor" d="M12 5V2L7 7l5 5V8a4 4 0 1 1-3.9 4.8l-1.9.6A6 6 0 1 0 12 5z"/></svg>'
-  }
-  const slash = kind === 'offline' ? '<path fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" d="M5 19L19 5"/>' : ''
-  return `<svg viewBox="0 0 24 24" aria-hidden="true"><path fill="currentColor" d="M7 18h10.2a3.8 3.8 0 0 0 .5-7.6A6 6 0 0 0 6.2 8.2 4.2 4.2 0 0 0 7 18z"/>${slash}</svg>`
+  return `<img src="${art(`ui/cloud_${kind}.webp`)}" alt="" aria-hidden="true"/>`
 }
 
 function cloudChip(save: SaveV2, cloud: CloudView): string {
@@ -964,13 +958,7 @@ function shop(save: SaveV2, now: number, tab: ShopTab, hint: boolean): string {
 }
 
 function glyph(id: SymbolId): string {
-  const box = 'viewBox="0 0 64 64" width="72" height="72" aria-hidden="true"'
-  if (id === 'stern') return `<svg ${box}><polygon points="32,6 38,24 58,24 42,36 48,56 32,44 16,56 22,36 6,24 26,24" fill="#f0c14a"/></svg>`
-  if (id === 'mond') return `<svg ${box}><path d="M42 8a22 22 0 1 0 0 48 16 16 0 1 1 0-48z" fill="#d6e4ff"/></svg>`
-  if (id === 'krone') return `<svg ${box}><path d="M8 48 L14 22 L26 34 L32 12 L38 34 L50 22 L56 48 Z" fill="#f0c14a"/></svg>`
-  if (id === 'blatt') return `<svg ${box}><ellipse cx="32" cy="36" rx="14" ry="22" transform="rotate(-28 32 36)" fill="#7dcea0"/></svg>`
-  if (id === 'tropfen') return `<svg ${box}><path d="M32 8 C32 8 14 30 14 42 a18 18 0 0 0 36 0 C50 30 32 8 32 8Z" fill="#4fc3f7"/></svg>`
-  return `<svg ${box}><polygon points="32,4 38,26 60,32 38,38 32,60 26,38 4,32 26,26" fill="#fff176"/></svg>`
+  return `<img class="reel-sym" src="${art(`ui/wheel_${id}.webp`)}" srcset="${art(`ui/wheel_${id}.webp`)} 1x, ${art(`ui/wheel_${id}@2x.webp`)} 2x" width="72" height="72" alt=""/>`
 }
 
 function activityTabs(save: SaveV2, wheel: WheelPanel): string {
@@ -2082,7 +2070,7 @@ function card(save: SaveV2, uid: string): string {
     <p class="muted">${tr(save, 'card.caught', { when, where: placeLabel(mon.caughtWhere, L(save)) })}</p>
     <label class="switch"><input type="checkbox" data-field="buddy" data-uid="${uid}" ${save.buddy === uid ? 'checked' : ''}/> ${tr(save, 'team.buddy')}</label>
     <label class="switch"><input type="checkbox" data-field="keep" data-uid="${uid}" ${mon.keepDupes ? 'checked' : ''}/> ${tr(save, 'card.keep')}</label>
-    <p>${tr(save, 'chest.star', { n: save.stars[sp.id] ?? 0 })} · ${save.shards[sp.id] ?? 0}</p>
+    <p>${tr(save, 'chest.star', { n: save.stars[sp.id] ?? 0 })} · <img class="shard-ico" src="${art('ui/shard_64.webp')}" alt="Splitter" width="28" height="28"/> ${save.shards[sp.id] ?? 0}</p>
     ${(save.stars[sp.id] ?? 0) < 5 ? `<button type="button" class="primary" data-act="star" data-id="${sp.id}">${tr(save, 'chest.starUp')} (${starCost(sp.baseRarity, (save.stars[sp.id] ?? 0) + 1)})</button>` : ''}
     ${Object.values(save.mons).filter((row) => row.species === sp.id).length > 1 ? `<button type="button" data-act="melt" data-uid="${uid}">Einschmelzen</button>` : ''}
     </div>
