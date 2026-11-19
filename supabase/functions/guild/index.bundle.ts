@@ -9954,7 +9954,7 @@ function starFactor(stars) {
 }
 
 // src/adventure/mastery.ts
-var MASTERY_STEPS = [1e3, 4e3, 12e3, 3e4, 6e4];
+var MASTERY_STEPS = [1e3, 3e3, 8e3, 18e3, 35e3];
 function masteryLevel(ep) {
   const points = Math.max(0, Math.floor(ep) || 0);
   let level = 0;
@@ -10233,6 +10233,12 @@ function tick(unit) {
 function withSpd(side, mul) {
   if (mul == null || mul === 1) return side;
   return { ...side, spd: Math.max(1, Math.round(side.spd * mul)) };
+}
+function allyStrikesFirst(allySpd, foeSpd, roll) {
+  const fast = Math.max(allySpd, foeSpd);
+  const slow = Math.min(allySpd, foeSpd);
+  if (!(fast > 0) || (fast - slow) / fast < 0.05) return roll < 0.5;
+  return allySpd > foeSpd;
 }
 function fight1v1(allyIn, foeIn, rng, trace, weather = null, mods = null) {
   const allySide = withSpd(allyIn, mods?.allySpd);
@@ -10522,7 +10528,12 @@ function fight1v1(allyIn, foeIn, rng, trace, weather = null, mods = null) {
     if (unit.wallFresh) unit.wallFresh = false;
     else if (unit.wallLeft > 0) unit.wallLeft -= 1;
   };
-  const allyFirst = ally.side.spd >= foe.side.spd;
+  const close = (() => {
+    const fast = Math.max(ally.side.spd, foe.side.spd);
+    const slow = Math.min(ally.side.spd, foe.side.spd);
+    return !(fast > 0) || (fast - slow) / fast < 0.05;
+  })();
+  const allyFirst = allyStrikesFirst(ally.side.spd, foe.side.spd, close ? rng() : 1);
   let actions = 0;
   let timeout = false;
   const actionCap = Math.max(1, Math.min(120, mods?.actionCap ?? ACTION_LIMIT));
@@ -10577,35 +10588,26 @@ var SYNERGY_CAP = 2;
 var KNOWN = new Set(SYNERGY_IDS);
 
 // src/adventure/synergy.ts
-var PURITY_THREE = 0.05;
-var PURITY_FOUR = 0.1;
+var PURITY_THREE = 0.02;
+var PURITY_FOUR = 0.0165;
+var SYNERGY_STAT_CAP = 0.06;
 var ROWS = [
-  { id: "gewitter", name: "Gewitter", types: ["water", "lightning"], bonus: { crit: 0.1 } },
-  { id: "flaechenbrand", name: "Fl\xE4chenbrand", types: ["fire", "wind"], bonus: { atk: 0.08 } },
-  { id: "wurzelgrund", name: "Wurzelgrund", types: ["plant", "earth"], bonus: { hp: 0.1 } },
-  { id: "polarstrom", name: "Polarstrom", types: ["ice", "water"], bonus: { foeSpd: 0.95 } },
-  { id: "bollwerk", name: "Bollwerk", types: ["stone", "metal"], bonus: { def: 0.1 } },
-  { id: "prisma", name: "Prisma", types: ["light", "crystal"], bonus: { atk: 0.05, crit: 0.05 } },
-  { id: "zwielicht", name: "Zwielicht", types: ["shadow", "ghost"], bonus: { dodge: 0.06 } },
-  { id: "rudelkraft", name: "Rudelkraft", types: ["fighting", "beast"], bonus: { wardenAtk: 0.08 } },
-  { id: "schwarmgift", name: "Schwarmgift", types: ["poison", "insect"], bonus: { status: 1.1 } },
-  { id: "resonanz", name: "Resonanz", types: ["psychic", "sound"], bonus: { cooldown: 0.9 } },
-  { id: "glutschwinge", name: "Glutschwinge", types: ["dragon", "fire"], bonus: { atk: 0.06, hp: 0.04 } },
-  { id: "sturmlied", name: "Sturmlied", types: ["wind", "sound"], bonus: { spd: 0.05 } }
+  { id: "gewitter", name: "Gewitter", types: ["water", "lightning"], bonus: { crit: 0.194, atk: 0.013 }, power: 124 },
+  { id: "flaechenbrand", name: "Fl\xE4chenbrand", types: ["fire", "wind"], bonus: { atk: 0.0139 }, power: 129 },
+  { id: "wurzelgrund", name: "Wurzelgrund", types: ["plant", "earth"], bonus: { hp: 0.022 }, power: 125 },
+  { id: "polarstrom", name: "Polarstrom", types: ["ice", "water"], bonus: { hp: 0.019, def: 0.0125 }, power: 125 },
+  { id: "bollwerk", name: "Bollwerk", types: ["stone", "metal"], bonus: { def: 0.06 }, power: 123 },
+  { id: "prisma", name: "Prisma", types: ["light", "crystal"], bonus: { atk: 0.0105, crit: 0.0354 }, power: 124 },
+  { id: "zwielicht", name: "Zwielicht", types: ["shadow", "ghost"], bonus: { dodge: 0.035 }, power: 124 },
+  { id: "rudelkraft", name: "Rudelkraft", types: ["fighting", "beast"], bonus: { wardenAtk: 0.0168 }, power: 129 },
+  { id: "schwarmgift", name: "Schwarmgift", types: ["poison", "insect"], bonus: { status: 1.15 }, power: 119 },
+  { id: "resonanz", name: "Resonanz", types: ["psychic", "sound"], bonus: { cooldown: 0.92 }, power: 119 },
+  { id: "glutschwinge", name: "Glutschwinge", types: ["dragon", "fire"], bonus: { atk: 0.011, hp: 0.011 }, power: 126 },
+  { id: "sturmlied", name: "Sturmlied", types: ["wind", "sound"], bonus: { dodge: 0.03 }, power: 124 }
 ];
-function powerOf(bonus) {
-  const crit = (bonus.crit ?? 0) * 100;
-  const status = bonus.status ? (bonus.status - 1) * 100 : 0;
-  const cooldown = bonus.cooldown ? (1 - bonus.cooldown) * 100 : 0;
-  const foe = bonus.foeSpd ? (1 - bonus.foeSpd) * 100 : 0;
-  return Math.round(
-    (bonus.atk ?? 0) * 100 + (bonus.hp ?? 0) * 100 + (bonus.def ?? 0) * 100 + (bonus.spd ?? 0) * 100 + (bonus.wardenAtk ?? 0) * 100 + (bonus.dodge ?? 0) * 100 + crit + status + cooldown + foe
-  );
-}
 var SYNERGIES = ROWS.map((row, order) => ({
   ...row,
-  order,
-  power: powerOf(row.bonus)
+  order
 }));
 function presentSynergies(types) {
   const have = new Set(types);
@@ -10659,13 +10661,18 @@ function synergyMods(active, warden) {
     if (bonus.status) mods.statusDur *= bonus.status;
     if (bonus.cooldown) mods.cooldown *= bonus.cooldown;
   }
+  mods.hp = Math.min(SYNERGY_STAT_CAP, mods.hp);
+  mods.def = Math.min(SYNERGY_STAT_CAP, mods.def);
+  mods.spd = Math.min(SYNERGY_STAT_CAP, mods.spd);
+  mods.atk = Math.min(SYNERGY_STAT_CAP, mods.atk);
+  mods.wardenAtk = Math.min(Math.max(0, SYNERGY_STAT_CAP - mods.atk), mods.wardenAtk);
   return mods;
 }
 function scaleSide(side, mods, purity = 0) {
-  const hp = (1 + mods.hp) * (1 + purity);
-  const atk = (1 + mods.atk + mods.wardenAtk) * (1 + purity);
-  const def = (1 + mods.def) * (1 + purity);
-  const spd = (1 + mods.spd) * (1 + purity);
+  const hp = 1 + Math.min(SYNERGY_STAT_CAP, mods.hp + purity);
+  const atk = 1 + Math.min(SYNERGY_STAT_CAP, mods.atk + mods.wardenAtk);
+  const def = 1 + Math.min(SYNERGY_STAT_CAP, mods.def + purity);
+  const spd = 1 + Math.min(SYNERGY_STAT_CAP, mods.spd);
   if (hp === 1 && atk === 1 && def === 1 && spd === 1) return side;
   const maxHp = Math.max(1, Math.round(side.maxHp * hp));
   const fraction = side.maxHp > 0 ? side.hp / side.maxHp : 1;
@@ -10731,7 +10738,7 @@ function boardWeek(now) {
 }
 
 // src/adventure/tree.ts
-var NODE_COSTS = [2, 2, 4, 4, 6, 6, 8, 10];
+var NODE_COSTS = [1, 2, 3, 4, 5, 6, 7, 9];
 var CHEST_SHINY_BASE = 1 / 200;
 var HOUR_MS = 60 * 60 * 1e3;
 var TREE_CAP_MAX_MS = 12 * HOUR_MS;

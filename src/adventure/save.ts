@@ -8,6 +8,7 @@ import { fontScale } from './touch'
 import { settleExpeditions } from './expedition'
 import { isDailyFrame, normalizeDaily } from './daily'
 import { normalizeResearch } from './research'
+import { t } from './i18n'
 import { normalizeTreeNodes } from './tree'
 import { SYNERGY_CAP, synergyKnown } from './synergyIds'
 import { readLook } from './avatar'
@@ -242,6 +243,7 @@ export function normalize(save: SaveV2, now: number): SaveV2 {
   // 9 adds expeditions. Older files get an empty board and keep every monster.
   // 10 adds the research tower. Older files get an empty tower and keep every monster.
   // 11 adds daily tasks and the 7-day calendar. Older files get an empty board and keep every monster.
+  // 12 reprices the mastery tree. Bought nodes stay. The cheaper costs free the difference.
   // Older files keep every stored value. Missing setting fields take the defaults.
   const seenVersion = Math.max(0, Math.floor(Number(save.saveVersion)) || 0)
   if (seenVersion < SAVE_VERSION) save.saveVersion = SAVE_VERSION
@@ -376,6 +378,11 @@ export function normalize(save: SaveV2, now: number): SaveV2 {
     nodes,
     resetDay: typeof masteryTree?.resetDay === 'string' ? masteryTree.resetDay : '',
     sealDay: typeof masteryTree?.sealDay === 'string' ? masteryTree.sealDay : ''
+  }
+  if (seenVersion < 12 && nodes.length) {
+    const note = t(save.settings?.lang, 'tree.reprice')
+    if (!save.log.some((row) => row.text === note)) save.log.push({ t: now, text: note })
+    if (save.log.length > 50) save.log.splice(0, save.log.length - 50)
   }
   save.roadMs = Math.max(0, Math.floor(Number(save.roadMs)) || 0)
   save.roadReady = Math.max(0, Math.min(4, Math.floor(Number(save.roadReady)) || 0))

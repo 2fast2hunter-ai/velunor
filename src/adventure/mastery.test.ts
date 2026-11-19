@@ -1,6 +1,7 @@
 import { describe, expect, it } from 'vitest'
 import { councilChapter, regionRoster } from './dex'
-import { SAVE_VERSION, OFFLINE_EXP_FACTOR } from './const'
+import { ENCOUNTER_MS, PATH_LENGTH, SAVE_VERSION, OFFLINE_EXP_FACTOR } from './const'
+import { speciesInRegion } from './lootbox'
 import { applyChest } from './chests'
 import { syncAchievements } from './achievements'
 import { MASTERY_STEPS, addMastery, masteryFactor, masteryLevel, settleOfflineMastery } from './mastery'
@@ -11,7 +12,7 @@ import { recordCouncilWin, resolveEncounter, simulateOffline } from './sim'
 import { monStats } from './stats'
 
 describe('species mastery', () => {
-  it('opens ranks at 1000, 4000, 12000, 30000 and 60000 and buffs HP, ATK and DEF', () => {
+  it('opens ranks at 1000, 3000, 8000, 18000 and 35000 and buffs HP, ATK and DEF', () => {
     expect(masteryLevel(999)).toBe(0)
     expect(MASTERY_STEPS.map((step) => masteryLevel(step))).toEqual([1, 2, 3, 4, 5])
     expect(masteryFactor(1)).toBeCloseTo(1.02)
@@ -73,8 +74,8 @@ describe('species mastery', () => {
     save.mons[uid].lvl = 9
     delete save.mastery
     normalize(save, 2_000)
-    expect(SAVE_VERSION).toBe(11)
-    expect(save.saveVersion).toBe(11)
+    expect(SAVE_VERSION).toBe(12)
+    expect(save.saveVersion).toBe(12)
     expect(save.mastery).toEqual({})
     expect(save.mons[uid].lvl).toBe(9)
     expect(save.gold).toBeGreaterThan(0)
@@ -83,10 +84,37 @@ describe('species mastery', () => {
   it('names a region master after five species reach rank 5, and a huge jump in two seconds is flag 2', () => {
     const save = beginAdventure('Ada', { skin: 0, hair: 0, color: 0 }, 'm01', 1_000)
     const before = auditFromSave(save)
-    for (const id of regionRoster(1).slice(0, 5)) save.mastery![id] = MASTERY_STEPS[4]
+    for (const id of regionRoster(1).slice(0, 5)) save.mastery![id] = 60_000
     expect(syncAchievements(save)).toContain('master-1')
     const rushed = auditSync(before, auditFromSave(save), 2_000)
     expect(rushed.flag).toBe(2)
     expect(rushed.reasons).toContain('mastery')
+  })
+
+  it('never drops a rank that the old steps had already granted', () => {
+    const old = [1_000, 4_000, 12_000, 30_000, 60_000]
+    const oldLevel = (ep: number) => old.filter((step) => ep >= step).length
+    for (const ep of [0, 999, 1_000, 3_000, 4_000, 8_000, 12_000, 18_000, 30_000, 35_000, 60_000, 90_000]) {
+      expect(masteryLevel(ep)).toBeGreaterThanOrEqual(oldLevel(ep))
+    }
+  })
+
+  it('reaches the first rank 5 inside 8 to 12 hours at speed 3', () => {
+    const pool = speciesInRegion(1).length
+    const fights = 13 + 3
+    const boss = 1
+    const epPerLoop = fights * 1 + boss * 5
+    const loopMs = PATH_LENGTH * ENCOUNTER_MS[3]
+    const loopsPerHour = 3_600_000 / loopMs
+    const fightPerHour = epPerLoop * loopsPerHour
+    const dupe = (1 / pool) * 12.5
+    const findPerHour = 1 * loopsPerHour * dupe
+    const trainerPerHour = 0.3 * loopsPerHour * dupe
+    const roadPerHour = (1 / 2) * dupe
+    const perHour = fightPerHour + findPerHour + trainerPerHour + roadPerHour
+    const hours = 35_000 / perHour
+    expect(hours).toBeGreaterThanOrEqual(8)
+    expect(hours).toBeLessThanOrEqual(12)
+    expect(pool).toBeGreaterThan(1)
   })
 })

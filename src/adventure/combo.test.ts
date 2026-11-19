@@ -9,7 +9,7 @@ describe('team synergies on the battle dock', () => {
     expect(AURA_FRAMES).toBe(5)
     const many = activeCombos(['water', 'lightning', 'fire', 'wind', 'plant', 'earth'])
     expect(many).toHaveLength(COMBO_CAP)
-    expect(many.map((combo) => combo.id)).toEqual(['gewitter', 'wurzelgrund'])
+    expect(many.map((combo) => combo.id)).toEqual(['flaechenbrand', 'wurzelgrund'])
   })
 
   it('names the pair that is actually on the team', () => {

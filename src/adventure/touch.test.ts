@@ -65,11 +65,11 @@ describe('touch polish', () => {
     storage.setItem(SAVE_KEY_V2, JSON.stringify(raw))
 
     const loaded = loadAdventure(storage, 5_000)
-    expect(SAVE_VERSION).toBe(11)
+    expect(SAVE_VERSION).toBe(12)
     expect(SAVE_KEY_V2).toBe('velunor_v2')
     expect(storage.getItem(SAVE_KEY_V2)).toBeTruthy()
     expect(loaded?.v).toBe(2)
-    expect(loaded?.saveVersion).toBe(11)
+    expect(loaded?.saveVersion).toBe(12)
     expect(loaded?.gold).toBe(4321)
     expect(loaded?.name).toBe('Ada')
     expect(loaded?.team).toEqual([uid])
@@ -88,7 +88,7 @@ describe('touch polish', () => {
     loaded!.settings.haptics = true
     writeSave(storage, loaded!)
     const again = loadAdventure(storage, 9_000)
-    expect(again?.saveVersion).toBe(11)
+    expect(again?.saveVersion).toBe(12)
     expect(again?.settings.font).toBe(115)
     expect(again?.settings.battery).toBe(true)
     expect(again?.settings.swipeTabs).toBe(true)

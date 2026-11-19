@@ -4,10 +4,10 @@ import { OFFLINE_CAP_MS, OFFLINE_EXP_FACTOR } from './const'
 import type { SaveV2 } from './types'
 
 /**
- * Node costs are the spec sequence doubled (2/2/4/4/6/6/8/10).
- * Three branches then cost 126. The point cap is 80, so the whole tree does not fit.
+ * One branch costs 1/2/3/4/5/6/7/9 = 37. Three branches cost 111.
+ * The point cap is 80, so two full branches leave 6 points.
  */
-export const NODE_COSTS = [2, 2, 4, 4, 6, 6, 8, 10] as const
+export const NODE_COSTS = [1, 2, 3, 4, 5, 6, 7, 9] as const
 export const TREE_POINT_CAP = 80
 export const TREE_UNLOCK_CRESTS = 3
 export const RESPEC_GOLD = 5_000
