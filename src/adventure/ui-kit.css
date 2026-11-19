@@ -758,3 +758,62 @@ select {
 
 .home:not(.is-door):not(.is-starter) .home-scroll { padding-bottom: 260px; }
 .home :focus-visible { outline: 6px solid #fff8e1; outline-offset: 4px; }
+
+/* Retest: the friend row keeps the light kit fill, so the name stays readable. */
+.card .friend-row {
+  background-color: #faf2e1 !important;
+  background-image: none !important;
+  color: var(--ink) !important;
+}
+.friend-row b,
+.friend-row p { color: var(--ink) !important; }
+.friend-row .muted { color: var(--ink-soft) !important; }
+
+/* Seven days: keep the normal wrap, and keep the word inside the frame. */
+.daily-day,
+.daily-day span,
+.daily-frame-btn {
+  overflow-wrap: normal !important;
+  word-break: normal !important;
+  hyphens: manual !important;
+}
+.daily-day {
+  padding: 8px 10px !important;
+  border-width: 8px !important;
+  border-image-width: 8px !important;
+  font-size: 22px !important;
+  line-height: 1.15 !important;
+}
+.daily-frame-btn {
+  padding: 8px 8px !important;
+  border-image-width: 10px !important;
+  font-size: 22px !important;
+}
+
+/* Team dock: the label wraps whole instead of being cut off. */
+.menu-dock > button:not([data-act="activity"]) {
+  overflow: visible !important;
+  white-space: normal !important;
+  text-overflow: clip !important;
+  font-size: 22px !important;
+  line-height: 1.1 !important;
+  border-width: 8px !important;
+  border-image-width: 10px !important;
+}
+.menu-dock > button .ui-icon { width: 40px !important; height: 40px !important; }
+
+/* Path nodes: icon above the step, gold frame on the node itself. */
+.card.path .node {
+  display: flex !important;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  gap: 0;
+  padding: 0 !important;
+  border-width: 4px !important;
+  border-image-width: 8px !important;
+  border-image-outset: 0 !important;
+}
+.card.path .node img { width: 22px !important; height: 22px !important; }
+.card.path .node small { position: static !important; line-height: 1; }
+.card.path .node.is-here { outline: none !important; outline-offset: 0 !important; }
