@@ -23,8 +23,10 @@ import {
   seasonIndex,
   softReset,
   spendAttack,
+  arenaFightErrorKey,
   teamFromRegister
 } from './arena'
+import { t } from './i18n'
 import { beginAdventure } from './save'
 
 describe('arena', () => {
@@ -127,5 +129,19 @@ describe('arena', () => {
     expect(sql).toContain('flag_level < 2')
     expect(sql).toContain('primary key (season, user_id)')
     expect(sql).toContain('floor((rating + 1000) / 2.0)')
+  })
+
+  it('names a missing defense team instead of a connection error', () => {
+    expect(arenaFightErrorKey('team')).toBe('arena.err.team')
+    expect(t('de', arenaFightErrorKey('team'))).toBe('Speichere zuerst ein Verteidigungsteam mit sechs Monstern.')
+    expect(arenaFightErrorKey('opponent')).toBe('arena.err.opponent')
+    expect(arenaFightErrorKey('index')).toBe('arena.err.index')
+    expect(arenaFightErrorKey('flag')).toBe('arena.err.flag')
+    expect(arenaFightErrorKey('season')).toBe('arena.err.season')
+    expect(arenaFightErrorKey('limit')).toBe('arena.attacks')
+    expect(arenaFightErrorKey('auth')).toBe('arena.offline')
+    expect(arenaFightErrorKey('Failed to fetch')).toBe('arena.offline')
+    const app = readFileSync(new URL('./app.ts', import.meta.url), 'utf8')
+    expect(app).toContain('arenaFightErrorKey(code)')
   })
 })

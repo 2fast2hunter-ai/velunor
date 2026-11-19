@@ -387,3 +387,17 @@ export function pickOpponents(selfId: string, selfRating: number, pool: readonly
   }
   return chosen
 }
+
+/** Maps an arena-fight error to a sentence. Unknown transport errors stay the offline note. */
+export function arenaFightErrorKey(code: string): string {
+  const known: Record<string, string> = {
+    team: 'arena.err.team',
+    opponent: 'arena.err.opponent',
+    index: 'arena.err.index',
+    flag: 'arena.err.flag',
+    season: 'arena.err.season',
+    limit: 'arena.attacks',
+    auth: 'arena.offline'
+  }
+  return known[code] ?? 'arena.offline'
+}
