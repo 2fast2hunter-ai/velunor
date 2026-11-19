@@ -1452,7 +1452,7 @@ export function cloudLayerHtml(cloud: CloudView, lang: Lang): string {
 function guide(save: SaveV2): string {
   return `<div class="menu-screen">
     <div class="menu-scroll">
-      <div class="card panel"><h2>${ui('guide')}${tr(save, 'guide.title')}</h2>
+      <div class="card panel guide-card"><h2>${ui('guide')}${tr(save, 'guide.title')}</h2>
         ${[1, 2, 3, 4, 5, 6, 7, 8, 9, 10, 11, 12, 13].map((n) => `<p>${ui('guide')}${tr(save, `guide.${n}`)}</p>`).join('')}
       </div>
     </div>
