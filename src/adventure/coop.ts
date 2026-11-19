@@ -19,15 +19,36 @@ export interface RegisterRow {
   schimmer: boolean
 }
 
+export type CoopTeamIssue = 'count' | 'dup' | 'starter' | 'register'
+
+/**
+ * Why a co-op team is refused. `count` is fewer or more than six,
+ * `dup` repeats a monster, `starter` is a second road starter,
+ * `register` is a monster that is neither registered nor the one road starter.
+ */
+export function coopTeamIssue(uids: readonly string[], owned: readonly RegisterRow[], save: SaveV2): CoopTeamIssue | null {
+  if (uids.length !== 6) return 'count'
+  if (new Set(uids).size !== 6) return 'dup'
+  const starterIds = new Set<string>(STARTERS.map((starter) => starter.id))
+  const byUid = new Map(owned.map((row) => [row.uid, row]))
+  let starters = 0
+  for (const uid of uids) {
+    if (byUid.has(uid)) continue
+    const mon = save.mons[uid]
+    if (!mon || !starterIds.has(mon.species) || !/^r\d+c\d+$/.test(mon.caughtWhere)) return 'register'
+    if (starters >= 1) return 'starter'
+    starters += 1
+  }
+  return null
+}
+
 /**
  * Six fighters from the register. One road starter may fill a missing row,
  * because the starter is not written into monsters_owned.
  */
 export function coopRoster(uids: readonly string[], owned: readonly RegisterRow[], save: SaveV2): RegisterRow[] | null {
-  if (uids.length !== 6 || new Set(uids).size !== 6) return null
-  const starterIds = new Set<string>(STARTERS.map((starter) => starter.id))
+  if (coopTeamIssue(uids, owned, save)) return null
   const byUid = new Map(owned.map((row) => [row.uid, row]))
-  let starters = 0
   const rows: RegisterRow[] = []
   for (const uid of uids) {
     const known = byUid.get(uid)
@@ -36,15 +57,14 @@ export function coopRoster(uids: readonly string[], owned: readonly RegisterRow[
       continue
     }
     const mon = save.mons[uid]
-    if (!mon || !starterIds.has(mon.species) || !/^r\d+c\d+$/.test(mon.caughtWhere) || starters >= 1) return null
-    starters += 1
+    if (!mon) return null
     rows.push({ uid, species: mon.species, schimmer: Boolean(mon.shiny) })
   }
   return rows
 }
 
 export function coopErrorKey(code: string): string {
-  const known = ['team', 'attempts', 'flag', 'none', 'join', 'group', 'strike']
+  const known = ['team', 'count', 'dup', 'starter', 'register', 'expedition', 'busy', 'attempts', 'flag', 'none', 'join', 'group', 'strike']
   return known.includes(code) ? `social.err.${code}` : 'social.err.team'
 }
 

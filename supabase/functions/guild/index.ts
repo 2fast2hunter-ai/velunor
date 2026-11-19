@@ -8,6 +8,7 @@ import {
   guildActionDenial,
   guildNameIssue,
   guildTagIssue,
+  guildHttpStatus,
   guildLevel,
   guildTextIssue,
   phraseOk,
@@ -126,5 +127,8 @@ Deno.serve(async (req) => {
     })
   }
   const acted = await db.rpc('guild_act', { p_user: user.id, p_body: { ...body, action } })
-  return json(acted.data ?? { error: 'guild' })
+  if (acted.error || !acted.data || typeof acted.data !== 'object') return json({ error: 'guild' }, 500)
+  const payload = acted.data as { error?: unknown }
+  if (typeof payload.error === 'string' && payload.error) return json({ error: payload.error }, guildHttpStatus(payload.error))
+  return json(acted.data)
 })

@@ -10933,11 +10933,24 @@ var COOP_ATTEMPTS = 3;
 var GROUP_MAX = 4;
 var EGG_CHANCE = 0.02;
 var WEEK_ATTEMPTS = COOP_ATTEMPTS * 7 * GROUP_MAX;
-function coopRoster(uids, owned2, save) {
-  if (uids.length !== 6 || new Set(uids).size !== 6) return null;
+function coopTeamIssue(uids, owned2, save) {
+  if (uids.length !== 6) return "count";
+  if (new Set(uids).size !== 6) return "dup";
   const starterIds = new Set(STARTERS.map((starter) => starter.id));
   const byUid = new Map(owned2.map((row2) => [row2.uid, row2]));
   let starters = 0;
+  for (const uid of uids) {
+    if (byUid.has(uid)) continue;
+    const mon = save.mons[uid];
+    if (!mon || !starterIds.has(mon.species) || !/^r\d+c\d+$/.test(mon.caughtWhere)) return "register";
+    if (starters >= 1) return "starter";
+    starters += 1;
+  }
+  return null;
+}
+function coopRoster(uids, owned2, save) {
+  if (coopTeamIssue(uids, owned2, save)) return null;
+  const byUid = new Map(owned2.map((row2) => [row2.uid, row2]));
   const rows = [];
   for (const uid of uids) {
     const known = byUid.get(uid);
@@ -10946,8 +10959,7 @@ function coopRoster(uids, owned2, save) {
       continue;
     }
     const mon = save.mons[uid];
-    if (!mon || !starterIds.has(mon.species) || !/^r\d+c\d+$/.test(mon.caughtWhere) || starters >= 1) return null;
-    starters += 1;
+    if (!mon) return null;
     rows.push({ uid, species: mon.species, schimmer: Boolean(mon.shiny) });
   }
   return rows;
@@ -11174,7 +11186,9 @@ Deno.serve(async (req) => {
     const saved = await db.from("saves").select("save_json").eq("user_id", user.id).maybeSingle();
     if (!saved.data?.save_json) return json({ error: "team" }, 400);
     const adventure = saved.data.save_json;
-    if (uids.some((uid) => expeditionBusy(adventure, uid))) return json({ error: "team" }, 400);
+    if (uids.some((uid) => expeditionBusy(adventure, uid))) return json({ error: "expedition" }, 400);
+    const issue = coopTeamIssue(uids, owned2.data ?? [], adventure);
+    if (issue) return json({ error: issue }, 400);
     const rows = coopRoster(uids, owned2.data ?? [], adventure);
     if (!rows) return json({ error: "team" }, 400);
     const team = teamFromRegister(rows, adventure);

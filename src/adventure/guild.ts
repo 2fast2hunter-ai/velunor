@@ -120,8 +120,16 @@ export function guildFoundBlock(crests: number, gold: number, region: number, na
 }
 
 export function guildErrorKey(code: string): string {
-  const known = ['crests', 'name', 'gold', 'member', 'missing', 'full', 'role', 'flag', 'code', 'phrase']
+  const known = ['crests', 'name', 'gold', 'member', 'missing', 'full', 'role', 'lead', 'flag', 'code', 'phrase', 'guild']
   return known.includes(code) ? `guild.err.${code}` : 'guild.err.missing'
+}
+
+/** HTTP status for a guild_act error code. A swallowed exception must not stay 200. */
+export function guildHttpStatus(code: string): number {
+  if (code === 'missing') return 404
+  if (code === 'role' || code === 'lead' || code === 'flag') return 403
+  if (code === 'full' || code === 'member') return 409
+  return 400
 }
 
 /** Guild mute: only the lead and the deputy, and never against the lead. */

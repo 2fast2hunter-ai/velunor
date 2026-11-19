@@ -1,6 +1,6 @@
 import { admin, caller, cors, json } from '../_shared/admin.ts'
 import { arenaDayKey, teamFromRegister } from '../../../src/adventure/arena.ts'
-import { EGG_CHANCE, coopDamage, coopRoster, weeklyBeast } from '../../../src/adventure/coop.ts'
+import { EGG_CHANCE, coopDamage, coopRoster, coopTeamIssue, weeklyBeast } from '../../../src/adventure/coop.ts'
 import { expeditionBusy } from '../../../src/adventure/expedition.ts'
 import { validFriendCode } from '../../../src/adventure/social.ts'
 import type { SaveV2 } from '../../../src/adventure/types.ts'
@@ -42,7 +42,9 @@ Deno.serve(async (req) => {
     const saved = await db.from('saves').select('save_json').eq('user_id', user.id).maybeSingle()
     if (!saved.data?.save_json) return json({ error: 'team' }, 400)
     const adventure = saved.data.save_json as SaveV2
-    if (uids.some((uid) => expeditionBusy(adventure, uid))) return json({ error: 'team' }, 400)
+    if (uids.some((uid) => expeditionBusy(adventure, uid))) return json({ error: 'expedition' }, 400)
+    const issue = coopTeamIssue(uids, owned.data ?? [], adventure)
+    if (issue) return json({ error: issue }, 400)
     const rows = coopRoster(uids, owned.data ?? [], adventure)
     if (!rows) return json({ error: 'team' }, 400)
     const team = teamFromRegister(rows, adventure)

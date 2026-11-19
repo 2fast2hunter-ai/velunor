@@ -443,6 +443,7 @@ class FxScene extends Phaser.Scene {
     const strip = projStrip(burst.type)
     const key = stripTexture(burst.type, 'proj')
     if (!this.textures.exists(key)) {
+      // A missing sheet (wrong path or a 503) leaves the particle burst in place.
       this.proj.setVisible(false)
       return
     }
