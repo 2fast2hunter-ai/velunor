@@ -9,12 +9,9 @@ const MONSTER_SLOT_SCALE: Readonly<Record<string, number>> = {
 
 /**
  * Monster side length as a fraction of the rarity frame.
- * The frame is a square with a transparent center. Rarity 6 and 9 use a thicker border.
+ * Every ring has the same inner radius, so one fit covers all rarities.
  */
-const FRAME_FIT: Readonly<Record<number, number>> = {
-  6: 0.58,
-  9: 0.58
-}
+const FRAME_FIT: Readonly<Record<number, number>> = {}
 
 /** Where the building base sits in the square texture, top = 0. */
 export const BUILDING_FOOT: Readonly<Record<string, number>> = {

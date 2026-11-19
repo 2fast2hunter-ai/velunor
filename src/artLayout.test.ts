@@ -15,11 +15,11 @@ describe('monster slot scale', () => {
     }
   })
 
-  it('keeps the monster inside the frame, and smaller again for the thick borders', () => {
+  it('keeps every monster at the same share of the ring', () => {
     expect(frameMonsterFit(0)).toBeCloseTo(0.7)
     expect(frameMonsterFit(4)).toBeCloseTo(0.7)
-    expect(frameMonsterFit(6)).toBeLessThan(frameMonsterFit(0))
-    expect(frameMonsterFit(9)).toBeLessThan(frameMonsterFit(0))
+    expect(frameMonsterFit(6)).toBeCloseTo(0.7)
+    expect(frameMonsterFit(9)).toBeCloseTo(0.7)
   })
 })
 
