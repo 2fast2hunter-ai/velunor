@@ -1260,9 +1260,9 @@ button.log div { grid-column: 2; }
 /* Team dock: the label wraps whole instead of being cut off. */
 .menu-dock > button:not([data-act="activity"]):not(.dock-primary) {
   overflow: visible !important;
-  white-space: normal !important;
+  white-space: nowrap !important;
   text-overflow: clip !important;
-  font-size: 22px !important;
+  font-size: 32px !important;
   line-height: 1.1 !important;
   border-width: 8px !important;
   border-image-width: 10px !important;
@@ -1469,7 +1469,7 @@ button.log div { grid-column: 2; }
   overflow: visible !important;
   white-space: nowrap !important;
   text-overflow: clip !important;
-  font-size: 28px !important;
+  font-size: 32px !important;
   line-height: 1.1 !important;
   border-width: 8px 8px 6px !important;
   border-image-width: 10px 10px 8px !important;
@@ -1556,11 +1556,17 @@ button.log div { grid-column: 2; }
 }
 #stage .menu-dock > button[data-act="to-hort"],
 #stage .menu-dock > button[data-act="from-hort"] {
-  font-size: 28px !important;
+  font-size: 32px !important;
   line-height: 1.1 !important;
   white-space: nowrap !important;
   overflow: hidden !important;
   text-overflow: clip !important;
+}
+.menu-dock > button.primary[data-act="activity"]:not(.shop-stock):not(.shop-toast) {
+  border-image-source: var(--kit-tab-active) !important;
+  background-color: #fffaed !important;
+  color: var(--ink) !important;
+  font-weight: 700;
 }
 .menu-dock[data-dock="hort"] > button[data-act="activity"],
 .menu-dock[data-dock="chests"] > button[data-act="activity"],
