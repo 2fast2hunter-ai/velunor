@@ -16,6 +16,8 @@ import {
   credit,
   foundCost,
   guildBeastHp,
+  guildErrorKey,
+  guildFoundBlock,
   guildLevel,
   guildNameIssue,
   guildTagIssue,
@@ -89,6 +91,46 @@ describe('guilds', () => {
     expect(html).toContain('Mooswacht')
     const offline = gameHtml(saveOf(), 'guild', now.getTime(), pc, dex, null, false, false, null)
     expect(offline).toContain('Offline')
+    const open = gameHtml(saveOf(), 'guild', now.getTime(), pc, dex, null, false, false, null, 1, undefined, {
+      guild: { status: 'ready', name: '', tag: '', level: 1, points: 0, note: '' }
+    })
+    expect(open).toContain('id="guild-name"')
+    expect(open).toContain('id="guild-tag"')
+    expect(open).toContain('data-act="guild-search"')
+    expect(open).toContain('id="guild-code"')
+    expect(open).toContain('data-act="guild-found" disabled')
+    expect(open).toContain('Gründen braucht 8 Wappen')
+    expect(guildFoundBlock(7, 50_000, 1, 'Mooswacht', 'MOS').reason).toBe('crests')
+    expect(guildFoundBlock(8, 1_000, 1, 'Mooswacht', 'MOS').reason).toBe('gold')
+    expect(guildFoundBlock(8, 50_000, 1, 'Mo', 'MOS').reason).toBe('name')
+    expect(guildFoundBlock(8, 50_000, 1, 'Mooswacht', 'MOS').disabled).toBe(false)
+    expect(guildErrorKey('crests')).toBe('guild.err.crests')
+    const lead = gameHtml(saveOf(), 'guild', now.getTime(), pc, dex, null, false, false, null, 1, undefined, {
+      guild: {
+        status: 'ready', name: 'Mooswacht', tag: 'MOS', level: 2, points: 10, note: '',
+        role: 'lead', code: 'ABCD2345',
+        members: [{ id: 'm1', label: 'Bea', role: 'member' }, { id: 'me', label: 'Ada', role: 'lead' }],
+        requests: [{ id: 'r1', label: 'Ced' }],
+        goals: [{ goal: 'chests', progress: 1, target: 300 }]
+      }
+    })
+    expect(lead).toContain('ABCD2345')
+    expect(lead).toContain('data-act="guild-accept"')
+    expect(lead).toContain('data-act="guild-decline"')
+    expect(lead).toContain('data-act="guild-kick"')
+    expect(lead).toContain('data-act="guild-mute"')
+    expect(lead).toContain('data-act="guild-role"')
+    expect(lead).toContain('1/300')
+    const member = gameHtml(saveOf(), 'guild', now.getTime(), pc, dex, null, false, false, null, 1, undefined, {
+      guild: {
+        status: 'ready', name: 'Mooswacht', tag: 'MOS', level: 2, points: 10, note: '',
+        role: 'member', code: 'SECRET12',
+        members: [{ id: 'me', label: 'Ada', role: 'member' }]
+      }
+    })
+    expect(member).not.toContain('data-act="guild-kick"')
+    expect(member).not.toContain('data-act="guild-mute"')
+    expect(member).not.toContain('SECRET12')
   })
 
   it('keeps guild writes on the service role and the weekly board on the rank cron', () => {
@@ -99,6 +141,13 @@ describe('guilds', () => {
     expect(sql).toContain('velunor-refresh-ranks')
     expect(sql).toContain('guild_ranks')
     expect(sql).not.toContain('freier chat')
+    const fix = readFileSync(new URL('../../supabase/migrations/20261119020000_guild_goals_succession.sql', import.meta.url), 'utf8')
+    expect(fix).not.toContain('array array[')
+    expect(fix).toContain("picked.goal_id in ('chests', 'arena', 'beast', 'expedition')")
+    expect(fix).toContain("action = 'decline'")
+    expect(fix).toContain('order by joined_at, user_id')
+    expect(fix).toContain('delete from public.guilds g')
+    expect(fix).not.toMatch(/delete from public\.guild_members m where m\.user_id/i)
   })
 })
 

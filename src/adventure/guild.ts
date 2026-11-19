@@ -111,3 +111,15 @@ export function rewardFor(contrib: number, done: boolean, claimed: boolean): { m
 export function phraseOk(id: string): boolean {
   return (PHRASES as readonly string[]).includes(id)
 }
+
+export function guildFoundBlock(crests: number, gold: number, region: number, name: string, tag: string): { disabled: boolean, reason: 'crests' | 'gold' | 'name' } {
+  if (crests < CREST_NEED) return { disabled: true, reason: 'crests' }
+  if (gold < foundCost(region)) return { disabled: true, reason: 'gold' }
+  if (guildNameIssue(name) || guildTagIssue(tag)) return { disabled: true, reason: 'name' }
+  return { disabled: false, reason: 'name' }
+}
+
+export function guildErrorKey(code: string): string {
+  const known = ['crests', 'name', 'gold', 'member', 'missing', 'full', 'role', 'flag', 'code', 'phrase']
+  return known.includes(code) ? `guild.err.${code}` : 'guild.err.missing'
+}

@@ -33,6 +33,8 @@ import {
 } from './lootbox'
 import type { ChestGrant } from './chests'
 import { expeditionBusy, expeditionSlots, expeditionTier } from './expedition'
+import { crestCount } from './arena'
+import { foundCost, guildFoundBlock } from './guild'
 import { tradedOnly } from './trade'
 import { workshopCost } from './sources'
 import {
@@ -151,6 +153,24 @@ export interface ChatPanel {
   adult: boolean | null
 }
 
+export interface GuildPerson {
+  id: string
+  label: string
+  role?: 'lead' | 'deputy' | 'member'
+}
+
+export interface GuildGoalView {
+  goal: string
+  progress: number
+  target: number
+}
+
+export interface GuildHit {
+  id: string
+  name: string
+  tag: string
+}
+
 export interface GuildPanel {
   status: 'offline' | 'ready' | 'loading'
   name: string
@@ -158,6 +178,17 @@ export interface GuildPanel {
   level: number
   points: number
   note: string
+  id?: string
+  role?: 'lead' | 'deputy' | 'member' | ''
+  code?: string
+  members?: GuildPerson[]
+  requests?: GuildPerson[]
+  goals?: GuildGoalView[]
+  hits?: GuildHit[]
+  draftName?: string
+  draftTag?: string
+  draftQuery?: string
+  draftCode?: string
 }
 
 export interface TradeCard {
@@ -1813,20 +1844,64 @@ function guildScreen(save: SaveV2, panel: GuildPanel | undefined): string {
   if (view.status !== 'ready') {
     return `<div class="menu-screen"><div class="menu-scroll"><div class="card panel"><h2>Offline</h2><p class="muted">${tr(save, 'guild.offline')}</p></div></div></div>`
   }
+  if (!view.name) return guildFoundScreen(save, view)
+  const officer = view.role === 'lead' || view.role === 'deputy'
+  const goals = (view.goals ?? []).map((goal) => {
+    const label = tr(save, `guild.goal.${goal.goal}`)
+    return `<li>${esc(label === `guild.goal.${goal.goal}` ? goal.goal : label)} · ${goal.progress}/${goal.target}</li>`
+  }).join('')
+  const members = (view.members ?? []).map((member) => {
+    const role = member.role ?? 'member'
+    const actions = [
+      view.role === 'lead' && role === 'member' ? `<button type="button" data-act="guild-role" data-id="${esc(member.id)}">${tr(save, 'guild.promote')}</button>` : '',
+      view.role === 'lead' && role !== 'lead' && member.id !== '' ? `<button type="button" data-act="guild-kick" data-id="${esc(member.id)}">${tr(save, 'guild.kick')}</button>` : '',
+      officer && role !== 'lead' ? `<button type="button" data-act="guild-mute" data-id="${esc(member.id)}">${tr(save, 'guild.mute')}</button>` : ''
+    ].join(' ')
+    return `<article class="friend-row"><b>${esc(member.label)}</b><p class="muted">${tr(save, `guild.role.${role}`)}</p>${actions}</article>`
+  }).join('')
+  const requests = officer ? (view.requests ?? []).map((request) => `<article class="friend-row"><b>${esc(request.label)}</b><button type="button" data-act="guild-accept" data-id="${esc(request.id)}">${tr(save, 'guild.accept')}</button><button type="button" data-act="guild-decline" data-id="${esc(request.id)}">${tr(save, 'guild.decline')}</button></article>`).join('') : ''
   return `<div class="menu-screen"><div class="menu-scroll"><div class="card panel guild-board">
     <h2>${tr(save, 'nav.guild')}</h2>
     ${guildEmblem()}
-    <h3>${esc(view.name || tr(save, 'guild.found'))} ${view.tag ? `· ${esc(view.tag)}` : ''}</h3>
+    <h3>${esc(view.name)} ${view.tag ? `· ${esc(view.tag)}` : ''}</h3>
     <p>${tr(save, 'guild.level', { n: view.level })} · ${tr(save, 'guild.points', { n: view.points })}</p>
+    ${officer && view.code ? `<p>${tr(save, 'guild.code')}: <b>${esc(view.code)}</b></p>` : ''}
     <p class="muted">${tr(save, 'guild.lead')}</p>
+    <ul class="guild-goals">${goals}</ul>
+    ${officer ? `<h3>${tr(save, 'guild.requests')}</h3>${requests || `<p class="muted">${tr(save, 'social.noRequests')}</p>`}` : ''}
+    <h3>${tr(save, 'guild.members')}</h3>
+    ${members}
     <div class="guild-phrases">
       <button type="button" data-act="guild-phrase" data-id="hallo">${tr(save, 'guild.phrase')}</button>
       <button type="button" data-act="guild-phrase" data-id="danke">Danke</button>
       <button type="button" data-act="guild-phrase" data-id="los">Los</button>
     </div>
-    <button type="button" class="primary" data-act="guild-found">${tr(save, 'guild.found')}</button>
-    <button type="button" data-act="guild-join">${tr(save, 'guild.join')}</button>
     <button type="button" data-act="guild-leave">${tr(save, 'guild.leave')}</button>
+    ${view.note ? `<p class="muted">${esc(view.note)}</p>` : ''}
+  </div></div></div>`
+}
+
+function guildFoundScreen(save: SaveV2, view: GuildPanel): string {
+  const crests = crestCount(save.badges)
+  const block = guildFoundBlock(crests, save.gold, save.region, view.draftName ?? '', view.draftTag ?? '')
+  const reason = block.reason === 'crests'
+    ? tr(save, 'guild.reason.crests', { n: crests })
+    : block.reason === 'gold'
+      ? tr(save, 'guild.reason.gold', { gold: foundCost(save.region).toLocaleString(L(save) === 'en' ? 'en' : 'de-DE') })
+      : tr(save, 'guild.reason.name')
+  const hits = (view.hits ?? []).map((hit) => `<article class="friend-row"><b>${esc(hit.name)} · ${esc(hit.tag)}</b><button type="button" data-act="guild-join" data-name="${esc(hit.name)}">${tr(save, 'guild.join')}</button></article>`).join('')
+  return `<div class="menu-screen"><div class="menu-scroll"><div class="card panel guild-board">
+    <h2>${tr(save, 'nav.guild')}</h2>
+    ${guildEmblem()}
+    <label class="friend-search">${tr(save, 'guild.name')}<input id="guild-name" data-field="guild-name" maxlength="20" value="${esc(view.draftName ?? '')}"/></label>
+    <label class="friend-search">${tr(save, 'guild.tag')}<input id="guild-tag" data-field="guild-tag" maxlength="3" value="${esc(view.draftTag ?? '')}"/></label>
+    <button type="button" class="primary" data-act="guild-found" ${block.disabled ? 'disabled' : ''}>${tr(save, 'guild.found')}</button>
+    <p id="guild-reason" class="muted">${esc(reason)}</p>
+    <label class="friend-search">${tr(save, 'guild.search')}<input id="guild-query" data-field="guild-query" maxlength="20" value="${esc(view.draftQuery ?? '')}"/></label>
+    <button type="button" data-act="guild-search">${tr(save, 'guild.search')}</button>
+    ${hits}
+    <label class="friend-search">${tr(save, 'guild.code')}<input id="guild-code" data-field="guild-code" maxlength="8" value="${esc(view.draftCode ?? '')}"/></label>
+    <button type="button" data-act="guild-join">${tr(save, 'guild.join')}</button>
     ${view.note ? `<p class="muted">${esc(view.note)}</p>` : ''}
   </div></div></div>`
 }

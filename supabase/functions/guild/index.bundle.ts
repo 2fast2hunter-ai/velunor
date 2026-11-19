@@ -11140,6 +11140,12 @@ Deno.serve(async (req) => {
   }
   const action = typeof body.action === "string" ? body.action : "state";
   const db = admin();
+  if (action === "search") {
+    const query = String(body.query ?? "").replace(/[^\p{L}\p{N}]/gu, "").slice(0, 20);
+    if (query.length < 2) return json({ guilds: [] });
+    const rows = await db.from("guilds").select("id, name, tag").or(`name.ilike.%${query}%,tag.ilike.%${query}%`).limit(8);
+    return json({ guilds: rows.data ?? [] });
+  }
   const profile = await db.from("profiles").select("flag_level, last_audit").eq("user_id", user.id).maybeSingle();
   if (profile.data?.flag_level === 2 && action !== "state" && action !== "leave") return json({ error: "flag" }, 403);
   const badges = Array.isArray(profile.data?.last_audit?.badges) ? profile.data?.last_audit?.badges : [];
@@ -11181,12 +11187,30 @@ Deno.serve(async (req) => {
   if (action === "sync") return json({ ok: true });
   if (action === "state") {
     const member = await db.from("guild_members").select("guild_id, role, contrib").eq("user_id", user.id).maybeSingle();
-    if (!member.data) return json({ status: "ready", guild: null });
-    const guild = await db.from("guilds").select("name, tag, points, week_points, shape, symbol, color").eq("id", member.data.guild_id).maybeSingle();
-    const goals = await db.from("guild_goals").select("goal, progress, target").eq("guild_id", member.data.guild_id);
+    if (!member.data) return json({ status: "ready", guild: null, goals: [], members: [], requests: [] });
+    const guild = await db.from("guilds").select("id, name, tag, points, week_points, shape, symbol, color, code").eq("id", member.data.guild_id).maybeSingle();
+    const week = boardWeek(/* @__PURE__ */ new Date()).toISOString();
+    const goals = await db.from("guild_goals").select("goal, progress, target, week").eq("guild_id", member.data.guild_id);
+    const current = (goals.data ?? []).filter((row) => String(row.week) === week);
+    const weekGoalsRows = { data: current.length ? current : goals.data ?? [] };
+    const roster = await db.from("guild_members").select("user_id, role").eq("guild_id", member.data.guild_id);
+    const ids = (roster.data ?? []).map((row) => String(row.user_id));
+    const officer = member.data.role === "lead" || member.data.role === "deputy";
+    const pending = officer ? await db.from("guild_requests").select("user_id").eq("guild_id", member.data.guild_id) : { data: [] };
+    const requestIds = (pending.data ?? []).map((row) => String(row.user_id));
+    const namedIds = [.../* @__PURE__ */ new Set([...ids, ...requestIds])];
+    const names = namedIds.length ? await db.from("player_names").select("user_id, hidden, display, name, tag").in("user_id", namedIds) : { data: [] };
+    const labelOf = (id) => {
+      const row = (names.data ?? []).find((item) => item.user_id === id);
+      if (!row) return "Spieler";
+      if (row.hidden) return `Spieler#${row.tag ?? "0000"}`;
+      return row.display || "Spieler";
+    };
     return json({
       status: "ready",
+      role: member.data.role,
       guild: {
+        id: guild.data?.id ?? member.data.guild_id,
         name: guild.data?.name ?? "",
         tag: guild.data?.tag ?? "",
         points: guild.data?.points ?? 0,
@@ -11194,9 +11218,12 @@ Deno.serve(async (req) => {
         level: guildLevel(Number(guild.data?.points) || 0),
         shape: guild.data?.shape,
         symbol: guild.data?.symbol,
-        color: guild.data?.color
+        color: guild.data?.color,
+        code: officer ? guild.data?.code ?? "" : ""
       },
-      goals: goals.data ?? [],
+      goals: weekGoalsRows.data ?? [],
+      members: (roster.data ?? []).map((row) => ({ id: row.user_id, label: labelOf(String(row.user_id)), role: row.role })),
+      requests: requestIds.map((id) => ({ id, label: labelOf(id) })),
       contrib: member.data.contrib
     });
   }
