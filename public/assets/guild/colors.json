@@ -1,0 +1,9 @@
+{
+  "tint": "multiply onto shape-*.png (grey layer)",
+  "colors": {
+    "moss": "#8fd27a",
+    "gold": "#f5c64a",
+    "sky": "#7cc0f0",
+    "berry": "#ec7aa4"
+  }
+}
