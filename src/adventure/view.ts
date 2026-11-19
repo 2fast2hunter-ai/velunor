@@ -1929,7 +1929,7 @@ function chatScreen(save: SaveV2, panel: ChatPanel | undefined): string {
   </div></div>
   <form class="chat-form" data-act="chat-form">
     <input id="chat-text" data-field="chat" maxlength="200" autocomplete="off" value="${esc(view.draft ?? '')}"/>
-    <button type="submit" class="primary"><img class="chat-icon" src="${art('chat/send@2x.png')}" alt="" onerror="this.style.visibility='hidden'"/>${tr(save, 'chat.send')}</button>
+    <button type="submit" class="chat-send"><img class="chat-icon" src="${art('chat/send@2x.png')}" alt="" onerror="this.style.visibility='hidden'"/>${tr(save, 'chat.send')}</button>
   </form></div>`
 }
 
