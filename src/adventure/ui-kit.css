@@ -33,7 +33,10 @@ html, body, #game, #stage, .band, #turn, .home {
 .kit-panel,
 .card,
 .continue-card,
-button.log {
+button.log,
+.mon-card,
+.chest-tile,
+.chest-card {
   box-sizing: border-box;
   background: none !important;
   border-style: solid !important;
@@ -51,7 +54,24 @@ button.log {
 
 .kit-inset,
 .card.path,
-.look-preview {
+.look-preview,
+.wx-chip,
+.battle-status,
+.victory,
+.name-banner,
+.boss-intro,
+.move-banner,
+.guard-card,
+.mech-row,
+.combo-tip,
+.status-tip,
+.reel,
+.stat,
+.dock,
+.mini,
+.mon-card.slot,
+.daily-day,
+[data-act="craft"] {
   box-sizing: border-box;
   background: none !important;
   border-style: solid !important;
@@ -68,7 +88,10 @@ button.log {
 }
 
 .kit-card,
-.continue-card {
+.continue-card,
+.mon-card,
+.chest-tile,
+.chest-card {
   border-image-source: var(--kit-panel-card) !important;
   border-image-slice: 72 fill !important;
   border-image-width: 40px !important;
@@ -78,7 +101,8 @@ button.log {
 .sheet,
 .modal,
 .more-sheet,
-.lang-sheet {
+.lang-sheet,
+.filter-body {
   box-sizing: border-box;
   background: none !important;
   border-style: solid !important;
@@ -96,7 +120,11 @@ button.log {
 
 .kit-row,
 .more-sheet button,
-.grip {
+.grip,
+.sight-row,
+.rate-list li,
+.rate-list summary,
+.wheel-stage + .menu-scroll .shop-row {
   box-sizing: border-box;
   background: none !important;
   border-style: solid !important;
@@ -140,7 +168,7 @@ button.log {
 
 /* Knöpfe. Gold ist hell, deshalb dunkle Schrift. Die übrigen farbigen Knöpfe tragen die Kontur. */
 .kit-btn,
-.primary:not(.shop-buy):not(.challenge-fab):not([data-act="spin"]),
+.primary:not(.shop-buy):not(.challenge-fab):not([data-act="spin"]):not([data-act="buy-hort"]):not([data-act="chest-claim"]):not([data-act="activity"]),
 .ghost,
 .danger,
 .home-back,
@@ -149,8 +177,16 @@ button.log {
 .choice-row button,
 .menu button,
 .text-btn,
-.card.panel > button:not(.primary),
-.menu-dock > button:not(.tab) {
+.card.panel > button:not(.primary):not([data-act="craft"]),
+.menu-dock > button:not(.tab):not([data-act="activity"]):not([data-act="spin"]):not([data-act="buy-hort"]):not([data-act="chest-claim"]),
+.challenge-fab,
+.primary[data-act="spin"],
+.primary[data-act="buy-hort"],
+.primary[data-act="chest-claim"],
+.chest-info,
+.filter-body button,
+.list-actions button,
+.is-menu .row-actions button:not(.primary) {
   box-sizing: border-box;
   background: none !important;
   border-style: solid !important;
@@ -168,7 +204,11 @@ button.log {
   font-family: var(--ui-font);
   font-weight: 700;
 }
-.primary:not(.shop-buy):not(.challenge-fab):not([data-act="spin"]),
+.menu-dock > button:not(.tab):not([data-act="activity"]):not([data-act="spin"]):not([data-act="buy-hort"]):not([data-act="chest-claim"]) {
+  border-width: 8px 10px !important;
+  border-image-width: 14px 16px !important;
+}
+.primary:not(.shop-buy):not(.challenge-fab):not([data-act="spin"]):not([data-act="buy-hort"]):not([data-act="chest-claim"]):not([data-act="activity"]),
 .starter-card.is-on .starter-choose,
 .lang-sheet button.primary,
 .home-bar .primary,
@@ -180,14 +220,18 @@ button.log {
   border-image-source: var(--kit-button-danger-normal) !important;
 }
 .kit-btn-gold,
-.primary.kit-gold {
+.primary.kit-gold,
+.challenge-fab,
+.menu-dock > .primary[data-act="spin"],
+.menu-dock > .primary[data-act="buy-hort"],
+.primary[data-act="chest-claim"] {
   border-image-source: var(--kit-button-gold-normal) !important;
   color: var(--ink) !important;
   text-shadow: none !important;
 }
 
 @media (hover: hover) {
-  .primary:not(.shop-buy):not(.challenge-fab):not([data-act="spin"]):hover,
+  .primary:not(.shop-buy):not(.challenge-fab):not([data-act="spin"]):not([data-act="buy-hort"]):not([data-act="chest-claim"]):not([data-act="activity"]):hover,
   .home-bar .primary:hover { border-image-source: var(--kit-button-primary-hover) !important; }
   .ghost:hover,
   .home-back:hover,
@@ -195,16 +239,24 @@ button.log {
   .starter-choose:hover,
   .choice-row button:not(.primary):hover { border-image-source: var(--kit-button-secondary-hover) !important; }
   .danger:hover { border-image-source: var(--kit-button-danger-hover) !important; }
+  .challenge-fab:hover,
+  .primary[data-act="spin"]:hover,
+  .primary[data-act="buy-hort"]:hover,
+  .primary[data-act="chest-claim"]:hover { border-image-source: var(--kit-button-gold-hover) !important; }
 }
-.primary:not(.shop-buy):not(.challenge-fab):not([data-act="spin"]):active,
+.primary:not(.shop-buy):not(.challenge-fab):not([data-act="spin"]):not([data-act="buy-hort"]):not([data-act="chest-claim"]):not([data-act="activity"]):active,
 .home-bar .primary:active { border-image-source: var(--kit-button-primary-pressed) !important; }
 .ghost:active,
 .home-back:active,
 .door-new:active,
 .choice-row button:not(.primary):active { border-image-source: var(--kit-button-secondary-pressed) !important; }
 .danger:active { border-image-source: var(--kit-button-danger-pressed) !important; }
-.primary:not(.shop-buy):not(.challenge-fab):not([data-act="spin"]):disabled,
-.primary:not(.shop-buy):not(.challenge-fab):not([data-act="spin"])[aria-disabled="true"],
+.challenge-fab:active,
+.primary[data-act="spin"]:active,
+.primary[data-act="buy-hort"]:active,
+.primary[data-act="chest-claim"]:active { border-image-source: var(--kit-button-gold-pressed) !important; }
+.primary:not(.shop-buy):not(.challenge-fab):not([data-act="spin"]):not([data-act="buy-hort"]):not([data-act="chest-claim"]):disabled,
+.primary:not(.shop-buy):not(.challenge-fab):not([data-act="spin"]):not([data-act="buy-hort"]):not([data-act="chest-claim"])[aria-disabled="true"],
 .home-bar .primary:disabled,
 .danger:disabled {
   border-image-source: var(--kit-button-primary-disabled) !important;
@@ -227,7 +279,10 @@ button.log {
 .kit-icon,
 .dice:not(.look-dice),
 .lang-chip,
-.cloud-chip {
+.cloud-chip,
+.speed button,
+.status-mark,
+.combo-mark {
   box-sizing: border-box;
   border: 0 !important;
   border-radius: 0 !important;
@@ -239,7 +294,10 @@ button.log {
 }
 .dice:not(.look-dice):active,
 .lang-chip:active,
-.cloud-chip:active { background-image: var(--kit-button-icon-pressed) !important; }
+.cloud-chip:active,
+.speed button.on,
+.status-mark:active,
+.combo-mark:active { background-image: var(--kit-button-icon-pressed) !important; }
 
 /* Leisten */
 .kit-hud,
@@ -277,7 +335,8 @@ button.log {
 
 .kit-header,
 .chapter-line,
-.home-hero {
+.home-hero,
+.filter-bar {
   box-sizing: border-box;
   background-color: transparent !important;
   border-style: solid !important;
@@ -305,7 +364,8 @@ button.log {
 
 .kit-tabbar,
 .tabbar,
-.home-bar {
+.home-bar,
+.menu-dock {
   box-sizing: border-box;
   background: none !important;
   border-style: solid !important;
@@ -319,7 +379,8 @@ button.log {
   border-image-repeat: stretch !important;
 }
 .kit-tab,
-.tab {
+.tab,
+[data-act="activity"] {
   box-sizing: border-box;
   background: none !important;
   border-style: solid !important;
@@ -337,7 +398,8 @@ button.log {
   height: auto;
 }
 .tab.active,
-.kit-tab.on {
+.kit-tab.on,
+[data-act="activity"].primary {
   border-image-source: var(--kit-tab-active) !important;
   color: var(--ink) !important;
   font-weight: 700;
@@ -348,7 +410,12 @@ button.log {
 .kit-chip,
 .look-choice,
 .look-dice,
-.starter-chip {
+.starter-chip,
+.synergy-pick,
+.synergy-auto,
+.daily-frame-btn,
+.konter-label,
+.forecast .now {
   box-sizing: border-box;
   background: none !important;
   border-style: solid !important;
@@ -441,7 +508,12 @@ select {
 
 .kit-track,
 .boot-track,
-.starter-track {
+.starter-track,
+.progress-track,
+.bar-exp,
+.hp,
+.ult,
+.mini .bar {
   box-sizing: border-box;
   height: 36px;
   border-radius: 0 !important;
@@ -456,7 +528,12 @@ select {
   border-image-repeat: stretch !important;
 }
 .boot-track span,
-.starter-track span {
+.starter-track span,
+.progress-track span,
+.bar-exp span,
+.hp span,
+.ult::before,
+.mini .bar span {
   box-sizing: border-box;
   height: 100%;
   border-radius: 0 !important;
@@ -470,7 +547,12 @@ select {
   border-image-repeat: stretch !important;
   min-width: 20px;
 }
-.starter-track span { border-image-source: var(--kit-progress-fill-green) !important; }
+.starter-track span,
+.combatant.ally .hp span,
+.mini .bar span { border-image-source: var(--kit-progress-fill-green) !important; }
+.combatant.foe .hp span { border-image-source: var(--kit-progress-fill-red) !important; }
+.ult::before { border-image-source: var(--kit-progress-fill-purple) !important; }
+.bar-exp span { border-image-source: var(--kit-progress-fill-blue) !important; }
 
 .shop-row,
 .fruit-row,
@@ -526,6 +608,69 @@ select {
   height: 48px !important;
   border-radius: 0 !important;
   background: var(--kit-dialog-grab) center / contain no-repeat !important;
+}
+
+/* PR B: nur die Bildquelle und die vorhandene Schriftfarbe tauschen. */
+.wx-chip,
+.battle-status,
+.name-banner,
+.boss-intro,
+.move-banner,
+.guard-card,
+.mech-row,
+.combo-tip,
+.status-tip {
+  border-image-source: var(--kit-panel-glass) !important;
+  color: var(--ink-light) !important;
+  text-shadow: var(--ink-shadow) !important;
+}
+.victory {
+  border-image-source: var(--kit-panel-glass) !important;
+  color: #ffd54f !important;
+  text-shadow: var(--ink-shadow) !important;
+}
+.dock,
+.daily-day,
+[data-act="craft"] {
+  border-image-source: var(--kit-panel-raised) !important;
+  color: var(--ink) !important;
+  text-shadow: none !important;
+}
+.mon-card.slot,
+.mini.is-empty { border-image-source: var(--kit-panel-inset) !important; }
+.mon-card.on,
+.mini.is-active,
+.daily-day.on,
+.synergy-pick.on,
+.synergy-auto.on,
+.daily-frame-btn.on,
+.forecast .now { border-image-source: var(--kit-panel-row-selected) !important; }
+.konter-label { border-image-source: var(--kit-badge-gold) !important; }
+.rate-list li:nth-child(even),
+.rate-list details:nth-child(even) { border-image-source: var(--kit-panel-row-alt) !important; }
+.codex-grid .mon-card:has(.sil) { opacity: 0.85; }
+.mon-card .muted,
+.chest-tile .muted,
+.synergy-pick span,
+.daily-task.done b { color: var(--ink-soft) !important; }
+.combo-tip::after,
+.status-tip::after {
+  content: '';
+  position: absolute;
+  left: 16px;
+  bottom: -34px;
+  width: 56px;
+  height: 36px;
+  background: var(--kit-panel-tooltip-tail) center / contain no-repeat;
+  pointer-events: none;
+}
+.challenge-fab:disabled,
+.primary[data-act="spin"]:disabled,
+.primary[data-act="buy-hort"]:disabled,
+.primary[data-act="chest-claim"]:disabled {
+  border-image-source: var(--kit-button-gold-disabled) !important;
+  color: #7d776c !important;
+  text-shadow: none !important;
 }
 
 .home:not(.is-door):not(.is-starter) .home-scroll { padding-bottom: 260px; }
