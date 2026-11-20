@@ -68,6 +68,29 @@ export function grantFindChest(save: SaveV2, paced = false): number {
   return addChest(save, 'kiesel', bankAdd(save, 'findChest', pacedBase(save, 1, 'chest')))
 }
 
+const FIND_CLAIM_CAP = 64
+
+/** `region:chapter:step`. One paid find stays marked until that chapter starts a new lap. */
+export function findNodeKey(save: Pick<SaveV2, 'region' | 'chapter' | 'step'>): string {
+  return `${save.region}:${save.chapter}:${save.step}`
+}
+
+/** Pay the find once. A later visit in the same lap, including after a defeat, pays nothing. */
+export function claimFindChest(save: SaveV2, paced = false): number {
+  const key = findNodeKey(save)
+  const claims = save.findClaims ?? []
+  if (claims.includes(key)) return 0
+  save.findClaims = [...claims, key].slice(-FIND_CLAIM_CAP)
+  return grantFindChest(save, paced)
+}
+
+/** The chapter finished a lap, so its find may pay again. Defeats do not call this. */
+export function releaseFindClaims(save: SaveV2, chapterId = save.chapter): void {
+  const prefix = `${save.region}:${chapterId}:`
+  if (!save.findClaims?.length) return
+  save.findClaims = save.findClaims.filter((key) => !key.startsWith(prefix))
+}
+
 export function grantTrainerChest(save: SaveV2, rng: () => number, paced = false): boolean {
   if (!paced) {
     if (rng() >= file.trainerSilver) return false

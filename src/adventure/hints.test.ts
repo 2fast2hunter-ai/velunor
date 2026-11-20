@@ -18,7 +18,7 @@ describe('goal and hints', () => {
     expect(goalLine(save, 'Wiesenpfad').key).toBe('goal.win')
     save.stats.wins = 1
     save.chests.kiesel = 2
-    expect(goalLine(save, 'Wiesenpfad').key).toBe('goal.chest')
+    expect(goalLine(save, 'Wiesenpfad')).toEqual({ key: 'goal.chest', n: 2 })
     save.stats.chestsOpened = 1
     save.team = ['a', 'b']
     save.step = 3

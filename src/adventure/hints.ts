@@ -27,7 +27,7 @@ export function goalLine(save: SaveV2, chapterName: string): GoalLine {
   const fresh = save.onboarding?.done !== true
   const wins = save.stats?.wins ?? 0
   if (fresh && wins <= 0) return { key: 'goal.win' }
-  if (fresh && (save.stats?.chestsOpened ?? 0) <= 0 && (save.chests?.kiesel ?? 0) > 0) return { key: 'goal.chest' }
+  if (fresh && (save.stats?.chestsOpened ?? 0) <= 0 && (save.chests?.kiesel ?? 0) > 0) return { key: 'goal.chest', n: save.chests.kiesel }
   if (fresh && save.team.length < 2) return { key: 'goal.buddy' }
   if (save.region === 1 && save.chapter === 1 && save.step < 7) return { key: 'goal.spring', n: save.step }
   if (save.region === 1 && save.chapter === 1 && save.step < 14) return { key: 'goal.road', n: 14 }
