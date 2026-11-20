@@ -12,6 +12,7 @@ import { t } from './i18n'
 import { normalizeTreeNodes } from './tree'
 import { SYNERGY_CAP, synergyKnown } from './synergyIds'
 import { readLook } from './avatar'
+import { freshOnboarding, normalizeOnboarding } from './onboarding'
 import type { AdventureSettings, AvatarLook, OwnedMon, SaveV2, StorageLike } from './types'
 
 interface LegacyMon {
@@ -118,7 +119,8 @@ export function blankSave(now: number): SaveV2 {
     equippedTitle: null,
     equippedFrame: null,
     pendingAwaken: [],
-    tree: { nodes: [], resetDay: '', sealDay: '' }
+    tree: { nodes: [], resetDay: '', sealDay: '' },
+    onboarding: freshOnboarding(false)
   }
 }
 
@@ -247,6 +249,7 @@ export function normalize(save: SaveV2, now: number): SaveV2 {
   // 10 adds the research tower. Older files get an empty tower and keep every monster.
   // 11 adds daily tasks and the 7-day calendar. Older files get an empty board and keep every monster.
   // 12 reprices the mastery tree. Bought nodes stay. The cheaper costs free the difference.
+  // 13 adds the first-30-minutes board. A veteran skips the entrance. Stored chests stay as they are.
   // Older files keep every stored value. Missing setting fields take the defaults.
   const seenVersion = Math.max(0, Math.floor(Number(save.saveVersion)) || 0)
   if (seenVersion < SAVE_VERSION) save.saveVersion = SAVE_VERSION
@@ -326,6 +329,7 @@ export function normalize(save: SaveV2, now: number): SaveV2 {
     save.nextId = Math.max(1, ...nums, 0) + 1
   }
   save.started = Boolean(save.started && Object.keys(save.mons).length)
+  save.onboarding = normalizeOnboarding(save.onboarding, save.started, save.badges, Object.keys(save.dex).length)
   save.loopsUntilRetry = Math.max(0, Math.floor(save.loopsUntilRetry) || 0)
   save.challengeNow = Boolean(save.challengeNow)
   save.guardMark = Math.max(0, Math.floor(Number(save.guardMark)) || 0)

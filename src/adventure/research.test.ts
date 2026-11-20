@@ -138,7 +138,7 @@ describe('research tower', () => {
     expect(loaded?.saveVersion).toBe(SAVE_VERSION)
     expect(loaded?.research?.ranks.gold).toBe(0)
     expect(loaded?.research?.job).toBeNull()
-    expect(SAVE_VERSION).toBe(12)
+    expect(SAVE_VERSION).toBe(13)
     save.badges.push('Ratsiegel')
     const html = gameHtml(save, 'tower', 1_000, pc, dex, null, false, false, null)
     for (const line of RESEARCH_LINES) expect(html).toContain(`data-art="tower/${line}"`)

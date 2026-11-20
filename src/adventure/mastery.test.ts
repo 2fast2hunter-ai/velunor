@@ -74,8 +74,8 @@ describe('species mastery', () => {
     save.mons[uid].lvl = 9
     delete save.mastery
     normalize(save, 2_000)
-    expect(SAVE_VERSION).toBe(12)
-    expect(save.saveVersion).toBe(12)
+    expect(SAVE_VERSION).toBe(13)
+    expect(save.saveVersion).toBe(13)
     expect(save.mastery).toEqual({})
     expect(save.mons[uid].lvl).toBe(9)
     expect(save.gold).toBeGreaterThan(0)

@@ -28,6 +28,7 @@ import { actionAt, battleQueueOn, focusKo, focusSide, focusTempo, hitNumberPhase
 import { battleLogFromTraces, lineFor, lineForFrame, logIconFile, rememberBattleLog, type BattleFightLog, type BattleLogLine } from './battleLog'
 import { hpLabel, typeEdge, weatherPct } from './battleHud'
 import { whyAutoMs, whyBattle, whyIconFile } from './battleWhy'
+import { rememberTutorial, TUTORIAL_STEP } from './onboarding'
 import { roadPaceFromSearch, setRoadPace } from './roadPace'
 import { species, typeColor, typeMult, typeName } from '../data'
 import { teamWeatherMarks, weatherArrow, weatherAt, WEATHER_SHIFTS } from './weather'
@@ -172,7 +173,7 @@ let cloud: CloudController | null = null
 let cloudReady = false
 let cloudLanded = false
 let cloudReplaced = false
-let tutorialNoted = 0
+const tutorialPending = new Set<number>()
 let cloudView: CloudView = {
   status: 'offline',
   consent: 'unset',
@@ -317,9 +318,13 @@ function cloudBlocks(): boolean {
 }
 
 function noteTutorial(step: number): void {
-  if (step <= tutorialNoted) return
-  tutorialNoted = step
-  cloud?.track('tutorial_step', { step })
+  const board = save?.onboarding
+  const prior = board ? board.sent : [...tutorialPending]
+  const next = rememberTutorial(prior, step)
+  if (!next.send) return
+  if (board) board.sent = next.sent
+  else tutorialPending.add(Math.floor(step))
+  cloud?.track('tutorial_step', { step: Math.floor(step) })
 }
 
 function mountCloudLayer(): void {
@@ -1098,7 +1103,7 @@ function showOnboarding(): void {
     draftLook = pickLook(Math.random)
   }
   document.documentElement.lang = draftLang
-  noteTutorial(draftStep === 'starter' ? 2 : 1)
+  noteTutorial(draftStep === 'starter' ? TUTORIAL_STEP.starter : TUTORIAL_STEP.name)
   paint(onboardingHtml(draftName, draftLook, draftPick, draftLang, draftStep, draftLangOpen))
   if (draftStep === 'starter') {
     bindStarterScroller()
@@ -1249,7 +1254,12 @@ async function start(next: SaveV2, intro = false): Promise<void> {
   localStorage.removeItem(RESET_FLAG)
   if (intro) {
     localStorage.setItem(REPLACE_SERVER_KEY, '1')
-    noteTutorial(3)
+    if (save.onboarding) {
+      for (const step of tutorialPending) {
+        save.onboarding.sent = rememberTutorial(save.onboarding.sent, step).sent
+      }
+    }
+    noteTutorial(TUTORIAL_STEP.started)
   }
   try { writeSave(gameStore, save) } catch { /* ignore */ }
   if (intro) void cloud?.sync('online')

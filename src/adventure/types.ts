@@ -193,6 +193,8 @@ export interface SaveV2 {
   research?: ResearchSave
   /** Daily tasks and the 7-day calendar. Missing on older files; the loader fills an empty board. */
   daily?: DailySave
+  /** First 30 minutes. Missing on older files; the loader fills it. A veteran skips the entrance. */
+  onboarding?: import('./onboarding').OnboardingState
 }
 
 export type ResearchLineId = 'gold' | 'ep' | 'offline' | 'expedition' | 'egg' | 'shard'
