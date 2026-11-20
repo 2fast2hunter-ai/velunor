@@ -10275,6 +10275,7 @@ function expeditionGold(level2, hours, tier) {
 // src/adventure/online/check.ts
 var PLAUSIBILITY_BUFFER = 1.2;
 var SPEED3_MS = 930;
+var REWARD_PACE_CAP = 3.5;
 var COIN_BONUS = 1.25;
 var LEARN_BONUS = 1.25;
 var TRAINER_PARTY = 3;
@@ -10305,7 +10306,8 @@ function allowedGold(elapsedMs, region, chapter, goldMult = 1) {
   const per = TRAINER_GOLD_PER_LEVEL * TRAINER_PARTY * level2 * COIN_BONUS;
   const crest = (1e3 + 750 * level2) * COIN_BONUS;
   const mult = Math.max(1, Math.min(1.1 * 1.3, goldMult));
-  return Math.ceil((encounters(elapsedMs) * per + crest) * PLAUSIBILITY_BUFFER * mult);
+  const road = encounters(elapsedMs) * per * REWARD_PACE_CAP;
+  return Math.ceil((road + crest) * PLAUSIBILITY_BUFFER * mult);
 }
 function allowedEp(elapsedMs, region, chapter, epMult = 1) {
   const level2 = reachLevel(region, chapter);
@@ -10313,28 +10315,28 @@ function allowedEp(elapsedMs, region, chapter, epMult = 1) {
   const team = 1 * 1.3 * LEARN_BONUS + 5 * 0.5 * LEARN_BONUS;
   const hort = 4 * 0.3 * LEARN_BONUS;
   const mult = Math.max(1, Math.min(1.3, epMult));
-  return Math.ceil(encounters(elapsedMs) * base * (team + hort) * PLAUSIBILITY_BUFFER * mult);
+  return Math.ceil(encounters(elapsedMs) * REWARD_PACE_CAP * base * (team + hort) * PLAUSIBILITY_BUFFER * mult);
 }
 function countedOffline(elapsedMs, capMs = OFFLINE_CAP_MS) {
   const cap = Math.min(12 * 60 * 60 * 1e3, Math.max(OFFLINE_CAP_MS, capMs));
   return Math.min(Math.max(0, elapsedMs), cap);
 }
-function fightCeiling(elapsedMs, capMs = OFFLINE_CAP_MS) {
+function rewardFights(elapsedMs, capMs = OFFLINE_CAP_MS) {
   const offline = Math.floor(countedOffline(elapsedMs, capMs) / BASE_ENCOUNTER_MS);
-  const online = Math.ceil(Math.max(0, elapsedMs) / SPEED3_MS);
+  const online = Math.ceil(Math.max(0, elapsedMs) / SPEED3_MS) * REWARD_PACE_CAP;
   return Math.max(offline, online, 1);
 }
 function allowedChests(elapsedMs, capMs = OFFLINE_CAP_MS) {
   const road = Math.floor(countedOffline(elapsedMs, capMs) / 6e4) + 5;
   const shop = Math.max(1, Math.ceil(Math.max(elapsedMs, 1) / 864e5)) * 10;
-  return Math.min(99 * 4 + 5, Math.ceil((fightCeiling(elapsedMs, capMs) + road + shop) * PLAUSIBILITY_BUFFER));
+  return Math.min(99 * 4 + 5, Math.ceil((rewardFights(elapsedMs, capMs) + road + shop) * PLAUSIBILITY_BUFFER));
 }
 function allowedShards(elapsedMs, capMs = OFFLINE_CAP_MS, yieldMult = 1) {
   const mult = Math.max(1, Math.min(1.3, yieldMult));
-  return Math.ceil(fightCeiling(elapsedMs, capMs) * PLAUSIBILITY_BUFFER * mult);
+  return Math.ceil(rewardFights(elapsedMs, capMs) * PLAUSIBILITY_BUFFER * mult);
 }
 function allowedMastery(elapsedMs, capMs = OFFLINE_CAP_MS) {
-  const fights = fightCeiling(elapsedMs, capMs);
+  const fights = rewardFights(elapsedMs, capMs);
   const bosses = Math.ceil(fights / 6);
   const dupes2 = Math.ceil(countedOffline(elapsedMs, capMs) / 6e4);
   return Math.ceil((fights + bosses * 5 + dupes2 * 10) * PLAUSIBILITY_BUFFER);
