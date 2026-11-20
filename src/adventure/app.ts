@@ -24,6 +24,7 @@ import {
 import { chatErrorKey } from './chat'
 import { t, type Lang } from './i18n'
 import { shotAt, shouldRecover } from './present'
+import { actionAt, battleQueueOn, planBattle, roadQueueFromSearch, roadTempo, setRoadQueue, shotFromAction } from './battlePlayer'
 import { species, typeColor } from '../data'
 import { teamWeatherMarks, weatherArrow, weatherAt } from './weather'
 import { ultName } from './ult'
@@ -541,6 +542,7 @@ export function bootAdventure(shell?: { storage: ShellStorage, native: boolean, 
   })
 
   const params = new URLSearchParams(window.location.search)
+  setRoadQueue(roadQueueFromSearch(debug, window.location.search) ? true : null)
   const fxDemo = params.get('fx')
   if (debug && fxDemo === 'k8') {
     showK8Demo(params.get('part'))
@@ -2197,7 +2199,12 @@ function play(outcome: EncounterOutcome, speed: Speed, done: () => void): void {
     raf = 0
     done()
   }
-  const dur = encounterMs(speed)
+  const catching = Boolean(outcome.catch)
+  const roadOn = battleQueueOn('road') && (outcome.kind === 'wild' || outcome.kind === 'trainer')
+  const roadPlan = roadOn ? planBattle(outcome.traces, 'road', roadTempo(speed, save?.settings.tempoWeg)) : null
+  const roadEnd = roadPlan?.length ? roadPlan[roadPlan.length - 1].start + roadPlan[roadPlan.length - 1].dur : 0
+  const floor = encounterMs(speed)
+  const dur = roadPlan ? Math.max(floor, roadEnd) + (catching ? Math.round(floor * 0.46) : 0) : floor
   let backstop = 0
   const finishOnce = () => {
     window.clearTimeout(backstop)
@@ -2250,8 +2257,8 @@ function play(outcome: EncounterOutcome, speed: Speed, done: () => void): void {
   let shakeStart = 0
   let shakeFor = 0
   let shakePx = 0
-  const catching = Boolean(outcome.catch)
-  const battleEnd = catching ? dur * 0.54 : dur
+  const battleEnd = roadPlan ? (catching ? roadEnd : dur) : catching ? dur * 0.54 : dur
+  let roadShown = -1
   let prevAlly: number | null = null
   let prevFoe: number | null = null
   let hitAt = -1
@@ -2268,10 +2275,21 @@ function play(outcome: EncounterOutcome, speed: Speed, done: () => void): void {
     }
     drawnAt = now
     try {
+      if (roadPlan) noteProgress()
       let motion = now - started
       if (frozen >= 0) motion = frozen
       const elapsed = frozen >= 0 || !(scriptAt > 0) ? motion : Math.max(0, motion - scriptAt)
-      const shot = shotAt(outcome.traces, Math.min(elapsed, battleEnd), battleEnd)
+      const roadStep = roadPlan ? actionAt(roadPlan, Math.min(elapsed, roadEnd)) : null
+      let armFx = false
+      if (roadPlan && roadStep) {
+        const stepIndex = roadPlan.indexOf(roadStep)
+        if (stepIndex !== roadShown) {
+          roadShown = stepIndex
+          window.clearTimeout(impactTimer)
+          armFx = roadStep.fx
+        }
+      }
+      const shot = roadStep ? shotFromAction(outcome.traces, roadStep) : shotAt(outcome.traces, Math.min(elapsed, battleEnd), battleEnd)
       if (holdCounter && shot?.counter) {
         if (counterAt < 0) counterAt = elapsed
         if (frozen < 0 && elapsed - counterAt >= 320) frozen = elapsed
@@ -2279,7 +2297,9 @@ function play(outcome: EncounterOutcome, speed: Speed, done: () => void): void {
       if (shot && allyHp && foeHp) {
         allyHp.style.width = `${(shot.allyHp / shot.allyMax) * 100}%`
         foeHp.style.width = `${(shot.foeHp / shot.foeMax) * 100}%`
-        const dropped = (prevAlly != null && shot.allyHp < prevAlly) || (prevFoe != null && shot.foeHp < prevFoe)
+        const dropped = roadPlan
+          ? armFx
+          : ((prevAlly != null && shot.allyHp < prevAlly) || (prevFoe != null && shot.foeHp < prevFoe))
         if (dropped) {
           hitAt = elapsed
           const hit = shot.hits.find((row) => row.ult) ?? shot.hits.find((row) => row.kind === 'hit') ?? shot.hits[0]
@@ -2291,8 +2311,10 @@ function play(outcome: EncounterOutcome, speed: Speed, done: () => void): void {
             playBattleFx({ type: hit.type, crit: hit.crit, band: hit.band, awaken: Boolean(hit.awaken), shimmer: Boolean(outcome.shiny), reduced, tempo: speed, from, to, kind: hit.kind, ult: Boolean(hit.ult) })
             const attackerId = hit.from === 'ally' ? shot.allySpecies : shot.foeSpecies
             const struck = hit.from === 'ally' ? foeActor : allyActor
-            const travel = hit.kind === 'hit' ? effectTiming(hit.type, speed).travelMs : 0
-              if (hit.kind === 'hit' || hit.ult) showMove(hit.ult ? ultName(hit.ult) : attackTitle(attackerId, hit.type), hit.from === 'ally' ? allyActor : foeActor, k)
+            const rawTravel = hit.kind === 'hit' ? effectTiming(hit.type, speed).travelMs : 0
+            const travel = roadStep?.fx ? Math.min(rawTravel, Math.max(0, Math.round(roadStep.dur * 0.45))) : rawTravel
+            const keyMove = Boolean(hit.crit || hit.ko || hit.ult || hit.kind === 'status' || hit.helper || hit.pulse)
+            if ((hit.kind === 'hit' || hit.ult) && (!roadPlan || keyMove)) showMove(hit.ult ? ultName(hit.ult) : attackTitle(attackerId, hit.type), hit.from === 'ally' ? allyActor : foeActor, k)
             window.clearTimeout(impactTimer)
             impactTimer = window.setTimeout(() => {
               if (gen !== playGen || !hit) return
@@ -2308,7 +2330,7 @@ function play(outcome: EncounterOutcome, speed: Speed, done: () => void): void {
                 const picture = struck.querySelector('img')
                 if (picture instanceof HTMLImageElement) picture.style.animationDuration = `${RECOIL_MS * k}ms`
               }
-              if (save?.settings.shake && hit.kind === 'hit') {
+              if (save?.settings.shake && hit.kind === 'hit' && (!roadPlan || hit.crit || hit.ult)) {
                 const spec = hit.ult ? bossUltShake({ speed, reduced }) : cameraShake(hitGrade(hit.band, hit.crit), 'hit', { speed, reduced })
                 shakeStart = performance.now() - started
                 shakeFor = spec.ms

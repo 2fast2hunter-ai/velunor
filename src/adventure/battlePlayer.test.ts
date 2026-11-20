@@ -1,7 +1,9 @@
 import { readFileSync } from 'node:fs'
 import { describe, expect, it } from 'vitest'
 import type { FightFrame, FightHit, FightTrace } from './battle'
-import { activeFx, BATTLE_QUEUE, battleQueueOn, planBattle, zugDauer } from './battlePlayer'
+import { beginAdventure, loadAdventure, writeSave } from './save'
+import type { StorageLike } from './types'
+import { actionAt, activeFx, BATTLE_QUEUE, battleQueueOn, planBattle, roadQueueFromSearch, roadTempo, setRoadQueue, shotFromAction, zugDauer } from './battlePlayer'
 
 function hit(over: Partial<FightHit> = {}): FightHit {
   return { from: 'ally', amount: 10, crit: false, type: 'fire', band: 'neutral', ko: false, kind: 'hit', ...over }
@@ -25,9 +27,21 @@ describe('battle queue', () => {
     expect(BATTLE_QUEUE.focus).toBe(false)
     expect(battleQueueOn('road')).toBe(false)
     expect(battleQueueOn('focus')).toBe(false)
+    expect(roadQueueFromSearch(false, '?debug=1&roadQueue=1')).toBe(false)
+    expect(roadQueueFromSearch(true, '?roadQueue=1')).toBe(true)
+    expect(roadQueueFromSearch(true, '?debug=1')).toBe(false)
+    setRoadQueue(true)
+    expect(battleQueueOn('road')).toBe(true)
+    expect(BATTLE_QUEUE.road).toBe(false)
+    setRoadQueue(null)
+    expect(battleQueueOn('road')).toBe(false)
+    expect(roadTempo(3)).toBe(3)
+    expect(roadTempo(3, 1)).toBe(1)
     const app = readFileSync(new URL('./app.ts', import.meta.url), 'utf8')
     expect(app).toContain('shotAt(outcome.traces')
-    expect(app).not.toContain('planBattle(')
+    expect(app).toContain("battleQueueOn('road')")
+    expect(app).toContain("outcome.kind === 'wild' || outcome.kind === 'trainer'")
+    expect(BATTLE_QUEUE.road).toBe(false)
   })
 
   it('prices road pieces from the ×1 table and divides by tempo', () => {
@@ -61,8 +75,17 @@ describe('battle queue', () => {
     ])], 'road', 1)
     expect(road[0]).toMatchObject({ phase: 'ansage', dur: 300, fx: false })
     expect(road.slice(1, 8).map((step) => step.dur)).toEqual([450, 450, 450, 450, 450, 450, 250])
+    const duo = trace([frame([hit({ amount: 4 }), hit({ amount: 9, from: 'foe' })])])
+    const steps = planBattle([duo], 'road', 1)
+    const firstHit = steps.find((step) => step.hitIndex === 0)
+    const secondHit = steps.find((step) => step.hitIndex === 1)
+    expect(firstHit && shotFromAction([duo], firstHit)?.hits.map((row) => row.amount)).toEqual([4])
+    expect(secondHit && shotFromAction([duo], secondHit)?.hits.map((row) => row.amount)).toEqual([9])
+    expect(actionAt(steps, 0)?.phase).toBe('zug')
     expect(road.at(-1)).toMatchObject({ phase: 'resultat' })
     expect(road.reduce((sum, step) => sum + step.dur, 0)).toBeGreaterThanOrEqual(2800)
+    expect(planBattle([trace([frame([hit()])])], 'road', 2).reduce((sum, step) => sum + step.dur, 0)).toBeGreaterThanOrEqual(1400)
+    expect(planBattle([trace([frame([hit()])])], 'road', 3).reduce((sum, step) => sum + step.dur, 0)).toBeGreaterThanOrEqual(930)
     for (let i = 1; i < road.length; i++) {
       expect(road[i].start).toBe(road[i - 1].start + road[i - 1].dur)
     }
@@ -75,6 +98,22 @@ describe('battle queue', () => {
     expect(bouts.map((step) => step.phase)).toContain('wechsel')
     expect(bouts.find((step) => step.phase === 'wechsel')?.dur).toBe(800)
     expect(bouts.filter((step) => step.fx).length).toBeGreaterThan(1)
+    const fresh = beginAdventure('Ada', { skin: 0, hair: 0, color: 0 }, 'm01', 1_000)
+    fresh.settings.speed = 2
+    const box: StorageLike = (() => {
+      const map = new Map<string, string>()
+      return { getItem: (key) => map.get(key) ?? null, setItem: (key, value) => { map.set(key, value) }, removeItem: (key) => { map.delete(key) } }
+    })()
+    writeSave(box, fresh)
+    const loaded = loadAdventure(box, 2_000)
+    expect(loaded?.settings.tempoWeg).toBeUndefined()
+    expect(roadTempo(loaded?.settings.speed ?? 1, loaded?.settings.tempoWeg)).toBe(2)
+    fresh.settings.tempoWeg = 1
+    fresh.settings.speed = 3
+    writeSave(box, fresh)
+    const kept = loadAdventure(box, 3_000)
+    expect(kept?.settings.tempoWeg).toBe(1)
+    expect(roadTempo(kept?.settings.speed ?? 1, kept?.settings.tempoWeg)).toBe(1)
     for (let i = 1; i < bouts.length; i++) {
       expect(bouts[i].start).toBe(bouts[i - 1].start + bouts[i - 1].dur)
     }
