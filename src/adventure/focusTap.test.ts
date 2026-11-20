@@ -111,6 +111,25 @@ describe('focus bar tap', () => {
         const page = await browser.newPage({ viewport, hasTouch: true })
         const port = server?.config.server.port ?? 5173
         await reachGuardian(page, `http://127.0.0.1:${port}/?debug=1`)
+        if (viewport.width === 390) {
+          const client = await page.context().newCDPSession(page)
+          await client.send('Emulation.setCPUThrottlingRate', { rate: 4 })
+          const gaps = await page.evaluate(() => new Promise<number[]>((resolve) => {
+            const stamps: number[] = []
+            let prev = performance.now()
+            const step = (now: number) => {
+              stamps.push(now - prev)
+              prev = now
+              if (stamps.length < 90) requestAnimationFrame(step)
+              else resolve(stamps)
+            }
+            requestAnimationFrame(step)
+          }))
+          await client.send('Emulation.setCPUThrottlingRate', { rate: 1 })
+          const fps = gaps.map((ms) => 1000 / Math.max(1, ms)).sort((a, b) => a - b)
+          const low = fps[Math.max(0, Math.floor(fps.length * 0.05))]
+          expect(low, `5% low ${low.toFixed(1)} fps`).toBeGreaterThanOrEqual(30)
+        }
         await assertClear(page)
         await page.locator('#battle-log').click()
         const sheet = page.locator('#battle-log-sheet:not([hidden])')

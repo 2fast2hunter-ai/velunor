@@ -111,7 +111,8 @@ export function numberAlpha(t: number): number {
 
 export function cameraShake(grade: HitGrade, kind: ImpactKind, opts: ImpactOpts): ShakeSpec {
   const base = kind === 'ult' ? SHAKE.ult : grade === 'crit' || grade === 'strong' ? SHAKE.heavy : SHAKE.normal
-  if (opts.reduced || opts.speed >= 3) return { ms: base.ms, px: base.px * 0.5 }
+  if (opts.reduced) return { ms: 0, px: 0 }
+  if (opts.speed >= 3) return { ms: base.ms, px: base.px * 0.5 }
   return { ...base }
 }
 
