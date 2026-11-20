@@ -1,9 +1,10 @@
 import { readFileSync } from 'node:fs'
 import { describe, expect, it } from 'vitest'
 import type { FightFrame, FightHit, FightTrace } from './battle'
+import { fitScale } from './const'
 import { beginAdventure, loadAdventure, writeSave } from './save'
 import type { StorageLike } from './types'
-import { actionAt, activeFx, BATTLE_QUEUE, battleQueueOn, planBattle, roadQueueFromSearch, roadTempo, setRoadQueue, shotFromAction, zugDauer } from './battlePlayer'
+import { actionAt, activeFx, BATTLE_QUEUE, battleQueueOn, focusKo, focusTempo, planBattle, roadQueueFromSearch, roadTempo, setRoadQueue, shotFromAction, zugDauer } from './battlePlayer'
 
 function hit(over: Partial<FightHit> = {}): FightHit {
   return { from: 'ally', amount: 10, crit: false, type: 'fire', band: 'neutral', ko: false, kind: 'hit', ...over }
@@ -24,9 +25,12 @@ function trace(frames: FightFrame[], over: Partial<FightTrace> = {}): FightTrace
 describe('battle queue', () => {
   it('stays off, so the live fight keeps today\'s clock', () => {
     expect(BATTLE_QUEUE.road).toBe(false)
-    expect(BATTLE_QUEUE.focus).toBe(false)
+    expect(BATTLE_QUEUE.focus).toBe(true)
     expect(battleQueueOn('road')).toBe(false)
-    expect(battleQueueOn('focus')).toBe(false)
+    expect(battleQueueOn('focus')).toBe(true)
+    expect(focusTempo(undefined)).toBe(1)
+    expect(focusTempo(2)).toBe(2)
+    expect(focusTempo(3)).toBe(1)
     expect(roadQueueFromSearch(false, '?debug=1&roadQueue=1')).toBe(false)
     expect(roadQueueFromSearch(true, '?roadQueue=1')).toBe(true)
     expect(roadQueueFromSearch(true, '?debug=1')).toBe(false)
@@ -41,6 +45,18 @@ describe('battle queue', () => {
     expect(app).toContain('shotAt(outcome.traces')
     expect(app).toContain("battleQueueOn('road')")
     expect(app).toContain("outcome.kind === 'wild' || outcome.kind === 'trainer'")
+    expect(app).toContain("battleQueueOn('focus') && outcome.kind === 'guardian'")
+    const view = readFileSync(new URL('./view.ts', import.meta.url), 'utf8')
+    const css = readFileSync(new URL('./adventure.css', import.meta.url), 'utf8')
+    expect(view).toContain('battle_ui/ko/leer_64.png')
+    expect(app).toContain('battle_ui/ko/voll_64.png')
+    expect(view).not.toContain('ko/leer_32')
+    expect(css).toContain('.ko-dots img { width: 64px; height: 64px; }')
+    expect(css).toContain('width: 128px;')
+    const phone = fitScale(390, 844)
+    expect((6 * 64 + 5 * 8) * phone).toBeLessThanOrEqual(390)
+    expect((4 * 128 + 3 * 12) * phone).toBeLessThanOrEqual(390)
+    expect(64 * phone).toBeGreaterThan(20)
     expect(BATTLE_QUEUE.road).toBe(false)
   })
 
@@ -114,6 +130,16 @@ describe('battle queue', () => {
     const kept = loadAdventure(box, 3_000)
     expect(kept?.settings.tempoWeg).toBe(1)
     expect(roadTempo(kept?.settings.speed ?? 1, kept?.settings.tempoWeg)).toBe(1)
+    expect(loaded?.settings.tempoFokus).toBeUndefined()
+    expect(focusTempo(loaded?.settings.tempoFokus)).toBe(1)
+    fresh.settings.tempoFokus = 2
+    writeSave(box, fresh)
+    expect(loadAdventure(box, 4_000)?.settings.tempoFokus).toBe(2)
+    const bouts4 = Array.from({ length: 4 }, () => trace([frame([hit()])], { foeKo: true }))
+    const focus = planBattle(bouts4, 'focus', 1)
+    expect(focus.filter((step) => step.phase === 'ansage')).toHaveLength(4)
+    expect(focusKo(bouts4, 2, 10)).toBe(2)
+    expect(focusKo(bouts4, 2, 0)).toBe(3)
     for (let i = 1; i < bouts.length; i++) {
       expect(bouts[i].start).toBe(bouts[i - 1].start + bouts[i - 1].dur)
     }

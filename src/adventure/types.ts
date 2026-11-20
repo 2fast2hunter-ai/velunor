@@ -42,6 +42,8 @@ export interface AdventureSettings {
   speed: Speed
   /** Road playback tempo. Missing on older saves, which keep `speed`. */
   tempoWeg?: Speed
+  /** Last focus tempo. Missing starts the next warden at 1x. */
+  tempoFokus?: 1 | 2
   autoSwitch: boolean
   catchCard: boolean
   shake: boolean

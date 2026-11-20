@@ -532,6 +532,50 @@ textarea { width: 100%; box-sizing: border-box; background: #121a30; color: inhe
   overflow: hidden;
   text-overflow: ellipsis;
 }
+.battle-status.is-callout {
+  min-height: 112px;
+  padding: 28px 36px;
+  border: 26px solid transparent;
+  border-radius: 36px;
+  background: rgba(255, 250, 240, 0.92) padding-box;
+  color: #4a2c17;
+  font-size: calc(42px * var(--font-scale, 1));
+  font-weight: 700;
+  line-height: 1.25;
+  white-space: normal;
+  overflow: visible;
+  text-overflow: clip;
+}
+.spotlight {
+  position: absolute;
+  left: 50%;
+  bottom: 8px;
+  width: 280px;
+  height: 140px;
+  transform: translateX(-50%);
+  z-index: 0;
+  pointer-events: none;
+}
+.combatant .sprite { position: relative; z-index: 1; }
+.focus-bar[hidden] { display: none; }
+.focus-bar {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 12px;
+  margin-top: 12px;
+}
+.ko-dots { display: flex; gap: 8px; }
+.ko-dots img { width: 64px; height: 64px; }
+.focus-tempo { display: flex; gap: 12px; }
+.focus-tempo button {
+  width: 128px;
+  height: 128px;
+  padding: 0;
+  border: 0;
+  background: transparent;
+}
+.focus-tempo img { width: 128px; height: 128px; display: block; }
 .challenge-fab {
   position: static;
   width: 100%;

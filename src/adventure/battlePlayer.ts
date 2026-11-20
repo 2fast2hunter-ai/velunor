@@ -2,8 +2,8 @@ import type { FightFrame, FightHit, FightTrace } from './battle'
 import { ENCOUNTER_MS, type Speed } from './const'
 import type { FrameShot } from './present'
 
-/** Road fights are A3. Focus fights are A6. Both stay off until those steps go live. */
-export const BATTLE_QUEUE = { road: false, focus: false } as const
+/** Road stays off until it ships with the pace switch and A5. Focus fights are live. */
+export const BATTLE_QUEUE = { road: false, focus: true } as const
 
 export type BattleArt = keyof typeof BATTLE_QUEUE
 
@@ -28,6 +28,27 @@ export function battleQueueOn(art: BattleArt): boolean {
 /** Missing `tempoWeg` keeps the speed the save already had. */
 export function roadTempo(speed: Speed, tempoWeg?: Speed | null): Speed {
   return tempoWeg === 1 || tempoWeg === 2 || tempoWeg === 3 ? tempoWeg : speed
+}
+
+/** Missing `tempoFokus` starts the next warden at 1x. 2x is the only faster step. */
+export function focusTempo(saved?: number | null): 1 | 2 {
+  return saved === 2 ? 2 : 1
+}
+
+/** KO dots already earned, including the foe who just dropped. */
+export function focusKo(traces: readonly FightTrace[], traceIndex: number, foeHp: number): number {
+  let n = 0
+  for (let i = 0; i < traceIndex && i < traces.length; i++) if (traces[i]?.foeKo) n += 1
+  if (foeHp <= 0) n += 1
+  return Math.min(6, n)
+}
+
+/** Who the spotlight stands under. An announcement uses the swing that follows it. */
+export function focusSide(traces: readonly FightTrace[], action: PlannedAction): 'ally' | 'foe' | null {
+  const frame = traces[action.traceIndex]?.frames[action.frameIndex]
+  const hit = action.hitIndex >= 0 ? frame?.hits?.[action.hitIndex] : frame?.hits?.[0]
+  if (!hit) return null
+  return hit.from
 }
 
 export type BattlePhase = 'ansage' | 'text' | 'zug' | 'aktion' | 'treffer' | 'ergebnis' | 'wechsel' | 'resultat'
