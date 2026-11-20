@@ -2357,6 +2357,8 @@ function paintFocusTempo(): void {
 }
 
 function showFocusChrome(): void {
+  const why = document.getElementById('why-chip')
+  if (why) why.hidden = true
   document.getElementById('focus-bar')?.removeAttribute('hidden')
   const text = document.getElementById('battle-text')
   if (text) {
@@ -2424,7 +2426,7 @@ function play(outcome: EncounterOutcome, speed: Speed, done: () => void): void {
       ? planBattle(outcome.traces, 'road', roadTempo(speed, save?.settings.tempoWeg))
       : null
   const queueEnd = queue?.length ? queue[queue.length - 1].start + queue[queue.length - 1].dur : 0
-  const floor = encounterMs(speed)
+  const floor = encounterMs(speed) + (focusOn ? 0 : 80)
   const dur = focusOn ? queueEnd : queue ? Math.max(floor, queueEnd) + (catching ? Math.round(floor * 0.46) : 0) : floor
   let skipped = false
   let backstop = 0

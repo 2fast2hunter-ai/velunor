@@ -216,8 +216,21 @@ async function assertClear(page: Page): Promise<void> {
   const weather = await box(page, '#wx-chip')
   const banner = await box(page, '#name-banner')
   const log = await box(page, '#battle-log')
+  const allySprite = await box(page, '#ally-sprite')
   expect(bar).toBeTruthy()
   if (bar && log && log.width > 2) expect(overlaps(bar, log), 'focus bar covers the battle log').toBe(false)
+  if (allySprite && allySprite.width > 8 && log && log.width > 2) expect(overlaps(allySprite, log), 'battle log covers the ally').toBe(false)
+  expect(await page.locator('#why-chip').getAttribute('hidden'), 'road reason chip stays in focus').not.toBeNull()
+  await page.evaluate(() => {
+    const line = document.getElementById('battle-log-text')
+    if (line) line.textContent = 'Der Gegner hat zuerst geschlagen, und der Satz läuft über die ganze Zeile weiter.'
+  })
+  const longLog = await box(page, '#battle-log')
+  if (allySprite && allySprite.width > 8 && longLog && longLog.width > 2) expect(overlaps(allySprite, longLog), 'long log covers the ally').toBe(false)
+  if (weather && weather.width > 4) {
+    const callout = await box(page, '#battle-text')
+    if (callout && callout.width > 8) expect(overlaps(callout, weather), 'status line covers the weather chip').toBe(false)
+  }
   const allyName = await box(page, '#ally-name')
   const allyHp = await box(page, '#ally-hp-num')
   if (bar && allyName && allyName.width > 8) expect(overlaps(bar, allyName), 'focus bar covers the ally name').toBe(false)
