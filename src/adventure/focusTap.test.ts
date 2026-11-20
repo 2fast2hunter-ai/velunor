@@ -538,7 +538,7 @@ describe('focus bar tap', () => {
             lines.push(`${Math.round(now - (start || begun))}:${line.slice(0, 70)}`)
             const origin = Number(document.getElementById('battle')?.getAttribute('data-fight-at') || 0)
             const from = origin > 0 ? origin : start
-            if (from && !tip && /Quelle|spring/i.test(line)) tip = Math.round(now - from)
+            if (from && !tip && /Quelle|spring|Tempo schlägt|speed strikes/i.test(line)) tip = Math.round(now - from)
             else if (tip && from) finish(Math.round(now - from))
           }
           if (now - begun > 20_000) finish(tip)

@@ -1377,6 +1377,46 @@ a.ghost { color: inherit; text-decoration: none; display: inline-block; }
 .hud .wx { width: 36px; height: 36px; }
 .hud .wx img { width: 36px; height: 36px; }
 
+.anchor-mid { position: relative; }
+.is-adventure:has(#goal-chip) #battle-text { visibility: hidden; }
+.goal-chip {
+  position: absolute;
+  z-index: 12;
+  top: 8px;
+  left: 16px;
+  right: 16px;
+  margin: 0;
+  min-height: 56px;
+  padding: 8px 20px;
+  border-radius: 28px;
+  background: rgba(8, 12, 24, 0.82);
+  color: #fff8e1;
+  font-size: 40px;
+  font-weight: 800;
+  line-height: 1.15;
+  text-align: center;
+  pointer-events: none;
+}
+.hint-bubble {
+  position: absolute;
+  z-index: 12;
+  top: 248px;
+  left: 16px;
+  display: block;
+  width: min(520px, 62%);
+  margin: 0;
+  min-height: 72px;
+  padding: 12px 20px;
+  border: 0;
+  border-radius: 24px;
+  background: #fff8e1;
+  color: #4a2c17;
+  font-size: 40px;
+  font-weight: 800;
+  line-height: 1.2;
+  text-align: left;
+  cursor: pointer;
+}
 .chapter-line {
   display: flex;
   align-items: center;
