@@ -79,6 +79,7 @@ import {
   type ResearchLine
 } from './research'
 import { DAILY_FRAMES, calendarReward, isDailyFrame, slotReward, type DailyFrameId } from './daily'
+import { showChestArrow, showJetztDu } from './chestLesson'
 import type { OfflineSummary } from './sim'
 import type { SaveV2 } from './types'
 import { PC_VIEW_FALLBACK, virtualWindow } from './virtualList'
@@ -130,6 +131,8 @@ export interface ShellFlags {
   fighting?: boolean
   /** Warden focus fight. Hints stay off the screen. */
   focusFight?: boolean
+  /** Card index while the first chest is explained. Null hides the cards. */
+  chestCard?: number | null
   /** Scroll offset of the PC viewport, in logical px. */
   pcScroll?: number
   /** Measured PC viewport height. 0 uses the fallback. */
@@ -420,7 +423,7 @@ const TAB_ICONS: Record<string, string> = {
   more: 'icons/tab_mehr_128.png'
 }
 
-function tabbar(save: SaveV2, screen: Screen, moreOpen: boolean): string {
+function tabbar(save: SaveV2, screen: Screen, moreOpen: boolean, arrow: boolean): string {
   const moreScreens: Screen[] = ['shop', 'achievements', 'ranks', 'tree', 'tower', 'arena', 'social', 'expedition', 'trade', 'guild', 'chat', 'options', 'guide']
   const tabs: { id: string; label: string; active: boolean; act: string; screen?: Screen }[] = [
     { id: 'adventure', label: 'nav.adventure', active: screen === 'adventure', act: 'screen', screen: 'adventure' },
@@ -430,10 +433,11 @@ function tabbar(save: SaveV2, screen: Screen, moreOpen: boolean): string {
     { id: 'more', label: 'nav.more', active: moreOpen || moreScreens.includes(screen), act: 'more' }
   ]
   return `<nav class="tabbar" aria-label="${esc(tr(save, 'nav.more'))}">
-    ${tabs.map((tab) => `<button type="button" class="tab ${tab.active ? 'active' : ''}" data-act="${tab.act}" ${tab.screen ? `data-screen="${tab.screen}"` : ''}>
+    ${tabs.map((tab) => `<button type="button" class="tab ${tab.active ? 'active' : ''}" data-act="${tab.act}" ${tab.screen ? `data-screen="${tab.screen}"` : ''} ${tab.id === 'activities' && arrow ? `title="${esc(tr(save, 'chest.arrow'))}"` : ''}>
       <img src="${art(TAB_ICONS[tab.id])}" alt=""/>
       <span>${tr(save, tab.label)}</span>
     </button>`).join('')}
+    ${arrow ? '<i class="chest-arrow" aria-hidden="true"></i>' : ''}
   </nav>`
 }
 
@@ -1074,20 +1078,35 @@ function chestRatesHtml(save: SaveV2, tier: ChestTier): string {
   return `<p class="muted">${esc(tr(save, 'chest.hint'))}</p><p class="muted">${esc(tr(save, 'tree.shinyLine', { n: shimmer }))}</p>${pity ? `<p data-pity="${tier}">${esc(pity)}</p>` : ''}<div class="rate-list">${rows}</div>`
 }
 
-function chestView(save: SaveV2, wheel: WheelPanel): string {
+function chestLessonCard(save: SaveV2, index: number): string {
+  const key = `chest.card.${index + 1}`
+  return `<div class="chest-lesson" data-card="${index}">
+    <p>${esc(tr(save, key))}</p>
+    <div class="chest-lesson-actions">
+      <button type="button" class="primary" data-act="chest-lesson" data-id="next">${tr(save, 'chest.next')}</button>
+      <button type="button" class="ghost" data-act="chest-lesson" data-id="skip">${tr(save, 'chest.skip')}</button>
+    </div>
+  </div>`
+}
+
+function chestView(save: SaveV2, wheel: WheelPanel, lesson: number | null): string {
   const tiles = CHEST_TIERS.map((tier) => {
     const count = save.chests[tier]
     const off = count <= 0 ? 'disabled' : ''
+    const you = tier === 'kiesel' && showJetztDu(save) ? `<p class="chest-you">${esc(tr(save, 'chest.you'))}</p>` : ''
     return `<article class="chest-tile">
       <img class="ui-icon chest-art" src="${art(SHOP_ART.chest[tier])}" alt=""/>
       <h3>${tr(save, CHEST_KEY[tier])}</h3>
       <p class="chest-count">${count}</p>
+      ${you}
       <button type="button" class="chest-info" data-act="chest-info" data-tier="${tier}">${tr(save, 'chest.info')}</button>
       <button type="button" class="primary" data-act="chest-open" data-tier="${tier}" ${off}>${tr(save, 'chest.open')}</button>
       <button type="button" class="ghost" data-act="chest-all" data-tier="${tier}" ${off}>${tr(save, 'chest.all')}</button>
     </article>`
   }).join('')
+  const cards = lesson == null ? '' : chestLessonCard(save, lesson)
   return `<div class="menu-screen">
+    ${cards}
     <div class="menu-scroll">
       <div class="card panel">
         <h2>${tr(save, 'act.chests')}</h2>
@@ -1118,9 +1137,9 @@ function ringDots(count: number): string {
   return html
 }
 
-function activitiesView(save: SaveV2, now: number, selected: string | null, wheel: WheelPanel): string {
+function activitiesView(save: SaveV2, now: number, selected: string | null, wheel: WheelPanel, lesson: number | null): string {
   if (wheel.tab === 'wheel') return wheelView(save, wheel)
-  if (wheel.tab === 'chests') return chestView(save, wheel)
+  if (wheel.tab === 'chests') return chestView(save, wheel, lesson)
   return hortView(save, now, selected, wheel)
 }
 
@@ -1990,7 +2009,7 @@ function center(save: SaveV2, screen: Screen, now: number, pc: PcQuery, dex: Cod
   if (screen === 'chat') return chatScreen(save, shell.chat)
   if (screen === 'team') return team(save, pc, selected, shell)
   if (screen === 'codex') return codex(save, dex, shell)
-  if (screen === 'activities') return activitiesView(save, now, selected, wheel)
+  if (screen === 'activities') return activitiesView(save, now, selected, wheel, shell.chestCard ?? null)
   if (screen === 'shop') return shop(save, now, shell.shopTab ?? 'chests', shell.shopHint === true)
   if (screen === 'achievements') return achievementsView(save)
   if (screen === 'options') return options(save, debug, shell)
@@ -2024,7 +2043,7 @@ export function gameHtml(save: SaveV2, screen: Screen, now: number, pc: PcQuery,
         ${adventure ? teamDock(save) : ''}
         ${adventure ? logBox(save) : ''}
         ${adventure ? sightings(save, sideOpen) : ''}
-        ${tabbar(save, screen, moreOpen)}
+        ${tabbar(save, screen, moreOpen, showChestArrow(save, screen))}
       </div>
       ${map}
       ${adventure && sideOpen ? drawerSheet(save, now) : ''}

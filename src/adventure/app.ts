@@ -29,6 +29,7 @@ import { battleLogFromTraces, lineFor, lineForFrame, logIconFile, rememberBattle
 import { hpLabel, typeEdge, weatherPct } from './battleHud'
 import { whyAutoMs, whyBattle, whyIconFile } from './battleWhy'
 import { rememberTutorial, TUTORIAL_STEP } from './onboarding'
+import { CHEST_CARD_COUNT, CHEST_SEEN, chestLessonOpen } from './chestLesson'
 import { roadPaceFromSearch, setRoadPace } from './roadPace'
 import { species, typeColor, typeMult, typeName } from '../data'
 import { teamWeatherMarks, weatherArrow, weatherAt, WEATHER_SHIFTS } from './weather'
@@ -251,6 +252,7 @@ let raf = 0
 let playGen = 0
 let pendingOutcome: EncounterOutcome | null = null
 let activity: WheelPanel['tab'] = 'hort'
+let chestCard = 0
 let shopTab: 'chests' | 'boost' | 'marks' = 'chests'
 let shopFlashUntil = 0
 let chestFrame = 0
@@ -328,6 +330,29 @@ function closeHint(id: string): void {
   }
   if (shownHint === id) shownHint = ''
   try { writeSave(gameStore, save) } catch { /* the memory copy still applies */ }
+}
+
+function finishChestLesson(): void {
+  if (!save) return
+  const board = save.onboarding
+  if (board && !board.seen.includes(CHEST_SEEN)) board.seen = [...board.seen, CHEST_SEEN].slice(-64)
+  noteTutorial(TUTORIAL_STEP.chestSeen)
+  chestCard = 0
+  try { writeSave(gameStore, save) } catch { /* the memory copy still applies */ }
+  render()
+}
+
+function stepChestLesson(dir: -1 | 1): void {
+  if (dir < 0) {
+    chestCard = Math.max(0, chestCard - 1)
+    render()
+    return
+  }
+  if (chestCard >= CHEST_CARD_COUNT - 1) finishChestLesson()
+  else {
+    chestCard += 1
+    render()
+  }
 }
 
 function noteTutorial(step: number): void {
@@ -1312,7 +1337,7 @@ function render(step = save?.step): void {
     mult: wheelMult,
     symbols: wheelSymbols,
     note: wheelNote
-  }, { mapOpen, moreOpen, pcScroll, filtersOpen, dexOpen, shopTab, shopHint: Date.now() < shopFlashUntil, fighting: animating, focusFight: animating && pendingOutcome?.kind === 'guardian', cloud: mergedCloud(), masteryNote: Date.now() < masteryUntil ? masteryNote : '', ranks: { ...rankView, board: rankBoard, excluded: mergedCloud().flagLevel === 2 }, treePick, arena: arenaPanel, social: socialPanel, expeditionPick, trade: tradePanel, guild: guildPanel, chat: chatPanel, battleLog: battleLogs }))
+  }, { mapOpen, moreOpen, pcScroll, filtersOpen, dexOpen, shopTab, shopHint: Date.now() < shopFlashUntil, fighting: animating, focusFight: animating && pendingOutcome?.kind === 'guardian', chestCard: screen === 'activities' && chestLessonOpen(save) ? chestCard : null, cloud: mergedCloud(), masteryNote: Date.now() < masteryUntil ? masteryNote : '', ranks: { ...rankView, board: rankBoard, excluded: mergedCloud().flagLevel === 2 }, treePick, arena: arenaPanel, social: socialPanel, expeditionPick, trade: tradePanel, guild: guildPanel, chat: chatPanel, battleLog: battleLogs }))
   const shown = document.getElementById('hint-bubble')?.getAttribute('data-hint') ?? ''
   if (save.onboarding && shown && shown !== shownHint) {
     shownHint = shown
@@ -3719,6 +3744,10 @@ function onClick(event: Event): void {
   if (act === 'screen') {
     const next = (node.getAttribute('data-screen') as Screen) || 'adventure'
     if (next !== screen) cloud?.track('tab_open', { tab: next })
+    if (next === 'activities' && chestLessonOpen(save)) {
+      activity = 'chests'
+      if (screen !== 'activities') chestCard = 0
+    }
     screen = next
     overlay = null
     moreOpen = false
@@ -4081,8 +4110,17 @@ function onClick(event: Event): void {
   if (act === 'activity') {
     const id = node.getAttribute('data-id')
     activity = id === 'wheel' || id === 'chests' ? id : 'hort'
+    if (chestLessonOpen(save)) {
+      activity = 'chests'
+      if (screen !== 'activities') chestCard = 0
+    }
     screen = 'activities'
     render()
+    return
+  }
+  if (act === 'chest-lesson') {
+    if (node.getAttribute('data-id') === 'skip') finishChestLesson()
+    else stepChestLesson(1)
     return
   }
   if (act === 'chest-claim') {
@@ -4438,6 +4476,11 @@ function onPointerUp(event: PointerEvent): void {
     }
   }
   const dir = start ? swipeDirection(event.clientX - start.x, event.clientY - start.y, fitScale(window.innerWidth, window.innerHeight)) : 0
+  if (save && dir !== 0 && document.querySelector('.chest-lesson')) {
+    ignoreClick = true
+    stepChestLesson(dir)
+    return
+  }
   if (save && start?.shop && !start.block && !overlay && dir !== 0) {
     const order = ['chests', 'boost', 'marks'] as const
     const index = order.indexOf(shopTab)
