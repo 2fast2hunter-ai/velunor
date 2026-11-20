@@ -114,6 +114,9 @@ describe('sync check', () => {
       if (paced) {
         setRoadQueue(true)
         setRoadPace(true)
+      } else {
+        setRoadQueue(false)
+        setRoadPace(false)
       }
       let now = start
       try {

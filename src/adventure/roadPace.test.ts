@@ -48,9 +48,9 @@ function arm(): void {
 }
 
 describe('road pace', () => {
-  it('stays off, so a live save keeps today\'s rewards', () => {
-    expect(ROAD_PACE_SWITCH).toBe(false)
-    expect(roadPaceLive()).toBe(false)
+  it('is on with the road queue, and a save without roadPace still loads', () => {
+    expect(ROAD_PACE_SWITCH).toBe(true)
+    expect(roadPaceLive()).toBe(true)
     expect(roadPaceFromSearch(false, '?debug=1&roadQueue=1&roadPace=1')).toBe(false)
     expect(roadPaceFromSearch(true, '?roadPace=1')).toBe(true)
     expect(roadPaceFromSearch(true, '?debug=1&roadQueue=1')).toBe(false)
@@ -59,8 +59,7 @@ describe('road pace', () => {
     const save = beginAdventure('Ada', { skin: 0, hair: 0, color: 0 }, 'm01', 1_000)
     save.rng = 42
     for (let i = 0; i < 40; i++) resolveEncounter(save, 2_000 + i * 2800, { offline: false, trace: false })
-    expect(save.roadPace).toBeUndefined()
-    expect(save.rewardBank).toBeUndefined()
+    expect(save.roadPace).toBeGreaterThan(1)
     const box = memory()
     writeSave(box, save)
     const raw = JSON.parse(box.getItem('velunor_v2') ?? '{}') as SaveV2
@@ -95,7 +94,7 @@ describe('road pace', () => {
     noteRoadNode(save, 'guardian', [], false)
     noteRoadNode(save, 'find', [], true)
     expect(save.roadPace).toBeCloseTo(held)
-    setRoadPace(null)
+    setRoadPace(false)
     noteRoadNode(save, 'wild', [], false)
     expect(save.roadPace).toBeCloseTo(held)
     setRoadPace(true)
@@ -178,6 +177,8 @@ function prepare(region: number, chapter: number, run: number): SaveV2 {
 }
 
 function measure(region: number, chapter: number): { pct: Record<string, number>, hoursOld: number, hoursNew: number, wildMin: number } {
+  setRoadQueue(false)
+  setRoadPace(false)
   let oldMs = 0
   let newMs = 0
   let oldAll = 0

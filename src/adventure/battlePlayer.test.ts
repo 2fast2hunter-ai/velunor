@@ -23,10 +23,10 @@ function trace(frames: FightFrame[], over: Partial<FightTrace> = {}): FightTrace
 }
 
 describe('battle queue', () => {
-  it('stays off, so the live fight keeps today\'s clock', () => {
-    expect(BATTLE_QUEUE.road).toBe(false)
+  it('is on together with the pace switch, so a road fight plays turn by turn', () => {
+    expect(BATTLE_QUEUE.road).toBe(true)
     expect(BATTLE_QUEUE.focus).toBe(true)
-    expect(battleQueueOn('road')).toBe(false)
+    expect(battleQueueOn('road')).toBe(true)
     expect(battleQueueOn('focus')).toBe(true)
     expect(focusTempo(undefined)).toBe(1)
     expect(focusTempo(2)).toBe(2)
@@ -34,11 +34,11 @@ describe('battle queue', () => {
     expect(roadQueueFromSearch(false, '?debug=1&roadQueue=1')).toBe(false)
     expect(roadQueueFromSearch(true, '?roadQueue=1')).toBe(true)
     expect(roadQueueFromSearch(true, '?debug=1')).toBe(false)
-    setRoadQueue(true)
-    expect(battleQueueOn('road')).toBe(true)
-    expect(BATTLE_QUEUE.road).toBe(false)
-    setRoadQueue(null)
+    setRoadQueue(false)
     expect(battleQueueOn('road')).toBe(false)
+    expect(BATTLE_QUEUE.road).toBe(true)
+    setRoadQueue(null)
+    expect(battleQueueOn('road')).toBe(true)
     expect(roadTempo(3)).toBe(3)
     expect(roadTempo(3, 1)).toBe(1)
     const app = readFileSync(new URL('./app.ts', import.meta.url), 'utf8')
@@ -57,7 +57,7 @@ describe('battle queue', () => {
     expect((6 * 64 + 5 * 8) * phone).toBeLessThanOrEqual(390)
     expect((4 * 128 + 3 * 12) * phone).toBeLessThanOrEqual(390)
     expect(64 * phone).toBeGreaterThan(20)
-    expect(BATTLE_QUEUE.road).toBe(false)
+    expect(BATTLE_QUEUE.road).toBe(true)
   })
 
   it('prices road pieces from the ×1 table and divides by tempo', () => {
