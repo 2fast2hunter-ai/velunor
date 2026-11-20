@@ -7,7 +7,7 @@
     "dev": "vite",
     "build": "tsc --noEmit && vite build",
     "preview": "vite preview",
-    "test": "vitest run",
+    "test": "vitest run --exclude src/adventure/focusTap.test.ts && vitest run src/adventure/focusTap.test.ts",
     "build:functions": "node scripts/build-functions.mjs",
     "sim:balance": "vite-node src/adventure/balanceSim.ts",
     "test:guardian": "node scripts/guardian-auto.mjs",
