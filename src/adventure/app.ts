@@ -2924,9 +2924,38 @@ function paintWeatherTag(factor: number | undefined, x: number, y: number): void
   node.hidden = false
   node.style.left = `${Math.round(x)}px`
   node.style.top = `${Math.round(y - 64)}px`
+  clearWeatherTag(node)
   node.style.borderImage = `url("${art('battle_ui/wetter/tag.png')}") 24 26 26 26 fill / 24px 26px 26px 26px / 5px stretch`
   const text = document.getElementById('wx-tag-text')
   if (text) text.textContent = pct
+}
+
+function clearWeatherTag(node: HTMLElement): void {
+  const host = node.offsetParent instanceof HTMLElement ? node.offsetParent : node.parentElement
+  if (!(host instanceof HTMLElement)) return
+  const hostBox = host.getBoundingClientRect()
+  const scaleX = hostBox.width / (host.clientWidth || hostBox.width || 1)
+  const scaleY = hostBox.height / (host.clientHeight || hostBox.height || 1)
+  const tagW = node.offsetWidth || 160
+  const tagH = node.offsetHeight || 56
+  let left = Number.parseFloat(node.style.left) || 0
+  let top = Number.parseFloat(node.style.top) || 0
+  const nudge = (box: DOMRect, gap: number) => {
+    const edgeLeft = (box.left - hostBox.left) / scaleX
+    const edgeTop = (box.top - hostBox.top) / scaleY
+    const edgeRight = (box.right - hostBox.left) / scaleX
+    const edgeBottom = (box.bottom - hostBox.top) / scaleY
+    if (!(left < edgeRight && left + tagW > edgeLeft && top < edgeBottom && top + tagH > edgeTop)) return
+    const shifted = edgeLeft - tagW - gap
+    if (shifted >= 16) left = shifted
+    else top = Math.max(16, edgeTop - tagH - gap)
+  }
+  const dock = document.querySelector('.guard-dock')
+  if (dock instanceof HTMLElement && dock.getClientRects().length > 0) nudge(dock.getBoundingClientRect(), 12)
+  const lock = document.querySelector('#ally-actor .ult-lock')
+  if (lock instanceof HTMLElement && !lock.hidden && lock.getClientRects().length > 0) nudge(lock.getBoundingClientRect(), 8)
+  node.style.left = `${Math.round(left)}px`
+  node.style.top = `${Math.round(top)}px`
 }
 
 let ultCardTimer = 0
@@ -4287,7 +4316,7 @@ function onPointerDown(event: PointerEvent): void {
   sheetY = grab ? event.clientY : null
   const card = target?.closest('[data-press="card"]')
   heldCard = card?.getAttribute('data-uid') ?? ''
-  const block = Boolean(target?.closest('input, textarea, select, .sheet-grab, #cloud-layer'))
+  const block = Boolean(target?.closest('input, textarea, select, button, .focus-bar, .speed, .guard-dock, .sheet-grab, #cloud-layer'))
   const onShop = Boolean(target?.closest('.shop-screen'))
   gesture = { x: event.clientX, y: event.clientY, t: performance.now(), block, shop: onShop }
 }

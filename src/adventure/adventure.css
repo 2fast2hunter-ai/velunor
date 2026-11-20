@@ -516,12 +516,13 @@ textarea { width: 100%; box-sizing: border-box; background: #121a30; color: inhe
 .status-chip .status-stack img { width: 40px; height: 40px; }
 .status-chip .status-stack b { position: absolute; inset: 0; display: grid; place-items: center; color: #fff; font-size: 32px; }
 .adv-chip {
-  position: absolute; z-index: 8; left: 50%; top: 58%; transform: translateX(-50%); animation: none;
+  position: absolute; z-index: 8; left: 16px; top: 17%; transform: none; animation: none;
   display: inline-flex; align-items: center; gap: 8px; height: 72px; max-width: 300px; padding: 0 20px 0 8px;
   pointer-events: none;
   color: #fff3dc; -webkit-text-stroke: 4px #4a2c17; paint-order: stroke fill; font-size: 34px; font-weight: 800;
   background: rgba(74, 44, 23, 0.35) padding-box; border-radius: 28px;
 }
+.battle:has(#focus-bar:not([hidden])) .adv-chip { left: auto; right: 16px; top: 38%; }
 .adv-chip img { width: 52px; height: 52px; object-fit: contain; }
 .wx-announce {
   margin: 0; width: auto; max-width: 100%; padding: 8px 20px; border-radius: 18px;
@@ -666,7 +667,19 @@ textarea { width: 100%; box-sizing: border-box; background: #121a30; color: inhe
   overflow: visible;
 }
 .battle:has(#focus-bar:not([hidden])) .combatant.foe { margin-top: 430px; }
-.battle:has(#focus-bar:not([hidden])) .focus-bar { left: auto; right: 16px; }
+.battle:has(#focus-bar:not([hidden])) .combatant.ally { margin-top: -160px; }
+.battle:has(#focus-bar:not([hidden])) .focus-bar {
+  left: 16px;
+  right: 16px;
+  width: auto;
+  bottom: 12px;
+  flex-wrap: nowrap;
+  justify-content: flex-end;
+  align-items: center;
+}
+.battle:has(#focus-bar:not([hidden])) .focus-bar .ko-dots { order: -1; margin-right: auto; }
+.battle:has(#focus-bar:not([hidden])) .focus-tempo { width: auto; flex-wrap: nowrap; }
+.battle:has(#focus-bar:not([hidden])) .why-chip { bottom: 320px; }
 #stage:has(#focus-bar:not([hidden])) .speed,
 #stage:has(#focus-bar:not([hidden])) [data-act="challenge"] { display: none !important; }
 .battle:has(#focus-bar:not([hidden])) .name-banner {
@@ -676,8 +689,8 @@ textarea { width: 100%; box-sizing: border-box; background: #121a30; color: inhe
 .battle:has(#focus-bar:not([hidden])) .battle-log {
   left: 16px;
   right: auto;
-  width: min(480px, 46%);
-  bottom: 12px;
+  width: min(440px, 40%);
+  bottom: 152px;
 }
 .battle-log {
   position: absolute;

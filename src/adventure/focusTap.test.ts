@@ -146,6 +146,15 @@ async function assertChallengeTap(page: Page): Promise<{ x: number, y: number }>
   const log = await box(page, '#battle-log')
   const lower = { x: at!.x, y: at!.y + at!.height / 2, width: at!.width, height: at!.height / 2 }
   if (log && log.height > 2) expect(overlaps(log, lower), 'two-line log covers the lower half of the challenge').toBe(false)
+  const dock = await box(page, '.guard-dock')
+  const adv = await box(page, '#adv-chip')
+  const tag = await box(page, '#wx-tag')
+  if (dock && adv && adv.width > 4 && await page.locator('#adv-chip').getAttribute('hidden') === null) {
+    expect(overlaps(dock, adv), 'advantage chip covers the warden card').toBe(false)
+  }
+  if (dock && tag && tag.width > 4 && await page.locator('#wx-tag').getAttribute('hidden') === null) {
+    expect(overlaps(dock, tag), 'weather tag covers the warden card').toBe(false)
+  }
   const x = at!.x + at!.width / 2
   const y = at!.y + at!.height * 0.75
   const hit = await page.evaluate(({ x, y }) => {
@@ -192,6 +201,10 @@ async function assertClear(page: Page): Promise<void> {
   expect(await page.locator('[data-act="challenge"]').isVisible(), 'challenge hidden in focus').toBe(false)
   if (bar && foeName && foeName.width > 8 && foeName.height > 8) expect(overlaps(bar, foeName), 'focus bar covers the foe name').toBe(false)
   if (bar && foeHp && foeHp.width > 2) expect(overlaps(bar, foeHp), 'focus bar covers the foe HP').toBe(false)
+  const foeSprite = await box(page, '#foe-sprite')
+  const spotlight = await box(page, '#spotlight-foe')
+  if (bar && foeSprite && foeSprite.width > 8 && foeSprite.height > 8) expect(overlaps(bar, foeSprite), 'focus bar covers the foe').toBe(false)
+  if (bar && spotlight && spotlight.width > 8 && spotlight.height > 8) expect(overlaps(bar, spotlight), 'focus bar covers the spotlight').toBe(false)
   if (weather && foeName && foeName.width > 8 && foeName.height > 8) expect(overlaps(weather, foeName), 'weather chip covers the foe name').toBe(false)
   if (weather && foeHp && foeHp.width > 2) expect(overlaps(weather, foeHp), 'weather chip covers the foe HP').toBe(false)
   const callout = await box(page, '#battle-text')
@@ -315,6 +328,11 @@ describe('focus bar tap', () => {
         }, { x, y })
         expect(hit.act, `${viewport.width} hit ${hit.tag}`).toBe('focus-tempo')
         expect(hit.tempo).toBe('2')
+        await page.mouse.move(x, y)
+        await page.mouse.down()
+        await page.mouse.move(x - 40, y)
+        await page.mouse.up()
+        expect(await page.locator('#focus-bar:not([hidden])').count(), 'a drifting tap stays in the fight').toBe(1)
         await page.touchscreen.tap(x, y)
         await expect.poll(async () => page.locator('[data-act="focus-tempo"][data-tempo="2"]').getAttribute('aria-pressed')).toBe('true')
         expect(await page.locator('#battle-log-sheet').getAttribute('hidden')).not.toBeNull()
