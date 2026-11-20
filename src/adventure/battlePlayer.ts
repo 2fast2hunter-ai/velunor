@@ -157,6 +157,11 @@ export function activeFx(actions: readonly PlannedAction[], at: number): number 
   return actions.filter((action) => action.fx && at >= action.start && at < action.start + action.dur).length
 }
 
+/** The phase that shows the hit number. The windup and the rest beat do not. */
+export function hitNumberPhase(phase: BattlePhase): boolean {
+  return phase === 'treffer' || phase === 'zug'
+}
+
 export function actionAt(actions: readonly PlannedAction[], elapsed: number): PlannedAction | null {
   if (!actions.length) return null
   return actions.find((action) => elapsed >= action.start && elapsed < action.start + action.dur) ?? actions[actions.length - 1]

@@ -14,7 +14,7 @@ import {
 import { fontFactor } from './touch'
 import { baseLine, dexPlaces, dexStatus, dexStatusLabel, listCodex, regionProgress, speciesNumber, type DexFilter } from './dex'
 import { goalName, goalTitle, rarityLabel, t, typeLabel, weatherLabel, whenLabel, type Lang } from './i18n'
-import { latestLine, logIconFile, type BattleFightLog, type BattleLogLine } from './battleLog'
+import { latestLine, logIconFile, sheetLine, type BattleFightLog, type BattleLogLine } from './battleLog'
 import { colorHex, colorId, skinHex } from './avatar'
 import { agoParts, continueFacts } from './continue'
 import { STARTER_ART, starterBars, strongTypes, typeList, weakTypes } from './starter'
@@ -535,22 +535,21 @@ function battle(save: SaveV2, now: number, fighting = false, shadow = false, log
       <img src="${art(logIconFile(logLine?.icon ?? 'angriff'))}" alt=""/>
       <span id="battle-log-text">${esc(logLine?.sentence ?? tr(save, 'log.none'))}</span>
     </button>
-    <div class="battle-log-sheet" id="battle-log-sheet" hidden></div>
     <div class="flash" id="flash"></div>
     <img class="seal" id="seal" alt="" src="${art(SEAL_ADD)}" data-fb="${art(SEAL_FALLBACK)}" style="left:${FOE_X}%;top:${FOE_Y}%"/>
     <div class="battle-top">
       <p id="battle-text" class="battle-status">${tr(save, 'battle.place', { part: clock.part, weather: weatherLabel(L(save), weatherForecast(now)[0].weather), place: chapter.name, state: tr(save, save.hold ? 'battle.waiting' : 'battle.walking') })}</p>
-      <div class="focus-bar" id="focus-bar" hidden>
-        <div class="ko-dots" id="ko-dots" aria-label="${esc(tr(save, 'battle.ko'))}">${Array.from({ length: 6 }, () => `<img src="${art('battle_ui/ko/leer_64.png')}" alt=""/>`).join('')}</div>
-        <div class="focus-tempo">
-          <button type="button" data-act="focus-tempo" data-tempo="1" aria-pressed="${save.settings.tempoFokus === 2 ? 'false' : 'true'}" aria-label="${esc(tr(save, 'battle.tempo1'))}"><img src="${art('battle_ui/tempo/1x_aktiv.png')}" alt=""/></button>
-          <button type="button" data-act="focus-tempo" data-tempo="2" aria-pressed="${save.settings.tempoFokus === 2 ? 'true' : 'false'}" aria-label="${esc(tr(save, 'battle.tempo2'))}"><img src="${art('battle_ui/tempo/2x_normal.png')}" alt=""/></button>
-          <button type="button" data-act="focus-skip" aria-label="${esc(tr(save, 'battle.skip'))}"><img src="${art('battle_ui/tempo/skip_normal.png')}" alt=""/></button>
-          <button type="button" data-act="focus-pause" aria-pressed="false" aria-label="${esc(tr(save, 'battle.pause'))}"><img src="${art('battle_ui/tempo/pause_normal.png')}" alt=""/></button>
-        </div>
-      </div>
-      <div class="wx-stack"><div class="wx-chip" id="wx-chip">${weatherChip(save, now)}</div></div>
       ${bossAhead(save) ? `<p class="wx-preview">${weatherPreview(save, now)}</p>` : ''}
+    </div>
+    <div class="wx-stack"><div class="wx-chip" id="wx-chip">${weatherChip(save, now)}</div></div>
+    <div class="focus-bar" id="focus-bar" hidden>
+      <div class="ko-dots" id="ko-dots" aria-label="${esc(tr(save, 'battle.ko'))}">${Array.from({ length: 6 }, () => `<img src="${art('battle_ui/ko/leer_64.png')}" alt=""/>`).join('')}</div>
+      <div class="focus-tempo">
+        <button type="button" data-act="focus-tempo" data-tempo="1" aria-pressed="${save.settings.tempoFokus === 2 ? 'false' : 'true'}" aria-label="${esc(tr(save, 'battle.tempo1'))}"><img src="${art('battle_ui/tempo/1x_aktiv.png')}" alt=""/></button>
+        <button type="button" data-act="focus-tempo" data-tempo="2" aria-pressed="${save.settings.tempoFokus === 2 ? 'true' : 'false'}" aria-label="${esc(tr(save, 'battle.tempo2'))}"><img src="${art('battle_ui/tempo/2x_normal.png')}" alt=""/></button>
+        <button type="button" data-act="focus-skip" aria-label="${esc(tr(save, 'battle.skip'))}"><img src="${art('battle_ui/tempo/skip_normal.png')}" alt=""/></button>
+        <button type="button" data-act="focus-pause" aria-pressed="false" aria-label="${esc(tr(save, 'battle.pause'))}"><img src="${art('battle_ui/tempo/pause_normal.png')}" alt=""/></button>
+      </div>
     </div>
     ${sealed ? '' : `<div class="guard-dock">${fighting ? '' : guardCard(save)}<button type="button" class="primary challenge-fab" data-act="challenge">${ui('challenge')}${tr(save, chapter.council || chapter.foyer ? 'battle.resume' : 'battle.challenge')}</button></div>`}
     ${shadow ? `<p class="shadow-note shadow-battle" role="status">${esc(tr(save, 'cloud.shadow'))}</p>` : ''}
@@ -2010,6 +2009,7 @@ export function gameHtml(save: SaveV2, screen: Screen, now: number, pc: PcQuery,
       ${overlay ? `<div class="overlay overlay-sheet">${overlayHtml(save, overlay, shell.battleLog ?? [])}</div>` : ''}
       ${shell.masteryNote ? `<p class="mastery-toast" role="status">${esc(shell.masteryNote)}</p>` : ''}
     </div>
+    ${adventure ? `<div class="battle-log-sheet" id="battle-log-sheet" hidden></div>` : ''}
     <div class="band band-bot"></div>
   </div>`
 }
@@ -2022,10 +2022,13 @@ export function battleLogBody(save: SaveV2, fights: readonly BattleFightLog[]): 
   if (!fights.length) return `<p class="muted">${tr(save, 'log.none')}</p>`
   return fights.map((fight, index) => fight.bouts.map((bout) => `<section>
     <h3>${esc(bout.label)}</h3>
-    ${bout.lines.map((line) => `<div class="battle-log-row">
+    ${bout.lines.map((line) => {
+      const shown = sheetLine(line)
+      return `<div class="battle-log-row">
       <img src="${art(logIconFile(line.icon))}" alt=""/>
-      <p><b>${esc(line.sentence)}</b>${line.tags.length ? `<span class="muted"> ${esc(line.tags.join(' · '))}</span>` : ''}</p>
-    </div>`).join('')}
+      <p><b>${esc(shown.main)}</b>${shown.tags ? `<span class="muted"> ${esc(shown.tags)}</span>` : ''}</p>
+    </div>`
+    }).join('')}
   </section>`).join('') + (index < fights.length - 1 ? '<hr/>' : '')).join('')
 }
 

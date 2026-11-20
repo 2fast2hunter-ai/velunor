@@ -4,7 +4,7 @@ import type { FightFrame, FightHit, FightTrace } from './battle'
 import { fitScale } from './const'
 import { beginAdventure, loadAdventure, writeSave } from './save'
 import type { StorageLike } from './types'
-import { actionAt, activeFx, BATTLE_QUEUE, battleQueueOn, focusKo, focusTempo, planBattle, roadQueueFromSearch, roadTempo, setRoadQueue, shotFromAction, zugDauer } from './battlePlayer'
+import { actionAt, activeFx, BATTLE_QUEUE, battleQueueOn, focusKo, focusTempo, hitNumberPhase, planBattle, roadQueueFromSearch, roadTempo, setRoadQueue, shotFromAction, zugDauer } from './battlePlayer'
 
 function hit(over: Partial<FightHit> = {}): FightHit {
   return { from: 'ally', amount: 10, crit: false, type: 'fire', band: 'neutral', ko: false, kind: 'hit', ...over }
@@ -80,6 +80,7 @@ describe('battle queue', () => {
     const planned = planBattle([trace([frame([hit()])])], 'focus', 1)
     expect(planned.map((step) => step.phase)).toEqual(['ansage', 'aktion', 'treffer', 'ergebnis'])
     expect(planned.map((step) => step.dur)).toEqual([300, 400, 400, 200])
+    expect(planned.map((step) => hitNumberPhase(step.phase))).toEqual([false, false, true, false])
   })
 
   it('plays one action at a time and never stacks FX', () => {

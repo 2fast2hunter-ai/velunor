@@ -24,7 +24,7 @@ import {
 import { chatErrorKey } from './chat'
 import { t, type Lang } from './i18n'
 import { shotAt, shouldRecover } from './present'
-import { actionAt, battleQueueOn, focusKo, focusSide, focusTempo, planBattle, roadQueueFromSearch, roadTempo, setRoadQueue, shotFromAction } from './battlePlayer'
+import { actionAt, battleQueueOn, focusKo, focusSide, focusTempo, hitNumberPhase, planBattle, roadQueueFromSearch, roadTempo, setRoadQueue, shotFromAction } from './battlePlayer'
 import { battleLogFromTraces, lineFor, lineForFrame, logIconFile, rememberBattleLog, type BattleFightLog, type BattleLogLine } from './battleLog'
 import { roadPaceFromSearch, setRoadPace } from './roadPace'
 import { species, typeColor } from '../data'
@@ -2437,15 +2437,17 @@ function play(outcome: EncounterOutcome, speed: Speed, done: () => void): void {
             const travel = queueStep?.fx ? Math.min(rawTravel, Math.max(0, Math.round(queueStep.dur * 0.45))) : rawTravel
             const keyMove = Boolean(hit.crit || hit.ko || hit.ult || hit.kind === 'status' || hit.helper || hit.pulse)
             if ((hit.kind === 'hit' || hit.ult) && !(roadOn && !keyMove)) showMove(hit.ult ? ultName(hit.ult) : attackTitle(attackerId, hit.type), hit.from === 'ally' ? allyActor : foeActor, k)
-            window.clearTimeout(impactTimer)
-            impactTimer = window.setTimeout(() => {
+            const paintNumber = () => {
               if (gen !== playGen || !hit) return
-              if (hit.kind === 'hit') {
+              if ((hit.kind === 'hit' || hit.kind === 'heal') && hit.amount > 0) {
                 const grade = hitGrade(hit.band, hit.crit)
                 const hold = numberHoldMs(speed)
                 const above = numberPoint(struck, fxHost)
-                const shown = showHitNumber(above.x, above.y, hit.amount, grade, hold, hit.weather ?? 1)
-                if (!shown) spawnFloat(floats, hit, typeFx(hit.type).base, hit.from === 'ally' ? '70%' : '30%', hold)
+                if (queue) spawnFloat(floats, hit, typeFx(hit.type).base, hit.from === 'ally' ? '70%' : '30%', hold, above)
+                else {
+                  const shown = showHitNumber(above.x, above.y, hit.amount, grade, hold, hit.weather ?? 1)
+                  if (!shown) spawnFloat(floats, hit, typeFx(hit.type).base, hit.from === 'ally' ? '70%' : '30%', hold, above)
+                }
                 struck.classList.remove('recoil')
                 void struck.offsetWidth
                 struck.classList.add('recoil')
@@ -2459,7 +2461,13 @@ function play(outcome: EncounterOutcome, speed: Speed, done: () => void): void {
                 shakePx = spec.px
               }
               if (allowFlash && hit.crit && critFlash) critFlash.style.opacity = '0.15'
-            }, travel)
+            }
+            if (queue) {
+              if (!queueStep || hitNumberPhase(queueStep.phase)) paintNumber()
+            } else {
+              window.clearTimeout(impactTimer)
+              impactTimer = window.setTimeout(paintNumber, travel)
+            }
           }
         } else if (critFlash && elapsed - hitAt > 50 * k) critFlash.style.opacity = '0'
         prevAlly = shot.allyHp
@@ -2840,7 +2848,7 @@ function reachDistance(from: HTMLElement, toward: HTMLElement, portion: number):
   return Math.max(140, gap * portion)
 }
 
-function spawnFloat(host: HTMLElement | null, hit: { amount: number; crit: boolean; band: 'strong' | 'weak' | 'neutral'; awaken?: boolean }, base: string, left = '68%', holdMs = numberHoldMs(1)): void {
+function spawnFloat(host: HTMLElement | null, hit: { amount: number; crit: boolean; band: 'strong' | 'weak' | 'neutral'; awaken?: boolean }, base: string, left = '68%', holdMs = numberHoldMs(1), point?: { x: number, y: number }): void {
   if (!host || hit.amount <= 0) return
   let node = floatPool.find((row) => row.hidden)
   if (!node) {
@@ -2859,9 +2867,9 @@ function spawnFloat(host: HTMLElement | null, hit: { amount: number; crit: boole
   const clamped = Math.min(hostWidth - half, Math.max(half, Number.isFinite(center) ? center : hostWidth * 0.5))
   node.hidden = false
   node.textContent = text
-  node.style.left = `${Math.round(clamped)}px`
+  node.style.left = `${Math.round(point ? point.x : clamped)}px`
   node.style.transform = 'translateX(-50%)'
-  node.style.top = '46%'
+  node.style.top = point ? `${Math.round(point.y)}px` : '46%'
   node.style.color = style.color
   node.style.fontSize = `${size}px`
   node.style.opacity = hit.band === 'weak' ? '0.5' : '1'
@@ -3081,11 +3089,18 @@ function onClick(event: Event): void {
   }
   const target = event.target
   if (!(target instanceof Element)) return
+  const logSheet = document.getElementById('battle-log-sheet')
+  if (logSheet && !logSheet.hidden && !target.closest('#battle-log-sheet') && !target.closest('[data-act="battle-log"]')) {
+    logSheet.hidden = true
+    logSheet.innerHTML = ''
+    if (!target.closest('[data-act]')) return
+  }
   const node = target.closest('[data-act]')
   if (!node) {
-    if (focusCtl && target.closest('#battle-world')) toggleFocusPause()
+    if (focusCtl && target.closest('#battle-world') && !target.closest('.focus-bar')) toggleFocusPause()
     return
   }
+  if (target.closest('.focus-bar')) event.stopPropagation()
   const act = node.getAttribute('data-act')
   if (act === 'battle-log') {
     if (animating) {

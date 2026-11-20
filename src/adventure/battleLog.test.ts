@@ -1,7 +1,7 @@
 import { readFileSync } from 'node:fs'
 import { describe, expect, it } from 'vitest'
 import type { FightHit, FightFrame, FightTrace } from './battle'
-import { battleLogFromTraces, latestLine, logIconFile, rememberBattleLog, sentenceWords } from './battleLog'
+import { battleLogFromTraces, latestLine, logIconFile, rememberBattleLog, sentenceWords, sheetLine } from './battleLog'
 import { fitScale } from './const'
 import { beginAdventure, writeSave } from './save'
 import type { StorageLike } from './types'
@@ -36,11 +36,23 @@ describe('battle log', () => {
     expect(lines[1].tags).toContain('stark')
     expect(lines[1].sentence).toContain('9')
     expect(lines[1].sentence).toContain('Krit')
+    const shown = sheetLine(lines[1])
+    expect(shown.main).toContain('9')
+    expect(shown.main).not.toContain('stark')
+    expect(shown.tags.match(/stark/g)).toEqual(['stark'])
+    const ko = sheetLine(lines[4])
+    expect(ko.main).not.toContain('KO')
+    expect(ko.tags.match(/KO/g)).toEqual(['KO'])
     expect(sentenceWords(lines[0].sentence)).toBeLessThanOrEqual(6)
     expect(sentenceWords(lines[1].sentence)).toBeLessThanOrEqual(6)
+    const marked = battleLogFromTraces([trace([frame([hit({ kind: 'status', amount: 0, from: 'foe' })], 'Kieselkrabbe setzt Panzerschale ein.')], { foeName: 'Kieselkrabbe', foeSpecies: 'm17' })], 'de')
+    expect(marked.bouts[0].lines[0].sentence).toBe('Kieselkrabbe: Spott')
+    expect(marked.bouts[0].lines[0].move).toBe('Spott')
     const english = battleLogFromTraces([trace([frame([hit({ crit: true, band: 'strong', weather: 0.85 })])])], 'en')
     const row = english.bouts[0].lines[0]
+    expect(row.sentence).toContain('Ember Strike')
     expect(row.sentence).toContain('crit')
+    expect(row.sentence).not.toContain('Fire')
     expect(row.sentence).not.toContain('stark')
     expect(row.tags.join(' ')).toContain('strong')
     expect(row.tags.join(' ')).toContain('%')
@@ -56,6 +68,8 @@ describe('battle log', () => {
     const css = readFileSync(new URL('./adventure.css', import.meta.url), 'utf8')
     expect(css).toContain('min-height: 64px')
     expect(css).toContain('width: 48px; height: 48px')
+    expect(css).toContain('.battle-log span { white-space: normal; overflow: visible; overflow-wrap: anywhere; }')
+    expect(css).toContain('top: 1760px')
     const app = readFileSync(new URL('./app.ts', import.meta.url), 'utf8')
     expect(app).toContain('rememberBattleLog')
     expect(app).not.toContain('save.battleLog')

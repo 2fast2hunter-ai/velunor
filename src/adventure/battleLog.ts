@@ -1,7 +1,8 @@
 import { species } from '../data'
 import { moveLabel } from '../battle/typeFx'
+import type { TypeId } from '../types'
 import type { FightHit, FightTrace } from './battle'
-import { t, typeLabel, type Lang } from './i18n'
+import { t, type Lang } from './i18n'
 import type { UltPattern } from './ult'
 
 export const BATTLE_LOG_KEEP = 10
@@ -60,16 +61,45 @@ function iconFor(hit: FightHit): LogIcon {
   return 'angriff'
 }
 
-function moveOf(lang: Lang, hit: FightHit, speciesId: string, mark: string | null): string {
+const MOVE_EN: Record<TypeId, string> = {
+  fire: 'Ember Strike', water: 'Water Jet', plant: 'Vine Lash', earth: 'Earth Rift', wind: 'Wind Sickle',
+  ice: 'Ice Splinter', lightning: 'Lightning Strike', poison: 'Poison Bubble', stone: 'Stone Throw', crystal: 'Prism Flash',
+  metal: 'Metal Blade', fighting: 'Strike Flurry', beast: 'Claw Strike', insect: 'Swarm Sting', light: 'Light Pillar',
+  shadow: 'Shadow Pull', ghost: 'Ghost Flame', psychic: 'Psycho Wave', sound: 'Sound Burst', dragon: 'Dragon Breath'
+}
+
+function englishSkill(id: string): string | null {
+  if (!/^[a-z0-9]+(?:_[a-z0-9]+)*$/.test(id) || id.endsWith('_skill')) return null
+  const words = id.split('_').filter((word) => word.length > 1)
+  if (!words.length) return null
+  return words.map((word) => word.charAt(0).toUpperCase() + word.slice(1)).join(' ')
+}
+
+function attackName(lang: Lang, speciesId: string, type: TypeId): string {
+  try {
+    const skill = species(speciesId).skill
+    if (lang === 'en') return englishSkill(skill.id) ?? MOVE_EN[type] ?? moveLabel(type)
+    const named = skill.name?.trim()
+    if (named) return named
+  } catch { /* type attack below */ }
+  return lang === 'en' ? (MOVE_EN[type] ?? moveLabel(type)) : moveLabel(type)
+}
+
+function skillStatusIds(speciesId: string): string[] {
+  try {
+    return species(speciesId).skill.effects.flatMap((effect) => effect.kind === 'status' ? [effect.status] : [])
+  } catch { return [] }
+}
+
+function moveOf(lang: Lang, hit: FightHit, speciesId: string, mark: string | null, statusId: string | null): string {
   if (hit.ult) return t(lang, ULT_KEY[hit.ult])
   if (hit.kind === 'heal') return t(lang, 'log.healName')
-  if (hit.kind === 'status') return mark ? t(lang, `log.ailment.${mark}`) : t(lang, 'log.statusName')
-  if (lang === 'en') return typeLabel('en', hit.type, moveLabel(hit.type))
-  try {
-    const named = species(speciesId).skill.name?.trim()
-    if (named) return named
-  } catch { /* type label below */ }
-  return moveLabel(hit.type)
+  if (hit.kind === 'status') {
+    if (statusId) return t(lang, `log.status.${statusId}`)
+    if (mark) return t(lang, `log.ailment.${mark}`)
+    return t(lang, 'log.statusName')
+  }
+  return attackName(lang, speciesId, hit.type)
 }
 
 function weatherTag(lang: Lang, factor: number | undefined): string | null {
@@ -133,11 +163,21 @@ export function battleLogFromTraces(traces: readonly FightTrace[], lang: Lang): 
         })
         return
       }
+      const statusIds = new Map<string, string[]>()
+      const statusUsed = new Map<string, number>()
       hits.forEach((hit, hitIndex) => {
         const who = hit.from === 'ally' ? trace.allyName : trace.foeName
         const speciesId = hit.from === 'ally' ? trace.allySpecies : trace.foeSpecies
         const mark = hit.from === 'ally' ? (frame.foeMark ?? null) : (frame.allyMark ?? null)
-        const move = moveOf(lang, hit, speciesId, mark)
+        let statusId: string | null = null
+        if (hit.kind === 'status' && !hit.ult) {
+          if (!statusIds.has(speciesId)) statusIds.set(speciesId, skillStatusIds(speciesId))
+          const list = statusIds.get(speciesId) ?? []
+          const at = statusUsed.get(speciesId) ?? 0
+          statusId = list[at] ?? list[list.length - 1] ?? null
+          statusUsed.set(speciesId, at + 1)
+        }
+        const move = moveOf(lang, hit, speciesId, mark, statusId)
         const tags = tagsFor(lang, hit)
         const amount = hit.kind === 'status' ? null : hit.amount
         lines.push({
@@ -198,6 +238,12 @@ export function lineForFrame(fight: BattleFightLog, allyHp: number, foeHp: numbe
     }
   }
   return found
+}
+
+/** Sheet text. The tag lives once, beside the move, not again inside the sentence. */
+export function sheetLine(line: BattleLogLine): { main: string, tags: string } {
+  const main = line.amount == null ? `${line.who}: ${line.move}` : `${line.who}: ${line.move} – ${line.amount}`
+  return { main, tags: line.tags.join(' · ') }
 }
 
 export function latestLine(fights: readonly BattleFightLog[]): BattleLogLine | null {

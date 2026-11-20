@@ -28,6 +28,13 @@ jobs:
           cache: npm
       - name: Install
         run: npm ci
+      - name: Chrome for the focus tap
+        run: |
+          if ! command -v google-chrome >/dev/null 2>&1 && ! command -v google-chrome-stable >/dev/null 2>&1; then
+            wget -q -O /tmp/chrome.deb https://dl.google.com/linux/direct/google-chrome-stable_current_amd64.deb
+            sudo apt-get update
+            sudo apt-get install -y /tmp/chrome.deb
+          fi
       - name: Test
         run: npm test
       - name: Function bundles
