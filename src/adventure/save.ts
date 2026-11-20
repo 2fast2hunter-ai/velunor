@@ -385,6 +385,22 @@ export function normalize(save: SaveV2, now: number): SaveV2 {
     if (!save.log.some((row) => row.text === note)) save.log.push({ t: now, text: note })
     if (save.log.length > 50) save.log.splice(0, save.log.length - 50)
   }
+  const roadPace = Number(save.roadPace)
+  if (Number.isFinite(roadPace)) save.roadPace = roadPace
+  else delete save.roadPace
+  const bank = save.rewardBank
+  if (bank && typeof bank === 'object') {
+    const part = (value: unknown) => {
+      const n = Number(value)
+      return Number.isFinite(n) && n > 0 ? n : 0
+    }
+    save.rewardBank = {
+      mastery: part(bank.mastery),
+      findChest: part(bank.findChest),
+      trainerChest: part(bank.trainerChest),
+      shard: part(bank.shard)
+    }
+  } else delete save.rewardBank
   save.roadMs = Math.max(0, Math.floor(Number(save.roadMs)) || 0)
   save.roadReady = Math.max(0, Math.min(4, Math.floor(Number(save.roadReady)) || 0))
   save.roadAt = Math.max(0, Math.floor(Number(save.roadAt)) || now)
