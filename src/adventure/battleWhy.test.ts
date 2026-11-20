@@ -60,5 +60,21 @@ describe('why summary', () => {
     expect(app).toContain('whyAutoMs(')
     expect(app).toContain("save.hold = true")
     expect(app).toContain("act === 'why-open'")
+    const oneHit = {
+      allySpecies: 'm01', foeSpecies: 'm02', allyName: 'A', foeName: 'B',
+      allyMax: 20, foeMax: 20, allyHp: 0, foeHp: 10, win: false, foeKo: false, allyKo: true, timeout: false,
+      frames: [{
+        allyHp: 0, foeHp: 10, text: '',
+        hits: [
+          { from: 'ally' as const, amount: 4, crit: true, type: 'fire' as const, band: 'neutral' as const, ko: false, kind: 'hit' as const },
+          { from: 'foe' as const, amount: 0, crit: false, type: 'water' as const, band: 'neutral' as const, ko: false, kind: 'status' as const }
+        ]
+      }]
+    }
+    const one = whyBattle([oneHit], { win: false, gold: 0, exp: 0, ultUnlocked: false }, 'de')
+    expect(one.tips.some((tip) => tip.includes('Ult-Leiste'))).toBe(false)
+    expect(one.reasons.map((reason) => reason.sentence)).toContain('1 kritischer Treffer')
+    expect(one.reasons.map((reason) => reason.sentence)).toContain('1 Status hat den Kampf geprägt')
+    expect(one.shares[0] && `${one.shares[0].normal}`).toBe('4')
   })
 })

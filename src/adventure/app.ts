@@ -31,13 +31,13 @@ import { whyAutoMs, whyBattle, whyIconFile } from './battleWhy'
 import { roadPaceFromSearch, setRoadPace } from './roadPace'
 import { species, typeColor, typeMult, typeName } from '../data'
 import { teamWeatherMarks, weatherArrow, weatherAt, WEATHER_SHIFTS } from './weather'
-import { ultName, type UltPattern } from './ult'
+import { ULT_LEVEL, ultName, type UltPattern } from './ult'
 import { AURA_FRAMES, AURA_MS } from './combo'
 import { activeSynergies, presentSynergies, SYNERGY_CAP, synergyKnown } from './synergy'
 import { mechIcon, type MechId } from './mech'
 import { AILMENTS, ailmentIcon, type AilmentId } from './ailment'
 import { sfx } from '../ui'
-import { actorTransform, clampShift, hitShake, koPose, lungeOffset, numberStyle, parallaxShift } from '../battle/stage'
+import { actorTransform, clampShift, hitShake, koPose, lungeOffset, numberStyle, parallaxShift, spriteMotion } from '../battle/stage'
 import { bossUltHitstop, bossUltShake, cameraShake, hitGrade, hitstopMs, numberHoldMs } from '../battle/hitReadout'
 import { beginBattleMood, clearBattleFx, holdBattleFx, mountBattleFx, onBattleFxReady, playBattleFx, preloadBattleStrips, setFxRunning, showBattleConfetti, showBattleDissolve, showHitNumber } from '../battle/phaserFx'
 import { effectTiming, battleStripTypes } from '../battle/strips'
@@ -1536,8 +1536,20 @@ function loop(): void {
     timer = window.setTimeout(loop, 0)
     return
   }
-  render(outcome.step)
+  if (screen === 'adventure' && !overlay && document.getElementById('battle') && document.getElementById('path')) patchAdventure(outcome.step)
+  else render(outcome.step)
   play(outcome, save.settings.speed, () => finishPresent(outcome))
+}
+
+function patchAdventure(step: number): void {
+  if (!save) return
+  const gold = document.getElementById('gold')
+  if (gold) gold.textContent = `${Math.floor(save.gold).toLocaleString('de-DE')} G`
+  document.querySelectorAll('#path .node').forEach((node, index) => {
+    const n = index + 1
+    node.classList.toggle('is-here', n === step)
+    node.classList.toggle('is-done', n < step)
+  })
 }
 
 function hardwareBack(): void {
@@ -1583,22 +1595,35 @@ function hardwareBack(): void {
   render()
 }
 
+let arenaToken = 0
+
 async function refreshArena(): Promise<void> {
+  const token = ++arenaToken
   if (!lineUp()) {
     arenaPanel = { ...arenaPanel, status: 'offline', note: '' }
     render()
     return
   }
-  arenaPanel = { ...arenaPanel, status: 'loading' }
-  render()
-  const state = await callOnline('arena-desk', { action: 'state' })
-  if (!state.ok) {
-    arenaPanel = { ...arenaPanel, status: 'offline', note: '' }
+  const keepReplay = arenaPanel.replay
+  if (!keepReplay) {
+    arenaPanel = { ...arenaPanel, status: 'loading' }
+    render()
+  }
+  const state = await Promise.race([
+    callOnline('arena-desk', { action: 'state' }),
+    new Promise<Awaited<ReturnType<typeof callOnline>>>((resolve) => {
+      window.setTimeout(() => resolve({ ok: false, missing: true, error: 'timeout', data: {} }), 8000)
+    })
+  ])
+  if (token !== arenaToken) return
+  if (!state.ok || !state.data) {
+    arenaPanel = { ...arenaPanel, status: keepReplay ? arenaPanel.status : 'offline', note: keepReplay ? arenaPanel.note : '' }
     render()
     return
   }
   const claim = await callOnline('arena-desk', { action: 'claim' })
   const logs = await callOnline('arena-desk', { action: 'log' })
+  if (token !== arenaToken) return
   if (claim.ok && save) {
     const marks = Math.max(0, Math.floor(Number(claim.data.marks)) || 0)
     if (marks > 0) {
@@ -2077,15 +2102,34 @@ async function arenaAction(act: string, index: string | null): Promise<void> {
   }
   render()
   window.clearInterval(arenaTimer)
+  let pace = 700
+  try {
+    pace = replayStepMs()
+  } catch {
+    pace = 700
+  }
   arenaTimer = window.setInterval(() => {
     const current = arenaPanel.replay
     if (!current || current.step >= current.bouts.length - 1) {
       window.clearInterval(arenaTimer)
       return
     }
-    arenaPanel = { ...arenaPanel, replay: { ...current, step: current.step + 1 } }
+    arenaPanel = { ...arenaPanel, status: 'ready', replay: { ...current, step: current.step + 1 } }
+    const card = document.querySelector('.arena-replay')
+    const bout = arenaPanel.replay?.bouts[arenaPanel.replay.step]
+    const bars = card?.querySelectorAll('.bar-exp span')
+    const count = card?.querySelector('p.muted')
+    if (card && bout && bars && bars.length >= 2 && arenaPanel.replay) {
+      const names = card.querySelectorAll('b')
+      if (names[0]) names[0].textContent = bout.foeName
+      if (names[1]) names[1].textContent = bout.allyName
+      ;(bars[0] as HTMLElement).style.width = `${Math.round(bout.foeHp / Math.max(1, bout.foeMax) * 100)}%`
+      ;(bars[1] as HTMLElement).style.width = `${Math.round(bout.allyHp / Math.max(1, bout.allyMax) * 100)}%`
+      if (count) count.textContent = `${arenaPanel.replay.step + 1} / ${arenaPanel.replay.bouts.length}`
+      return
+    }
     render()
-  }, replayStepMs())
+  }, Math.min(1200, Math.max(400, pace)))
 }
 
 async function refreshRanks(): Promise<void> {
@@ -2141,10 +2185,17 @@ function showMastery(ups: MasteryUp[] | undefined): void {
   }, 4300)
 }
 
+function ultUnlocked(): boolean {
+  if (!save) return false
+  const uid = save.active && save.mons[save.active] ? save.active : save.team[0]
+  const mon = uid ? save.mons[uid] : null
+  return Boolean(mon && mon.lvl >= ULT_LEVEL)
+}
+
 function showWhyChip(outcome: EncounterOutcome): void {
   if (!save || !outcome.traces.length) return
   lastWhy = outcome
-  const card = whyBattle(outcome.traces, { win: outcome.win, gold: outcome.gold, exp: outcome.exp }, save.settings.lang)
+  const card = whyBattle(outcome.traces, { win: outcome.win, gold: outcome.gold, exp: outcome.exp, ultUnlocked: ultUnlocked() }, save.settings.lang)
   const chip = document.getElementById('why-chip')
   const icon = document.querySelector<HTMLImageElement>('#why-chip img')
   const text = document.getElementById('why-chip-text')
@@ -2159,7 +2210,7 @@ function showWhyChip(outcome: EncounterOutcome): void {
 
 function openWhy(outcome: EncounterOutcome | null, focus: boolean): void {
   if (!save || !outcome) return
-  const card = whyBattle(outcome.traces, { win: outcome.win, gold: outcome.gold, exp: outcome.exp }, save.settings.lang)
+  const card = whyBattle(outcome.traces, { win: outcome.win, gold: outcome.gold, exp: outcome.exp, ultUnlocked: ultUnlocked() }, save.settings.lang)
   overlay = { kind: 'why', card, badge: outcome.badge }
   render()
   window.clearTimeout(whyTimer)
@@ -2545,8 +2596,7 @@ function play(outcome: EncounterOutcome, speed: Speed, done: () => void): void {
       const field = document.getElementById('battle-world')
       if (allyActor) {
         const slide = clampActorSlide(allyActor, field, -240 * enter)
-        allyActor.style.transform = `${actorTransform('ally', allyMove, allyHit, allyKo, elapsed, reach)} translate(${slide.toFixed(1)}px, 0px)`
-        allyActor.style.opacity = String(koPose(allyKo).opacity)
+        poseActor(allyActor, 'ally', allyMove, allyHit, allyKo, elapsed, reach, slide)
         clampActorPose(allyActor, field)
       }
       paintWeatherArrow('ally-arrow', shot ? species(shot.allySpecies).type : null, weather)
@@ -2569,8 +2619,7 @@ function play(outcome: EncounterOutcome, speed: Speed, done: () => void): void {
         if (picture instanceof HTMLImageElement) picture.style.filter = 'brightness(2.4)'
       }
       if (foeActor) {
-        foeActor.style.transform = actorTransform('foe', foeMove, foeHit, foeKo, elapsed + 180, reach)
-        foeActor.style.opacity = String(koPose(foeKo).opacity)
+        poseActor(foeActor, 'foe', foeMove, foeHit, foeKo, elapsed + 180, reach, 0)
         clampActorPose(foeActor, field)
       }
       const world = document.getElementById('battle-world')
@@ -2713,6 +2762,13 @@ function showAura(speed: number): void {
     }
     node.style.backgroundPosition = `${-frame * 420}px 0`
   }, step)
+}
+
+function poseActor(actor: HTMLElement, side: 'ally' | 'foe', move: number, hit: number, ko: number, idle: number, reach: number, extraX: number): void {
+  actor.style.transform = `translate(-50%, -100%)${extraX ? ` translate(${extraX.toFixed(1)}px, 0px)` : ''}`
+  const sprite = actor.querySelector('img.sprite')
+  if (sprite instanceof HTMLElement) sprite.style.transform = spriteMotion(side, move, hit, ko, idle, reach)
+  actor.style.opacity = String(koPose(ko).opacity)
 }
 
 function clampActorSlide(actor: HTMLElement, field: HTMLElement | null, x: number): number {
@@ -3289,7 +3345,9 @@ function onClick(event: Event): void {
     return
   }
   if (act === 'why-log') {
-    overlay = { kind: 'battle-log' }
+    window.clearTimeout(whyTimer)
+    whyTimer = 0
+    overlay = { kind: 'battle-log', back: 'why' }
     render()
     return
   }
@@ -3707,6 +3765,10 @@ function onClick(event: Event): void {
     return
   }
   if (act === 'close') {
+    if (overlay?.kind === 'battle-log' && overlay.back === 'why' && lastWhy) {
+      openWhy(lastWhy, false)
+      return
+    }
     overlay = null
     if (showAwaken()) return
     render()

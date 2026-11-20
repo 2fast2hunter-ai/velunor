@@ -41,7 +41,7 @@ export function whyIconFile(icon: WhyIcon): string {
   return `battle_ui/summary/grund_${icon}.png`
 }
 
-export function whyBattle(traces: readonly FightTrace[], facts: { win: boolean, gold: number, exp: number }, lang: Lang): WhyCard {
+export function whyBattle(traces: readonly FightTrace[], facts: { win: boolean, gold: number, exp: number, ultUnlocked?: boolean }, lang: Lang): WhyCard {
   const hits = traces.flatMap((trace) => (trace.frames ?? []).flatMap((frame) => (frame.hits ?? []).map((hit) => ({
     from: hit.from,
     amount: hit.amount,
@@ -76,14 +76,14 @@ export function whyBattle(traces: readonly FightTrace[], facts: { win: boolean, 
   if (weatherHits.length) reasons.push({ icon: 'wetter', score: Math.abs(weatherPct) + weatherHits.length, sentence: t(lang, 'why.wetter', { pct: `${weatherPct > 0 ? '+' : ''}${weatherPct}` }) })
   if (first) reasons.push({ icon: 'erstschlag', score: 40, sentence: t(lang, first.from === 'ally' ? 'why.first.you' : 'why.first.foe') })
   if (ultPct > 0) reasons.push({ icon: 'ult', score: ultPct, sentence: t(lang, 'why.ult', { pct: ultPct }) })
-  if (statusN > 0) reasons.push({ icon: 'status', score: statusN * 25, sentence: t(lang, 'why.status', { n: statusN }) })
-  if (critN > 0) reasons.push({ icon: 'mechanik', score: critN * 20, sentence: t(lang, 'why.crit', { n: critN }) })
+  if (statusN > 0) reasons.push({ icon: 'status', score: statusN * 25, sentence: t(lang, statusN === 1 ? 'why.status.one' : 'why.status', { n: statusN }) })
+  if (critN > 0) reasons.push({ icon: 'mechanik', score: critN * 20, sentence: t(lang, critN === 1 ? 'why.crit.one' : 'why.crit', { n: critN }) })
   if (mechN > 0) reasons.push({ icon: 'mechanik', score: mechN * 35, sentence: t(lang, 'why.mech', { n: mechN }) })
   reasons.sort((a, b) => b.score - a.score)
   const picked = reasons.slice(0, 3)
   if (!picked.length) picked.push({ icon: 'erstschlag', score: 0, sentence: t(lang, facts.win ? 'why.tip.win' : 'why.tip.loss') })
   const shares = shareRows(hits)
-  const tips = tipLines(lang, { win: facts.win, strongPct, weakPct, firstAlly: first?.from === 'ally', ultPct, statusN, critN })
+  const tips = tipLines(lang, { win: facts.win, strongPct, weakPct, firstAlly: first?.from === 'ally', ultPct, statusN, critN, ultUnlocked: facts.ultUnlocked !== false })
   return {
     win: facts.win,
     ko: Math.min(6, traces.filter((trace) => trace.foeKo).length),
@@ -122,12 +122,18 @@ function shareRows(hits: { from: 'ally' | 'foe', amount: number, kind: string, u
   return [...rows.values()]
 }
 
-function tipLines(lang: Lang, row: { win: boolean, strongPct: number, weakPct: number, firstAlly: boolean | undefined, ultPct: number, statusN: number, critN: number }): string[] {
+export function shareLegend(share: WhyShare, lang: Lang): string {
+  const total = share.normal + share.ult + share.status
+  const pct = (part: number) => total > 0 ? Math.round((part / total) * 100) : 0
+  return t(lang, 'why.share', { normal: pct(share.normal), ult: pct(share.ult), status: pct(share.status) })
+}
+
+function tipLines(lang: Lang, row: { win: boolean, strongPct: number, weakPct: number, firstAlly: boolean | undefined, ultPct: number, statusN: number, critN: number, ultUnlocked: boolean }): string[] {
   const tips: string[] = []
   if (row.weakPct >= 50) tips.push(t(lang, 'why.tip.weak'))
   if (row.firstAlly === false) tips.push(t(lang, 'why.tip.tempo'))
   if (row.statusN > 0) tips.push(t(lang, 'why.tip.status'))
-  if (!row.win && row.ultPct === 0) tips.push(t(lang, 'why.tip.ult'))
+  if (!row.win && row.ultPct === 0 && row.ultUnlocked) tips.push(t(lang, 'why.tip.ult'))
   if (row.win && row.strongPct >= 50) tips.push(t(lang, 'why.tip.strong'))
   if (row.critN >= 2) tips.push(t(lang, 'why.tip.crit'))
   tips.push(t(lang, row.win ? 'why.tip.win' : 'why.tip.loss'))

@@ -16,7 +16,7 @@ import { baseLine, dexPlaces, dexStatus, dexStatusLabel, listCodex, regionProgre
 import { goalName, goalTitle, rarityLabel, t, typeLabel, weatherLabel, whenLabel, type Lang } from './i18n'
 import { latestLine, logIconFile, sheetLine, type BattleFightLog, type BattleLogLine } from './battleLog'
 import { hpNumbersOn } from './battleHud'
-import { whyIconFile, type WhyCard } from './battleWhy'
+import { shareLegend, whyIconFile, type WhyCard } from './battleWhy'
 import { colorHex, colorId, skinHex } from './avatar'
 import { agoParts, continueFacts } from './continue'
 import { STARTER_ART, starterBars, strongTypes, typeList, weakTypes } from './starter'
@@ -111,7 +111,7 @@ export type Overlay =
   | { kind: 'awaken'; uid: string; level: 25 | 50 }
   | { kind: 'offline'; done: number; total: number }
   | { kind: 'log' }
-  | { kind: 'battle-log' }
+  | { kind: 'battle-log'; back?: 'why' }
   | { kind: 'guard'; win: boolean; badge: string | null; gold: number; text: string }
   | { kind: 'why'; card: WhyCard; badge: string | null }
   | { kind: 'chest-rates'; tier: ChestTier }
@@ -1561,7 +1561,7 @@ function screenHead(key: 'arena' | 'tower'): string {
 function arenaScreen(save: SaveV2, panel: ArenaPanel | undefined): string {
   const view = panel ?? { status: 'offline' as const, note: '', rating: 1000, league: 'Kiesel', attacks: 0, slots: [], suggestions: [], logs: [], frames: [], replay: null }
   const badges = ['kiesel', 'bronze', 'silber', 'gold', 'kristall', 'meister'].map((id) => `<div class="league-item">${leagueBadge(id, view.frames.includes(id) || view.league.toLowerCase().includes(id === 'meister' ? 'meister' : id))}<span>${esc(tr(save, `arena.league.${id}`))}</span></div>`).join('')
-  if (view.status === 'loading') {
+  if (view.status === 'loading' && !view.replay) {
     return `<div class="menu-screen"><div class="menu-scroll"><div class="card panel">${screenHead('arena')}<h2>${tr(save, 'nav.arena')}</h2><p class="muted">${tr(save, 'arena.loading')}</p></div></div></div>`
   }
   if (view.status !== 'ready' && view.status !== 'locked') {
@@ -2059,7 +2059,7 @@ function whyCard(save: SaveV2, card: WhyCard, badge: string | null): string {
   const shares = card.shares.map((share) => {
     const total = share.normal + share.ult + share.status
     const pct = (part: number) => total > 0 ? Math.round((part / total) * 100) : 0
-    return `<div class="why-share"><b>${esc(share.name)}</b><span><i class="is-normal" style="width:${pct(share.normal)}%"></i><i class="is-ult" style="width:${pct(share.ult)}%"></i><i class="is-status" style="width:${pct(share.status)}%"></i></span></div>`
+    return `<div class="why-share"><b>${esc(share.name)}</b><span><i class="is-normal" style="width:${pct(share.normal)}%"></i><i class="is-ult" style="width:${pct(share.ult)}%"></i><i class="is-status" style="width:${pct(share.status)}%"></i></span><small>${esc(shareLegend(share, L(save)))}</small></div>`
   }).join('')
   return `<div class="why-card" style="${frame}"><h2>${tr(save, 'why.title')}</h2>
     <p>${tr(save, card.win ? 'why.win' : 'why.loss')} · ${tr(save, 'why.ko', { n: card.ko, total: card.koMax })}</p>

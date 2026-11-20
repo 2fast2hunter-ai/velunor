@@ -37,7 +37,9 @@ async function reachGuardian(page: Page, base: string): Promise<void> {
   await page.locator('[data-act="pick"][data-species="m01"]').click()
   await page.locator('[data-act="start"]').click()
   await page.locator('[data-screen="adventure"]').waitFor()
-  await assertRoadDock(page)
+  const challengePoint = await assertRoadDock(page)
+  if (page.viewportSize()?.width === 390) await assertRoadFps(page)
+  await page.touchscreen.tap(challengePoint.x, challengePoint.y)
   const raw = await page.evaluate(() => localStorage.getItem('velunor_v2'))
   const save = JSON.parse(raw ?? '{}')
   save.step = 20
@@ -72,7 +74,30 @@ async function reachGuardian(page: Page, base: string): Promise<void> {
   }
 }
 
-async function assertRoadDock(page: Page): Promise<void> {
+async function assertRoadFps(page: Page): Promise<void> {
+  await page.locator('[data-act="speed"][data-speed="3"]').click()
+  const client = await page.context().newCDPSession(page)
+  await client.send('Emulation.setCPUThrottlingRate', { rate: 4 })
+  await page.locator('.float-num').first().waitFor({ timeout: 20_000 })
+  const gaps = await page.evaluate(() => new Promise<number[]>((resolve) => {
+    const stamps: number[] = []
+    let prev = performance.now()
+    const step = (now: number) => {
+      stamps.push(now - prev)
+      prev = now
+      if (stamps.length < 150) requestAnimationFrame(step)
+      else resolve(stamps)
+    }
+    requestAnimationFrame(step)
+  }))
+  await client.send('Emulation.setCPUThrottlingRate', { rate: 1 })
+  const fps = gaps.map((ms) => 1000 / Math.max(1, ms)).sort((a, b) => a - b)
+  const slow = fps.slice(0, Math.max(1, Math.ceil(fps.length * 0.05)))
+  const low = slow.reduce((sum, n) => sum + n, 0) / slow.length
+  expect(low, `road ×3 5% low ${low.toFixed(1)} fps`).toBeGreaterThanOrEqual(30)
+}
+
+async function assertRoadDock(page: Page): Promise<{ x: number, y: number }> {
   const log = await box(page, '#battle-log')
   for (const speed of ['1', '2', '3']) {
     const button = await box(page, `[data-act="speed"][data-speed="${speed}"]`)
@@ -99,6 +124,29 @@ async function assertRoadDock(page: Page): Promise<void> {
   if (sheet && speed3) expect(overlaps(sheet, speed3), 'sheet covers ×3').toBe(false)
   if (close) await page.touchscreen.tap(close.x + close.width / 2, close.y + close.height / 2)
   await expect.poll(async () => page.locator('#battle-log-sheet').getAttribute('hidden')).not.toBeNull()
+  return assertChallengeTap(page)
+}
+
+async function assertChallengeTap(page: Page): Promise<{ x: number, y: number }> {
+  const button = page.locator('[data-act="challenge"]')
+  await button.waitFor()
+  await page.evaluate(() => {
+    const line = document.getElementById('battle-log-text')
+    if (line) line.textContent = 'Ein langer Kampfsatz mit Typ, Wetter und Status, der auf zwei Zeilen umbrechen muss, damit der Herausfordern-Knopf frei bleibt.'
+  })
+  const at = await button.boundingBox()
+  expect(at && at.height).toBeGreaterThan(40)
+  const log = await box(page, '#battle-log')
+  const lower = { x: at!.x, y: at!.y + at!.height / 2, width: at!.width, height: at!.height / 2 }
+  if (log && log.height > 2) expect(overlaps(log, lower), 'two-line log covers the lower half of the challenge').toBe(false)
+  const x = at!.x + at!.width / 2
+  const y = at!.y + at!.height * 0.75
+  const hit = await page.evaluate(({ x, y }) => {
+    const el = document.elementFromPoint(x, y)
+    return el?.closest('[data-act="challenge"]') ? 'challenge' : (el?.id || el?.className || '')
+  }, { x, y })
+  expect(hit, 'lower half of the challenge').toBe('challenge')
+  return { x, y }
 }
 
 async function assertNamesFree(page: Page): Promise<void> {
@@ -269,5 +317,38 @@ describe('focus bar tap', () => {
     } finally {
       await browser.close()
     }
-  }, 180_000)
+  }, 240_000)
+
+  it.skipIf(!hasChrome)('the why card comes back after Kampflog and the road walks again', async () => {
+    if (!chrome) return
+    const browser = await chromium.launch({ executablePath: chrome, headless: true, args: ['--no-sandbox', '--disable-gpu'] })
+    try {
+      const page = await browser.newPage({ viewport: { width: 390, height: 844 }, hasTouch: true })
+      const port = server?.config.server.port ?? 5173
+      const base = `http://127.0.0.1:${port}/?debug=1`
+      await page.goto(base, { waitUntil: 'domcontentloaded' })
+      await page.evaluate(() => localStorage.clear())
+      await page.reload({ waitUntil: 'domcontentloaded' })
+      await page.locator('#hero-name, [data-act="consent"]').first().waitFor({ timeout: 45_000 })
+      const consent = page.locator('[data-act="consent"][data-consent="no"]')
+      if (await consent.count()) await consent.click()
+      await page.locator('#hero-name').fill('Ada')
+      await page.locator('[data-act="next"]').click()
+      await page.locator('[data-act="pick"][data-species="m01"]').click()
+      await page.locator('[data-act="start"]').click()
+      await page.locator('[data-screen="adventure"]').waitFor()
+      await page.locator('#why-chip:not([hidden])').waitFor({ timeout: 30_000 })
+      await page.locator('#why-chip').click()
+      await page.locator('[data-act="why-log"]').waitFor({ timeout: 20_000 })
+      await page.locator('[data-act="why-log"]').click()
+      await page.locator('.log-full [data-act="close"]').click()
+      await page.locator('[data-act="why-next"]').waitFor({ timeout: 5_000 })
+      await page.locator('[data-act="why-next"]').click()
+      await expect.poll(async () => page.evaluate(() => Boolean(JSON.parse(localStorage.getItem('velunor_v2') ?? '{}').hold))).toBe(false)
+      await expect.poll(async () => page.locator('#battle-text').innerText(), { timeout: 8_000 }).not.toContain('wartet')
+      await page.close()
+    } finally {
+      await browser.close()
+    }
+  }, 90_000)
 })
