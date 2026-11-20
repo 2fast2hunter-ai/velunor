@@ -22,14 +22,15 @@ import {
   type Speed
 } from './const'
 import { chatErrorKey } from './chat'
-import { t, type Lang } from './i18n'
+import { t, typeLabel, weatherLabel, type Lang } from './i18n'
 import { shotAt, shouldRecover } from './present'
 import { actionAt, battleQueueOn, focusKo, focusSide, focusTempo, hitNumberPhase, planBattle, roadQueueFromSearch, roadTempo, setRoadQueue, shotFromAction } from './battlePlayer'
 import { battleLogFromTraces, lineFor, lineForFrame, logIconFile, rememberBattleLog, type BattleFightLog, type BattleLogLine } from './battleLog'
+import { hpLabel, typeEdge, weatherPct } from './battleHud'
 import { roadPaceFromSearch, setRoadPace } from './roadPace'
-import { species, typeColor } from '../data'
-import { teamWeatherMarks, weatherArrow, weatherAt } from './weather'
-import { ultName } from './ult'
+import { species, typeColor, typeMult } from '../data'
+import { teamWeatherMarks, weatherArrow, weatherAt, WEATHER_SHIFTS } from './weather'
+import { ultName, type UltPattern } from './ult'
 import { AURA_FRAMES, AURA_MS } from './combo'
 import { activeSynergies, presentSynergies, SYNERGY_CAP, synergyKnown } from './synergy'
 import { mechIcon, type MechId } from './mech'
@@ -2365,6 +2366,7 @@ function play(outcome: EncounterOutcome, speed: Speed, done: () => void): void {
     focusCtl = { paused: false, stop: () => { skipped = true; finishOnce() } }
     showFocusChrome()
   }
+  announceWeather()
   if (save && outcome.traces.length) {
     liveFight = battleLogFromTraces(outcome.traces, save.settings.lang)
     battleLogs = rememberBattleLog(battleLogs, liveFight)
@@ -2417,8 +2419,9 @@ function play(outcome: EncounterOutcome, speed: Speed, done: () => void): void {
         if (frozen < 0 && elapsed - counterAt >= 320) frozen = elapsed
       }
       if (shot && allyHp && foeHp) {
-        allyHp.style.width = `${(shot.allyHp / shot.allyMax) * 100}%`
-        foeHp.style.width = `${(shot.foeHp / shot.foeMax) * 100}%`
+        paintHp('ally-hp', shot.allyHp, shot.allyMax)
+        paintHp('foe-hp', shot.foeHp, shot.foeMax)
+        paintAdvantage(shot.allySpecies, shot.foeSpecies, shot.hits[0]?.band)
         const dropped = queue
           ? armFx
           : ((prevAlly != null && shot.allyHp < prevAlly) || (prevFoe != null && shot.foeHp < prevFoe))
@@ -2437,6 +2440,8 @@ function play(outcome: EncounterOutcome, speed: Speed, done: () => void): void {
             const travel = queueStep?.fx ? Math.min(rawTravel, Math.max(0, Math.round(queueStep.dur * 0.45))) : rawTravel
             const keyMove = Boolean(hit.crit || hit.ko || hit.ult || hit.kind === 'status' || hit.helper || hit.pulse)
             if ((hit.kind === 'hit' || hit.ult) && !(roadOn && !keyMove)) showMove(hit.ult ? ultName(hit.ult) : attackTitle(attackerId, hit.type), hit.from === 'ally' ? allyActor : foeActor, k)
+            paintWeatherTag(hit.weather, to.x, to.y)
+            if (hit.ult) showUltCard(hit.ult, speed)
             const paintNumber = () => {
               if (gen !== playGen || !hit) return
               if ((hit.kind === 'hit' || hit.kind === 'heal') && hit.amount > 0) {
@@ -2613,8 +2618,30 @@ function paintMark(id: string, mark: string | null, stacks: number): void {
     img.src = art(ailmentIcon(spec.id))
     img.alt = spec.name
   }
+  const name = node.querySelector('.status-name')
+  if (name) name.textContent = t(save?.settings.lang, `log.ailment.${spec.id}`)
+  const pile = node.querySelector('.status-stack')
+  const count = node.querySelector('.status-stack b')
+  if (pile instanceof HTMLElement) pile.hidden = stacks <= 1
+  if (count) count.textContent = String(Math.max(1, stacks))
   const piles = spec.id === 'giftnebel' && stacks > 1 ? ` Stapel ${stacks}.` : ''
   node.dataset.tip = `${spec.tip}${piles}`
+}
+
+function paintHp(id: string, hp: number, max: number): void {
+  const bar = document.getElementById(id)
+  if (!(bar instanceof HTMLElement) || !(max > 0)) return
+  const next = Math.max(0, Math.min(100, (hp / max) * 100))
+  const prev = Number(bar.dataset.pct ?? next)
+  const ghost = document.getElementById(`${id}-ghost`)
+  if (ghost instanceof HTMLElement && next < prev - 0.5) {
+    ghost.style.width = `${prev}%`
+    window.setTimeout(() => { ghost.style.width = `${next}%` }, 400)
+  } else if (ghost instanceof HTMLElement) ghost.style.width = `${next}%`
+  bar.dataset.pct = String(next)
+  bar.style.width = `${next}%`
+  const num = document.getElementById(`${id}-num`)
+  if (num) num.textContent = hpLabel(hp, max)
 }
 
 let auraTimer = 0
@@ -2703,10 +2730,101 @@ function paintHelper(on: boolean, speciesId: string): void {
 function paintUlt(id: string, n: number, open: boolean): void {
   const node = document.getElementById(id)
   if (!node) return
+  const filled = Math.max(0, Math.min(5, Math.floor(n)))
   node.hidden = false
-  node.dataset.n = String(Math.max(0, Math.min(5, Math.floor(n))))
-  node.classList.toggle('is-ready', open && n >= 5)
+  node.dataset.n = String(filled)
+  node.dataset.open = open ? '1' : '0'
+  node.classList.toggle('is-ready', open && filled >= 5)
   node.classList.toggle('is-locked', !open)
+  const ready = open && filled >= 5
+  node.querySelectorAll<HTMLImageElement>('.ult-seg').forEach((img, index) => {
+    const file = ready ? 'seg_bereit_s' : index < filled ? 'seg_voll_s' : 'seg_leer_s'
+    img.src = art(`battle_ui/ult/${file}.png`)
+  })
+  const note = node.querySelector('.ult-lock b')
+  if (note) note.textContent = t(save?.settings.lang, 'battle.ultLocked')
+  const banner = node.querySelector('.ult-ready')
+  if (banner) banner.textContent = t(save?.settings.lang, 'battle.ultReady')
+}
+
+function paintAdvantage(allyId: string, foeId: string, band?: 'strong' | 'weak' | 'neutral'): void {
+  const chip = document.getElementById('adv-chip')
+  if (!(chip instanceof HTMLElement)) return
+  let allyType: TypeId
+  let foeType: TypeId
+  try {
+    allyType = species(allyId).type
+    foeType = species(foeId).type
+  } catch {
+    chip.hidden = true
+    return
+  }
+  const edge = band ?? typeEdge(typeMult(allyType, foeType))
+  const formName = edge === 'strong' ? 'stark' : edge === 'weak' ? 'schwach' : 'neutral'
+  chip.hidden = false
+  const from = document.getElementById('adv-from')
+  const to = document.getElementById('adv-to')
+  const form = document.getElementById('adv-form')
+  const word = document.getElementById('adv-word')
+  if (from instanceof HTMLImageElement) from.src = art(`icons/type_${allyType}_128.png`)
+  if (to instanceof HTMLImageElement) to.src = art(`icons/type_${foeType}_128.png`)
+  if (form instanceof HTMLImageElement) form.src = art(`battle_ui/adv/${formName}.png`)
+  if (word) word.textContent = t(save?.settings.lang, `log.tag.${edge === 'strong' ? 'strong' : edge === 'weak' ? 'weak' : 'neutral'}`)
+  chip.style.borderImage = `url("${art(`battle_ui/adv/pill_${formName}.png`)}") 34 40 40 40 fill / 34px 40px 40px 40px / 8px stretch`
+}
+
+function paintWeatherTag(factor: number | undefined, x: number, y: number): void {
+  const node = document.getElementById('wx-tag')
+  const pct = weatherPct(factor)
+  if (!(node instanceof HTMLElement) || !pct) {
+    if (node instanceof HTMLElement) node.hidden = true
+    return
+  }
+  node.hidden = false
+  node.style.left = `${Math.round(x)}px`
+  node.style.top = `${Math.round(y - 64)}px`
+  node.style.borderImage = `url("${art('battle_ui/wetter/tag.png')}") 24 26 26 26 fill / 24px 26px 26px 26px / 5px stretch`
+  const text = document.getElementById('wx-tag-text')
+  if (text) text.textContent = pct
+}
+
+let ultCardTimer = 0
+
+function showUltCard(pattern: UltPattern, tempo: number): void {
+  const card = document.getElementById('ult-card')
+  const world = document.getElementById('battle-world')
+  if (!(card instanceof HTMLElement)) return
+  const key = pattern === 'durchschlag' ? 'log.ult.strike' : pattern === 'schildwall' ? 'log.ult.wall' : pattern === 'impuls' ? 'log.ult.impulse' : pattern === 'fessel' ? 'log.ult.fetter' : 'log.ult.glow'
+  const name = document.getElementById('ult-card-name')
+  const sub = document.getElementById('ult-card-pattern')
+  if (name) name.textContent = t(save?.settings.lang, key)
+  if (sub) sub.textContent = t(save?.settings.lang, 'battle.ultReady')
+  card.hidden = false
+  card.style.borderImage = `url("${art('battle_ui/callout/ult.png')}") 64 64 68 64 fill / 64px 64px 68px 64px / 12px stretch`
+  world?.classList.add('is-ult')
+  window.clearTimeout(ultCardTimer)
+  const pace = tempo === 2 || tempo === 3 ? tempo : 1
+  ultCardTimer = window.setTimeout(() => {
+    card.hidden = true
+    world?.classList.remove('is-ult')
+  }, Math.round(900 / pace))
+}
+
+function announceWeather(): void {
+  const node = document.getElementById('wx-announce')
+  if (!(node instanceof HTMLElement) || !save) return
+  const weather = weatherAt(Date.now())
+  const row = WEATHER_SHIFTS[weather]
+  if (!row || weather === 'klar') {
+    node.hidden = true
+    return
+  }
+  const lang = save.settings.lang
+  const bit = (shift: { type: TypeId; pct: number }, sign: string) => `${typeLabel(lang, shift.type, shift.type)} ${sign}${shift.pct} %`
+  const parts = [...row.up.map((shift) => bit(shift, '+')), ...row.down.map((shift) => bit(shift, '−'))]
+  node.hidden = false
+  node.textContent = `${weatherLabel(lang, weather)}: ${parts.join(', ')}`
+  window.setTimeout(() => { node.hidden = true }, 1200)
 }
 
 function paintWeatherArrow(id: string, type: TypeId | null, weather: ReturnType<typeof weatherAt>): void {
@@ -3933,6 +4051,11 @@ function syncField(target: EventTarget | null): void {
   if (field === 'motion' && target instanceof HTMLInputElement) save.settings.reduceMotion = target.checked
   if (field === 'swipe' && target instanceof HTMLInputElement) save.settings.swipeTabs = target.checked
   if (field === 'haptic' && target instanceof HTMLInputElement) save.settings.haptics = target.checked
+  if (field === 'hp' && target instanceof HTMLInputElement) {
+    if (target.checked) delete save.settings.showHpNumbers
+    else save.settings.showHpNumbers = false
+    try { writeSave(gameStore, save) } catch { /* the memory copy still applies */ }
+  }
   if (field === 'battery' && target instanceof HTMLInputElement) {
     save.settings.battery = target.checked
     setFxRunning(true, target.checked ? BATTERY_FPS : 60)

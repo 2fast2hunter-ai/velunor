@@ -471,6 +471,7 @@ textarea { width: 100%; box-sizing: border-box; background: #121a30; color: inhe
 .combatant img.sprite { height: 280px; width: auto; filter: drop-shadow(0 12px 10px rgba(0, 0, 0, 0.35)); }
 .combatant.ally img.sprite { transform: scaleX(-1); }
 .hp {
+  position: relative;
   width: 180px;
   height: 14px;
   border-radius: 99px;
@@ -478,7 +479,52 @@ textarea { width: 100%; box-sizing: border-box; background: #121a30; color: inhe
   overflow: hidden;
   border: 1px solid rgba(255, 255, 255, 0.2);
 }
-.hp span { display: block; height: 100%; width: 100%; background: linear-gradient(90deg, #e35d5d, #f0c14a); }
+.hp .hp-fill { position: relative; z-index: 1; display: block; height: 100%; width: 100%; background: linear-gradient(90deg, #e35d5d, #f0c14a); transition: width 300ms linear; }
+.hp .hp-ghost { position: absolute; left: 0; top: 0; z-index: 0; height: 100%; width: 0; background: rgba(255, 236, 180, 0.75); }
+.reduce-motion .hp .hp-fill { transition: none; }
+.hp-num { display: none; margin-top: 4px; font-size: 28px; font-weight: 800; color: #fff8e1; -webkit-text-stroke: 3px #1a1208; paint-order: stroke fill; }
+#stage.hp-nums .hp-num { display: block; }
+.ult-bar.small { display: flex; align-items: center; gap: 6px; min-height: 40px; margin-top: 6px; }
+.ult-bar.small .ult-seg { width: 36px; height: 36px; }
+.ult-bar .ult-lock, .ult-bar .ult-ready { display: flex; align-items: center; gap: 6px; font-size: 28px; font-weight: 800; color: #fff8e1; }
+.ult-bar .ult-lock img { width: 36px; height: 36px; }
+.ult-bar.is-locked .ult-lock { display: flex; }
+.ult-bar:not(.is-locked) .ult-lock { display: none; }
+.ult-bar.is-locked .ult-seg { display: none; }
+.ult-bar.is-ready .ult-ready { display: flex; }
+.status-chip[hidden], .adv-chip[hidden], .wx-tag[hidden], .ult-card[hidden], .wx-announce[hidden] { display: none; }
+.status-chip {
+  display: inline-flex; align-items: center; gap: 8px; min-height: 64px; margin-top: 6px; padding: 0 12px;
+  border: 0; border-radius: 18px; background: rgba(255, 250, 240, 0.92); color: #4a2c17; font-size: 32px; font-weight: 800;
+}
+.status-chip img:first-child { width: 40px; height: 40px; object-fit: contain; }
+.status-chip .status-stack { position: relative; width: 40px; height: 40px; }
+.status-chip .status-stack img { width: 40px; height: 40px; }
+.status-chip .status-stack b { position: absolute; inset: 0; display: grid; place-items: center; color: #fff; font-size: 24px; }
+.adv-chip {
+  position: absolute; z-index: 8; left: 50%; top: 46%; transform: translate(-50%, -50%);
+  display: inline-flex; align-items: center; gap: 8px; height: 72px; padding: 0 20px 0 8px;
+  color: #fff3dc; -webkit-text-stroke: 4px #4a2c17; paint-order: stroke fill; font-size: 34px; font-weight: 800;
+  background: rgba(74, 44, 23, 0.35) padding-box; border-radius: 28px;
+}
+.adv-chip img { width: 52px; height: 52px; object-fit: contain; }
+.wx-announce { margin: 0; max-width: 100%; font-size: 32px; font-weight: 800; color: #fff8e1; text-align: center; }
+.wx-tag {
+  position: absolute; z-index: 9; display: inline-flex; align-items: center; gap: 6px; height: 56px; padding: 0 12px;
+  color: #1d3d66; font-weight: 800; font-size: 32px; background: rgba(232, 244, 255, 0.94); border-radius: 16px;
+}
+.wx-tag img { width: 28px; height: 28px; }
+.ult-card {
+  position: absolute; z-index: 11; left: 50%; top: 38%; transform: translate(-50%, -50%);
+  width: 860px; min-height: 200px; display: grid; place-items: center; text-align: center;
+  color: #4a2c17; background: #fbe3a6; border-radius: 36px; overflow: hidden;
+}
+.ult-card b { font-size: 48px; }
+.ult-card span { font-size: 34px; }
+.ult-glanz { position: absolute; inset: 0 auto 0 -20%; width: 160px; height: 160px; animation: ult-sweep 600ms linear; pointer-events: none; }
+.reduce-motion .ult-glanz { display: none; }
+@keyframes ult-sweep { from { transform: translateX(0); } to { transform: translateX(520px); } }
+.battle-world.is-ult::after { content: ''; position: absolute; inset: 0; background: rgba(20, 12, 30, 0.55); z-index: 3; pointer-events: none; }
 .ult {
   width: 180px; height: 10px; margin-top: 6px; border-radius: 99px;
   background: rgba(8, 12, 24, 0.55);
