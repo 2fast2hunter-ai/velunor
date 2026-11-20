@@ -67,11 +67,11 @@ export function eventsForEncounter(input: {
     })
   }
   for (const drop of shardGains(input.shardsBefore, input.shardsAfter)) {
-    events.push({ event: 'shard_drop', props: { species: drop.species, amount: drop.amount, source: 'wild' } })
+    events.push({ event: 'shard_drop', props: { speciesId: drop.species, amount: drop.amount, source: 'wild' } })
   }
   const unlocked = input.outcome.unlock
   if (typeof unlocked === 'string' && SPECIES_ID.test(unlocked)) {
-    events.push({ event: 'species_unlock', props: { species: unlocked, via: 'splitter' } })
+    events.push({ event: 'species_unlock', props: { speciesId: unlocked, via: 'splitter' } })
   }
   return events
 }
@@ -88,7 +88,7 @@ export function eventsForLoot(tier: string, grants: readonly LootOpen[], before:
   if (CHEST_TIER.has(tier)) {
     for (const grant of grants) {
       events.push({
-        event: 'lootbox_open',
+        event: 'chest_open',
         props: {
           tier,
           rarity: Math.max(0, Math.floor(grant.rarity)),
@@ -97,19 +97,19 @@ export function eventsForLoot(tier: string, grants: readonly LootOpen[], before:
         }
       })
       if (grant.isNew && SPECIES_ID.test(grant.speciesId)) {
-        events.push({ event: 'species_unlock', props: { species: grant.speciesId, via: 'chest' } })
+        events.push({ event: 'species_unlock', props: { speciesId: grant.speciesId, via: 'chest' } })
       }
     }
   }
   for (const drop of shardGains(before, after)) {
-    events.push({ event: 'shard_drop', props: { species: drop.species, amount: drop.amount, source: 'duplicate' } })
+    events.push({ event: 'shard_drop', props: { speciesId: drop.species, amount: drop.amount, source: 'duplicate' } })
   }
   return events
 }
 
-export function unlockEvent(speciesId: string, via: 'chest' | 'splitter' | 'werkstatt'): AnalyticsEvent | null {
+export function unlockEvent(speciesId: string, via: 'chest' | 'splitter' | 'workshop'): AnalyticsEvent | null {
   if (!SPECIES_ID.test(speciesId)) return null
-  return { event: 'species_unlock', props: { species: speciesId, via } }
+  return { event: 'species_unlock', props: { speciesId, via } }
 }
 
 export function starEvent(speciesId: string, star: number): AnalyticsEvent | null {
