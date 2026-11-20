@@ -695,7 +695,7 @@ textarea { width: 100%; box-sizing: border-box; background: #121a30; color: inhe
   overflow: visible;
 }
 .battle:has(#focus-bar:not([hidden])) .combatant.foe { margin-top: 430px; }
-.battle:has(#focus-bar:not([hidden])) .combatant.ally { margin-top: -120px; }
+.battle:has(#focus-bar:not([hidden])) .combatant.ally { margin-top: -160px; }
 .battle:has(#focus-bar:not([hidden])) .focus-bar {
   left: 16px;
   right: 16px;
@@ -707,7 +707,7 @@ textarea { width: 100%; box-sizing: border-box; background: #121a30; color: inhe
 }
 .battle:has(#focus-bar:not([hidden])) .focus-bar .ko-dots { order: -1; margin-right: auto; }
 .battle:has(#focus-bar:not([hidden])) .focus-tempo { width: auto; flex-wrap: nowrap; }
-.battle:has(#focus-bar:not([hidden])) .why-chip { bottom: 320px; }
+.battle:has(#focus-bar:not([hidden])) .why-chip { display: none; }
 #stage:has(#focus-bar:not([hidden])) .speed,
 #stage:has(#focus-bar:not([hidden])) [data-act="challenge"] { display: none !important; }
 .battle:has(#focus-bar:not([hidden])) .name-banner {
@@ -719,6 +719,19 @@ textarea { width: 100%; box-sizing: border-box; background: #121a30; color: inhe
   right: auto;
   width: min(440px, 40%);
   bottom: 152px;
+  max-height: 128px;
+  overflow: hidden;
+}
+.battle:has(#focus-bar:not([hidden])) .battle-log span {
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+.battle:has(#focus-bar:not([hidden])) .battle-status.is-callout {
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  max-height: 112px;
 }
 .battle-log {
   position: absolute;
