@@ -1,6 +1,7 @@
 import { describe, expect, it } from 'vitest'
 import { nextFloat } from '../rng'
 import { SAVE_KEY_V2 } from './const'
+import { ROAD_PACE_DEFAULT } from './roadPace'
 import { chapterById, routeOf } from './route'
 import { beginAdventure, loadAdventure, makeMon } from './save'
 import { awardCombatExp, catchChance, resolveEncounter } from './sim'
@@ -154,7 +155,7 @@ describe('fruit effects', () => {
     resolveEncounter(save, 1_000, { offline: false, trace: false })
     const fruits = Object.values(save.bag.fruits).reduce((sum, count) => sum + count, 0)
     expect(fruits).toBe(1)
-    expect(save.gold).toBe(before + 50)
+    expect(save.gold).toBe(before + Math.round(50 * ROAD_PACE_DEFAULT))
     expect(chapterById(1, 1).id).toBe(1)
   })
 })

@@ -4,8 +4,8 @@ import { BASE_ENCOUNTER_MS } from './const'
 import type { NodeKind } from './route'
 import type { RewardBank, SaveV2 } from './types'
 
-/** Road-pace compensation stays off until it ships together with the road queue and A5. */
-export const ROAD_PACE_SWITCH = false
+/** Road-pace compensation is live together with the road queue. */
+export const ROAD_PACE_SWITCH = true
 
 /** Chapter-1 measurement. Missing `roadPace` uses this once the switch is on. */
 export const ROAD_PACE_DEFAULT = 1.6
@@ -33,7 +33,7 @@ export const PACE_K = {
 
 export type PaceKind = keyof typeof PACE_K
 
-/** Dev-only override. `null` keeps `ROAD_PACE_SWITCH`, which is false on main. */
+/** Dev-only override. `null` keeps `ROAD_PACE_SWITCH`. */
 let paceOverride: boolean | null = null
 
 export function setRoadPace(on: boolean | null): void {

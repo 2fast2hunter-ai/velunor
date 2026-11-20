@@ -2,12 +2,12 @@ import type { FightFrame, FightHit, FightTrace } from './battle'
 import { ENCOUNTER_MS, type Speed } from './const'
 import type { FrameShot } from './present'
 
-/** Road stays off until it ships with the pace switch and A5. Focus fights are live. */
-export const BATTLE_QUEUE = { road: false, focus: true } as const
+/** Road fights are live together with the pace switch. Focus fights are live. */
+export const BATTLE_QUEUE = { road: true, focus: true } as const
 
 export type BattleArt = keyof typeof BATTLE_QUEUE
 
-/** Dev-only override. `null` keeps the constant, which is false on main. */
+/** Dev-only override. `null` keeps the constant. */
 let roadOverride: boolean | null = null
 
 export function setRoadQueue(on: boolean | null): void {
