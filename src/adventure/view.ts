@@ -2018,10 +2018,8 @@ export function gameHtml(save: SaveV2, screen: Screen, now: number, pc: PcQuery,
         ${screen === 'shop' ? '' : header(save, now, cloudState(shell))}
         ${adventure ? chapterLine(save, step, mapOpen) : ''}
         ${adventure ? path(save, step) : ''}
-        ${adventure ? goalChip(save) : ''}
-        ${adventure && !shell.focusFight ? hintBubble(save, now) : ''}
       </div>
-      <div class="anchor anchor-mid">${adventure ? battle(save, now, shell.fighting, cloudState(shell).flagLevel === 2, latestLine(shell.battleLog ?? [])) : center(save, screen, now, pc, dex, selected, debug, wheel, shell)}</div>
+      <div class="anchor anchor-mid">${adventure ? goalChip(save) : ''}${adventure && !shell.focusFight ? hintBubble(save, now) : ''}${adventure ? battle(save, now, shell.fighting, cloudState(shell).flagLevel === 2, latestLine(shell.battleLog ?? [])) : center(save, screen, now, pc, dex, selected, debug, wheel, shell)}</div>
       <div class="anchor anchor-bot">
         ${adventure ? teamDock(save) : ''}
         ${adventure ? logBox(save) : ''}
