@@ -120,6 +120,19 @@ async function assertRoadDock(page: Page): Promise<{ x: number, y: number }> {
     return el?.closest('[data-act="speed"]')?.getAttribute('data-speed') ?? ''
   }, { x, y })
   expect(hit, 'tap on ×1').toBe('1')
+  for (const speed of ['2', '3']) {
+    const button = await box(page, `[data-act="speed"][data-speed="${speed}"]`)
+    expect(button && button.height).toBeGreaterThan(40)
+    const top = await page.evaluate(({ x, y }) => {
+      const el = document.elementFromPoint(x, y)
+      return {
+        act: el?.closest('[data-act="speed"]')?.getAttribute('data-speed') ?? '',
+        pe: el ? getComputedStyle(el).pointerEvents : ''
+      }
+    }, { x: button!.x + button!.width / 2, y: button!.y + button!.height / 2 })
+    expect(top.act, `first hit on ×${speed}`).toBe(speed)
+    expect(top.pe, `×${speed} icon`).not.toBe('none')
+  }
   await page.touchscreen.tap(x, y)
   await page.locator('.float-num').first().waitFor({ timeout: 20_000 })
   await page.locator('#battle-log').click()
@@ -201,6 +214,28 @@ async function assertClear(page: Page): Promise<void> {
   expect(await page.locator('[data-act="challenge"]').isVisible(), 'challenge hidden in focus').toBe(false)
   if (bar && foeName && foeName.width > 8 && foeName.height > 8) expect(overlaps(bar, foeName), 'focus bar covers the foe name').toBe(false)
   if (bar && foeHp && foeHp.width > 2) expect(overlaps(bar, foeHp), 'focus bar covers the foe HP').toBe(false)
+  const foeHpNum = await box(page, '#foe-hp-num')
+  if (bar && foeHpNum && foeHpNum.width > 8 && foeHpNum.height > 8) expect(overlaps(bar, foeHpNum), 'focus bar covers the foe HP number').toBe(false)
+  await page.evaluate(() => {
+    const node = document.getElementById('wx-announce')
+    if (!(node instanceof HTMLElement)) return
+    node.hidden = false
+    node.textContent = 'Wind: Wind +15 %, Sound +5 %, Insect −10 %'
+  })
+  const announce = await box(page, '#wx-announce')
+  if (announce && announce.width > 4 && foeName && foeName.width > 8 && foeName.height > 8) {
+    expect(overlaps(announce, foeName), 'weather announcement covers the foe name').toBe(false)
+  }
+  if (announce && announce.width > 4 && allyName && allyName.width > 8 && allyName.height > 8) {
+    expect(overlaps(announce, allyName), 'weather announcement covers the ally name').toBe(false)
+  }
+  if (announce && announce.width > 4 && allyHp && allyHp.width > 8) {
+    expect(overlaps(announce, allyHp), 'weather announcement covers the ally HP').toBe(false)
+  }
+  await page.evaluate(() => {
+    const node = document.getElementById('wx-announce')
+    if (node instanceof HTMLElement) node.hidden = true
+  })
   const foeSprite = await box(page, '#foe-sprite')
   const spotlight = await box(page, '#spotlight-foe')
   if (bar && foeSprite && foeSprite.width > 8 && foeSprite.height > 8) expect(overlaps(bar, foeSprite), 'focus bar covers the foe').toBe(false)
