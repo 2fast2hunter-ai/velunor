@@ -769,9 +769,12 @@ textarea { width: 100%; box-sizing: border-box; background: #121a30; color: inhe
   overflow: hidden;
 }
 .battle:has(#focus-bar:not([hidden])) .battle-log span {
-  white-space: nowrap;
+  display: -webkit-box;
+  -webkit-box-orient: vertical;
+  -webkit-line-clamp: 2;
+  white-space: normal;
   overflow: hidden;
-  text-overflow: ellipsis;
+  overflow-wrap: anywhere;
 }
 .battle:has(#focus-bar:not([hidden])) .battle-status.is-callout {
   white-space: nowrap;

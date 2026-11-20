@@ -68,6 +68,7 @@ export function blankSave(now: number): SaveV2 {
     step: 1,
     loop: true,
     lastHealStep: 1,
+    findClaims: [],
     badges: [],
     team: [],
     pc: [],
@@ -288,6 +289,17 @@ export function normalize(save: SaveV2, now: number): SaveV2 {
   save.step = Math.min(stepMax, Math.max(1, Math.floor(save.step) || 1))
   save.loop = save.loop !== false
   save.lastHealStep = save.lastHealStep || 1
+  const claims = Array.isArray(save.findClaims) ? save.findClaims : []
+  const seenClaims = new Set<string>()
+  save.findClaims = []
+  for (const key of claims) {
+    if (typeof key !== 'string') continue
+    const text = key.trim().slice(0, 24)
+    if (!text || seenClaims.has(text)) continue
+    seenClaims.add(text)
+    save.findClaims.push(text)
+  }
+  save.findClaims = save.findClaims.slice(-64)
   save.badges = Array.isArray(save.badges) ? save.badges.filter((badge) => typeof badge === 'string') : []
   save.mons = save.mons && typeof save.mons === 'object' ? save.mons : {}
   save.team = (save.team ?? []).filter((uid) => save.mons[uid]).slice(0, 6)

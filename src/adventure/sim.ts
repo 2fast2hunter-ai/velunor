@@ -40,7 +40,7 @@ import {
 } from './route'
 import { chapterCapNow, regionRoster } from './dex'
 import { enteredRegions } from './lootbox'
-import { bankRoad, grantCouncilChest, grantFindChest, grantTrainerChest, grantWardenChest, rollWildShard } from './sources'
+import { bankRoad, claimFindChest, grantCouncilChest, grantTrainerChest, grantWardenChest, releaseFindClaims, rollWildShard } from './sources'
 import { bankAdd, noteRoadNode, PACE_K, paceWeight, roadPaceLive } from './roadPace'
 import { rollShiny, shinyChance, teamBlocksShiny } from './shiny'
 import { syncAchievements } from './achievements'
@@ -194,6 +194,7 @@ function continuePast(save: SaveV2, chapter: ChapterDef): void {
       return
     }
   }
+  releaseFindClaims(save, chapter.id)
   save.step = 1
 }
 
@@ -459,6 +460,7 @@ function advance(save: SaveV2, chapter: ChapterDef): void {
       return
     }
   }
+  releaseFindClaims(save, chapter.id)
   save.step = 1
 }
 
@@ -1016,7 +1018,7 @@ function resolveEncounterNow(save: SaveV2, now: number, opts: ResolveOpts): Enco
       const label = fruitDef(found).name
       say(save, outcome, now, line(save, 'say.findFruit', { gold, fruit: label }), quiet)
     } else say(save, outcome, now, line(save, 'say.find', { gold }), quiet)
-    if (grantFindChest(save, pace != null) > 0) say(save, outcome, now, line(save, 'say.findChest'), quiet)
+    if (claimFindChest(save, pace != null) > 0) say(save, outcome, now, line(save, 'say.findChest'), quiet)
     advance(save, chapter)
     return finish(save, chapter, outcome)
   }

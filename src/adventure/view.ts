@@ -2473,7 +2473,7 @@ function nameStepHtml(name: string, look: AvatarLook, lang: Lang, error: string)
   return `<h1>${t(lang, 'start.you')}</h1>
     <label class="home-label" for="hero-name">${t(lang, 'start.name')}</label>
     <div class="name-row">
-      <input id="hero-name" data-field="name" maxlength="16" autocomplete="nickname" placeholder="${esc(t(lang, 'start.placeholder'))}" value="${esc(name)}"/>
+      <input id="hero-name" data-field="name" maxlength="16" autocomplete="off" placeholder="${esc(t(lang, 'start.placeholder'))}" value="${esc(name)}"/>
       <button type="button" class="dice" data-act="random-name" aria-label="${esc(t(lang, 'start.randomName'))}"><img src="${art('home/dice.png')}" alt=""/></button>
     </div>
     <p class="home-error" id="name-error" role="alert">${esc(error)}</p>

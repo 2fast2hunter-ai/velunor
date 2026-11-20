@@ -1158,6 +1158,8 @@ function showOnboarding(): void {
   document.documentElement.lang = draftLang
   noteTutorial(draftStep === 'starter' ? TUTORIAL_STEP.starter : TUTORIAL_STEP.name)
   paint(onboardingHtml(draftName, draftLook, draftPick, draftLang, draftStep, draftLangOpen))
+  const nameField = document.getElementById('hero-name')
+  if (nameField instanceof HTMLInputElement) nameField.addEventListener('focus', () => nameField.select())
   if (draftStep === 'starter') {
     bindStarterScroller()
     placeStarter(draftPick)

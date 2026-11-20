@@ -103,6 +103,8 @@ export interface SaveV2 {
   step: number
   loop: boolean
   lastHealStep: number
+  /** Find nodes already paid this lap, `region:chapter:step`. Missing on older files; the loader fills []. */
+  findClaims?: string[]
   badges: string[]
   team: string[]
   pc: string[]
