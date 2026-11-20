@@ -1,0 +1,1090 @@
+{
+ "raster": "UI-px, 1080 breit (@1x), Kit-Stil Paket 9",
+ "outline": "#4a2c17",
+ "font": "Fredoka (OFL)",
+ "parts": [
+  {
+   "file": "battle_ui/log/angriff.png",
+   "size": [
+    48,
+    48
+   ],
+   "kind": "image",
+   "use": "Log-Icon 48: Angriff / normaler Treffer (2 Hiebe)",
+   "ui_px": [
+    48,
+    48
+   ]
+  },
+  {
+   "file": "battle_ui/log/angriff@2x.png",
+   "size": [
+    96,
+    96
+   ],
+   "kind": "image",
+   "use": "Log-Icon 48: Angriff / normaler Treffer (2 Hiebe)",
+   "ui_px": [
+    48,
+    48
+   ]
+  },
+  {
+   "file": "battle_ui/log/krit.png",
+   "size": [
+    48,
+    48
+   ],
+   "kind": "image",
+   "use": "Log-Icon 48: Kritischer Treffer (Zacken-Explosion)",
+   "ui_px": [
+    48,
+    48
+   ]
+  },
+  {
+   "file": "battle_ui/log/krit@2x.png",
+   "size": [
+    96,
+    96
+   ],
+   "kind": "image",
+   "use": "Log-Icon 48: Kritischer Treffer (Zacken-Explosion)",
+   "ui_px": [
+    48,
+    48
+   ]
+  },
+  {
+   "file": "battle_ui/log/ult.png",
+   "size": [
+    48,
+    48
+   ],
+   "kind": "image",
+   "use": "Log-Icon 48: Ultimate (Raute mit Stern)",
+   "ui_px": [
+    48,
+    48
+   ]
+  },
+  {
+   "file": "battle_ui/log/ult@2x.png",
+   "size": [
+    96,
+    96
+   ],
+   "kind": "image",
+   "use": "Log-Icon 48: Ultimate (Raute mit Stern)",
+   "ui_px": [
+    48,
+    48
+   ]
+  },
+  {
+   "file": "battle_ui/log/heilung.png",
+   "size": [
+    48,
+    48
+   ],
+   "kind": "image",
+   "use": "Log-Icon 48: Heilung (Herz mit großem Plus)",
+   "ui_px": [
+    48,
+    48
+   ]
+  },
+  {
+   "file": "battle_ui/log/heilung@2x.png",
+   "size": [
+    96,
+    96
+   ],
+   "kind": "image",
+   "use": "Log-Icon 48: Heilung (Herz mit großem Plus)",
+   "ui_px": [
+    48,
+    48
+   ]
+  },
+  {
+   "file": "battle_ui/log/schild.png",
+   "size": [
+    48,
+    48
+   ],
+   "kind": "image",
+   "use": "Log-Icon 48: Schild / Verteidigung",
+   "ui_px": [
+    48,
+    48
+   ]
+  },
+  {
+   "file": "battle_ui/log/schild@2x.png",
+   "size": [
+    96,
+    96
+   ],
+   "kind": "image",
+   "use": "Log-Icon 48: Schild / Verteidigung",
+   "ui_px": [
+    48,
+    48
+   ]
+  },
+  {
+   "file": "battle_ui/log/status.png",
+   "size": [
+    48,
+    48
+   ],
+   "kind": "image",
+   "use": "Log-Icon 48: Status zugefügt (Kreis mit Spirale)",
+   "ui_px": [
+    48,
+    48
+   ]
+  },
+  {
+   "file": "battle_ui/log/status@2x.png",
+   "size": [
+    96,
+    96
+   ],
+   "kind": "image",
+   "use": "Log-Icon 48: Status zugefügt (Kreis mit Spirale)",
+   "ui_px": [
+    48,
+    48
+   ]
+  },
+  {
+   "file": "battle_ui/log/wetter.png",
+   "size": [
+    48,
+    48
+   ],
+   "kind": "image",
+   "use": "Log-Icon 48: Wetter-Effekt (Wolke mit Tropfen)",
+   "ui_px": [
+    48,
+    48
+   ]
+  },
+  {
+   "file": "battle_ui/log/wetter@2x.png",
+   "size": [
+    96,
+    96
+   ],
+   "kind": "image",
+   "use": "Log-Icon 48: Wetter-Effekt (Wolke mit Tropfen)",
+   "ui_px": [
+    48,
+    48
+   ]
+  },
+  {
+   "file": "battle_ui/log/ko.png",
+   "size": [
+    48,
+    48
+   ],
+   "kind": "image",
+   "use": "Log-Icon 48: KO (großes graues ×)",
+   "ui_px": [
+    48,
+    48
+   ]
+  },
+  {
+   "file": "battle_ui/log/ko@2x.png",
+   "size": [
+    96,
+    96
+   ],
+   "kind": "image",
+   "use": "Log-Icon 48: KO (großes graues ×)",
+   "ui_px": [
+    48,
+    48
+   ]
+  },
+  {
+   "file": "battle_ui/log/wechsel.png",
+   "size": [
+    48,
+    48
+   ],
+   "kind": "image",
+   "use": "Log-Icon 48: Wechsel / neues Monster (Gegenpfeile)",
+   "ui_px": [
+    48,
+    48
+   ]
+  },
+  {
+   "file": "battle_ui/log/wechsel@2x.png",
+   "size": [
+    96,
+    96
+   ],
+   "kind": "image",
+   "use": "Log-Icon 48: Wechsel / neues Monster (Gegenpfeile)",
+   "ui_px": [
+    48,
+    48
+   ]
+  },
+  {
+   "file": "battle_ui/log/boss.png",
+   "size": [
+    48,
+    48
+   ],
+   "kind": "image",
+   "use": "Log-Icon 48: Boss-Mechanik (Zahnrad mit !)",
+   "ui_px": [
+    48,
+    48
+   ]
+  },
+  {
+   "file": "battle_ui/log/boss@2x.png",
+   "size": [
+    96,
+    96
+   ],
+   "kind": "image",
+   "use": "Log-Icon 48: Boss-Mechanik (Zahnrad mit !)",
+   "ui_px": [
+    48,
+    48
+   ]
+  },
+  {
+   "file": "battle_ui/summary/grund_typ.png",
+   "size": [
+    64,
+    64
+   ],
+   "kind": "image",
+   "use": "Grund-Icon 64 (Zusammenfassung): Typ-Vorteil/-Nachteil",
+   "ui_px": [
+    64,
+    64
+   ]
+  },
+  {
+   "file": "battle_ui/summary/grund_typ@2x.png",
+   "size": [
+    128,
+    128
+   ],
+   "kind": "image",
+   "use": "Grund-Icon 64 (Zusammenfassung): Typ-Vorteil/-Nachteil",
+   "ui_px": [
+    64,
+    64
+   ]
+  },
+  {
+   "file": "battle_ui/summary/grund_wetter.png",
+   "size": [
+    64,
+    64
+   ],
+   "kind": "image",
+   "use": "Grund-Icon 64 (Zusammenfassung): Wetter",
+   "ui_px": [
+    64,
+    64
+   ]
+  },
+  {
+   "file": "battle_ui/summary/grund_wetter@2x.png",
+   "size": [
+    128,
+    128
+   ],
+   "kind": "image",
+   "use": "Grund-Icon 64 (Zusammenfassung): Wetter",
+   "ui_px": [
+    64,
+    64
+   ]
+  },
+  {
+   "file": "battle_ui/summary/grund_erstschlag.png",
+   "size": [
+    64,
+    64
+   ],
+   "kind": "image",
+   "use": "Grund-Icon 64 (Zusammenfassung): Erstschlag/Tempo",
+   "ui_px": [
+    64,
+    64
+   ]
+  },
+  {
+   "file": "battle_ui/summary/grund_erstschlag@2x.png",
+   "size": [
+    128,
+    128
+   ],
+   "kind": "image",
+   "use": "Grund-Icon 64 (Zusammenfassung): Erstschlag/Tempo",
+   "ui_px": [
+    64,
+    64
+   ]
+  },
+  {
+   "file": "battle_ui/summary/grund_ult.png",
+   "size": [
+    64,
+    64
+   ],
+   "kind": "image",
+   "use": "Grund-Icon 64 (Zusammenfassung): Ult-Anteil",
+   "ui_px": [
+    64,
+    64
+   ]
+  },
+  {
+   "file": "battle_ui/summary/grund_ult@2x.png",
+   "size": [
+    128,
+    128
+   ],
+   "kind": "image",
+   "use": "Grund-Icon 64 (Zusammenfassung): Ult-Anteil",
+   "ui_px": [
+    64,
+    64
+   ]
+  },
+  {
+   "file": "battle_ui/summary/grund_status.png",
+   "size": [
+    64,
+    64
+   ],
+   "kind": "image",
+   "use": "Grund-Icon 64 (Zusammenfassung): Status-Schaden",
+   "ui_px": [
+    64,
+    64
+   ]
+  },
+  {
+   "file": "battle_ui/summary/grund_status@2x.png",
+   "size": [
+    128,
+    128
+   ],
+   "kind": "image",
+   "use": "Grund-Icon 64 (Zusammenfassung): Status-Schaden",
+   "ui_px": [
+    64,
+    64
+   ]
+  },
+  {
+   "file": "battle_ui/summary/grund_mechanik.png",
+   "size": [
+    64,
+    64
+   ],
+   "kind": "image",
+   "use": "Grund-Icon 64 (Zusammenfassung): Boss-Mechanik/Krits",
+   "ui_px": [
+    64,
+    64
+   ]
+  },
+  {
+   "file": "battle_ui/summary/grund_mechanik@2x.png",
+   "size": [
+    128,
+    128
+   ],
+   "kind": "image",
+   "use": "Grund-Icon 64 (Zusammenfassung): Boss-Mechanik/Krits",
+   "ui_px": [
+    64,
+    64
+   ]
+  },
+  {
+   "file": "battle_ui/summary/tipp.png",
+   "size": [
+    64,
+    64
+   ],
+   "kind": "image",
+   "use": "Tipp-Glühbirne 64 (Zusammenfassung, vor jedem Tipp)",
+   "ui_px": [
+    64,
+    64
+   ]
+  },
+  {
+   "file": "battle_ui/summary/tipp@2x.png",
+   "size": [
+    128,
+    128
+   ],
+   "kind": "image",
+   "use": "Tipp-Glühbirne 64 (Zusammenfassung, vor jedem Tipp)",
+   "ui_px": [
+    64,
+    64
+   ]
+  },
+  {
+   "file": "battle_ui/spotlight/ally.png",
+   "size": [
+    256,
+    128
+   ],
+   "kind": "image",
+   "use": "Spotlight-Ring unter dem handelnden Monster (eigenes, runde Marker); mittig unter die Füße, Breite ≈ 1,1× Sprite-Breite",
+   "ui_px": [
+    256,
+    128
+   ]
+  },
+  {
+   "file": "battle_ui/spotlight/foe.png",
+   "size": [
+    256,
+    128
+   ],
+   "kind": "image",
+   "use": "Spotlight-Ring unter dem handelnden Monster (Gegner, Rauten-Marker); mittig unter die Füße, Breite ≈ 1,1× Sprite-Breite",
+   "ui_px": [
+    256,
+    128
+   ]
+  },
+  {
+   "file": "battle_ui/callout/ansage.png",
+   "size": [
+    192,
+    128
+   ],
+   "kind": "9slice",
+   "use": "Ansage-Karte (feste Ansagezeile, halbtransparent 90 %), Text #4a2c17 ≥ 40 px",
+   "slice": {
+    "top": 48,
+    "right": 52,
+    "bottom": 52,
+    "left": 52
+   },
+   "outset": 12
+  },
+  {
+   "file": "battle_ui/callout/ult.png",
+   "size": [
+    224,
+    160
+   ],
+   "kind": "9slice",
+   "use": "Ult-Ansage-Karte mit Glanz (lila Band, Sternnieten in den Ecken), Name + Muster; Bühne dahinter per CSS abdunkeln",
+   "slice": {
+    "top": 64,
+    "right": 64,
+    "bottom": 68,
+    "left": 64
+   },
+   "outset": 12
+  },
+  {
+   "file": "battle_ui/callout/ult_glanz.png",
+   "size": [
+    160,
+    160
+   ],
+   "kind": "image",
+   "use": "Glanzstreifen über der Ult-Karte (mix-blend normal, translateX-Animation 600 ms; bei reduzierter Bewegung weglassen)",
+   "ui_px": [
+    160,
+    160
+   ]
+  },
+  {
+   "file": "battle_ui/adv/stark.png",
+   "size": [
+    64,
+    64
+   ],
+   "kind": "image",
+   "use": "Vorteils-Chip stark (Form: Doppelpfeil hoch), immer mit Wort daneben",
+   "ui_px": [
+    64,
+    64
+   ]
+  },
+  {
+   "file": "battle_ui/adv/stark@2x.png",
+   "size": [
+    128,
+    128
+   ],
+   "kind": "image",
+   "use": "Vorteils-Chip stark (Form: Doppelpfeil hoch), immer mit Wort daneben",
+   "ui_px": [
+    64,
+    64
+   ]
+  },
+  {
+   "file": "battle_ui/adv/pill_stark.png",
+   "size": [
+    192,
+    80
+   ],
+   "kind": "9slice",
+   "use": "Pille hinter „stark“-Label (links Platz für adv/stark.png 48 px), Text #fff3dc mit Kontur",
+   "slice": {
+    "top": 34,
+    "right": 40,
+    "bottom": 40,
+    "left": 40
+   },
+   "outset": 8
+  },
+  {
+   "file": "battle_ui/adv/schwach.png",
+   "size": [
+    64,
+    64
+   ],
+   "kind": "image",
+   "use": "Vorteils-Chip schwach (Form: Pfeil runter), immer mit Wort daneben",
+   "ui_px": [
+    64,
+    64
+   ]
+  },
+  {
+   "file": "battle_ui/adv/schwach@2x.png",
+   "size": [
+    128,
+    128
+   ],
+   "kind": "image",
+   "use": "Vorteils-Chip schwach (Form: Pfeil runter), immer mit Wort daneben",
+   "ui_px": [
+    64,
+    64
+   ]
+  },
+  {
+   "file": "battle_ui/adv/pill_schwach.png",
+   "size": [
+    192,
+    80
+   ],
+   "kind": "9slice",
+   "use": "Pille hinter „schwach“-Label (links Platz für adv/schwach.png 48 px), Text #fff3dc mit Kontur",
+   "slice": {
+    "top": 34,
+    "right": 40,
+    "bottom": 40,
+    "left": 40
+   },
+   "outset": 8
+  },
+  {
+   "file": "battle_ui/adv/neutral.png",
+   "size": [
+    64,
+    64
+   ],
+   "kind": "image",
+   "use": "Vorteils-Chip neutral (Form: Strich), immer mit Wort daneben",
+   "ui_px": [
+    64,
+    64
+   ]
+  },
+  {
+   "file": "battle_ui/adv/neutral@2x.png",
+   "size": [
+    128,
+    128
+   ],
+   "kind": "image",
+   "use": "Vorteils-Chip neutral (Form: Strich), immer mit Wort daneben",
+   "ui_px": [
+    64,
+    64
+   ]
+  },
+  {
+   "file": "battle_ui/adv/pill_neutral.png",
+   "size": [
+    192,
+    80
+   ],
+   "kind": "9slice",
+   "use": "Pille hinter „neutral“-Label (links Platz für adv/neutral.png 48 px), Text #fff3dc mit Kontur",
+   "slice": {
+    "top": 34,
+    "right": 40,
+    "bottom": 40,
+    "left": 40
+   },
+   "outset": 8
+  },
+  {
+   "file": "battle_ui/ult/seg_leer_l.png",
+   "size": [
+    60,
+    60
+   ],
+   "kind": "image",
+   "use": "Ult-Segment leer (groß, Kreis 40 px, Bild 60 px inkl. Glow-Rand); Form: leer=Mulde, voll=gefüllt, bereit=gefüllt+Stern+Glow",
+   "ui_px": [
+    60,
+    60
+   ]
+  },
+  {
+   "file": "battle_ui/ult/seg_voll_l.png",
+   "size": [
+    60,
+    60
+   ],
+   "kind": "image",
+   "use": "Ult-Segment voll (groß, Kreis 40 px, Bild 60 px inkl. Glow-Rand); Form: leer=Mulde, voll=gefüllt, bereit=gefüllt+Stern+Glow",
+   "ui_px": [
+    60,
+    60
+   ]
+  },
+  {
+   "file": "battle_ui/ult/seg_bereit_l.png",
+   "size": [
+    60,
+    60
+   ],
+   "kind": "image",
+   "use": "Ult-Segment bereit (groß, Kreis 40 px, Bild 60 px inkl. Glow-Rand); Form: leer=Mulde, voll=gefüllt, bereit=gefüllt+Stern+Glow",
+   "ui_px": [
+    60,
+    60
+   ]
+  },
+  {
+   "file": "battle_ui/ult/schloss_l.png",
+   "size": [
+    60,
+    60
+   ],
+   "kind": "image",
+   "use": "Schloss in der Ult-Leiste unter Lv 25, daneben Text „ab Lv 25“ (groß)",
+   "ui_px": [
+    60,
+    60
+   ]
+  },
+  {
+   "file": "battle_ui/ult/bahn_l.png",
+   "size": [
+    160,
+    64
+   ],
+   "kind": "9slice",
+   "use": "Bahn hinter den 5 Ult-Segmenten (groß), 9-Slice",
+   "slice": {
+    "top": 24,
+    "right": 32,
+    "bottom": 24,
+    "left": 32
+   }
+  },
+  {
+   "file": "battle_ui/ult/seg_leer_s.png",
+   "size": [
+    36,
+    36
+   ],
+   "kind": "image",
+   "use": "Ult-Segment leer (klein/Handy, Kreis 24 px, Bild 36 px inkl. Glow-Rand); Form: leer=Mulde, voll=gefüllt, bereit=gefüllt+Stern+Glow",
+   "ui_px": [
+    36,
+    36
+   ]
+  },
+  {
+   "file": "battle_ui/ult/seg_voll_s.png",
+   "size": [
+    36,
+    36
+   ],
+   "kind": "image",
+   "use": "Ult-Segment voll (klein/Handy, Kreis 24 px, Bild 36 px inkl. Glow-Rand); Form: leer=Mulde, voll=gefüllt, bereit=gefüllt+Stern+Glow",
+   "ui_px": [
+    36,
+    36
+   ]
+  },
+  {
+   "file": "battle_ui/ult/seg_bereit_s.png",
+   "size": [
+    36,
+    36
+   ],
+   "kind": "image",
+   "use": "Ult-Segment bereit (klein/Handy, Kreis 24 px, Bild 36 px inkl. Glow-Rand); Form: leer=Mulde, voll=gefüllt, bereit=gefüllt+Stern+Glow",
+   "ui_px": [
+    36,
+    36
+   ]
+  },
+  {
+   "file": "battle_ui/ult/schloss_s.png",
+   "size": [
+    36,
+    36
+   ],
+   "kind": "image",
+   "use": "Schloss in der Ult-Leiste unter Lv 25, daneben Text „ab Lv 25“ (klein)",
+   "ui_px": [
+    36,
+    36
+   ]
+  },
+  {
+   "file": "battle_ui/ult/bahn_s.png",
+   "size": [
+    112,
+    40
+   ],
+   "kind": "9slice",
+   "use": "Bahn hinter den 5 Ult-Segmenten (klein), 9-Slice",
+   "slice": {
+    "top": 12,
+    "right": 20,
+    "bottom": 12,
+    "left": 20
+   }
+  },
+  {
+   "file": "battle_ui/status/chip.png",
+   "size": [
+    160,
+    64
+   ],
+   "kind": "9slice",
+   "use": "Status-Chip-Rahmen: links vorhandenes Status-Icon (icons/status_*_128 auf 40 px), Kurzname + Runden, Text #4a2c17",
+   "slice": {
+    "top": 30,
+    "right": 32,
+    "bottom": 32,
+    "left": 32
+   },
+   "outset": 6
+  },
+  {
+   "file": "battle_ui/status/stapel.png",
+   "size": [
+    40,
+    40
+   ],
+   "kind": "image",
+   "use": "Stapel-/Runden-Kreis rechts am Status-Chip (Zahl #ffffff fett 24 px)",
+   "ui_px": [
+    40,
+    40
+   ]
+  },
+  {
+   "file": "battle_ui/wetter/tag.png",
+   "size": [
+    128,
+    56
+   ],
+   "kind": "9slice",
+   "use": "Wetter-Tag neben der Schadenszahl („−15 %“), links Platz für wetter/tag_icon 28 px, Text #1d3d66 fett",
+   "slice": {
+    "top": 24,
+    "right": 26,
+    "bottom": 26,
+    "left": 26
+   },
+   "outset": 5
+  },
+  {
+   "file": "battle_ui/wetter/tag_icon.png",
+   "size": [
+    32,
+    32
+   ],
+   "kind": "image",
+   "use": "Mini-Wolke im Wetter-Tag (Form = Wetter, unabhängig von der Farbe)",
+   "ui_px": [
+    32,
+    32
+   ]
+  },
+  {
+   "file": "battle_ui/wetter/tag_icon@2x.png",
+   "size": [
+    64,
+    64
+   ],
+   "kind": "image",
+   "use": "Mini-Wolke im Wetter-Tag (Form = Wetter, unabhängig von der Farbe)",
+   "ui_px": [
+    32,
+    32
+   ]
+  },
+  {
+   "file": "battle_ui/summary/karte.png",
+   "size": [
+    224,
+    224
+   ],
+   "kind": "9slice",
+   "use": "Zusammenfassungskarte „Warum?“ (Goldband, Sternnieten nur in den Ecken)",
+   "slice": {
+    "top": 76,
+    "right": 76,
+    "bottom": 84,
+    "left": 76
+   },
+   "outset": 14
+  },
+  {
+   "file": "battle_ui/summary/grund_zeile.png",
+   "size": [
+    192,
+    96
+   ],
+   "kind": "9slice",
+   "use": "Zeile für einen Grund (Grund-Icon 64 links, Satz rechts) bzw. Tipp-Zeile",
+   "slice": {
+    "top": 36,
+    "right": 36,
+    "bottom": 36,
+    "left": 36
+   }
+  },
+  {
+   "file": "battle_ui/tempo/1x_normal.png",
+   "size": [
+    128,
+    128
+   ],
+   "kind": "image",
+   "use": "Tempo-Knopf 1x (normal), Ziel 128 UI-px ≥ 120",
+   "ui_px": [
+    128,
+    128
+   ]
+  },
+  {
+   "file": "battle_ui/tempo/1x_aktiv.png",
+   "size": [
+    128,
+    128
+   ],
+   "kind": "image",
+   "use": "Tempo-Knopf 1x (aktiv), Ziel 128 UI-px ≥ 120",
+   "ui_px": [
+    128,
+    128
+   ]
+  },
+  {
+   "file": "battle_ui/tempo/2x_normal.png",
+   "size": [
+    128,
+    128
+   ],
+   "kind": "image",
+   "use": "Tempo-Knopf 2x (normal), Ziel 128 UI-px ≥ 120",
+   "ui_px": [
+    128,
+    128
+   ]
+  },
+  {
+   "file": "battle_ui/tempo/2x_aktiv.png",
+   "size": [
+    128,
+    128
+   ],
+   "kind": "image",
+   "use": "Tempo-Knopf 2x (aktiv), Ziel 128 UI-px ≥ 120",
+   "ui_px": [
+    128,
+    128
+   ]
+  },
+  {
+   "file": "battle_ui/tempo/skip_normal.png",
+   "size": [
+    128,
+    128
+   ],
+   "kind": "image",
+   "use": "Tempo-Knopf skip (normal), Ziel 128 UI-px ≥ 120",
+   "ui_px": [
+    128,
+    128
+   ]
+  },
+  {
+   "file": "battle_ui/tempo/skip_aktiv.png",
+   "size": [
+    128,
+    128
+   ],
+   "kind": "image",
+   "use": "Tempo-Knopf skip (aktiv), Ziel 128 UI-px ≥ 120",
+   "ui_px": [
+    128,
+    128
+   ]
+  },
+  {
+   "file": "battle_ui/tempo/pause_normal.png",
+   "size": [
+    128,
+    128
+   ],
+   "kind": "image",
+   "use": "Tempo-Knopf pause (normal), Ziel 128 UI-px ≥ 120",
+   "ui_px": [
+    128,
+    128
+   ]
+  },
+  {
+   "file": "battle_ui/tempo/pause_aktiv.png",
+   "size": [
+    128,
+    128
+   ],
+   "kind": "image",
+   "use": "Tempo-Knopf pause (aktiv), Ziel 128 UI-px ≥ 120",
+   "ui_px": [
+    128,
+    128
+   ]
+  },
+  {
+   "file": "battle_ui/tempo/weiter_normal.png",
+   "size": [
+    128,
+    128
+   ],
+   "kind": "image",
+   "use": "Tempo-Knopf weiter (normal), Ziel 128 UI-px ≥ 120",
+   "ui_px": [
+    128,
+    128
+   ]
+  },
+  {
+   "file": "battle_ui/tempo/weiter_aktiv.png",
+   "size": [
+    128,
+    128
+   ],
+   "kind": "image",
+   "use": "Tempo-Knopf weiter (aktiv), Ziel 128 UI-px ≥ 120",
+   "ui_px": [
+    128,
+    128
+   ]
+  },
+  {
+   "file": "battle_ui/ko/voll_32.png",
+   "size": [
+    32,
+    32
+   ],
+   "kind": "image",
+   "use": "KO-Punkt voll (gefüllt mit ×), 32 px; 6 nebeneinander, Abstand 8; 64 = Handy-Standard",
+   "ui_px": [
+    32,
+    32
+   ]
+  },
+  {
+   "file": "battle_ui/ko/voll_48.png",
+   "size": [
+    48,
+    48
+   ],
+   "kind": "image",
+   "use": "KO-Punkt voll (gefüllt mit ×), 48 px; 6 nebeneinander, Abstand 8; 64 = Handy-Standard",
+   "ui_px": [
+    48,
+    48
+   ]
+  },
+  {
+   "file": "battle_ui/ko/voll_64.png",
+   "size": [
+    64,
+    64
+   ],
+   "kind": "image",
+   "use": "KO-Punkt voll (gefüllt mit ×), 64 px; 6 nebeneinander, Abstand 8; 64 = Handy-Standard",
+   "ui_px": [
+    64,
+    64
+   ]
+  },
+  {
+   "file": "battle_ui/ko/leer_32.png",
+   "size": [
+    32,
+    32
+   ],
+   "kind": "image",
+   "use": "KO-Punkt leer (hohler Ring), 32 px; 6 nebeneinander, Abstand 8; 64 = Handy-Standard",
+   "ui_px": [
+    32,
+    32
+   ]
+  },
+  {
+   "file": "battle_ui/ko/leer_48.png",
+   "size": [
+    48,
+    48
+   ],
+   "kind": "image",
+   "use": "KO-Punkt leer (hohler Ring), 48 px; 6 nebeneinander, Abstand 8; 64 = Handy-Standard",
+   "ui_px": [
+    48,
+    48
+   ]
+  },
+  {
+   "file": "battle_ui/ko/leer_64.png",
+   "size": [
+    64,
+    64
+   ],
+   "kind": "image",
+   "use": "KO-Punkt leer (hohler Ring), 64 px; 6 nebeneinander, Abstand 8; 64 = Handy-Standard",
+   "ui_px": [
+    64,
+    64
+   ]
+  }
+ ]
+}
