@@ -184,7 +184,7 @@ async function assertChallengeTap(page: Page): Promise<{ x: number, y: number }>
 async function assertNamesFree(page: Page): Promise<void> {
   await page.locator('#ally-name').waitFor()
   const names = ['#ally-name', '#foe-name', '#ally-hp-num', '#foe-hp-num']
-  const covers = ['#battle-log', '#wx-chip', '#wx-announce', '#adv-chip']
+  const covers = ['#battle-log', '#wx-chip', '#wx-announce', '#adv-chip', '#wx-tag']
   for (const name of names) {
     const area = await box(page, name)
     if (!area || area.width < 8 || area.height < 8) continue
@@ -201,6 +201,15 @@ async function assertNamesFree(page: Page): Promise<void> {
 
 async function assertClear(page: Page): Promise<void> {
   await page.locator('#foe-sprite:not([hidden])').waitFor({ timeout: 8_000 }).catch(() => undefined)
+  const nameBefore = await box(page, '#foe-name')
+  await page.evaluate(() => {
+    const chip = document.getElementById('foe-status')
+    if (!(chip instanceof HTMLElement)) return
+    chip.hidden = false
+    const label = chip.querySelector('.status-name')
+    if (label) label.textContent = 'Brand'
+    Object.defineProperty(chip, 'hidden', { configurable: true, get: () => false, set() { /* stay visible for the overlap check */ } })
+  })
   const bar = await box(page, '#focus-bar')
   const foeName = await box(page, '#foe-name')
   const foeHp = await box(page, '#foe-hp')
@@ -219,6 +228,18 @@ async function assertClear(page: Page): Promise<void> {
   if (bar && foeHp && foeHp.width > 2) expect(overlaps(bar, foeHp), 'focus bar covers the foe HP').toBe(false)
   const foeHpNum = await box(page, '#foe-hp-num')
   if (bar && foeHpNum && foeHpNum.width > 8 && foeHpNum.height > 8) expect(overlaps(bar, foeHpNum), 'focus bar covers the foe HP number').toBe(false)
+  const advantage = await box(page, '#adv-chip')
+  if (advantage && advantage.width > 4 && foeHp && foeHp.width > 2) expect(overlaps(advantage, foeHp), 'advantage chip covers the foe HP bar').toBe(false)
+  if (advantage && advantage.width > 4 && foeHpNum && foeHpNum.width > 8) expect(overlaps(advantage, foeHpNum), 'advantage chip covers the foe HP number').toBe(false)
+  const status = await box(page, '#foe-status')
+  if (nameBefore && foeName && nameBefore.height > 8 && foeName.height > 8) {
+    expect(Math.abs(foeName.y - nameBefore.y), 'status chip pushes the foe name').toBeLessThan(4)
+  }
+  if (status && foeName && foeName.height > 8) expect(overlaps(status, foeName), 'status chip covers the foe name').toBe(false)
+  if (status && foeHpNum && foeHpNum.width > 8) expect(overlaps(status, foeHpNum), 'status chip covers the foe HP number').toBe(false)
+  const allyHpNum = await box(page, '#ally-hp-num')
+  if (status && allyHpNum && allyHpNum.width > 8) expect(overlaps(status, allyHpNum), 'status chip covers the ally HP number').toBe(false)
+  if (status && weather && weather.width > 4) expect(overlaps(status, weather), 'status chip covers the weather chip').toBe(false)
   await page.evaluate(() => {
     const node = document.getElementById('wx-announce')
     if (!(node instanceof HTMLElement)) return
@@ -243,6 +264,27 @@ async function assertClear(page: Page): Promise<void> {
   const spotlight = await box(page, '#spotlight-foe')
   if (bar && foeSprite && foeSprite.width > 8 && foeSprite.height > 8) expect(overlaps(bar, foeSprite), 'focus bar covers the foe').toBe(false)
   if (bar && spotlight && spotlight.width > 8 && spotlight.height > 8) expect(overlaps(bar, spotlight), 'focus bar covers the spotlight').toBe(false)
+  const ring = await page.evaluate(() => new Promise<{ seen: number, drift: number }>((resolve) => {
+    const start = performance.now()
+    let seen = 0
+    let drift = 0
+    const tick = () => {
+      const spot = document.getElementById('spotlight-foe')
+      const sprite = document.getElementById('foe-sprite')
+      if (spot instanceof HTMLElement && sprite instanceof HTMLElement && !spot.hidden) {
+        const ringBox = spot.getBoundingClientRect()
+        const body = sprite.getBoundingClientRect()
+        if (ringBox.width > 8 && body.width > 8) {
+          seen += 1
+          drift = Math.max(drift, Math.abs((ringBox.x + ringBox.width / 2) - (body.x + body.width / 2)))
+        }
+      }
+      if (performance.now() - start > 1800) resolve({ seen, drift })
+      else requestAnimationFrame(tick)
+    }
+    requestAnimationFrame(tick)
+  }))
+  if (ring.seen > 0) expect(ring.drift, 'spotlight sits beside the foe').toBeLessThan(28)
   if (weather && foeName && foeName.width > 8 && foeName.height > 8) expect(overlaps(weather, foeName), 'weather chip covers the foe name').toBe(false)
   if (weather && foeHp && foeHp.width > 2) expect(overlaps(weather, foeHp), 'weather chip covers the foe HP').toBe(false)
   const callout = await box(page, '#battle-text')
@@ -415,4 +457,78 @@ describe('focus bar tap', () => {
       await browser.close()
     }
   }, 90_000)
+
+  it.skipIf(!hasChrome)('a two-turn road loss keeps the minimum duration before the spring tip', async () => {
+    if (!chrome) return
+    const browser = await chromium.launch({ executablePath: chrome, headless: true, args: ['--no-sandbox', '--disable-gpu'] })
+    try {
+      const page = await browser.newPage({ viewport: { width: 390, height: 844 }, hasTouch: true })
+      const port = server?.config.server.port ?? 5173
+      const base = `http://127.0.0.1:${port}/?debug=1`
+      await page.goto(base, { waitUntil: 'domcontentloaded' })
+      await page.evaluate(() => localStorage.clear())
+      await page.reload({ waitUntil: 'domcontentloaded' })
+      await page.locator('#hero-name, [data-act="consent"]').first().waitFor({ timeout: 45_000 })
+      const consent = page.locator('[data-act="consent"][data-consent="no"]')
+      if (await consent.count()) await consent.click()
+      await page.locator('#hero-name').fill('Ada')
+      await page.locator('[data-act="next"]').click()
+      await page.locator('[data-act="pick"][data-species="m01"]').click()
+      await page.locator('[data-act="start"]').click()
+      await page.locator('[data-screen="adventure"]').waitFor()
+      const raw = await page.evaluate(() => localStorage.getItem('velunor_v2'))
+      const save = JSON.parse(raw ?? '{}')
+      const mon = save.mons[save.team[0]]
+      mon.lvl = 1
+      mon.hp = 1
+      save.settings.speed = 1
+      save.settings.tempoWeg = 1
+      save.hold = false
+      await page.evaluate((stored) => {
+        localStorage.setItem('velunor_v2', stored)
+        const set = localStorage.setItem.bind(localStorage)
+        localStorage.setItem = (key, value) => { if (key !== 'velunor_v2') set(key, value) }
+      }, JSON.stringify(save))
+      await page.reload({ waitUntil: 'domcontentloaded' })
+      await page.locator('[data-screen="adventure"], [data-act="continue"]').first().waitFor({ timeout: 45_000 })
+      if (await page.locator('[data-act="continue"]').count()) await page.locator('[data-act="continue"]').click()
+      await page.locator('[data-screen="adventure"]').waitFor()
+      const timed = await page.evaluate(() => new Promise<{ tip: number, next: number, lines: string[] }>((resolve) => {
+        const foe = document.getElementById('foe-name')
+        const log = document.getElementById('battle-log-text')
+        const lines: string[] = []
+        let name = ''
+        let seen = ''
+        let start = 0
+        let tip = 0
+        const begun = performance.now()
+        const tick = () => {
+          const now = performance.now()
+          const next = (foe?.textContent || '').trim()
+          const line = (log?.textContent || '').replace(/\s+/g, ' ').trim()
+          if (line && line !== seen) {
+            seen = line
+            lines.push(`${Math.round(now - (start || begun))}:${line.slice(0, 70)}`)
+            if (start && !tip && /Quelle|spring/i.test(line)) tip = Math.round(now - start)
+          }
+          if (next && next !== name) {
+            if (start) {
+              resolve({ tip, next: Math.round(now - start), lines })
+              return
+            }
+            name = next
+            start = now
+          }
+          if (now - begun > 12_000) resolve({ tip, next: tip, lines })
+          else requestAnimationFrame(tick)
+        }
+        requestAnimationFrame(tick)
+      }))
+      expect(timed.tip, `loss tip before the minimum (${timed.lines.join(' | ')})`).toBeGreaterThanOrEqual(2_700)
+      expect(timed.next, 'next fight before the minimum').toBeGreaterThanOrEqual(2_700)
+      await page.close()
+    } finally {
+      await browser.close()
+    }
+  }, 40_000)
 })

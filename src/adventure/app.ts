@@ -2527,7 +2527,7 @@ function play(outcome: EncounterOutcome, speed: Speed, done: () => void): void {
       if (frozen >= 0) motion = frozen
       const elapsed = frozen >= 0 || !(scriptAt > 0) ? motion : Math.max(0, motion - scriptAt)
       const queueStep = queue ? actionAt(queue, Math.min(elapsed, queueEnd)) : null
-      if (roadOn && queueStep?.phase === 'resultat') showWhyChip(outcome)
+      if (roadOn && queueStep?.phase === 'resultat' && (outcome.win || elapsed >= floor)) showWhyChip(outcome)
       let armFx = false
       if (queue && queueStep) {
         const stepIndex = queue.indexOf(queueStep)
@@ -2804,6 +2804,13 @@ function poseActor(actor: HTMLElement, side: 'ally' | 'foe', move: number, hit: 
     const motion = spriteMotion(side, move, hit, ko, idle, reach)
     if (sprite.style.transform !== motion) sprite.style.transform = motion
   }
+  const spot = actor.querySelector('img.spotlight')
+  if (spot instanceof HTMLElement) {
+    const x = lungeOffset(move, reach) * (side === 'ally' ? 1 : -1) + hitShake(hit)
+    const y = koPose(ko).drop
+    const placedSpot = `translateX(calc(-50% + ${x.toFixed(1)}px)) translateY(${y.toFixed(1)}px)`
+    if (spot.style.transform !== placedSpot) spot.style.transform = placedSpot
+  }
   const opacity = String(koPose(ko).opacity)
   if (actor.style.opacity !== opacity) actor.style.opacity = opacity
 }
@@ -2923,7 +2930,7 @@ function paintWeatherTag(factor: number | undefined, x: number, y: number): void
   }
   node.hidden = false
   node.style.left = `${Math.round(x)}px`
-  node.style.top = `${Math.round(y - 64)}px`
+  node.style.top = `${Math.round(y - 96)}px`
   node.style.borderImage = `url("${art('battle_ui/wetter/tag.png')}") 24 26 26 26 fill / 24px 26px 26px 26px / 5px stretch`
   const text = document.getElementById('wx-tag-text')
   if (text) text.textContent = pct
@@ -2938,30 +2945,46 @@ function clearWeatherTag(node: HTMLElement): void {
   if (dock instanceof HTMLElement && dock.getClientRects().length > 0) obstacles.push(dock)
   const lock = document.querySelector('#ally-actor .ult-lock')
   if (lock instanceof HTMLElement && !lock.hidden && lock.getClientRects().length > 0) obstacles.push(lock)
+  for (const sel of ['#ally-hp-num', '#foe-hp-num', '#ally-name', '#foe-name', '#ally-status', '#foe-status', '#wx-chip', '#wx-announce']) {
+    const plate = document.querySelector(sel)
+    if (plate instanceof HTMLElement && !plate.hidden && plate.getClientRects().length > 0) obstacles.push(plate)
+  }
   if (!obstacles.length) return
   const hostBox = host.getBoundingClientRect()
   const scaleX = hostBox.width / (host.clientWidth || hostBox.width || 1) || 1
   const scaleY = hostBox.height / (host.clientHeight || hostBox.height || 1) || 1
   const gap = 12
-  for (let pass = 0; pass < 3; pass++) {
+  for (let pass = 0; pass < 4; pass++) {
     const tag = node.getBoundingClientRect()
     if (tag.width < 2 || tag.height < 2) return
-    let dx = 0
-    let dy = 0
+    let bestDx = 0
+    let bestDy = 0
+    let best = Number.POSITIVE_INFINITY
     for (const obstacle of obstacles) {
       const box = obstacle.getBoundingClientRect()
-      const left = tag.left + dx
-      const right = tag.right + dx
-      const top = tag.top + dy
-      const bottom = tag.bottom + dy
-      if (!(left < box.right && right > box.left && top < box.bottom && bottom > box.top)) continue
-      const shiftLeft = box.left - gap - right
-      if (left + shiftLeft >= hostBox.left + 16) dx += shiftLeft
-      else dy += box.top - gap - bottom
+      if (!(tag.left < box.right && tag.right > box.left && tag.top < box.bottom && tag.bottom > box.top)) continue
+      const options = [
+        { dx: box.left - gap - tag.right, dy: 0 },
+        { dx: box.right + gap - tag.left, dy: 0 },
+        { dx: 0, dy: box.top - gap - tag.bottom },
+        { dx: 0, dy: box.bottom + gap - tag.top }
+      ]
+      for (const option of options) {
+        const left = tag.left + option.dx
+        const top = tag.top + option.dy
+        if (left < hostBox.left + 16 || top < hostBox.top + 16) continue
+        if (left + tag.width > hostBox.right - 16 || top + tag.height > hostBox.bottom - 16) continue
+        const cost = Math.abs(option.dx) + Math.abs(option.dy)
+        if (cost < best) {
+          best = cost
+          bestDx = option.dx
+          bestDy = option.dy
+        }
+      }
     }
-    if (dx === 0 && dy === 0) return
-    const left = (Number.parseFloat(node.style.left) || 0) + dx / scaleX
-    const top = (Number.parseFloat(node.style.top) || 0) + dy / scaleY
+    if (best === Number.POSITIVE_INFINITY) return
+    const left = (Number.parseFloat(node.style.left) || 0) + bestDx / scaleX
+    const top = (Number.parseFloat(node.style.top) || 0) + bestDy / scaleY
     node.style.left = `${Math.round(Math.max(16, left))}px`
     node.style.top = `${Math.round(Math.max(16, top))}px`
   }
