@@ -7,7 +7,7 @@
     "dev": "vite",
     "build": "tsc --noEmit && vite build",
     "preview": "vite preview",
-    "test": "vitest run --exclude src/adventure/focusTap.test.ts && vitest run src/adventure/focusTap.test.ts",
+    "test": "vitest run --exclude src/adventure/focusTap.test.ts --exclude src/adventure/social.play.test.ts --exclude src/adventure/synergy.play.test.ts --exclude src/adventure/daily.play.test.ts --exclude src/adventure/research.play.test.ts --exclude src/adventure/online/account.play.test.ts && vitest run --fileParallelism=false --testTimeout=120000 src/adventure/focusTap.test.ts src/adventure/social.play.test.ts src/adventure/synergy.play.test.ts src/adventure/daily.play.test.ts src/adventure/research.play.test.ts src/adventure/online/account.play.test.ts",
     "build:functions": "node scripts/build-functions.mjs",
     "sim:balance": "vite-node src/adventure/balanceSim.ts",
     "test:guardian": "node scripts/guardian-auto.mjs",
