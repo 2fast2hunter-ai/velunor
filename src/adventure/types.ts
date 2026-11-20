@@ -44,6 +44,8 @@ export interface AdventureSettings {
   tempoWeg?: Speed
   /** Last focus tempo. Missing starts the next warden at 1x. */
   tempoFokus?: 1 | 2
+  /** Hit points as a number. Missing means on. */
+  showHpNumbers?: boolean
   autoSwitch: boolean
   catchCard: boolean
   shake: boolean

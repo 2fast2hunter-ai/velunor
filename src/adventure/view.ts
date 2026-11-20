@@ -15,6 +15,7 @@ import { fontFactor } from './touch'
 import { baseLine, dexPlaces, dexStatus, dexStatusLabel, listCodex, regionProgress, speciesNumber, type DexFilter } from './dex'
 import { goalName, goalTitle, rarityLabel, t, typeLabel, weatherLabel, whenLabel, type Lang } from './i18n'
 import { latestLine, logIconFile, sheetLine, type BattleFightLog, type BattleLogLine } from './battleLog'
+import { hpNumbersOn } from './battleHud'
 import { colorHex, colorId, skinHex } from './avatar'
 import { agoParts, continueFacts } from './continue'
 import { STARTER_ART, starterBars, strongTypes, typeList, weakTypes } from './starter'
@@ -479,6 +480,11 @@ function path(save: SaveV2, here: number): string {
   return pathNodes(cells, false)
 }
 
+function ultSegments(): string {
+  return Array.from({ length: 5 }, (_, index) => `<img class="ult-seg" data-i="${index}" src="${art('battle_ui/ult/seg_leer_s.png')}" alt=""/>`).join('')
+    + `<span class="ult-lock" hidden><img src="${art('battle_ui/ult/schloss_s.png')}" alt=""/><b></b></span><span class="ult-ready" hidden></span>`
+}
+
 function battle(save: SaveV2, now: number, fighting = false, shadow = false, logLine: BattleLogLine | null = null): string {
   const chapter = chapterById(save.region, save.chapter)
   const scene = sceneFile(chapter.scene, chapter.tint)
@@ -501,28 +507,32 @@ function battle(save: SaveV2, now: number, fighting = false, shadow = false, log
       <div id="battle-fx"></div>
       <div class="combatant foe" id="foe-actor" style="left:${FOE_X}%;top:${FOE_Y}%">
         <img class="spotlight" id="spotlight-foe" src="${art('battle_ui/spotlight/foe.png')}" alt="" hidden/>
-        <button type="button" class="status-mark" id="foe-status" data-act="status" data-who="foe" hidden><img alt=""/></button>
         <p class="status-tip" id="foe-tip" hidden></p>
         <b id="foe-name"><img class="wx-arrow" id="foe-arrow" alt="" hidden/></b>
         <div class="mech-row" id="foe-mechs" hidden></div>
         <img class="helper" id="foe-helper" alt="" hidden/>
-        <div class="hp"><span id="foe-hp" style="width:100%"></span></div>
-        <div class="ult" id="foe-ult" data-n="0" hidden></div>
+        <div class="hp"><span class="hp-ghost" id="foe-hp-ghost"></span><span class="hp-fill" id="foe-hp" style="width:100%"></span></div>
+        <b class="hp-num" id="foe-hp-num"></b>
+        <button type="button" class="status-chip" id="foe-status" data-act="status" data-who="foe" hidden><img alt=""/><span class="status-name"></span><span class="status-stack"><img src="${art('battle_ui/status/stapel.png')}" alt=""/><b></b></span></button>
+        <div class="ult-bar small" id="foe-ult" data-n="0">${ultSegments()}</div>
         <img class="sprite" id="foe-sprite" alt="" hidden/>
         <span class="ground-shadow"></span>
       </div>
       <div class="combatant ally" id="ally-actor" style="left:${ALLY_X}%;top:${FEET_Y}%">
         <img class="spotlight" id="spotlight-ally" src="${art('battle_ui/spotlight/ally.png')}" alt="" hidden/>
-        <button type="button" class="status-mark" id="ally-status" data-act="status" data-who="ally" hidden><img alt=""/></button>
         <p class="status-tip" id="ally-tip" hidden></p>
         <div class="konter-label" id="konter-label" hidden>Konter!</div>
         <b id="ally-name">${mon ? esc(species(mon.species).name) : ''}<img class="wx-arrow" id="ally-arrow" alt="" ${mon && weatherArrow(weatherForecast(now)[0].weather, species(mon.species).type) ? `src="${art(weatherArrow(weatherForecast(now)[0].weather, species(mon.species).type) === 'up' ? 'battle/stat_up.png' : 'battle/stat_down.png')}"` : 'hidden'}/></b>
-        <div class="hp"><span id="ally-hp" style="width:${(hp.hp / hp.max) * 100}%"></span></div>
-        <div class="ult ${mon && mon.lvl >= 25 ? '' : 'is-locked'}" id="ally-ult" data-n="0" title="${mon && mon.lvl >= 25 ? 'Ult' : 'ab Level 25'}"></div>
+        <div class="hp"><span class="hp-ghost" id="ally-hp-ghost"></span><span class="hp-fill" id="ally-hp" style="width:${(hp.hp / hp.max) * 100}%"></span></div>
+        <b class="hp-num" id="ally-hp-num">${mon ? `${hp.hp} / ${hp.max}` : ''}</b>
+        <button type="button" class="status-chip" id="ally-status" data-act="status" data-who="ally" hidden><img alt=""/><span class="status-name"></span><span class="status-stack"><img src="${art('battle_ui/status/stapel.png')}" alt=""/><b></b></span></button>
+        <div class="ult-bar small ${mon && mon.lvl >= 25 ? '' : 'is-locked'}" id="ally-ult" data-n="0" data-open="${mon && mon.lvl >= 25 ? '1' : '0'}">${ultSegments()}</div>
         <div id="aura-flash" class="aura-flash" hidden></div>
         ${mon ? `<img class="sprite ${mon.shiny ? 'is-shiny' : ''}" id="ally-sprite" src="${monsterArt(mon.species, true)}" alt=""/>` : ''}
         <span class="ground-shadow"></span>
       </div>
+      <div class="adv-chip" id="adv-chip" hidden><img id="adv-from" alt=""/><img id="adv-form" alt=""/><img id="adv-to" alt=""/><b id="adv-word"></b></div>
+      <div class="wx-tag" id="wx-tag" hidden><img src="${art('battle_ui/wetter/tag_icon.png')}" alt=""/><b id="wx-tag-text"></b></div>
       <div id="floats"></div>
       <div class="move-banner" id="move-banner" hidden></div>
       <div class="name-banner" id="name-banner" hidden></div>
@@ -530,6 +540,11 @@ function battle(save: SaveV2, now: number, fighting = false, shadow = false, log
       <div class="boss-intro" id="boss-intro" hidden></div>
       <button type="button" class="victory" id="victory" hidden></button>
       <img class="crest-fly" id="crest-fly" alt="" hidden/>
+    </div>
+    <div class="ult-card" id="ult-card" hidden>
+      <img class="ult-glanz" src="${art('battle_ui/callout/ult_glanz.png')}" alt=""/>
+      <b id="ult-card-name"></b>
+      <span id="ult-card-pattern"></span>
     </div>
     <button type="button" class="battle-log" id="battle-log" data-act="battle-log">
       <img src="${art(logIconFile(logLine?.icon ?? 'angriff'))}" alt=""/>
@@ -541,7 +556,7 @@ function battle(save: SaveV2, now: number, fighting = false, shadow = false, log
       <p id="battle-text" class="battle-status">${tr(save, 'battle.place', { part: clock.part, weather: weatherLabel(L(save), weatherForecast(now)[0].weather), place: chapter.name, state: tr(save, save.hold ? 'battle.waiting' : 'battle.walking') })}</p>
       ${bossAhead(save) ? `<p class="wx-preview">${weatherPreview(save, now)}</p>` : ''}
     </div>
-    <div class="wx-stack"><div class="wx-chip" id="wx-chip">${weatherChip(save, now)}</div></div>
+    <div class="wx-stack"><div class="wx-chip" id="wx-chip">${weatherChip(save, now)}</div><p class="wx-announce" id="wx-announce" hidden></p></div>
     <div class="focus-bar" id="focus-bar" hidden>
       <div class="ko-dots" id="ko-dots" aria-label="${esc(tr(save, 'battle.ko'))}">${Array.from({ length: 6 }, () => `<img src="${art('battle_ui/ko/leer_64.png')}" alt=""/>`).join('')}</div>
       <div class="focus-tempo">
@@ -1378,6 +1393,7 @@ function options(save: SaveV2, debug: boolean, shell: ShellFlags): string {
       ${([100, 115, 130] as const).map((size) => `<button type="button" data-act="font" data-size="${size}" class="${save.settings.font === size ? 'primary' : ''}">${size} %</button>`).join('')}
     </div>
     <label class="switch">${ui('optBattery')}<input type="checkbox" data-field="battery" ${save.settings.battery ? 'checked' : ''}/> ${tr(save, 'opt.battery')}</label>
+    <label class="switch">${ui('optCard')}<input type="checkbox" data-field="hp" ${hpNumbersOn(save.settings) ? 'checked' : ''}/> ${tr(save, 'opt.hp')}</label>
     <p class="muted">${tr(save, 'opt.batteryNote')}</p>
     <label class="switch">${ui('optLoop')}<input type="checkbox" data-field="loop" ${save.loop ? 'checked' : ''}/> ${tr(save, 'nav.loop')}</label>
     <div class="row-actions">
@@ -1988,7 +2004,7 @@ export function gameHtml(save: SaveV2, screen: Screen, now: number, pc: PcQuery,
   const stageStyle = screen === 'shop'
     ? `--font-scale:${typeScale};background-image:url('${art(SHOP_ART.bg)}');background-size:100% 100%`
     : `--font-scale:${typeScale}`
-  return `<div id="stage" data-font="${save.settings.font}" data-swipe="${save.settings.swipeTabs ? '1' : '0'}" data-battery="${save.settings.battery ? '1' : '0'}" style="${stageStyle}" class="${adventure ? 'is-adventure' : 'is-menu'} ${screen === 'shop' ? 'is-shop' : ''} ${save.settings.reduceMotion ? 'reduce-motion' : ''}">
+  return `<div id="stage" data-font="${save.settings.font}" data-swipe="${save.settings.swipeTabs ? '1' : '0'}" data-battery="${save.settings.battery ? '1' : '0'}" style="${stageStyle}" class="${adventure ? 'is-adventure' : 'is-menu'} ${screen === 'shop' ? 'is-shop' : ''} ${save.settings.reduceMotion ? 'reduce-motion' : ''} ${hpNumbersOn(save.settings) ? 'hp-nums' : ''}">
     <div class="band band-top"></div>
     <div class="safe">
       <div class="anchor anchor-top">
