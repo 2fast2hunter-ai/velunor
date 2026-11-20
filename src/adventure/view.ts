@@ -16,7 +16,7 @@ import { baseLine, dexPlaces, dexStatus, dexStatusLabel, listCodex, regionProgre
 import { goalName, goalTitle, rarityLabel, t, typeLabel, weatherLabel, whenLabel, type Lang } from './i18n'
 import { latestLine, logIconFile, sheetLine, type BattleFightLog, type BattleLogLine } from './battleLog'
 import { hpNumbersOn } from './battleHud'
-import { whyIconFile, type WhyCard } from './battleWhy'
+import { shareLegend, whyIconFile, type WhyCard } from './battleWhy'
 import { colorHex, colorId, skinHex } from './avatar'
 import { agoParts, continueFacts } from './continue'
 import { STARTER_ART, starterBars, strongTypes, typeList, weakTypes } from './starter'
@@ -111,7 +111,7 @@ export type Overlay =
   | { kind: 'awaken'; uid: string; level: 25 | 50 }
   | { kind: 'offline'; done: number; total: number }
   | { kind: 'log' }
-  | { kind: 'battle-log' }
+  | { kind: 'battle-log'; back?: 'why' }
   | { kind: 'guard'; win: boolean; badge: string | null; gold: number; text: string }
   | { kind: 'why'; card: WhyCard; badge: string | null }
   | { kind: 'chest-rates'; tier: ChestTier }
@@ -482,9 +482,9 @@ function path(save: SaveV2, here: number): string {
   return pathNodes(cells, false)
 }
 
-function ultSegments(): string {
+function ultSegments(locked: boolean, label: string): string {
   return Array.from({ length: 5 }, (_, index) => `<img class="ult-seg" data-i="${index}" src="${art('battle_ui/ult/seg_leer_s.png')}" alt=""/>`).join('')
-    + `<span class="ult-lock" hidden><img src="${art('battle_ui/ult/schloss_s.png')}" alt=""/><b></b></span><span class="ult-ready" hidden></span>`
+    + `<span class="ult-lock"${locked ? '' : ' hidden'}><img src="${art('battle_ui/ult/schloss_s.png')}" alt=""/><b>${esc(label)}</b></span><span class="ult-ready" hidden></span>`
 }
 
 function battle(save: SaveV2, now: number, fighting = false, shadow = false, logLine: BattleLogLine | null = null): string {
@@ -516,7 +516,7 @@ function battle(save: SaveV2, now: number, fighting = false, shadow = false, log
         <div class="hp"><span class="hp-ghost" id="foe-hp-ghost"></span><span class="hp-fill" id="foe-hp" style="width:100%"></span></div>
         <b class="hp-num" id="foe-hp-num"></b>
         <button type="button" class="status-chip" id="foe-status" data-act="status" data-who="foe" hidden><img alt=""/><span class="status-name"></span><span class="status-stack"><img src="${art('battle_ui/status/stapel.png')}" alt=""/><b></b></span></button>
-        <div class="ult-bar small" id="foe-ult" data-n="0">${ultSegments()}</div>
+        <div class="ult-bar small is-locked" id="foe-ult" data-n="0" data-open="0">${ultSegments(true, tr(save, 'battle.ultLocked'))}</div>
         <img class="sprite" id="foe-sprite" alt="" hidden/>
         <span class="ground-shadow"></span>
       </div>
@@ -528,7 +528,7 @@ function battle(save: SaveV2, now: number, fighting = false, shadow = false, log
         <div class="hp"><span class="hp-ghost" id="ally-hp-ghost"></span><span class="hp-fill" id="ally-hp" style="width:${(hp.hp / hp.max) * 100}%"></span></div>
         <b class="hp-num" id="ally-hp-num">${mon ? `${hp.hp} / ${hp.max}` : ''}</b>
         <button type="button" class="status-chip" id="ally-status" data-act="status" data-who="ally" hidden><img alt=""/><span class="status-name"></span><span class="status-stack"><img src="${art('battle_ui/status/stapel.png')}" alt=""/><b></b></span></button>
-        <div class="ult-bar small ${mon && mon.lvl >= 25 ? '' : 'is-locked'}" id="ally-ult" data-n="0" data-open="${mon && mon.lvl >= 25 ? '1' : '0'}">${ultSegments()}</div>
+        <div class="ult-bar small ${mon && mon.lvl >= 25 ? '' : 'is-locked'}" id="ally-ult" data-n="0" data-open="${mon && mon.lvl >= 25 ? '1' : '0'}">${ultSegments(!(mon && mon.lvl >= 25), tr(save, 'battle.ultLocked'))}</div>
         <div id="aura-flash" class="aura-flash" hidden></div>
         ${mon ? `<img class="sprite ${mon.shiny ? 'is-shiny' : ''}" id="ally-sprite" src="${monsterArt(mon.species, true)}" alt=""/>` : ''}
         <span class="ground-shadow"></span>
@@ -1561,7 +1561,7 @@ function screenHead(key: 'arena' | 'tower'): string {
 function arenaScreen(save: SaveV2, panel: ArenaPanel | undefined): string {
   const view = panel ?? { status: 'offline' as const, note: '', rating: 1000, league: 'Kiesel', attacks: 0, slots: [], suggestions: [], logs: [], frames: [], replay: null }
   const badges = ['kiesel', 'bronze', 'silber', 'gold', 'kristall', 'meister'].map((id) => `<div class="league-item">${leagueBadge(id, view.frames.includes(id) || view.league.toLowerCase().includes(id === 'meister' ? 'meister' : id))}<span>${esc(tr(save, `arena.league.${id}`))}</span></div>`).join('')
-  if (view.status === 'loading') {
+  if (view.status === 'loading' && !view.replay) {
     return `<div class="menu-screen"><div class="menu-scroll"><div class="card panel">${screenHead('arena')}<h2>${tr(save, 'nav.arena')}</h2><p class="muted">${tr(save, 'arena.loading')}</p></div></div></div>`
   }
   if (view.status !== 'ready' && view.status !== 'locked') {
@@ -2055,18 +2055,18 @@ function whyCard(save: SaveV2, card: WhyCard, badge: string | null): string {
   const frame = `border-image-source:url('${art('battle_ui/summary/karte.png')}')`
   const rowFrame = `border-image-source:url('${art('battle_ui/summary/grund_zeile.png')}')`
   const reasons = card.reasons.map((reason) => `<div class="why-row" style="${rowFrame}"><img src="${art(whyIconFile(reason.icon))}" alt=""/><p>${esc(reason.sentence)}</p></div>`).join('')
-  const tips = card.tips.map((tip) => `<div class="why-row" style="${rowFrame}"><img src="${art('battle_ui/summary/tipp.png')}" alt=""/><p>${esc(tip)}</p></div>`).join('')
+  const tips = card.tips.map((tip) => `<div class="why-row is-tip" style="${rowFrame}"><img src="${art('battle_ui/summary/tipp.png')}" alt=""/><p>${esc(tip)}</p></div>`).join('')
   const shares = card.shares.map((share) => {
     const total = share.normal + share.ult + share.status
     const pct = (part: number) => total > 0 ? Math.round((part / total) * 100) : 0
-    return `<div class="why-share"><b>${esc(share.name)}</b><span><i class="is-normal" style="width:${pct(share.normal)}%"></i><i class="is-ult" style="width:${pct(share.ult)}%"></i><i class="is-status" style="width:${pct(share.status)}%"></i></span></div>`
+    return `<div class="why-share"><b>${esc(share.name)}</b><span><i class="is-normal" style="width:${pct(share.normal)}%"></i><i class="is-ult" style="width:${pct(share.ult)}%"></i><i class="is-status" style="width:${pct(share.status)}%"></i></span><small>${esc(shareLegend(share, L(save)))}</small></div>`
   }).join('')
   return `<div class="why-card" style="${frame}"><h2>${tr(save, 'why.title')}</h2>
     <p>${tr(save, card.win ? 'why.win' : 'why.loss')} · ${tr(save, 'why.ko', { n: card.ko, total: card.koMax })}</p>
     <p>${tr(save, 'why.reward', { gold: card.gold, exp: card.exp })}</p>
     ${badge ? `<p>${esc(badge)}</p>` : ''}
     ${reasons}${shares}${tips}
-    <button type="button" data-act="why-log">${tr(save, 'why.log')}</button>
+    <button type="button" class="why-log" data-act="why-log">${tr(save, 'why.log')}</button>
     <button type="button" class="primary" data-act="why-next">${tr(save, 'why.next')}</button>
   </div>`
 }

@@ -31,13 +31,13 @@ import { whyAutoMs, whyBattle, whyIconFile } from './battleWhy'
 import { roadPaceFromSearch, setRoadPace } from './roadPace'
 import { species, typeColor, typeMult, typeName } from '../data'
 import { teamWeatherMarks, weatherArrow, weatherAt, WEATHER_SHIFTS } from './weather'
-import { ultName, type UltPattern } from './ult'
+import { ULT_LEVEL, ultName, type UltPattern } from './ult'
 import { AURA_FRAMES, AURA_MS } from './combo'
 import { activeSynergies, presentSynergies, SYNERGY_CAP, synergyKnown } from './synergy'
 import { mechIcon, type MechId } from './mech'
 import { AILMENTS, ailmentIcon, type AilmentId } from './ailment'
 import { sfx } from '../ui'
-import { actorTransform, clampShift, hitShake, koPose, lungeOffset, numberStyle, parallaxShift } from '../battle/stage'
+import { actorTransform, clampShift, hitShake, koPose, lungeOffset, numberStyle, parallaxShift, spriteMotion } from '../battle/stage'
 import { bossUltHitstop, bossUltShake, cameraShake, hitGrade, hitstopMs, numberHoldMs } from '../battle/hitReadout'
 import { beginBattleMood, clearBattleFx, holdBattleFx, mountBattleFx, onBattleFxReady, playBattleFx, preloadBattleStrips, setFxRunning, showBattleConfetti, showBattleDissolve, showHitNumber } from '../battle/phaserFx'
 import { effectTiming, battleStripTypes } from '../battle/strips'
@@ -80,7 +80,7 @@ import { arenaFightErrorKey, crestCount } from './arena'
 import { buyCrystal, buyFruit, sellCrystal, sellFruit, useCrystal, useFruit } from './shop'
 import { buyPrize, spinWheel, type Multiplier, type SymbolId } from './wheel'
 import { chapterCapNow } from './dex'
-import { chapterById } from './route'
+import { chapterById, encounterTable } from './route'
 import {
   challengeGuardian,
   emptySummary,
@@ -1525,7 +1525,7 @@ function loop(): void {
     return
   }
   save.lastSeenAt = now
-  try { writeSave(gameStore, save) } catch { /* ignore */ }
+  persistSave()
   animating = true
   pendingOutcome = outcome
   if (screen !== 'adventure') {
@@ -1536,8 +1536,49 @@ function loop(): void {
     timer = window.setTimeout(loop, 0)
     return
   }
-  render(outcome.step)
+  if (screen === 'adventure' && !overlay && document.getElementById('battle') && document.getElementById('path')) patchAdventure(outcome.step)
+  else render(outcome.step)
   play(outcome, save.settings.speed, () => finishPresent(outcome))
+}
+
+let persistAt = 0
+
+function persistSave(force = false): void {
+  if (!save) return
+  const now = Date.now()
+  if (!force && now - persistAt < 3000) return
+  persistAt = now
+  try { writeSave(gameStore, save) } catch { /* the memory copy still applies */ }
+}
+
+const warmedArt = new Set<string>()
+
+function warmArt(src: string): void {
+  if (!src || warmedArt.has(src)) return
+  warmedArt.add(src)
+  const img = new Image()
+  img.decoding = 'async'
+  img.src = src
+}
+
+function warmChapterArt(): void {
+  if (!save) return
+  const chapter = chapterById(save.region, save.chapter)
+  for (const row of encounterTable(chapter, Date.now())) warmArt(monsterArt(row.species, true))
+  const uid = save.active && save.mons[save.active] ? save.active : save.team[0]
+  const mon = uid ? save.mons[uid] : null
+  if (mon) warmArt(monsterArt(mon.species, true))
+}
+
+function patchAdventure(step: number): void {
+  if (!save) return
+  const gold = document.getElementById('gold')
+  if (gold) gold.textContent = `${Math.floor(save.gold).toLocaleString('de-DE')} G`
+  document.querySelectorAll('#path .node').forEach((node, index) => {
+    const n = index + 1
+    node.classList.toggle('is-here', n === step)
+    node.classList.toggle('is-done', n < step)
+  })
 }
 
 function hardwareBack(): void {
@@ -1583,22 +1624,35 @@ function hardwareBack(): void {
   render()
 }
 
+let arenaToken = 0
+
 async function refreshArena(): Promise<void> {
+  const token = ++arenaToken
   if (!lineUp()) {
     arenaPanel = { ...arenaPanel, status: 'offline', note: '' }
     render()
     return
   }
-  arenaPanel = { ...arenaPanel, status: 'loading' }
-  render()
-  const state = await callOnline('arena-desk', { action: 'state' })
-  if (!state.ok) {
-    arenaPanel = { ...arenaPanel, status: 'offline', note: '' }
+  const keepReplay = arenaPanel.replay
+  if (!keepReplay) {
+    arenaPanel = { ...arenaPanel, status: 'loading' }
+    render()
+  }
+  const state = await Promise.race([
+    callOnline('arena-desk', { action: 'state' }),
+    new Promise<Awaited<ReturnType<typeof callOnline>>>((resolve) => {
+      window.setTimeout(() => resolve({ ok: false, missing: true, error: 'timeout', data: {} }), 8000)
+    })
+  ])
+  if (token !== arenaToken) return
+  if (!state.ok || !state.data) {
+    arenaPanel = { ...arenaPanel, status: keepReplay ? arenaPanel.status : 'offline', note: keepReplay ? arenaPanel.note : '' }
     render()
     return
   }
   const claim = await callOnline('arena-desk', { action: 'claim' })
   const logs = await callOnline('arena-desk', { action: 'log' })
+  if (token !== arenaToken) return
   if (claim.ok && save) {
     const marks = Math.max(0, Math.floor(Number(claim.data.marks)) || 0)
     if (marks > 0) {
@@ -2077,15 +2131,34 @@ async function arenaAction(act: string, index: string | null): Promise<void> {
   }
   render()
   window.clearInterval(arenaTimer)
+  let pace = 700
+  try {
+    pace = replayStepMs()
+  } catch {
+    pace = 700
+  }
   arenaTimer = window.setInterval(() => {
     const current = arenaPanel.replay
     if (!current || current.step >= current.bouts.length - 1) {
       window.clearInterval(arenaTimer)
       return
     }
-    arenaPanel = { ...arenaPanel, replay: { ...current, step: current.step + 1 } }
+    arenaPanel = { ...arenaPanel, status: 'ready', replay: { ...current, step: current.step + 1 } }
+    const card = document.querySelector('.arena-replay')
+    const bout = arenaPanel.replay?.bouts[arenaPanel.replay.step]
+    const bars = card?.querySelectorAll('.bar-exp span')
+    const count = card?.querySelector('p.muted')
+    if (card && bout && bars && bars.length >= 2 && arenaPanel.replay) {
+      const names = card.querySelectorAll('b')
+      if (names[0]) names[0].textContent = bout.foeName
+      if (names[1]) names[1].textContent = bout.allyName
+      ;(bars[0] as HTMLElement).style.width = `${Math.round(bout.foeHp / Math.max(1, bout.foeMax) * 100)}%`
+      ;(bars[1] as HTMLElement).style.width = `${Math.round(bout.allyHp / Math.max(1, bout.allyMax) * 100)}%`
+      if (count) count.textContent = `${arenaPanel.replay.step + 1} / ${arenaPanel.replay.bouts.length}`
+      return
+    }
     render()
-  }, replayStepMs())
+  }, Math.min(1200, Math.max(400, pace)))
 }
 
 async function refreshRanks(): Promise<void> {
@@ -2141,10 +2214,17 @@ function showMastery(ups: MasteryUp[] | undefined): void {
   }, 4300)
 }
 
+function ultUnlocked(): boolean {
+  if (!save) return false
+  const uid = save.active && save.mons[save.active] ? save.active : save.team[0]
+  const mon = uid ? save.mons[uid] : null
+  return Boolean(mon && mon.lvl >= ULT_LEVEL)
+}
+
 function showWhyChip(outcome: EncounterOutcome): void {
   if (!save || !outcome.traces.length) return
   lastWhy = outcome
-  const card = whyBattle(outcome.traces, { win: outcome.win, gold: outcome.gold, exp: outcome.exp }, save.settings.lang)
+  const card = whyBattle(outcome.traces, { win: outcome.win, gold: outcome.gold, exp: outcome.exp, ultUnlocked: ultUnlocked() }, save.settings.lang)
   const chip = document.getElementById('why-chip')
   const icon = document.querySelector<HTMLImageElement>('#why-chip img')
   const text = document.getElementById('why-chip-text')
@@ -2159,7 +2239,7 @@ function showWhyChip(outcome: EncounterOutcome): void {
 
 function openWhy(outcome: EncounterOutcome | null, focus: boolean): void {
   if (!save || !outcome) return
-  const card = whyBattle(outcome.traces, { win: outcome.win, gold: outcome.gold, exp: outcome.exp }, save.settings.lang)
+  const card = whyBattle(outcome.traces, { win: outcome.win, gold: outcome.gold, exp: outcome.exp, ultUnlocked: ultUnlocked() }, save.settings.lang)
   overlay = { kind: 'why', card, badge: outcome.badge }
   render()
   window.clearTimeout(whyTimer)
@@ -2173,6 +2253,7 @@ function closeWhy(): void {
   overlay = null
   whyArmed = false
   if (save) save.hold = false
+  persistSave(true)
   render()
   kick()
 }
@@ -2281,6 +2362,7 @@ function showFocusChrome(): void {
   if (text) {
     text.classList.add('is-callout')
     text.setAttribute('aria-live', 'polite')
+    text.style.setProperty('--callout', `url("${art('battle_ui/callout/ansage.png')}")`)
     text.style.borderImage = `url("${art('battle_ui/callout/ansage.png')}") 48 52 52 52 fill / 48px 52px 52px 52px / 12px stretch`
   }
   paintFocusTempo()
@@ -2292,6 +2374,7 @@ function hideFocusChrome(): void {
   if (text) {
     text.classList.remove('is-callout')
     text.style.borderImage = ''
+    text.style.removeProperty('--callout')
   }
   const ally = document.getElementById('spotlight-ally')
   const foe = document.getElementById('spotlight-foe')
@@ -2404,6 +2487,7 @@ function play(outcome: EncounterOutcome, speed: Speed, done: () => void): void {
     focusCtl = { paused: false, stop: () => { skipped = true; finishOnce() } }
     showFocusChrome()
   }
+  warmChapterArt()
   announceWeather()
   if (save && outcome.traces.length) {
     liveFight = battleLogFromTraces(outcome.traces, save.settings.lang)
@@ -2543,9 +2627,8 @@ function play(outcome: EncounterOutcome, speed: Speed, done: () => void): void {
       const field = document.getElementById('battle-world')
       if (allyActor) {
         const slide = clampActorSlide(allyActor, field, -240 * enter)
-        allyActor.style.transform = `${actorTransform('ally', allyMove, allyHit, allyKo, elapsed, reach)} translate(${slide.toFixed(1)}px, 0px)`
-        allyActor.style.opacity = String(koPose(allyKo).opacity)
-        clampActorPose(allyActor, field)
+        poseActor(allyActor, 'ally', allyMove, allyHit, allyKo, elapsed, reach, slide)
+        if (allyMove >= 0 || enter > 0) clampActorPose(allyActor, field)
       }
       paintWeatherArrow('ally-arrow', shot ? species(shot.allySpecies).type : null, weather)
       paintWeatherArrow('foe-arrow', shot ? species(shot.foeSpecies).type : null, weather)
@@ -2567,9 +2650,8 @@ function play(outcome: EncounterOutcome, speed: Speed, done: () => void): void {
         if (picture instanceof HTMLImageElement) picture.style.filter = 'brightness(2.4)'
       }
       if (foeActor) {
-        foeActor.style.transform = actorTransform('foe', foeMove, foeHit, foeKo, elapsed + 180, reach)
-        foeActor.style.opacity = String(koPose(foeKo).opacity)
-        clampActorPose(foeActor, field)
+        poseActor(foeActor, 'foe', foeMove, foeHit, foeKo, elapsed + 180, reach, 0)
+        if (foeMove >= 0) clampActorPose(foeActor, field)
       }
       const world = document.getElementById('battle-world')
       const shakeAge = elapsed - shakeStart
@@ -2645,6 +2727,7 @@ function paintMark(id: string, mark: string | null, stacks: number): void {
   }
   const spec = AILMENTS[mark as AilmentId]
   node.hidden = false
+  node.style.setProperty('--status-chip', `url("${art('battle_ui/status/chip.png')}")`)
   const img = node.querySelector('img')
   if (img instanceof HTMLImageElement) {
     img.src = art(ailmentIcon(spec.id))
@@ -2712,6 +2795,18 @@ function showAura(speed: number): void {
   }, step)
 }
 
+function poseActor(actor: HTMLElement, side: 'ally' | 'foe', move: number, hit: number, ko: number, idle: number, reach: number, extraX: number): void {
+  const placed = `translate(-50%, -100%)${extraX ? ` translate(${extraX.toFixed(1)}px, 0px)` : ''}`
+  if (actor.style.transform !== placed) actor.style.transform = placed
+  const sprite = actor.querySelector('img.sprite')
+  if (sprite instanceof HTMLElement) {
+    const motion = spriteMotion(side, move, hit, ko, idle, reach)
+    if (sprite.style.transform !== motion) sprite.style.transform = motion
+  }
+  const opacity = String(koPose(ko).opacity)
+  if (actor.style.opacity !== opacity) actor.style.opacity = opacity
+}
+
 function clampActorSlide(actor: HTMLElement, field: HTMLElement | null, x: number): number {
   const img = actor.querySelector('img.sprite')
   const width = field?.clientWidth || 1080
@@ -2763,19 +2858,26 @@ function paintUlt(id: string, n: number, open: boolean): void {
   const node = document.getElementById(id)
   if (!node) return
   const filled = Math.max(0, Math.min(5, Math.floor(n)))
+  const ready = open && filled >= 5
+  const paintKey = `${filled}:${open ? 1 : 0}:${ready ? 1 : 0}`
+  if (node.dataset.paint === paintKey) return
+  node.dataset.paint = paintKey
   node.hidden = false
   node.dataset.n = String(filled)
   node.dataset.open = open ? '1' : '0'
-  node.classList.toggle('is-ready', open && filled >= 5)
+  node.classList.toggle('is-ready', ready)
   node.classList.toggle('is-locked', !open)
-  const ready = open && filled >= 5
   node.querySelectorAll<HTMLImageElement>('.ult-seg').forEach((img, index) => {
     const file = ready ? 'seg_bereit_s' : index < filled ? 'seg_voll_s' : 'seg_leer_s'
-    img.src = art(`battle_ui/ult/${file}.png`)
+    const src = art(`battle_ui/ult/${file}.png`)
+    if (!img.src.endsWith(src) && img.getAttribute('src') !== src) img.src = src
   })
-  const note = node.querySelector('.ult-lock b')
-  if (note) note.textContent = t(save?.settings.lang, 'battle.ultLocked')
+  const lock = node.querySelector('.ult-lock')
   const banner = node.querySelector('.ult-ready')
+  if (lock instanceof HTMLElement) lock.hidden = open
+  if (banner instanceof HTMLElement) banner.hidden = !ready
+  const note = lock?.querySelector('b')
+  if (note) note.textContent = t(save?.settings.lang, 'battle.ultLocked')
   if (banner) banner.textContent = t(save?.settings.lang, 'battle.ultReady')
 }
 
@@ -2793,6 +2895,12 @@ function paintAdvantage(allyId: string, foeId: string, band?: 'strong' | 'weak' 
   }
   const edge = band ?? typeEdge(typeMult(allyType, foeType))
   const formName = edge === 'strong' ? 'stark' : edge === 'weak' ? 'schwach' : 'neutral'
+  const paintKey = `${allyId}:${foeId}:${formName}`
+  if (chip.dataset.paint === paintKey) {
+    chip.hidden = false
+    return
+  }
+  chip.dataset.paint = paintKey
   chip.hidden = false
   const from = document.getElementById('adv-from')
   const to = document.getElementById('adv-to')
@@ -3283,7 +3391,9 @@ function onClick(event: Event): void {
     return
   }
   if (act === 'why-log') {
-    overlay = { kind: 'battle-log' }
+    window.clearTimeout(whyTimer)
+    whyTimer = 0
+    overlay = { kind: 'battle-log', back: 'why' }
     render()
     return
   }
@@ -3701,6 +3811,10 @@ function onClick(event: Event): void {
     return
   }
   if (act === 'close') {
+    if (overlay?.kind === 'battle-log' && overlay.back === 'why' && lastWhy) {
+      openWhy(lastWhy, false)
+      return
+    }
     overlay = null
     if (showAwaken()) return
     render()

@@ -40,6 +40,11 @@ export function koPose(progress: number): { rotate: number; opacity: number; dro
 }
 
 export function actorTransform(side: 'ally' | 'foe', elapsed: number, hitAge: number, ko: number, idleT: number, distance = LUNGE_PX): string {
+  return `translate(-50%, -100%) ${spriteMotion(side, elapsed, hitAge, ko, idleT, distance, false)}`
+}
+
+/** Lunge, bob and knockout on the sprite. The name and the HP number stay put. */
+export function spriteMotion(side: 'ally' | 'foe', elapsed: number, hitAge: number, ko: number, idleT: number, distance = LUNGE_PX, flip = true): string {
   const idle = idleBob(idleT)
   const base = side === 'foe' ? 0.72 : 1.05
   const dir = side === 'ally' ? 1 : -1
@@ -47,7 +52,8 @@ export function actorTransform(side: 'ally' | 'foe', elapsed: number, hitAge: nu
   const x = lungeOffset(elapsed, distance) * dir + hitShake(hitAge)
   const y = idle.y + pose.drop
   const scale = base * idle.scale * lungeScale(elapsed) * (1 - pose.rotate / 400)
-  return `translate(-50%, -100%) translate(${x}px, ${y}px) rotate(${pose.rotate}deg) scale(${scale})`
+  const face = flip && side === 'ally' ? ' scaleX(-1)' : ''
+  return `translate(${x}px, ${y}px) rotate(${pose.rotate}deg) scale(${scale})${face}`
 }
 
 export function numberStyle(band: 'strong' | 'weak' | 'neutral', crit: boolean, _awaken = false, _base = '#ffffff'): { scale: number; color: string; label: string } {

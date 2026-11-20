@@ -509,13 +509,24 @@ export function fxPoolSize(): number {
   return pool.allocated
 }
 
+let fxW = 0
+let fxH = 0
+
+function resizeFx(width: number, height: number): void {
+  if (!game || width < 1 || height < 1) return
+  if (width === fxW && height === fxH) return
+  fxW = width
+  fxH = height
+  game.scale.resize(width, height)
+}
+
 export function mountBattleFx(parent: HTMLElement): void {
   const width = parent.clientWidth || 1080
   const height = parent.clientHeight || 980
   if (game) {
     const canvas = game.canvas
     if (canvas.parentElement !== parent) parent.appendChild(canvas)
-    game.scale.resize(width, height)
+    resizeFx(width, height)
     return
   }
   game = new Phaser.Game({
@@ -581,7 +592,7 @@ export function preloadBattleStrips(types: TypeId[], done?: () => void): void {
 export function playBattleFx(burst: FxBurst): void {
   if (game) {
     const parent = game.canvas.parentElement
-    if (parent && parent.clientWidth > 0) game.scale.resize(parent.clientWidth, parent.clientHeight || 360)
+    if (parent && parent.clientWidth > 0) resizeFx(parent.clientWidth, parent.clientHeight || 360)
   }
   pool.releaseAll()
   const spec = typeFx(burst.type)
