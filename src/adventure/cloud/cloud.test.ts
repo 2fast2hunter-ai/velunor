@@ -108,10 +108,14 @@ describe('sync decisions', () => {
 describe('consent gating', () => {
   it('drops every event unless consent is yes, and rejects catch, gacha and ad names', () => {
     expect(EVENT_NAMES).toHaveLength(11)
-    expect(EVENT_NAMES).toContain('species_unlock')
+    expect(EVENT_NAMES).toContain('lootbox_open')
+    expect(EVENT_NAMES).not.toContain('chest_open')
+    expect(EVENT_NAMES).not.toContain('catch_attempt')
+    expect(EVENT_NAMES).not.toContain('catch_success')
     expect(acceptEvent('session_start', { app_version: '0.1.0' }, 'unset')).toBeNull()
     expect(acceptEvent('session_start', { app_version: '0.1.0' }, 'no')).toBeNull()
-    expect(acceptEvent('catch_attempt', { species: 'm01' }, 'yes')).toBeNull()
+    expect(acceptEvent('catch_attempt', { speciesId: 'm01' }, 'yes')).toBeNull()
+    expect(acceptEvent('catch_success', { speciesId: 'm01' }, 'yes')).toBeNull()
     expect(acceptEvent('gacha_pull', { tier: 'gold' }, 'yes')).toBeNull()
     expect(acceptEvent('ad_view', { placement: 'shop' }, 'yes')).toBeNull()
     for (const name of EVENT_NAMES) {
@@ -171,7 +175,7 @@ describe('play events', () => {
     })
     expect(clear.map((event) => event.event)).toEqual(['stage_clear', 'shard_drop'])
     expect(clear[0].props).toEqual({ region: 1, chapter: 2, node: 4 })
-    expect(clear[1].props).toEqual({ species: 'm03', amount: 1, source: 'wild' })
+    expect(clear[1].props).toEqual({ speciesId: 'm03', amount: 1, source: 'wild' })
 
     const fail = eventsForEncounter({
       outcome: { kind: 'trainer', step: 9, win: false },
@@ -214,8 +218,8 @@ describe('play events', () => {
     expect(opened.map((event) => event.event)).toEqual(['lootbox_open', 'lootbox_open', 'species_unlock', 'shard_drop'])
     expect(opened[0].props).toEqual({ tier: 'kiesel', rarity: 2, isNew: false, pityHit: false })
     expect(opened[1].props).toEqual({ tier: 'kiesel', rarity: 4, isNew: true, pityHit: true })
-    expect(opened[2].props).toEqual({ species: 'm05', via: 'chest' })
-    expect(opened[3].props).toEqual({ species: 'm04', amount: 3, source: 'duplicate' })
+    expect(opened[2].props).toEqual({ speciesId: 'm05', via: 'chest' })
+    expect(opened[3].props).toEqual({ speciesId: 'm04', amount: 3, source: 'duplicate' })
     expect(eventsForEncounter({
       outcome: { kind: 'wild', step: 1, win: true, unlock: 'm08' },
       region: 1,
@@ -225,14 +229,16 @@ describe('play events', () => {
       shardsBefore: {},
       shardsAfter: {}
     }).map((event) => event.event)).toEqual(['stage_clear', 'species_unlock'])
-    expect(unlockEvent('m12', 'werkstatt')).toEqual({ event: 'species_unlock', props: { species: 'm12', via: 'werkstatt' } })
-    expect(unlockEvent('ada', 'werkstatt')).toBeNull()
-    expect(acceptEvent('species_unlock', { species: 'm12', via: 'werkstatt' }, 'no')).toBeNull()
+    expect(unlockEvent('m12', 'workshop')).toEqual({ event: 'species_unlock', props: { speciesId: 'm12', via: 'workshop' } })
+    expect(unlockEvent('ada', 'workshop')).toBeNull()
+    expect(acceptEvent('species_unlock', { speciesId: 'm12', via: 'workshop' }, 'no')).toBeNull()
     expect(starEvent('m01', 3)).toEqual({ event: 'star_up', props: { species: 'm01', star: 3 } })
     expect(starEvent('ada@example.com', 1)).toBeNull()
     const sql = readFileSync(new URL('../../../supabase/migrations/20261119180000_species_unlock_event.sql', import.meta.url), 'utf8')
     expect(sql).toContain('events_event_check')
+    expect(sql).toContain("'lootbox_open'")
     expect(sql).toContain("'species_unlock'")
+    expect(sql).not.toContain("'chest_open'")
   })
 })
 

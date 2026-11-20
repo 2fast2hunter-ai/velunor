@@ -3523,7 +3523,7 @@ function onClick(event: Event): void {
     const reason = craftSpecies(save, crafted, Date.now())
     if (reason) save.log.push({ t: Date.now(), text: reason })
     else {
-      const event = unlockEvent(crafted, 'werkstatt')
+      const event = unlockEvent(crafted, 'workshop')
       if (event) cloud?.track(event.event, event.props)
     }
     try { writeSave(gameStore, save) } catch { /* ignore */ }
