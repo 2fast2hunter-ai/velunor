@@ -5268,7 +5268,7 @@ var lootbox_default = {
   },
   extraGold: { kiesel: [100, 200], silber: [200, 350], gold: [300, 500], sternen: [500, 800], perRegion: true },
   storageCap: 99,
-  startChests: { kiesel: 2 },
+  debugStartChests: { kiesel: 5 },
   shards: [5, 6, 8, 10, 15, 20, 30, 40, 60, 100],
   dust: [1, 2, 3, 5, 8, 12, 20, 30, 50, 100],
   starCostPct: [10, 20, 40, 80, 150],

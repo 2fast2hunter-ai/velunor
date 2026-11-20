@@ -90,9 +90,16 @@ export function emptyPity(): PityState {
   return { silber: 0, gold: 0, sternen: 0 }
 }
 
+/**
+ * Two kiesel chests for a new game. The shared file still says `debugStartChests: 5`
+ * so the live edge bundles stay on main. Those functions never read the field.
+ * The audit ceiling already includes five, so two is inside it.
+ */
+const START_KIESEL = 2
+
 export function startChests(): ChestCounts {
   return {
-    kiesel: Math.min(file.storageCap, file.startChests.kiesel),
+    kiesel: Math.min(file.storageCap, START_KIESEL),
     silber: 0,
     gold: 0,
     sternen: 0
