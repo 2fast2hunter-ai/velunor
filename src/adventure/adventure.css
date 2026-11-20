@@ -256,7 +256,7 @@ img.portrait.sil { background: none; }
   overflow: hidden;
   border-radius: 22px;
 }
-.battle picture, .battle img.plate { position: absolute; inset: 0; width: 100%; height: 100%; object-fit: cover; }
+.battle picture, .battle img.plate { position: absolute; inset: 0; width: 100%; height: 100%; object-fit: cover; pointer-events: none; z-index: 0; }
 .battle-world.shake { animation: screen-shake 120ms linear; }
 .battle-world.shake-crit { animation: screen-shake-crit 120ms linear; }
 @keyframes screen-shake-crit { 25% { transform: translate(4px, 2px); } 75% { transform: translate(-4px, -2px); } }
@@ -354,8 +354,9 @@ textarea { width: 100%; box-sizing: border-box; background: #121a30; color: inhe
   pointer-events: none;
 }
 .wx-stack {
-  position: static; transform: none; width: 100%;
+  position: absolute; z-index: 7; top: 78px; left: 16px; right: 16px;
   display: flex; flex-direction: column; align-items: center; gap: 8px;
+  pointer-events: none;
 }
 .wx-chip {
   position: static; transform: none;
@@ -414,6 +415,7 @@ textarea { width: 100%; box-sizing: border-box; background: #121a30; color: inhe
 .name-banner {
   top: 18%; padding: 10px 22px; border-radius: 999px; background: rgba(8, 12, 24, 0.88);
   color: #fff8e1; font-weight: 800; font-size: 32px;
+  pointer-events: none;
 }
 .boss-intro {
   top: 220px; width: 78%; text-align: center; padding: 28px 18px; border-radius: 28px;
@@ -559,23 +561,53 @@ textarea { width: 100%; box-sizing: border-box; background: #121a30; color: inhe
 .combatant .sprite { position: relative; z-index: 1; }
 .focus-bar[hidden] { display: none; }
 .focus-bar {
+  position: absolute;
+  z-index: 20;
+  left: 12px;
+  bottom: 12px;
   display: flex;
-  flex-direction: column;
+  flex-direction: row;
+  flex-wrap: wrap;
   align-items: center;
   gap: 12px;
-  margin-top: 12px;
+  width: min(440px, 42%);
+  margin: 0;
+  pointer-events: auto;
 }
 .ko-dots { display: flex; gap: 8px; }
 .ko-dots img { width: 64px; height: 64px; }
-.focus-tempo { display: flex; gap: 12px; }
+.focus-bar img { pointer-events: none; }
+.focus-tempo { display: flex; flex-wrap: wrap; gap: 12px; width: 268px; pointer-events: auto; }
 .focus-tempo button {
   width: 128px;
   height: 128px;
   padding: 0;
   border: 0;
   background: transparent;
+  position: relative;
+  z-index: 21;
+  pointer-events: auto;
 }
-.focus-tempo img { width: 128px; height: 128px; display: block; }
+.focus-tempo img { width: 128px; height: 128px; display: block; pointer-events: none; }
+.battle:has(#focus-bar:not([hidden])) .wx-stack {
+  position: absolute;
+  z-index: 20;
+  left: 12px;
+  bottom: 430px;
+  width: min(440px, 42%);
+  align-items: flex-start;
+  pointer-events: none;
+}
+.battle:has(#focus-bar:not([hidden])) .name-banner {
+  top: auto;
+  bottom: 46%;
+}
+.battle:has(#focus-bar:not([hidden])) .battle-log {
+  left: 12px;
+  right: auto;
+  width: min(440px, 42%);
+  bottom: 500px;
+}
 .battle-log {
   position: absolute;
   z-index: 8;

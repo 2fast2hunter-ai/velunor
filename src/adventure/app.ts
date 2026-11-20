@@ -3083,9 +3083,10 @@ function onClick(event: Event): void {
   if (!(target instanceof Element)) return
   const node = target.closest('[data-act]')
   if (!node) {
-    if (focusCtl && target.closest('#battle-world')) toggleFocusPause()
+    if (focusCtl && target.closest('#battle-world') && !target.closest('.focus-bar')) toggleFocusPause()
     return
   }
+  if (target.closest('.focus-bar')) event.stopPropagation()
   const act = node.getAttribute('data-act')
   if (act === 'battle-log') {
     if (animating) {

@@ -1,0 +1,141 @@
+import { existsSync } from 'node:fs'
+import { fileURLToPath } from 'node:url'
+import { chromium, type Page } from 'playwright-core'
+import { afterAll, beforeAll, describe, expect, it } from 'vitest'
+import { createServer, type ViteDevServer } from 'vite'
+
+const chrome = [
+  process.env.CHROME_PATH,
+  '/usr/local/bin/google-chrome',
+  '/usr/bin/google-chrome',
+  '/usr/bin/google-chrome-stable'
+].find((path) => path && existsSync(path))
+const hasChrome = Boolean(chrome)
+
+interface Box { x: number; y: number; width: number; height: number }
+
+function overlaps(a: Box, b: Box): boolean {
+  return a.x < b.x + b.width && a.x + a.width > b.x && a.y < b.y + b.height && a.y + a.height > b.y
+}
+
+async function box(page: Page, selector: string): Promise<Box | null> {
+  const node = page.locator(selector).first()
+  if (await node.count() === 0) return null
+  return node.boundingBox()
+}
+
+async function reachGuardian(page: Page, base: string): Promise<void> {
+  await page.goto(base, { waitUntil: 'domcontentloaded' })
+  await page.evaluate(() => localStorage.clear())
+  await page.reload({ waitUntil: 'domcontentloaded' })
+  await page.locator('#hero-name, [data-act="consent"]').first().waitFor({ timeout: 45_000 })
+  const consent = page.locator('[data-act="consent"][data-consent="no"]')
+  if (await consent.count()) await consent.click()
+  await page.locator('#hero-name').waitFor({ timeout: 20_000 })
+  await page.locator('#hero-name').fill('Ada')
+  await page.locator('[data-act="next"]').click()
+  await page.locator('[data-act="pick"][data-species="m01"]').click()
+  await page.locator('[data-act="start"]').click()
+  await page.locator('[data-screen="adventure"]').waitFor()
+  const raw = await page.evaluate(() => localStorage.getItem('velunor_v2'))
+  const save = JSON.parse(raw ?? '{}')
+  save.step = 20
+  save.hold = true
+  save.loop = false
+  save.challengeNow = false
+  save.guardMark = 0
+  save.guardWins = 0
+  save.lastSeenAt = Date.now()
+  save.settings.catchCard = false
+  save.settings.reduceMotion = true
+  save.mons[save.team[0]].lvl = 20
+  save.mons[save.team[0]].hp = null
+  await page.evaluate((stored) => localStorage.setItem('velunor_v2', stored), JSON.stringify(save))
+  await page.addInitScript((stored) => localStorage.setItem('velunor_v2', stored), JSON.stringify(save))
+  await page.goto(base, { waitUntil: 'domcontentloaded' })
+  await page.locator('[data-screen="adventure"], [data-act="continue"]').first().waitFor({ timeout: 45_000 })
+  const resume = page.locator('[data-act="continue"]')
+  if (await resume.count()) await resume.click()
+  await page.locator('[data-screen="adventure"]').waitFor({ timeout: 45_000 })
+  const bar = page.locator('#focus-bar:not([hidden])')
+  const challenge = page.locator('[data-act="challenge"]')
+  const opened = await bar.waitFor({ timeout: 8000 }).then(() => true, () => false)
+  if (!opened) {
+    await challenge.click()
+    try {
+      await bar.waitFor({ timeout: 15000 })
+    } catch (err) {
+      const text = await page.locator('#battle').innerText().catch(() => '')
+      throw new Error(`${text.slice(0, 500)}\n${err}`)
+    }
+  }
+}
+
+async function assertClear(page: Page): Promise<void> {
+  const bar = await box(page, '#focus-bar')
+  const foeName = await box(page, '#foe-name')
+  const foeHp = await box(page, '#foe-hp')
+  const weather = await box(page, '#wx-chip')
+  const banner = await box(page, '#name-banner')
+  const log = await box(page, '#battle-log')
+  expect(bar).toBeTruthy()
+  if (bar && log && log.width > 2) expect(overlaps(bar, log), 'focus bar covers the battle log').toBe(false)
+  if (bar && foeName && foeName.width > 2) expect(overlaps(bar, foeName), 'focus bar covers the foe name').toBe(false)
+  if (bar && foeHp && foeHp.width > 2) expect(overlaps(bar, foeHp), 'focus bar covers the foe HP').toBe(false)
+  if (weather && foeName && foeName.width > 2) expect(overlaps(weather, foeName), 'weather chip covers the foe name').toBe(false)
+  if (weather && foeHp && foeHp.width > 2) expect(overlaps(weather, foeHp), 'weather chip covers the foe HP').toBe(false)
+  for (const tempo of ['1', '2']) {
+    const button = await box(page, `[data-act="focus-tempo"][data-tempo="${tempo}"]`)
+    expect(button && button.width).toBeGreaterThan(20)
+    if (button && banner && banner.width > 2) expect(overlaps(button, banner), `name banner covers ${tempo}x`).toBe(false)
+  }
+}
+
+describe('focus bar tap', () => {
+  let server: ViteDevServer | null = null
+  beforeAll(async () => {
+    if (!hasChrome) return
+    server = await createServer({
+      configFile: fileURLToPath(new URL('../../vite.config.ts', import.meta.url)),
+      server: { host: '127.0.0.1', port: 5199, strictPort: true }
+    })
+    await server.listen()
+  }, 30_000)
+  afterAll(async () => { await server?.close() })
+
+  it.skipIf(!hasChrome)('a real tap on the center of 2x changes the tempo at 390 and wider', async () => {
+    if (!chrome) return
+    const browser = await chromium.launch({ executablePath: chrome, headless: true, args: ['--no-sandbox', '--disable-gpu'] })
+    try {
+      for (const viewport of [{ width: 390, height: 844 }, { width: 900, height: 1200 }]) {
+        const page = await browser.newPage({ viewport, hasTouch: true })
+        const port = server?.config.server.port ?? 5173
+        await reachGuardian(page, `http://127.0.0.1:${port}/?debug=1`)
+        await assertClear(page)
+        const button = page.locator('[data-act="focus-tempo"][data-tempo="2"]')
+        const at = await button.boundingBox()
+        expect(at).toBeTruthy()
+        const x = at!.x + at!.width / 2
+        const y = at!.y + at!.height / 2
+        const hit = await page.evaluate(({ x, y }) => {
+          const el = document.elementFromPoint(x, y)
+          const act = el?.closest('[data-act]')
+          return {
+            tag: el?.tagName ?? '',
+            act: act?.getAttribute('data-act') ?? '',
+            tempo: act?.getAttribute('data-tempo') ?? ''
+          }
+        }, { x, y })
+        expect(hit.act, `${viewport.width} hit ${hit.tag}`).toBe('focus-tempo')
+        expect(hit.tempo).toBe('2')
+        await page.touchscreen.tap(x, y)
+        await expect.poll(async () => page.locator('[data-act="focus-tempo"][data-tempo="2"]').getAttribute('aria-pressed')).toBe('true')
+        const stored = await page.evaluate(() => JSON.parse(localStorage.getItem('velunor_v2') ?? '{}').settings?.tempoFokus)
+        expect(stored).toBe(2)
+        await page.close()
+      }
+    } finally {
+      await browser.close()
+    }
+  }, 180_000)
+})

@@ -540,17 +540,17 @@ function battle(save: SaveV2, now: number, fighting = false, shadow = false, log
     <img class="seal" id="seal" alt="" src="${art(SEAL_ADD)}" data-fb="${art(SEAL_FALLBACK)}" style="left:${FOE_X}%;top:${FOE_Y}%"/>
     <div class="battle-top">
       <p id="battle-text" class="battle-status">${tr(save, 'battle.place', { part: clock.part, weather: weatherLabel(L(save), weatherForecast(now)[0].weather), place: chapter.name, state: tr(save, save.hold ? 'battle.waiting' : 'battle.walking') })}</p>
-      <div class="focus-bar" id="focus-bar" hidden>
-        <div class="ko-dots" id="ko-dots" aria-label="${esc(tr(save, 'battle.ko'))}">${Array.from({ length: 6 }, () => `<img src="${art('battle_ui/ko/leer_64.png')}" alt=""/>`).join('')}</div>
-        <div class="focus-tempo">
-          <button type="button" data-act="focus-tempo" data-tempo="1" aria-pressed="${save.settings.tempoFokus === 2 ? 'false' : 'true'}" aria-label="${esc(tr(save, 'battle.tempo1'))}"><img src="${art('battle_ui/tempo/1x_aktiv.png')}" alt=""/></button>
-          <button type="button" data-act="focus-tempo" data-tempo="2" aria-pressed="${save.settings.tempoFokus === 2 ? 'true' : 'false'}" aria-label="${esc(tr(save, 'battle.tempo2'))}"><img src="${art('battle_ui/tempo/2x_normal.png')}" alt=""/></button>
-          <button type="button" data-act="focus-skip" aria-label="${esc(tr(save, 'battle.skip'))}"><img src="${art('battle_ui/tempo/skip_normal.png')}" alt=""/></button>
-          <button type="button" data-act="focus-pause" aria-pressed="false" aria-label="${esc(tr(save, 'battle.pause'))}"><img src="${art('battle_ui/tempo/pause_normal.png')}" alt=""/></button>
-        </div>
-      </div>
-      <div class="wx-stack"><div class="wx-chip" id="wx-chip">${weatherChip(save, now)}</div></div>
       ${bossAhead(save) ? `<p class="wx-preview">${weatherPreview(save, now)}</p>` : ''}
+    </div>
+    <div class="wx-stack"><div class="wx-chip" id="wx-chip">${weatherChip(save, now)}</div></div>
+    <div class="focus-bar" id="focus-bar" hidden>
+      <div class="ko-dots" id="ko-dots" aria-label="${esc(tr(save, 'battle.ko'))}">${Array.from({ length: 6 }, () => `<img src="${art('battle_ui/ko/leer_64.png')}" alt=""/>`).join('')}</div>
+      <div class="focus-tempo">
+        <button type="button" data-act="focus-tempo" data-tempo="1" aria-pressed="${save.settings.tempoFokus === 2 ? 'false' : 'true'}" aria-label="${esc(tr(save, 'battle.tempo1'))}"><img src="${art('battle_ui/tempo/1x_aktiv.png')}" alt=""/></button>
+        <button type="button" data-act="focus-tempo" data-tempo="2" aria-pressed="${save.settings.tempoFokus === 2 ? 'true' : 'false'}" aria-label="${esc(tr(save, 'battle.tempo2'))}"><img src="${art('battle_ui/tempo/2x_normal.png')}" alt=""/></button>
+        <button type="button" data-act="focus-skip" aria-label="${esc(tr(save, 'battle.skip'))}"><img src="${art('battle_ui/tempo/skip_normal.png')}" alt=""/></button>
+        <button type="button" data-act="focus-pause" aria-pressed="false" aria-label="${esc(tr(save, 'battle.pause'))}"><img src="${art('battle_ui/tempo/pause_normal.png')}" alt=""/></button>
+      </div>
     </div>
     ${sealed ? '' : `<div class="guard-dock">${fighting ? '' : guardCard(save)}<button type="button" class="primary challenge-fab" data-act="challenge">${ui('challenge')}${tr(save, chapter.council || chapter.foyer ? 'battle.resume' : 'battle.challenge')}</button></div>`}
     ${shadow ? `<p class="shadow-note shadow-battle" role="status">${esc(tr(save, 'cloud.shadow'))}</p>` : ''}
