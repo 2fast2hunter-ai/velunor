@@ -3,6 +3,7 @@ import { nextFloat } from '../rng'
 import {
   OPEN_ALL_MAX,
   chestStateOf,
+  guaranteeNewRoll,
   openChest,
   shardValue,
   type ChestGrant,
@@ -73,6 +74,7 @@ export function takeChests(save: SaveV2, tier: ChestTier, count: number, now: nu
       markSeal(save, now)
       if (second.rarity > roll.rarity) roll = second
     }
+    if ((save.stats.chestsOpened ?? 0) === 0) roll = guaranteeNewRoll(openTier, roll, state, () => draw(save))
     if (save.chestLuck) save.chestLuck = 0
     if (tier !== 'kiesel') save.pity[tier] = roll.pity
     grants.push(applyChest(save, roll, now, () => draw(save)))

@@ -375,6 +375,19 @@ export function openChest(tier: ChestTier, state: OpenChestState, rng: () => num
   }
 }
 
+/**
+ * First chest only. The rarity and the gold stay. A known species is replaced
+ * by an unknown one from that same rarity, when one exists.
+ */
+export function guaranteeNewRoll(tier: ChestTier, roll: ChestRoll, state: OpenChestState, rng: () => number): ChestRoll {
+  if (roll.isNew) return roll
+  const lists = prepare(tier, poolFor(state.unlockedRegions)).lists
+  const fresh = (lists[roll.rarity] ?? []).filter((id) => !state.ownedSpecies.includes(id))
+  if (!fresh.length) return roll
+  const speciesId = fresh[Math.min(fresh.length - 1, Math.floor(rng() * fresh.length))]
+  return { ...roll, speciesId, isNew: true }
+}
+
 export function duplicateExp(level: number): number {
   return expToNext(level) + expToNext(level + 1)
 }
