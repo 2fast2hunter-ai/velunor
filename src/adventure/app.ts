@@ -80,7 +80,7 @@ import { arenaFightErrorKey, crestCount } from './arena'
 import { buyCrystal, buyFruit, sellCrystal, sellFruit, useCrystal, useFruit } from './shop'
 import { buyPrize, spinWheel, type Multiplier, type SymbolId } from './wheel'
 import { chapterCapNow } from './dex'
-import { chapterById } from './route'
+import { chapterById, encounterTable } from './route'
 import {
   challengeGuardian,
   emptySummary,
@@ -1525,7 +1525,7 @@ function loop(): void {
     return
   }
   save.lastSeenAt = now
-  try { writeSave(gameStore, save) } catch { /* ignore */ }
+  persistSave()
   animating = true
   pendingOutcome = outcome
   if (screen !== 'adventure') {
@@ -1539,6 +1539,35 @@ function loop(): void {
   if (screen === 'adventure' && !overlay && document.getElementById('battle') && document.getElementById('path')) patchAdventure(outcome.step)
   else render(outcome.step)
   play(outcome, save.settings.speed, () => finishPresent(outcome))
+}
+
+let persistAt = 0
+
+function persistSave(force = false): void {
+  if (!save) return
+  const now = Date.now()
+  if (!force && now - persistAt < 3000) return
+  persistAt = now
+  try { writeSave(gameStore, save) } catch { /* the memory copy still applies */ }
+}
+
+const warmedArt = new Set<string>()
+
+function warmArt(src: string): void {
+  if (!src || warmedArt.has(src)) return
+  warmedArt.add(src)
+  const img = new Image()
+  img.decoding = 'async'
+  img.src = src
+}
+
+function warmChapterArt(): void {
+  if (!save) return
+  const chapter = chapterById(save.region, save.chapter)
+  for (const row of encounterTable(chapter, Date.now())) warmArt(monsterArt(row.species, true))
+  const uid = save.active && save.mons[save.active] ? save.active : save.team[0]
+  const mon = uid ? save.mons[uid] : null
+  if (mon) warmArt(monsterArt(mon.species, true))
 }
 
 function patchAdventure(step: number): void {
@@ -2224,6 +2253,7 @@ function closeWhy(): void {
   overlay = null
   whyArmed = false
   if (save) save.hold = false
+  persistSave(true)
   render()
   kick()
 }
@@ -2457,6 +2487,7 @@ function play(outcome: EncounterOutcome, speed: Speed, done: () => void): void {
     focusCtl = { paused: false, stop: () => { skipped = true; finishOnce() } }
     showFocusChrome()
   }
+  warmChapterArt()
   announceWeather()
   if (save && outcome.traces.length) {
     liveFight = battleLogFromTraces(outcome.traces, save.settings.lang)
@@ -2597,7 +2628,7 @@ function play(outcome: EncounterOutcome, speed: Speed, done: () => void): void {
       if (allyActor) {
         const slide = clampActorSlide(allyActor, field, -240 * enter)
         poseActor(allyActor, 'ally', allyMove, allyHit, allyKo, elapsed, reach, slide)
-        clampActorPose(allyActor, field)
+        if (allyMove >= 0 || enter > 0) clampActorPose(allyActor, field)
       }
       paintWeatherArrow('ally-arrow', shot ? species(shot.allySpecies).type : null, weather)
       paintWeatherArrow('foe-arrow', shot ? species(shot.foeSpecies).type : null, weather)
@@ -2620,7 +2651,7 @@ function play(outcome: EncounterOutcome, speed: Speed, done: () => void): void {
       }
       if (foeActor) {
         poseActor(foeActor, 'foe', foeMove, foeHit, foeKo, elapsed + 180, reach, 0)
-        clampActorPose(foeActor, field)
+        if (foeMove >= 0) clampActorPose(foeActor, field)
       }
       const world = document.getElementById('battle-world')
       const shakeAge = elapsed - shakeStart
@@ -2765,10 +2796,15 @@ function showAura(speed: number): void {
 }
 
 function poseActor(actor: HTMLElement, side: 'ally' | 'foe', move: number, hit: number, ko: number, idle: number, reach: number, extraX: number): void {
-  actor.style.transform = `translate(-50%, -100%)${extraX ? ` translate(${extraX.toFixed(1)}px, 0px)` : ''}`
+  const placed = `translate(-50%, -100%)${extraX ? ` translate(${extraX.toFixed(1)}px, 0px)` : ''}`
+  if (actor.style.transform !== placed) actor.style.transform = placed
   const sprite = actor.querySelector('img.sprite')
-  if (sprite instanceof HTMLElement) sprite.style.transform = spriteMotion(side, move, hit, ko, idle, reach)
-  actor.style.opacity = String(koPose(ko).opacity)
+  if (sprite instanceof HTMLElement) {
+    const motion = spriteMotion(side, move, hit, ko, idle, reach)
+    if (sprite.style.transform !== motion) sprite.style.transform = motion
+  }
+  const opacity = String(koPose(ko).opacity)
+  if (actor.style.opacity !== opacity) actor.style.opacity = opacity
 }
 
 function clampActorSlide(actor: HTMLElement, field: HTMLElement | null, x: number): number {
@@ -2822,15 +2858,19 @@ function paintUlt(id: string, n: number, open: boolean): void {
   const node = document.getElementById(id)
   if (!node) return
   const filled = Math.max(0, Math.min(5, Math.floor(n)))
+  const ready = open && filled >= 5
+  const paintKey = `${filled}:${open ? 1 : 0}:${ready ? 1 : 0}`
+  if (node.dataset.paint === paintKey) return
+  node.dataset.paint = paintKey
   node.hidden = false
   node.dataset.n = String(filled)
   node.dataset.open = open ? '1' : '0'
-  node.classList.toggle('is-ready', open && filled >= 5)
+  node.classList.toggle('is-ready', ready)
   node.classList.toggle('is-locked', !open)
-  const ready = open && filled >= 5
   node.querySelectorAll<HTMLImageElement>('.ult-seg').forEach((img, index) => {
     const file = ready ? 'seg_bereit_s' : index < filled ? 'seg_voll_s' : 'seg_leer_s'
-    img.src = art(`battle_ui/ult/${file}.png`)
+    const src = art(`battle_ui/ult/${file}.png`)
+    if (!img.src.endsWith(src) && img.getAttribute('src') !== src) img.src = src
   })
   const lock = node.querySelector('.ult-lock')
   const banner = node.querySelector('.ult-ready')
@@ -2855,6 +2895,12 @@ function paintAdvantage(allyId: string, foeId: string, band?: 'strong' | 'weak' 
   }
   const edge = band ?? typeEdge(typeMult(allyType, foeType))
   const formName = edge === 'strong' ? 'stark' : edge === 'weak' ? 'schwach' : 'neutral'
+  const paintKey = `${allyId}:${foeId}:${formName}`
+  if (chip.dataset.paint === paintKey) {
+    chip.hidden = false
+    return
+  }
+  chip.dataset.paint = paintKey
   chip.hidden = false
   const from = document.getElementById('adv-from')
   const to = document.getElementById('adv-to')
