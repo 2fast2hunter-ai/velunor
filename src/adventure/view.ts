@@ -1138,10 +1138,10 @@ function chestView(save: SaveV2, wheel: WheelPanel, lesson: number | null): stri
   }).join('')
   const cards = lesson == null ? '' : chestLessonCard(save, lesson)
   return `<div class="menu-screen">
-    ${cards}
     <div class="menu-scroll">
       <div class="card panel">
         <h2>${tr(save, 'act.chests')}</h2>
+        ${cards}
         <div class="chest-grid">${tiles}</div>
         <p>${ui('road')}${tr(save, 'chest.road', { n: save.roadReady })}</p>
         <button type="button" class="primary" data-act="chest-claim" ${save.roadReady > 0 ? '' : 'disabled'}>${ui('road')}${tr(save, 'chest.claim')}</button>
@@ -2170,7 +2170,7 @@ function overlayHtml(save: SaveV2, overlay: Overlay, fights: readonly BattleFigh
     </div>`
   }
   if (overlay.kind === 'chest-rates') {
-    return `<div class="sheet" data-sheet="swipe">${grab()}<h2>${tr(save, CHEST_KEY[overlay.tier])}</h2>${chestRatesHtml(save, overlay.tier)}<button type="button" class="primary" data-act="close">${tr(save, 'chest.next')}</button></div>`
+    return `<div class="sheet sheet-rates" data-sheet="swipe">${grab()}<h2>${tr(save, CHEST_KEY[overlay.tier])}</h2><div class="rate-scroll">${chestRatesHtml(save, overlay.tier)}</div><button type="button" class="primary" data-act="close">${tr(save, 'chest.next')}</button></div>`
   }
   if (overlay.kind === 'chest-summary') {
     const lines = overlay.grants.map((grant) => `<li><b>${esc(grant.name)}</b> · ${esc(rarityInfo(grant.rarity).name)} · ${esc(chestPlace(save, grant))} · ${grant.gold.toLocaleString(L(save) === 'en' ? 'en' : 'de-DE')} G</li>`).join('')

@@ -220,6 +220,10 @@ async function assertClear(page: Page): Promise<void> {
   expect(bar).toBeTruthy()
   if (bar && log && log.width > 2) expect(overlaps(bar, log), 'focus bar covers the battle log').toBe(false)
   if (allySprite && allySprite.width > 8 && log && log.width > 2) expect(overlaps(allySprite, log), 'battle log covers the ally').toBe(false)
+  const advantageEarly = await box(page, '#adv-chip')
+  if (advantageEarly && advantageEarly.width > 4 && allySprite && allySprite.width > 8) {
+    expect(overlaps(advantageEarly, allySprite), 'advantage chip covers the ally').toBe(false)
+  }
   expect(await page.locator('#why-chip').getAttribute('hidden'), 'road reason chip stays in focus').not.toBeNull()
   await page.evaluate(() => {
     const line = document.getElementById('battle-log-text')
