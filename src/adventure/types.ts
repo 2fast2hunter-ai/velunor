@@ -32,6 +32,8 @@ export interface LogLine {
 
 export interface AdventureSettings {
   speed: Speed
+  /** Road playback tempo. Missing on older saves, which keep `speed`. */
+  tempoWeg?: Speed
   autoSwitch: boolean
   catchCard: boolean
   shake: boolean
