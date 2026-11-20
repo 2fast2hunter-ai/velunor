@@ -2472,7 +2472,8 @@ function play(outcome: EncounterOutcome, speed: Speed, done: () => void): void {
     preloadBattleStrips(fightTypes(outcome))
   }
   const battery = Boolean(save?.settings.battery)
-  setFxRunning(true, battery ? BATTERY_FPS : 60)
+  const fxTempo = focusOn ? focusTempo(save?.settings.tempoFokus) : roadTempo(speed, save?.settings.tempoWeg)
+  setFxRunning(true, battery || fxTempo >= 3 ? BATTERY_FPS : 60)
   const reduced = effectsReduced()
   if (fxHost) onBattleFxReady(() => beginBattleMood(weather, reduced, speed))
   const allowFlash = Boolean(save?.settings.flashes) && !reduced

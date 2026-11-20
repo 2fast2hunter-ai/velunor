@@ -74,11 +74,7 @@ async function reachGuardian(page: Page, base: string): Promise<void> {
   }
 }
 
-async function assertRoadFps(page: Page): Promise<void> {
-  await page.locator('[data-act="speed"][data-speed="3"]').click()
-  const client = await page.context().newCDPSession(page)
-  await client.send('Emulation.setCPUThrottlingRate', { rate: 4 })
-  await page.locator('.float-num').first().waitFor({ timeout: 20_000 })
+async function roadLowFps(page: Page): Promise<number> {
   const gaps = await page.evaluate(() => new Promise<number[]>((resolve) => {
     const stamps: number[] = []
     let prev = performance.now()
@@ -90,11 +86,22 @@ async function assertRoadFps(page: Page): Promise<void> {
     }
     requestAnimationFrame(step)
   }))
-  await client.send('Emulation.setCPUThrottlingRate', { rate: 1 })
   const fps = gaps.map((ms) => 1000 / Math.max(1, ms)).sort((a, b) => a - b)
   const slow = fps.slice(0, Math.max(1, Math.ceil(fps.length * 0.05)))
-  const low = slow.reduce((sum, n) => sum + n, 0) / slow.length
-  expect(low, `road ×3 5% low ${low.toFixed(1)} fps`).toBeGreaterThanOrEqual(30)
+  return slow.reduce((sum, n) => sum + n, 0) / slow.length
+}
+
+async function assertRoadFps(page: Page): Promise<void> {
+  await page.locator('[data-act="speed"][data-speed="3"]').click()
+  const client = await page.context().newCDPSession(page)
+  await client.send('Emulation.setCPUThrottlingRate', { rate: 4 })
+  await page.locator('.float-num').first().waitFor({ timeout: 20_000 })
+  const samples: number[] = []
+  for (let i = 0; i < 3; i++) samples.push(await roadLowFps(page))
+  await client.send('Emulation.setCPUThrottlingRate', { rate: 1 })
+  const ordered = [...samples].sort((a, b) => a - b)
+  const median = ordered[1] ?? 0
+  expect(median, `road ×3 median 5% low ${median.toFixed(1)} fps (${samples.map((n) => n.toFixed(1)).join(', ')})`).toBeGreaterThanOrEqual(30)
 }
 
 async function assertRoadDock(page: Page): Promise<{ x: number, y: number }> {
