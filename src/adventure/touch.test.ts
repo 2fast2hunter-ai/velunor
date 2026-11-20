@@ -163,7 +163,7 @@ describe('touch polish', () => {
     expect(css).toContain('--font-scale')
     expect(css).toMatch(/#stage\s*\{[^}]*overflow:\s*hidden/)
     expect(css).toContain('minmax(160px, calc(160px * var(--font-scale, 1)))')
-    expect(css).toContain('max(132px, calc(16px + 34px * var(--font-scale, 1) * 3))')
+    expect(css).toContain('max(168px, calc(16px + 46px * var(--font-scale, 1) * 3))')
     expect(css).toContain('-webkit-line-clamp: 2')
   })
 

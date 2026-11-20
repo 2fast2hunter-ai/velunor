@@ -2927,6 +2927,44 @@ function paintWeatherTag(factor: number | undefined, x: number, y: number): void
   node.style.borderImage = `url("${art('battle_ui/wetter/tag.png')}") 24 26 26 26 fill / 24px 26px 26px 26px / 5px stretch`
   const text = document.getElementById('wx-tag-text')
   if (text) text.textContent = pct
+  clearWeatherTag(node)
+}
+
+function clearWeatherTag(node: HTMLElement): void {
+  const host = node.offsetParent instanceof HTMLElement ? node.offsetParent : node.parentElement
+  if (!(host instanceof HTMLElement)) return
+  const obstacles: HTMLElement[] = []
+  const dock = document.querySelector('.guard-dock')
+  if (dock instanceof HTMLElement && dock.getClientRects().length > 0) obstacles.push(dock)
+  const lock = document.querySelector('#ally-actor .ult-lock')
+  if (lock instanceof HTMLElement && !lock.hidden && lock.getClientRects().length > 0) obstacles.push(lock)
+  if (!obstacles.length) return
+  const hostBox = host.getBoundingClientRect()
+  const scaleX = hostBox.width / (host.clientWidth || hostBox.width || 1) || 1
+  const scaleY = hostBox.height / (host.clientHeight || hostBox.height || 1) || 1
+  const gap = 12
+  for (let pass = 0; pass < 3; pass++) {
+    const tag = node.getBoundingClientRect()
+    if (tag.width < 2 || tag.height < 2) return
+    let dx = 0
+    let dy = 0
+    for (const obstacle of obstacles) {
+      const box = obstacle.getBoundingClientRect()
+      const left = tag.left + dx
+      const right = tag.right + dx
+      const top = tag.top + dy
+      const bottom = tag.bottom + dy
+      if (!(left < box.right && right > box.left && top < box.bottom && bottom > box.top)) continue
+      const shiftLeft = box.left - gap - right
+      if (left + shiftLeft >= hostBox.left + 16) dx += shiftLeft
+      else dy += box.top - gap - bottom
+    }
+    if (dx === 0 && dy === 0) return
+    const left = (Number.parseFloat(node.style.left) || 0) + dx / scaleX
+    const top = (Number.parseFloat(node.style.top) || 0) + dy / scaleY
+    node.style.left = `${Math.round(Math.max(16, left))}px`
+    node.style.top = `${Math.round(Math.max(16, top))}px`
+  }
 }
 
 let ultCardTimer = 0
@@ -4287,7 +4325,7 @@ function onPointerDown(event: PointerEvent): void {
   sheetY = grab ? event.clientY : null
   const card = target?.closest('[data-press="card"]')
   heldCard = card?.getAttribute('data-uid') ?? ''
-  const block = Boolean(target?.closest('input, textarea, select, .sheet-grab, #cloud-layer'))
+  const block = Boolean(target?.closest('input, textarea, select, button, .focus-bar, .speed, .guard-dock, .sheet-grab, #cloud-layer'))
   const onShop = Boolean(target?.closest('.shop-screen'))
   gesture = { x: event.clientX, y: event.clientY, t: performance.now(), block, shop: onShop }
 }

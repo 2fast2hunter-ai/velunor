@@ -51,11 +51,11 @@ export function tabBlock(scale: FontScale): number {
 }
 
 export function logBlock(scale: FontScale): number {
-  return 16 + 34 * fontFactor(scale) * 3
+  return 16 + 46 * fontFactor(scale) * 3
 }
 
 export function logRow(scale: FontScale): number {
-  return Math.max(132, logBlock(scale))
+  return Math.max(168, logBlock(scale))
 }
 
 /** Battle plate left after the chrome grows. The safe area stays 1920 px tall. */
