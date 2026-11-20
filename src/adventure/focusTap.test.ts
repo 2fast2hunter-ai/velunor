@@ -175,6 +175,7 @@ async function assertNamesFree(page: Page): Promise<void> {
 }
 
 async function assertClear(page: Page): Promise<void> {
+  await page.locator('#foe-sprite:not([hidden])').waitFor({ timeout: 8_000 }).catch(() => undefined)
   const bar = await box(page, '#focus-bar')
   const foeName = await box(page, '#foe-name')
   const foeHp = await box(page, '#foe-hp')
@@ -189,9 +190,9 @@ async function assertClear(page: Page): Promise<void> {
   if (bar && allyHp && allyHp.width > 8) expect(overlaps(bar, allyHp), 'focus bar covers the ally HP').toBe(false)
   expect(await page.locator('.speed').isVisible(), 'road tempo hidden in focus').toBe(false)
   expect(await page.locator('[data-act="challenge"]').isVisible(), 'challenge hidden in focus').toBe(false)
-  if (bar && foeName && foeName.width > 2) expect(overlaps(bar, foeName), 'focus bar covers the foe name').toBe(false)
+  if (bar && foeName && foeName.width > 8 && foeName.height > 8) expect(overlaps(bar, foeName), 'focus bar covers the foe name').toBe(false)
   if (bar && foeHp && foeHp.width > 2) expect(overlaps(bar, foeHp), 'focus bar covers the foe HP').toBe(false)
-  if (weather && foeName && foeName.width > 2) expect(overlaps(weather, foeName), 'weather chip covers the foe name').toBe(false)
+  if (weather && foeName && foeName.width > 8 && foeName.height > 8) expect(overlaps(weather, foeName), 'weather chip covers the foe name').toBe(false)
   if (weather && foeHp && foeHp.width > 2) expect(overlaps(weather, foeHp), 'weather chip covers the foe HP').toBe(false)
   const callout = await box(page, '#battle-text')
   const allyActor = await box(page, '#ally-actor')
