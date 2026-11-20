@@ -615,8 +615,9 @@ textarea { width: 100%; box-sizing: border-box; background: #121a30; color: inhe
   right: 16px;
   bottom: 168px;
   min-height: 64px;
+  height: auto;
   display: flex;
-  align-items: center;
+  align-items: flex-start;
   gap: 12px;
   margin: 0;
   padding: 8px 16px;
@@ -627,15 +628,15 @@ textarea { width: 100%; box-sizing: border-box; background: #121a30; color: inhe
   text-align: left;
   font: 700 calc(32px * var(--font-scale, 1)) Fredoka, sans-serif;
 }
-.battle-log span { overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+.battle-log span { white-space: normal; overflow: visible; overflow-wrap: anywhere; }
 .battle-log img, .battle-log-row img { width: 48px; height: 48px; flex: 0 0 48px; object-fit: contain; }
 .battle-log-sheet {
   position: absolute;
-  z-index: 12;
-  left: 12px;
-  right: 12px;
-  top: 18%;
-  bottom: 12px;
+  z-index: 24;
+  left: 24px;
+  right: 24px;
+  top: 1760px;
+  bottom: 24px;
   overflow: auto;
   padding: 16px;
   border-radius: 22px;
@@ -649,7 +650,7 @@ textarea { width: 100%; box-sizing: border-box; background: #121a30; color: inhe
   align-items: center;
   gap: 12px;
 }
-.battle-log-row p { margin: 0; font-size: calc(32px * var(--font-scale, 1)); }
+.battle-log-row p { margin: 0; min-width: 0; font-size: calc(32px * var(--font-scale, 1)); white-space: normal; overflow-wrap: anywhere; }
 .challenge-fab {
   position: static;
   width: 100%;

@@ -14,7 +14,7 @@ import {
 import { fontFactor } from './touch'
 import { baseLine, dexPlaces, dexStatus, dexStatusLabel, listCodex, regionProgress, speciesNumber, type DexFilter } from './dex'
 import { goalName, goalTitle, rarityLabel, t, typeLabel, weatherLabel, whenLabel, type Lang } from './i18n'
-import { latestLine, logIconFile, type BattleFightLog, type BattleLogLine } from './battleLog'
+import { latestLine, logIconFile, sheetLine, type BattleFightLog, type BattleLogLine } from './battleLog'
 import { colorHex, colorId, skinHex } from './avatar'
 import { agoParts, continueFacts } from './continue'
 import { STARTER_ART, starterBars, strongTypes, typeList, weakTypes } from './starter'
@@ -535,7 +535,6 @@ function battle(save: SaveV2, now: number, fighting = false, shadow = false, log
       <img src="${art(logIconFile(logLine?.icon ?? 'angriff'))}" alt=""/>
       <span id="battle-log-text">${esc(logLine?.sentence ?? tr(save, 'log.none'))}</span>
     </button>
-    <div class="battle-log-sheet" id="battle-log-sheet" hidden></div>
     <div class="flash" id="flash"></div>
     <img class="seal" id="seal" alt="" src="${art(SEAL_ADD)}" data-fb="${art(SEAL_FALLBACK)}" style="left:${FOE_X}%;top:${FOE_Y}%"/>
     <div class="battle-top">
@@ -2010,6 +2009,7 @@ export function gameHtml(save: SaveV2, screen: Screen, now: number, pc: PcQuery,
       ${overlay ? `<div class="overlay overlay-sheet">${overlayHtml(save, overlay, shell.battleLog ?? [])}</div>` : ''}
       ${shell.masteryNote ? `<p class="mastery-toast" role="status">${esc(shell.masteryNote)}</p>` : ''}
     </div>
+    ${adventure ? `<div class="battle-log-sheet" id="battle-log-sheet" hidden></div>` : ''}
     <div class="band band-bot"></div>
   </div>`
 }
@@ -2022,10 +2022,13 @@ export function battleLogBody(save: SaveV2, fights: readonly BattleFightLog[]): 
   if (!fights.length) return `<p class="muted">${tr(save, 'log.none')}</p>`
   return fights.map((fight, index) => fight.bouts.map((bout) => `<section>
     <h3>${esc(bout.label)}</h3>
-    ${bout.lines.map((line) => `<div class="battle-log-row">
+    ${bout.lines.map((line) => {
+      const shown = sheetLine(line)
+      return `<div class="battle-log-row">
       <img src="${art(logIconFile(line.icon))}" alt=""/>
-      <p><b>${esc(line.sentence)}</b>${line.tags.length ? `<span class="muted"> ${esc(line.tags.join(' · '))}</span>` : ''}</p>
-    </div>`).join('')}
+      <p><b>${esc(shown.main)}</b>${shown.tags ? `<span class="muted"> ${esc(shown.tags)}</span>` : ''}</p>
+    </div>`
+    }).join('')}
   </section>`).join('') + (index < fights.length - 1 ? '<hr/>' : '')).join('')
 }
 

@@ -112,6 +112,28 @@ describe('focus bar tap', () => {
         const port = server?.config.server.port ?? 5173
         await reachGuardian(page, `http://127.0.0.1:${port}/?debug=1`)
         await assertClear(page)
+        await page.locator('#battle-log').click()
+        const sheet = page.locator('#battle-log-sheet:not([hidden])')
+        await sheet.waitFor({ timeout: 5000 })
+        const sheetBox = await box(page, '#battle-log-sheet')
+        const foeActor = await box(page, '#foe-actor')
+        const allyActor = await box(page, '#ally-actor')
+        const challenge = await box(page, '[data-act="challenge"]')
+        const tempo = await box(page, '[data-act="focus-tempo"][data-tempo="2"]')
+        expect(sheetBox && sheetBox.height).toBeGreaterThan(40)
+        if (sheetBox && foeActor && foeActor.height > 2) expect(overlaps(sheetBox, foeActor), 'log sheet covers the foe').toBe(false)
+        if (sheetBox && allyActor && allyActor.height > 2) expect(overlaps(sheetBox, allyActor), 'log sheet covers the ally').toBe(false)
+        if (sheetBox && challenge && challenge.width > 2) expect(overlaps(sheetBox, challenge), 'log sheet covers the challenge').toBe(false)
+        if (sheetBox && tempo && tempo.width > 2) expect(overlaps(sheetBox, tempo), 'log sheet covers 2x').toBe(false)
+        const floated = page.locator('.float-num')
+        await expect.poll(async () => {
+          const count = await floated.count()
+          for (let i = 0; i < count; i++) {
+            const text = (await floated.nth(i).textContent()) ?? ''
+            if (/\d/.test(text) && await floated.nth(i).isVisible()) return text
+          }
+          return ''
+        }, { timeout: 8000 }).not.toBe('')
         const button = page.locator('[data-act="focus-tempo"][data-tempo="2"]')
         const at = await button.boundingBox()
         expect(at).toBeTruthy()
@@ -130,6 +152,7 @@ describe('focus bar tap', () => {
         expect(hit.tempo).toBe('2')
         await page.touchscreen.tap(x, y)
         await expect.poll(async () => page.locator('[data-act="focus-tempo"][data-tempo="2"]').getAttribute('aria-pressed')).toBe('true')
+        expect(await page.locator('#battle-log-sheet').getAttribute('hidden')).not.toBeNull()
         const stored = await page.evaluate(() => JSON.parse(localStorage.getItem('velunor_v2') ?? '{}').settings?.tempoFokus)
         expect(stored).toBe(2)
         await page.close()
