@@ -1,0 +1,75 @@
+{
+ "badges": [
+  {
+   "badge": "Sporenwappen",
+   "region": 6,
+   "chapter": 1,
+   "kind": "crest",
+   "symbol": "sporen",
+   "file": "crests/sporenwappen"
+  },
+  {
+   "badge": "Tauwappen",
+   "region": 6,
+   "chapter": 2,
+   "kind": "crest",
+   "symbol": "tau",
+   "file": "crests/tauwappen"
+  },
+  {
+   "badge": "Wurzelwappen",
+   "region": 6,
+   "chapter": 3,
+   "kind": "crest",
+   "symbol": "wurzel",
+   "file": "crests/wurzelwappen"
+  },
+  {
+   "badge": "Myzelwappen",
+   "region": 6,
+   "chapter": 4,
+   "kind": "crest",
+   "symbol": "myzel",
+   "file": "crests/myzelwappen"
+  },
+  {
+   "badge": "Lampionwappen",
+   "region": 6,
+   "chapter": 5,
+   "kind": "crest",
+   "symbol": "lampion",
+   "file": "crests/lampionwappen"
+  },
+  {
+   "badge": "Harzwappen",
+   "region": 6,
+   "chapter": 6,
+   "kind": "crest",
+   "symbol": "harz",
+   "file": "crests/harzwappen"
+  },
+  {
+   "badge": "Wipfelwappen",
+   "region": 6,
+   "chapter": 7,
+   "kind": "crest",
+   "symbol": "wipfel",
+   "file": "crests/wipfelwappen"
+  },
+  {
+   "badge": "Laubwappen",
+   "region": 6,
+   "chapter": 8,
+   "kind": "crest",
+   "symbol": "laub",
+   "file": "crests/laubwappen"
+  },
+  {
+   "badge": "Sechstes Ratsiegel",
+   "region": 6,
+   "chapter": 10,
+   "kind": "seal",
+   "file": "crests/ratsiegel_6"
+  }
+ ]
+}
