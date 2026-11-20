@@ -4,7 +4,7 @@ import type { FightFrame, FightHit, FightTrace } from './battle'
 import { fitScale } from './const'
 import { beginAdventure, loadAdventure, writeSave } from './save'
 import type { StorageLike } from './types'
-import { actionAt, activeFx, BATTLE_QUEUE, battleQueueOn, focusKo, focusTempo, hitNumberPhase, planBattle, roadQueueFromSearch, roadTempo, setRoadQueue, shotFromAction, zugDauer } from './battlePlayer'
+import { actionAt, activeFx, BATTLE_QUEUE, battleQueueOn, focusKo, focusTempo, hitNumberPhase, planBattle, replayStepMs, roadQueueFromSearch, roadTempo, setRoadQueue, shotFromAction, zugDauer } from './battlePlayer'
 
 function hit(over: Partial<FightHit> = {}): FightHit {
   return { from: 'ally', amount: 10, crit: false, type: 'fire', band: 'neutral', ko: false, kind: 'hit', ...over }
@@ -42,10 +42,10 @@ describe('battle queue', () => {
     expect(roadTempo(3)).toBe(3)
     expect(roadTempo(3, 1)).toBe(1)
     const app = readFileSync(new URL('./app.ts', import.meta.url), 'utf8')
-    expect(app).toContain('shotAt(outcome.traces')
-    expect(app).toContain("battleQueueOn('road')")
+    expect(app).not.toContain('shotAt(')
+    expect(app).toContain('shotFromAction(outcome.traces')
     expect(app).toContain("outcome.kind === 'wild' || outcome.kind === 'trainer'")
-    expect(app).toContain("battleQueueOn('focus') && outcome.kind === 'guardian'")
+    expect(app).toContain("outcome.kind === 'guardian'")
     const view = readFileSync(new URL('./view.ts', import.meta.url), 'utf8')
     const css = readFileSync(new URL('./adventure.css', import.meta.url), 'utf8')
     expect(view).toContain('battle_ui/ko/leer_64.png')
@@ -81,6 +81,8 @@ describe('battle queue', () => {
     expect(planned.map((step) => step.phase)).toEqual(['ansage', 'aktion', 'treffer', 'ergebnis'])
     expect(planned.map((step) => step.dur)).toEqual([300, 400, 400, 200])
     expect(planned.map((step) => hitNumberPhase(step.phase))).toEqual([false, false, true, false])
+    expect(replayStepMs()).toBeGreaterThan(400)
+    expect(replayStepMs()).not.toBe(700)
   })
 
   it('plays one action at a time and never stacks FX', () => {

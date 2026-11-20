@@ -53,15 +53,15 @@ describe('hit readout styles', () => {
     expect(numberAlpha(1)).toBe(0)
   })
 
-  it('shakes 4, 8 and 12 px and halves that when reduced or at ×3', () => {
+  it('shakes 4, 8 and 12 px, stays still when reduced, and halves at ×3', () => {
     expect(cameraShake('normal', 'hit', { speed: 1, reduced: false })).toEqual({ ms: 80, px: 4 })
     expect(cameraShake('weak', 'hit', { speed: 1, reduced: false })).toEqual({ ms: 80, px: 4 })
     expect(cameraShake('strong', 'hit', { speed: 2, reduced: false })).toEqual({ ms: 120, px: 8 })
     expect(cameraShake('crit', 'hit', { speed: 1, reduced: false })).toEqual({ ms: 120, px: 8 })
     expect(bossUltShake({ speed: 1, reduced: false })).toEqual({ ms: 200, px: 12 })
-    expect(cameraShake('crit', 'hit', { speed: 1, reduced: true })).toEqual({ ms: 120, px: 4 })
+    expect(cameraShake('crit', 'hit', { speed: 1, reduced: true })).toEqual({ ms: 0, px: 0 })
     expect(cameraShake('normal', 'hit', { speed: 3, reduced: false })).toEqual({ ms: 80, px: 2 })
-    expect(bossUltShake({ speed: 3, reduced: true })).toEqual({ ms: 200, px: 6 })
+    expect(bossUltShake({ speed: 3, reduced: true })).toEqual({ ms: 0, px: 0 })
   })
 
   it('pauses 40 ms on crit and strong, 80 ms on an ult, and never at ×3 or reduced', () => {

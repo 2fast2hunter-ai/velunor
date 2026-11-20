@@ -23,8 +23,8 @@ import {
 } from './const'
 import { chatErrorKey } from './chat'
 import { t, typeLabel, weatherLabel, type Lang } from './i18n'
-import { shotAt, shouldRecover } from './present'
-import { actionAt, battleQueueOn, focusKo, focusSide, focusTempo, hitNumberPhase, planBattle, roadQueueFromSearch, roadTempo, setRoadQueue, shotFromAction } from './battlePlayer'
+import { shouldRecover } from './present'
+import { actionAt, battleQueueOn, focusKo, focusSide, focusTempo, hitNumberPhase, planBattle, replayStepMs, roadQueueFromSearch, roadTempo, setRoadQueue, shotFromAction } from './battlePlayer'
 import { battleLogFromTraces, lineFor, lineForFrame, logIconFile, rememberBattleLog, type BattleFightLog, type BattleLogLine } from './battleLog'
 import { hpLabel, typeEdge, weatherPct } from './battleHud'
 import { roadPaceFromSearch, setRoadPace } from './roadPace'
@@ -2084,7 +2084,7 @@ async function arenaAction(act: string, index: string | null): Promise<void> {
     }
     arenaPanel = { ...arenaPanel, replay: { ...current, step: current.step + 1 } }
     render()
-  }, 700)
+  }, replayStepMs())
 }
 
 async function refreshRanks(): Promise<void> {
@@ -2295,8 +2295,8 @@ function play(outcome: EncounterOutcome, speed: Speed, done: () => void): void {
     done()
   }
   const catching = Boolean(outcome.catch)
-  const focusOn = battleQueueOn('focus') && outcome.kind === 'guardian'
-  const roadOn = !focusOn && battleQueueOn('road') && (outcome.kind === 'wild' || outcome.kind === 'trainer')
+  const focusOn = outcome.kind === 'guardian' && outcome.traces.length > 0
+  const roadOn = !focusOn && (outcome.kind === 'wild' || outcome.kind === 'trainer') && outcome.traces.length > 0
   const queue = focusOn
     ? planBattle(outcome.traces, 'focus', focusTempo(save?.settings.tempoFokus))
     : roadOn
@@ -2352,7 +2352,7 @@ function play(outcome: EncounterOutcome, speed: Speed, done: () => void): void {
   }
   const battery = Boolean(save?.settings.battery)
   setFxRunning(true, battery ? BATTERY_FPS : 60)
-  const reduced = Boolean(save?.settings.reduceMotion)
+  const reduced = effectsReduced()
   if (fxHost) onBattleFxReady(() => beginBattleMood(weather, reduced, speed))
   const allowFlash = Boolean(save?.settings.flashes) && !reduced
   let shakeStart = 0
@@ -2413,7 +2413,7 @@ function play(outcome: EncounterOutcome, speed: Speed, done: () => void): void {
           armFx = queueStep.fx
         }
       }
-      const shot = queueStep ? shotFromAction(outcome.traces, queueStep) : shotAt(outcome.traces, Math.min(elapsed, battleEnd), battleEnd)
+      const shot = queueStep ? shotFromAction(outcome.traces, queueStep) : null
       if (holdCounter && shot?.counter) {
         if (counterAt < 0) counterAt = elapsed
         if (frozen < 0 && elapsed - counterAt >= 320) frozen = elapsed
@@ -2436,8 +2436,6 @@ function play(outcome: EncounterOutcome, speed: Speed, done: () => void): void {
             playBattleFx({ type: hit.type, crit: hit.crit, band: hit.band, awaken: Boolean(hit.awaken), shimmer: Boolean(outcome.shiny), reduced, tempo: speed, from, to, kind: hit.kind, ult: Boolean(hit.ult) })
             const attackerId = hit.from === 'ally' ? shot.allySpecies : shot.foeSpecies
             const struck = hit.from === 'ally' ? foeActor : allyActor
-            const rawTravel = hit.kind === 'hit' ? effectTiming(hit.type, speed).travelMs : 0
-            const travel = queueStep?.fx ? Math.min(rawTravel, Math.max(0, Math.round(queueStep.dur * 0.45))) : rawTravel
             const keyMove = Boolean(hit.crit || hit.ko || hit.ult || hit.kind === 'status' || hit.helper || hit.pulse)
             if ((hit.kind === 'hit' || hit.ult) && !(roadOn && !keyMove)) showMove(hit.ult ? ultName(hit.ult) : attackTitle(attackerId, hit.type), hit.from === 'ally' ? allyActor : foeActor, k)
             paintWeatherTag(hit.weather, to.x, to.y)
@@ -2467,12 +2465,7 @@ function play(outcome: EncounterOutcome, speed: Speed, done: () => void): void {
               }
               if (allowFlash && hit.crit && critFlash) critFlash.style.opacity = '0.15'
             }
-            if (queue) {
-              if (!queueStep || hitNumberPhase(queueStep.phase)) paintNumber()
-            } else {
-              window.clearTimeout(impactTimer)
-              impactTimer = window.setTimeout(paintNumber, travel)
-            }
+            if (!queueStep || hitNumberPhase(queueStep.phase)) paintNumber()
           }
         } else if (critFlash && elapsed - hitAt > 50 * k) critFlash.style.opacity = '0'
         prevAlly = shot.allyHp
@@ -2548,7 +2541,7 @@ function play(outcome: EncounterOutcome, speed: Speed, done: () => void): void {
           world.style.transform = `translate(${x.toFixed(2)}px, ${(x * 0.35).toFixed(2)}px)`
         } else if (world.style.transform) world.style.transform = ''
       }
-      const layers = parallaxShift(pose > 0 ? lungeOffset(pose, reach) : 0, 0)
+      const layers = reduced ? { far: 0, mid: 0, near: 0 } : parallaxShift(pose > 0 ? lungeOffset(pose, reach) : 0, 0)
       const far = document.getElementById('parallax-far')
       const mid = document.getElementById('parallax-mid')
       const near = document.getElementById('parallax-near')

@@ -157,6 +157,20 @@ export function activeFx(actions: readonly PlannedAction[], at: number): number 
   return actions.filter((action) => action.fx && at >= action.start && at < action.start + action.dur).length
 }
 
+/** One arena bout, timed by the focus player instead of a fixed clock. */
+export function replayStepMs(): number {
+  const trace: FightTrace = {
+    allySpecies: 'm01', foeSpecies: 'm02', allyName: 'A', foeName: 'B',
+    allyMax: 100, foeMax: 100,
+    frames: [
+      { allyHp: 100, foeHp: 100, text: 'Start', hits: [] },
+      { allyHp: 40, foeHp: 0, text: 'Ende', hits: [] }
+    ],
+    win: true, foeKo: true, allyKo: false, timeout: false, allyHp: 40, foeHp: 0
+  }
+  return planBattle([trace], 'focus', 1).reduce((sum, step) => sum + step.dur, 0)
+}
+
 /** The phase that shows the hit number. The windup and the rest beat do not. */
 export function hitNumberPhase(phase: BattlePhase): boolean {
   return phase === 'treffer' || phase === 'zug'
