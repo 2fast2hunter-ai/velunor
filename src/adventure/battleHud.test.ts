@@ -12,7 +12,7 @@ function box(): StorageLike {
 
 describe('battle hud', () => {
   it('shows hit points unless the option is stored off', () => {
-    expect(SAVE_VERSION).toBe(12)
+    expect(SAVE_VERSION).toBe(13)
     expect(hpNumbersOn(undefined)).toBe(true)
     expect(hpNumbersOn({})).toBe(true)
     expect(hpNumbersOn({ showHpNumbers: false })).toBe(false)
@@ -32,7 +32,7 @@ describe('battle hud', () => {
     writeSave(store, save)
     const kept = loadAdventure(store, 3_000)
     expect(kept?.settings.showHpNumbers).toBe(false)
-    expect(kept?.saveVersion).toBe(12)
+    expect(kept?.saveVersion).toBe(13)
     expect(hpNumbersOn(kept?.settings)).toBe(false)
     const view = readFileSync(new URL('./view.ts', import.meta.url), 'utf8')
     const css = readFileSync(new URL('./adventure.css', import.meta.url), 'utf8')

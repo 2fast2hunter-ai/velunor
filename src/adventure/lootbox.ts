@@ -92,7 +92,7 @@ export function emptyPity(): PityState {
 
 export function startChests(): ChestCounts {
   return {
-    kiesel: Math.min(file.storageCap, file.debugStartChests.kiesel),
+    kiesel: Math.min(file.storageCap, file.startChests.kiesel),
     silber: 0,
     gold: 0,
     sternen: 0

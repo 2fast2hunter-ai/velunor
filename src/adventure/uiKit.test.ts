@@ -15,6 +15,6 @@ describe('ui kit theme', () => {
     expect(used.length).toBeGreaterThan(20)
     for (const id of used) expect(KIT_ART).toHaveProperty(id)
     expect(css).toContain('--ink: #4a2c17')
-    expect(SAVE_VERSION).toBe(12)
+    expect(SAVE_VERSION).toBe(13)
   })
 })

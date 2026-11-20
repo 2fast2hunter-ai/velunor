@@ -133,7 +133,7 @@ describe('daily tasks and the calendar', () => {
     box.setItem('velunor_v2', JSON.stringify(raw))
     const loaded = loadAdventure(box, 5_000)
     expect(loaded?.saveVersion).toBe(SAVE_VERSION)
-    expect(SAVE_VERSION).toBe(12)
+    expect(SAVE_VERSION).toBe(13)
     expect(loaded?.gold).toBe(raw.gold)
     expect(loaded?.daily?.key).toBe('')
     expect(loaded?.daily?.tasks).toEqual([])

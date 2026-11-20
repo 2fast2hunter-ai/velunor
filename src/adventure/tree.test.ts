@@ -71,8 +71,8 @@ describe('mastery tree', () => {
     ;(save as { tree?: unknown }).tree = undefined
     save.mons[save.team[0]].lvl = 11
     normalize(save, 2_000)
-    expect(SAVE_VERSION).toBe(12)
-    expect(save.saveVersion).toBe(12)
+    expect(SAVE_VERSION).toBe(13)
+    expect(save.saveVersion).toBe(13)
     expect(save.tree?.nodes).toEqual([])
     expect(save.mons[save.team[0]].lvl).toBe(11)
     expect(treePointParts(save).earned).toBe(parts.earned)
