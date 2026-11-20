@@ -174,6 +174,7 @@ let cloudReady = false
 let cloudLanded = false
 let cloudReplaced = false
 const tutorialPending = new Set<number>()
+let shownHint = ''
 let cloudView: CloudView = {
   status: 'offline',
   consent: 'unset',
@@ -315,6 +316,18 @@ function activeLang(): Lang {
 
 function cloudBlocks(): boolean {
   return cloudView.askConsent || cloudView.conflict !== null
+}
+
+function closeHint(id: string): void {
+  if (!save?.onboarding || !id) return
+  if (!save.onboarding.seen.includes(id)) {
+    save.onboarding.seen = [...save.onboarding.seen, id].slice(-64)
+    const remembered = rememberTutorial(save.onboarding.sent, TUTORIAL_STEP.hintDismiss)
+    save.onboarding.sent = remembered.sent
+    cloud?.track('tutorial_step', { step: TUTORIAL_STEP.hintDismiss, hint: id })
+  }
+  if (shownHint === id) shownHint = ''
+  try { writeSave(gameStore, save) } catch { /* the memory copy still applies */ }
 }
 
 function noteTutorial(step: number): void {
@@ -1299,7 +1312,12 @@ function render(step = save?.step): void {
     mult: wheelMult,
     symbols: wheelSymbols,
     note: wheelNote
-  }, { mapOpen, moreOpen, pcScroll, filtersOpen, dexOpen, shopTab, shopHint: Date.now() < shopFlashUntil, fighting: animating, cloud: mergedCloud(), masteryNote: Date.now() < masteryUntil ? masteryNote : '', ranks: { ...rankView, board: rankBoard, excluded: mergedCloud().flagLevel === 2 }, treePick, arena: arenaPanel, social: socialPanel, expeditionPick, trade: tradePanel, guild: guildPanel, chat: chatPanel, battleLog: battleLogs }))
+  }, { mapOpen, moreOpen, pcScroll, filtersOpen, dexOpen, shopTab, shopHint: Date.now() < shopFlashUntil, fighting: animating, focusFight: animating && pendingOutcome?.kind === 'guardian', cloud: mergedCloud(), masteryNote: Date.now() < masteryUntil ? masteryNote : '', ranks: { ...rankView, board: rankBoard, excluded: mergedCloud().flagLevel === 2 }, treePick, arena: arenaPanel, social: socialPanel, expeditionPick, trade: tradePanel, guild: guildPanel, chat: chatPanel, battleLog: battleLogs }))
+  const shown = document.getElementById('hint-bubble')?.getAttribute('data-hint') ?? ''
+  if (save.onboarding && shown && shown !== shownHint) {
+    shownHint = shown
+    save.onboarding.lastHintAt = Date.now()
+  }
   if (screen === 'team') {
     pcIds = visiblePc(save, pc)
     const view = document.getElementById('pc-viewport')
@@ -2369,6 +2387,7 @@ function paintFocusTempo(): void {
 function showFocusChrome(): void {
   const why = document.getElementById('why-chip')
   if (why) why.hidden = true
+  document.getElementById('hint-bubble')?.remove()
   document.getElementById('focus-bar')?.removeAttribute('hidden')
   const text = document.getElementById('battle-text')
   if (text) {
@@ -3432,11 +3451,24 @@ function onClick(event: Event): void {
   }
   const node = target.closest('[data-act]')
   if (!node) {
+    const bubble = document.getElementById('hint-bubble')
+    if (bubble && save) {
+      closeHint(bubble.getAttribute('data-hint') ?? '')
+      bubble.remove()
+    }
     if (focusCtl && target.closest('#battle-world') && !target.closest('.focus-bar')) toggleFocusPause()
     return
   }
   if (target.closest('.focus-bar')) event.stopPropagation()
   const act = node.getAttribute('data-act')
+  if (act !== 'hint-close' && save?.onboarding) {
+    const bubble = document.getElementById('hint-bubble')
+    const id = bubble?.getAttribute('data-hint') ?? ''
+    if (id) {
+      closeHint(id)
+      bubble?.remove()
+    }
+  }
   if (act === 'log-close') {
     const sheet = document.getElementById('battle-log-sheet')
     if (sheet) {
@@ -3459,6 +3491,11 @@ function onClick(event: Event): void {
     save.settings.tempoFokus = tempo
     try { writeSave(gameStore, save) } catch { /* the next warden still reads the memory copy */ }
     paintFocusTempo()
+    return
+  }
+  if (act === 'hint-close' && save) {
+    closeHint(node.getAttribute('data-hint') ?? '')
+    render()
     return
   }
   if (act === 'why-open' && save) {
@@ -4300,6 +4337,11 @@ function syncField(target: EventTarget | null): void {
   if (field === 'hp' && target instanceof HTMLInputElement) {
     if (target.checked) delete save.settings.showHpNumbers
     else save.settings.showHpNumbers = false
+    try { writeSave(gameStore, save) } catch { /* the memory copy still applies */ }
+  }
+  if (field === 'hints' && target instanceof HTMLInputElement && save.onboarding) {
+    save.onboarding.hintsOff = target.checked
+    if (target.checked) noteTutorial(TUTORIAL_STEP.hintsOff)
     try { writeSave(gameStore, save) } catch { /* the memory copy still applies */ }
   }
   if (field === 'battery' && target instanceof HTMLInputElement) {

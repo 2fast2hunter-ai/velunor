@@ -16,6 +16,7 @@ import { baseLine, dexPlaces, dexStatus, dexStatusLabel, listCodex, regionProgre
 import { goalName, goalTitle, rarityLabel, t, typeLabel, weatherLabel, whenLabel, type Lang } from './i18n'
 import { latestLine, logIconFile, sheetLine, type BattleFightLog, type BattleLogLine } from './battleLog'
 import { hpNumbersOn } from './battleHud'
+import { dueHint, goalLine } from './hints'
 import { shareLegend, whyIconFile, type WhyCard } from './battleWhy'
 import { colorHex, colorId, skinHex } from './avatar'
 import { agoParts, continueFacts } from './continue'
@@ -127,6 +128,8 @@ export interface ShellFlags {
   moreOpen?: boolean
   /** A fight is on screen. The preview card stays off the field. */
   fighting?: boolean
+  /** Warden focus fight. Hints stay off the screen. */
+  focusFight?: boolean
   /** Scroll offset of the PC viewport, in logical px. */
   pcScroll?: number
   /** Measured PC viewport height. 0 uses the fallback. */
@@ -1396,6 +1399,7 @@ function options(save: SaveV2, debug: boolean, shell: ShellFlags): string {
       ${([100, 115, 130] as const).map((size) => `<button type="button" data-act="font" data-size="${size}" class="${save.settings.font === size ? 'primary' : ''}">${size} %</button>`).join('')}
     </div>
     <label class="switch">${ui('optBattery')}<input type="checkbox" data-field="battery" ${save.settings.battery ? 'checked' : ''}/> ${tr(save, 'opt.battery')}</label>
+    <label class="switch"><input type="checkbox" data-field="hints" ${save.onboarding?.hintsOff ? 'checked' : ''}/> ${tr(save, 'opt.hintsOff')}</label>
     <label class="switch">${ui('optCard')}<input type="checkbox" data-field="hp" ${hpNumbersOn(save.settings) ? 'checked' : ''}/> ${tr(save, 'opt.hp')}</label>
     <p class="muted">${tr(save, 'opt.batteryNote')}</p>
     <label class="switch">${ui('optLoop')}<input type="checkbox" data-field="loop" ${save.loop ? 'checked' : ''}/> ${tr(save, 'nav.loop')}</label>
@@ -2014,6 +2018,8 @@ export function gameHtml(save: SaveV2, screen: Screen, now: number, pc: PcQuery,
         ${screen === 'shop' ? '' : header(save, now, cloudState(shell))}
         ${adventure ? chapterLine(save, step, mapOpen) : ''}
         ${adventure ? path(save, step) : ''}
+        ${adventure ? goalChip(save) : ''}
+        ${adventure && !shell.focusFight ? hintBubble(save, now) : ''}
       </div>
       <div class="anchor anchor-mid">${adventure ? battle(save, now, shell.fighting, cloudState(shell).flagLevel === 2, latestLine(shell.battleLog ?? [])) : center(save, screen, now, pc, dex, selected, debug, wheel, shell)}</div>
       <div class="anchor anchor-bot">
@@ -2031,6 +2037,18 @@ export function gameHtml(save: SaveV2, screen: Screen, now: number, pc: PcQuery,
     ${adventure ? `<div class="battle-log-sheet" id="battle-log-sheet" hidden></div>` : ''}
     <div class="band band-bot"></div>
   </div>`
+}
+
+function goalChip(save: SaveV2): string {
+  const chapter = chapterById(save.region, save.chapter)
+  const line = goalLine(save, chapter.name)
+  return `<p class="goal-chip" id="goal-chip">${esc(tr(save, line.key, { n: line.n ?? 0, name: line.name ?? '' }))}</p>`
+}
+
+function hintBubble(save: SaveV2, now: number): string {
+  const hint = dueHint(save, now, false)
+  if (!hint) return ''
+  return `<button type="button" class="hint-bubble" id="hint-bubble" data-act="hint-close" data-hint="${esc(hint.id)}">${esc(tr(save, hint.key))}</button>`
 }
 
 function grab(): string {
