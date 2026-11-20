@@ -25,14 +25,14 @@ describe('lootbox sources and pity', () => {
     expect(save.roadReady).toBe(4)
     expect(bankRoad(save, 2 * 60 * 60 * 1000)).toBe(0)
     expect(claimRoad(save)).toBe(4)
-    expect(save.chests.kiesel).toBe(9)
+    expect(save.chests.kiesel).toBe(6)
     expect(save.roadReady).toBe(0)
   })
 
   it('drops a kiesel on a find and a silver chest on one trainer in ten', () => {
     const save = beginAdventure('Ada', { skin: 0, hair: 0, color: 0 }, 'm01', 1)
     expect(grantFindChest(save)).toBe(1)
-    expect(save.chests.kiesel).toBe(6)
+    expect(save.chests.kiesel).toBe(3)
     expect(grantTrainerChest(save, () => 0.09)).toBe(true)
     expect(save.chests.silber).toBe(1)
     expect(grantTrainerChest(save, () => 0.1)).toBe(false)
