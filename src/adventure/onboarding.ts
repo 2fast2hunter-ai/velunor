@@ -28,10 +28,12 @@ export interface OnboardingState {
   sent: number[]
   hintsOff: boolean
   lastHintAt: number
+  /** Play time in ms. Missing files load as 0. The unlock card uses the first 15 minutes. */
+  playMs: number
 }
 
 export function freshOnboarding(done = false): OnboardingState {
-  return { v: 1, done, seen: [], sent: [], hintsOff: false, lastHintAt: 0 }
+  return { v: 1, done, seen: [], sent: [], hintsOff: false, lastHintAt: 0, playMs: 0 }
 }
 
 /** An existing game skips the entrance once a crest or three species are in the codex. */
@@ -75,7 +77,8 @@ export function normalizeOnboarding(raw: unknown, started: boolean, badges: read
     seen: uniqueCap(seen, ONBOARDING_CAP) as string[],
     sent: uniqueCap(sent, ONBOARDING_CAP) as number[],
     hintsOff: row.hintsOff === true,
-    lastHintAt: Math.max(0, Math.floor(Number(row.lastHintAt)) || 0)
+    lastHintAt: Math.max(0, Math.floor(Number(row.lastHintAt)) || 0),
+    playMs: Math.max(0, Math.min(48 * 60 * 60 * 1000, Math.floor(Number(row.playMs)) || 0))
   }
 }
 

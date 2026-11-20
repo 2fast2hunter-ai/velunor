@@ -110,7 +110,7 @@ describe('first 30 minutes save', () => {
     expect(second.sent).toEqual([12, 4])
     const storage = memory()
     const save = beginAdventure('Ada', { skin: 0, hair: 0, color: 0 }, 'm01', 1_000)
-    save.onboarding = { v: 1, done: false, seen: [], sent: second.sent, hintsOff: false, lastHintAt: 0 }
+    save.onboarding = { v: 1, done: false, seen: [], sent: second.sent, hintsOff: false, lastHintAt: 0, playMs: 0 }
     storage.setItem(SAVE_KEY_V2, JSON.stringify(save))
     const loaded = loadAdventure(storage, 2_000)
     expect(loaded?.onboarding?.sent).toEqual([12, 4])

@@ -80,6 +80,7 @@ import {
 } from './research'
 import { DAILY_FRAMES, calendarReward, isDailyFrame, slotReward, type DailyFrameId } from './daily'
 import { showChestArrow, showJetztDu } from './chestLesson'
+import { anyNew, isNew, ladder, lockChip, pathUnlocked, type UnlockHint } from './unlocks'
 import type { OfflineSummary } from './sim'
 import type { SaveV2 } from './types'
 import { PC_VIEW_FALLBACK, virtualWindow } from './virtualList'
@@ -133,6 +134,7 @@ export interface ShellFlags {
   focusFight?: boolean
   /** Card index while the first chest is explained. Null hides the cards. */
   chestCard?: number | null
+  unlockHint?: UnlockHint | null
   /** Scroll offset of the PC viewport, in logical px. */
   pcScroll?: number
   /** Measured PC viewport height. 0 uses the fallback. */
@@ -432,13 +434,36 @@ function tabbar(save: SaveV2, screen: Screen, moreOpen: boolean, arrow: boolean)
     { id: 'activities', label: 'nav.activities', active: screen === 'activities', act: 'screen', screen: 'activities' },
     { id: 'more', label: 'nav.more', active: moreOpen || moreScreens.includes(screen), act: 'more' }
   ]
+  const dot = anyNew(save) ? '<i class="new-dot" aria-label="Neu"></i>' : ''
   return `<nav class="tabbar" aria-label="${esc(tr(save, 'nav.more'))}">
     ${tabs.map((tab) => `<button type="button" class="tab ${tab.active ? 'active' : ''}" data-act="${tab.act}" ${tab.screen ? `data-screen="${tab.screen}"` : ''} ${tab.id === 'activities' && arrow ? `title="${esc(tr(save, 'chest.arrow'))}"` : ''}>
       <img src="${art(TAB_ICONS[tab.id])}" alt=""/>
       <span>${tr(save, tab.label)}</span>
+      ${tab.id === 'more' ? dot : ''}
     </button>`).join('')}
     ${arrow ? '<i class="chest-arrow" aria-hidden="true"></i>' : ''}
   </nav>`
+}
+
+const LADDER_NAME: Record<string, string> = {
+  friends: 'unlock.friends',
+  guild: 'unlock.guild',
+  wheel: 'unlock.wheel',
+  chat: 'unlock.chat',
+  arena: 'unlock.arenaName',
+  found: 'unlock.found',
+  trade: 'unlock.tradeName'
+}
+
+function lockLine(save: SaveV2, id: string): string {
+  const gate = lockChip(save, id)
+  if (!gate) return ''
+  return `<p class="lock-line">${esc(tr(save, gate.key, gate.vars))}</p>`
+}
+
+function unlockCard(save: SaveV2): string {
+  const rows = ladder(save).map((row) => `<li class="${row.open ? 'open' : ''}"><b>${esc(tr(save, LADDER_NAME[row.id] ?? row.id))}</b><span>${esc(tr(save, row.key, row.vars))}</span></li>`).join('')
+  return `<section class="unlock-card"><h3>${esc(tr(save, 'unlock.title'))}</h3><ul>${rows}</ul></section>`
 }
 
 function moreSheet(save: SaveV2, open: boolean): string {
@@ -459,7 +484,13 @@ function moreSheet(save: SaveV2, open: boolean): string {
   ]
   return `<div class="more-sheet card" ${open ? '' : 'hidden'}>
     <div class="more-who">${lookFace(save.look, save.equippedFrame ?? '')}<b>${esc(save.name)}</b></div>
-    ${items.map(([id, icon, label]) => `<button type="button" data-act="screen" data-screen="${id}">${ui(icon)}${tr(save, label)}</button>`).join('')}
+    ${pathUnlocked(save) ? unlockCard(save) : ''}
+    ${items.map(([id, icon, label]) => {
+      const gate = lockChip(save, id === 'social' ? 'friends' : id)
+      const chip = gate ? `<span class="lock-chip">${esc(tr(save, gate.key, gate.vars))}</span>` : ''
+      const mark = isNew(save, id === 'social' ? 'friends' : id) ? '<i class="new-dot" aria-label="Neu"></i>' : ''
+      return `<button type="button" data-act="screen" data-screen="${id}">${ui(icon)}${tr(save, label)}${chip}${mark}</button>`
+    }).join('')}
   </div>`
 }
 
@@ -773,6 +804,7 @@ function progress(save: SaveV2): string {
   return `<div class="card panel"><h2>${tr(save, 'nav.progress')} · ${esc(region.name)}</h2>
     <div class="row-actions">${switches}</div>
     <p class="muted">${tr(save, 'progress.note')}</p>
+    ${pathUnlocked(save) ? unlockCard(save) : ''}
     <div class="chapters">${buttons}</div>
   </div>`
 }
@@ -1047,7 +1079,7 @@ function glyph(id: SymbolId): string {
 function activityTabs(save: SaveV2, wheel: WheelPanel): string {
   return `<button type="button" data-act="activity" data-id="hort" class="${wheel.tab === 'hort' ? 'primary' : ''}">${ui('hort')}${tr(save, 'act.hort')}</button>
     <button type="button" data-act="activity" data-id="chests" class="${wheel.tab === 'chests' ? 'primary' : ''}">${ui('chests')}${tr(save, 'act.chests')}</button>
-    <button type="button" data-act="activity" data-id="wheel" class="${wheel.tab === 'wheel' ? 'primary' : ''}">${ui('wheel')}${tr(save, 'act.wheel')}</button>`
+    <button type="button" data-act="activity" data-id="wheel" class="${wheel.tab === 'wheel' ? 'primary' : ''}">${ui('wheel')}${tr(save, 'act.wheel')}${wheelOpen(save) ? '' : `<span class="lock-chip">${esc(tr(save, 'unlock.crests', { n: ladder(save).find((row) => row.id === 'wheel')?.vars.n ?? 0 }))}</span>`}${isNew(save, 'wheel') ? '<i class="new-dot" aria-label="Neu"></i>' : ''}</button>`
 }
 
 const CHEST_KEY: Record<ChestTier, string> = {
@@ -2001,12 +2033,12 @@ function center(save: SaveV2, screen: Screen, now: number, pc: PcQuery, dex: Cod
   if (screen === 'ranks') return ranksScreen(save, shell.ranks)
   if (screen === 'tree') return treeScreen(save, shell.treePick, now)
   if (screen === 'tower') return towerScreen(save, now)
-  if (screen === 'arena') return arenaScreen(save, shell.arena)
+  if (screen === 'arena') return `${lockLine(save, 'arena')}${arenaScreen(save, shell.arena)}`
   if (screen === 'social') return socialScreen(save, shell.social)
   if (screen === 'expedition') return expeditionScreen(save, now, shell.expeditionPick, shell.guild?.level ?? 0)
-  if (screen === 'trade') return tradeScreen(save, shell.trade)
+  if (screen === 'trade') return `${lockLine(save, 'trade')}${tradeScreen(save, shell.trade)}`
   if (screen === 'guild') return guildScreen(save, shell.guild)
-  if (screen === 'chat') return chatScreen(save, shell.chat)
+  if (screen === 'chat') return `${lockLine(save, 'chat')}${chatScreen(save, shell.chat)}`
   if (screen === 'team') return team(save, pc, selected, shell)
   if (screen === 'codex') return codex(save, dex, shell)
   if (screen === 'activities') return activitiesView(save, now, selected, wheel, shell.chestCard ?? null)
@@ -2038,7 +2070,7 @@ export function gameHtml(save: SaveV2, screen: Screen, now: number, pc: PcQuery,
         ${adventure ? chapterLine(save, step, mapOpen) : ''}
         ${adventure ? path(save, step) : ''}
       </div>
-      <div class="anchor anchor-mid">${adventure ? goalChip(save) : ''}${adventure && !shell.focusFight ? hintBubble(save, now) : ''}${adventure ? battle(save, now, shell.fighting, cloudState(shell).flagLevel === 2, latestLine(shell.battleLog ?? [])) : center(save, screen, now, pc, dex, selected, debug, wheel, shell)}</div>
+      <div class="anchor anchor-mid">${adventure ? goalChip(save) : ''}${adventure && !shell.focusFight && !shell.unlockHint ? hintBubble(save, now) : ''}${adventure && shell.unlockHint && !shell.focusFight ? `<button type="button" class="unlock-hint" id="unlock-hint" data-act="unlock-hint" data-hint="${esc(shell.unlockHint.id)}">${esc(tr(save, shell.unlockHint.key))}</button>` : ''}${adventure ? battle(save, now, shell.fighting, cloudState(shell).flagLevel === 2, latestLine(shell.battleLog ?? [])) : center(save, screen, now, pc, dex, selected, debug, wheel, shell)}</div>
       <div class="anchor anchor-bot">
         ${adventure ? teamDock(save) : ''}
         ${adventure ? logBox(save) : ''}

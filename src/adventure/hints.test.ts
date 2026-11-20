@@ -8,7 +8,7 @@ const dex: CodexQuery = { q: '', type: '', rarity: '', shiny: '' }
 
 function fresh() {
   const save = beginAdventure('Ada', { skin: 0, hair: 0, color: 0 }, 'm01', 1_000)
-  save.onboarding = { v: 1, done: false, seen: [], sent: [], hintsOff: false, lastHintAt: 0 }
+  save.onboarding = { v: 1, done: false, seen: [], sent: [], hintsOff: false, lastHintAt: 0, playMs: 0 }
   return save
 }
 

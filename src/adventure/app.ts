@@ -30,6 +30,7 @@ import { hpLabel, typeEdge, weatherPct } from './battleHud'
 import { whyAutoMs, whyBattle, whyIconFile } from './battleWhy'
 import { rememberTutorial, TUTORIAL_STEP } from './onboarding'
 import { CHEST_CARD_COUNT, CHEST_SEEN, chestLessonOpen } from './chestLesson'
+import { bankPlay, clearNew, dismissUnlockHint, dueUnlockHint, noteUnlocks, pathUnlocked } from './unlocks'
 import { roadPaceFromSearch, setRoadPace } from './roadPace'
 import { species, typeColor, typeMult, typeName } from '../data'
 import { teamWeatherMarks, weatherArrow, weatherAt, WEATHER_SHIFTS } from './weather'
@@ -253,6 +254,7 @@ let playGen = 0
 let pendingOutcome: EncounterOutcome | null = null
 let activity: WheelPanel['tab'] = 'hort'
 let chestCard = 0
+let shownUnlock = ''
 let shopTab: 'chests' | 'boost' | 'marks' = 'chests'
 let shopFlashUntil = 0
 let chestFrame = 0
@@ -353,6 +355,19 @@ function stepChestLesson(dir: -1 | 1): void {
     chestCard += 1
     render()
   }
+}
+
+function closeUnlockHint(id: string): void {
+  if (!save || !id) return
+  dismissUnlockHint(save, id, Date.now())
+  const board = save.onboarding
+  if (board) {
+    const remembered = rememberTutorial(board.sent, TUTORIAL_STEP.hintDismiss)
+    board.sent = remembered.sent
+  }
+  cloud?.track('tutorial_step', { step: TUTORIAL_STEP.hintDismiss, hint: id })
+  if (shownUnlock === id) shownUnlock = ''
+  try { writeSave(gameStore, save) } catch { /* the memory copy still applies */ }
 }
 
 function noteTutorial(step: number): void {
@@ -1332,14 +1347,31 @@ function render(step = save?.step): void {
   const prev = document.getElementById('pc-viewport')
   if (prev && keepPcScroll) pcScroll = prev.scrollTop
   keepPcScroll = true
+  if (pathUnlocked(save) && save.onboarding && !save.onboarding.seen.includes('path:open')) {
+    save.onboarding.seen = [...save.onboarding.seen, 'path:open'].slice(-64)
+    noteTutorial(TUTORIAL_STEP.path)
+  }
+  const fresh = noteUnlocks(save)
+  for (const id of fresh) {
+    const text = t(save.settings.lang, `unlock.log.${id}`)
+    if (text !== `unlock.log.${id}`) save.log.push({ t: Date.now(), text })
+  }
+  if (save.log.length > 50) save.log.splice(0, save.log.length - 50)
+  const focusFight = animating && pendingOutcome?.kind === 'guardian'
+  const hint = dueUnlockHint(save, Date.now(), focusFight)
+  if (hint && hint.id !== shownUnlock) {
+    shownUnlock = hint.id
+    if (save.onboarding) save.onboarding.lastHintAt = Date.now()
+  }
+  if (!hint) shownUnlock = ''
   paint(gameHtml(save, screen, Date.now(), pc, dex, selected, sideOpen, debug, overlay, step ?? save.step, {
     tab: activity,
     mult: wheelMult,
     symbols: wheelSymbols,
     note: wheelNote
-  }, { mapOpen, moreOpen, pcScroll, filtersOpen, dexOpen, shopTab, shopHint: Date.now() < shopFlashUntil, fighting: animating, focusFight: animating && pendingOutcome?.kind === 'guardian', chestCard: screen === 'activities' && chestLessonOpen(save) ? chestCard : null, cloud: mergedCloud(), masteryNote: Date.now() < masteryUntil ? masteryNote : '', ranks: { ...rankView, board: rankBoard, excluded: mergedCloud().flagLevel === 2 }, treePick, arena: arenaPanel, social: socialPanel, expeditionPick, trade: tradePanel, guild: guildPanel, chat: chatPanel, battleLog: battleLogs }))
+  }, { mapOpen, moreOpen, pcScroll, filtersOpen, dexOpen, shopTab, shopHint: Date.now() < shopFlashUntil, fighting: animating, focusFight, chestCard: screen === 'activities' && chestLessonOpen(save) ? chestCard : null, unlockHint: hint, cloud: mergedCloud(), masteryNote: Date.now() < masteryUntil ? masteryNote : '', ranks: { ...rankView, board: rankBoard, excluded: mergedCloud().flagLevel === 2 }, treePick, arena: arenaPanel, social: socialPanel, expeditionPick, trade: tradePanel, guild: guildPanel, chat: chatPanel, battleLog: battleLogs }))
   const shown = document.getElementById('hint-bubble')?.getAttribute('data-hint') ?? ''
-  if (save.onboarding && shown && shown !== shownHint) {
+  if (!hint && save.onboarding && shown && shown !== shownHint) {
     shownHint = shown
     save.onboarding.lastHintAt = Date.now()
   }
@@ -1530,7 +1562,9 @@ function loop(): void {
   if (!save?.started || animating || overlay || cloudBlocks() || (save.hold && !save.challengeNow)) return
   const dur = encounterMs(save.settings.speed)
   const now = Date.now()
-  bankRoad(save, Math.max(0, now - (save.roadAt || now)))
+  const played = Math.max(0, now - (save.roadAt || now))
+  bankPlay(save, played)
+  bankRoad(save, played)
   save.roadAt = now
   if (save.settings.battery && (document.hidden || screenLocked)) {
     away = true
@@ -3336,6 +3370,7 @@ async function finishOffline(rawMs: number): Promise<void> {
   }
   summary.mastery = settleOfflineMastery(save, masteryBag)
   syncAchievements(save)
+  bankPlay(save, counted)
   bankRoad(save, counted)
   save.roadAt = Date.now()
   save.lastSeenAt = stopped ? reached : Date.now()
@@ -3481,6 +3516,11 @@ function onClick(event: Event): void {
       closeHint(bubble.getAttribute('data-hint') ?? '')
       bubble.remove()
     }
+    const unlock = document.getElementById('unlock-hint')
+    if (unlock && save) {
+      closeUnlockHint(unlock.getAttribute('data-hint') ?? '')
+      unlock.remove()
+    }
     if (focusCtl && target.closest('#battle-world') && !target.closest('.focus-bar')) toggleFocusPause()
     return
   }
@@ -3493,6 +3533,16 @@ function onClick(event: Event): void {
       closeHint(id)
       bubble?.remove()
     }
+  }
+  if (save && act !== 'unlock-hint') {
+    const bubble = document.getElementById('unlock-hint')
+    const hintId = bubble?.getAttribute('data-hint') ?? ''
+    if (hintId) closeUnlockHint(hintId)
+  }
+  if (act === 'unlock-hint' && save) {
+    closeUnlockHint(node.getAttribute('data-hint') ?? '')
+    render()
+    return
   }
   if (act === 'log-close') {
     const sheet = document.getElementById('battle-log-sheet')
@@ -3748,6 +3798,8 @@ function onClick(event: Event): void {
       activity = 'chests'
       if (screen !== 'activities') chestCard = 0
     }
+    clearNew(save, next === 'social' ? 'friends' : next)
+    if (next === 'activities') clearNew(save, activity)
     screen = next
     overlay = null
     moreOpen = false
@@ -4110,6 +4162,7 @@ function onClick(event: Event): void {
   if (act === 'activity') {
     const id = node.getAttribute('data-id')
     activity = id === 'wheel' || id === 'chests' ? id : 'hort'
+    if (activity === 'wheel') clearNew(save, 'wheel')
     if (chestLessonOpen(save)) {
       activity = 'chests'
       if (screen !== 'activities') chestCard = 0
