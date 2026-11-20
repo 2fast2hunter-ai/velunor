@@ -179,6 +179,8 @@ let cloudReplaced = false
 const tutorialPending = new Set<number>()
 let shownHint = ''
 let hintShownAt = 0
+let coachGoal = ''
+let coachHint = ''
 let cloudView: CloudView = {
   status: 'offline',
   consent: 'unset',
@@ -334,6 +336,7 @@ function closeHint(id: string): boolean {
   }
   if (shownHint === id) shownHint = ''
   hintShownAt = 0
+  coachHint = ''
   try { writeSave(gameStore, save) } catch { /* the memory copy still applies */ }
   return true
 }
@@ -1670,15 +1673,24 @@ function refreshCoach(): void {
   noteHintReach(save)
   const chapter = chapterById(save.region, save.chapter)
   const line = goalLine(save, chapter.name)
-  const chip = document.getElementById('goal-chip')
-  if (chip) chip.textContent = t(save.settings.lang, line.key, { n: line.n ?? 0, name: line.name ?? '' })
+  const text = t(save.settings.lang, line.key, { n: line.n ?? 0, name: line.name ?? '' })
+  if (text !== coachGoal) {
+    const chip = document.getElementById('goal-chip')
+    if (chip) chip.textContent = text
+    coachGoal = text
+  }
   const focus = animating && pendingOutcome?.kind === 'guardian'
   const bubble = document.getElementById('hint-bubble')
   if (focus) {
-    bubble?.remove()
+    if (bubble) bubble.remove()
+    coachHint = ''
     return
   }
-  if (bubble) return
+  if (bubble) {
+    coachHint = bubble.getAttribute('data-hint') ?? coachHint
+    return
+  }
+  if (coachHint) coachHint = ''
   const next = dueHint(save, Date.now(), false)
   if (!next) return
   const host = document.querySelector('.anchor-mid')
@@ -1692,6 +1704,7 @@ function refreshCoach(): void {
   button.textContent = t(save.settings.lang, next.key)
   host.prepend(button)
   shownHint = next.id
+  coachHint = next.id
   hintShownAt = Date.now()
   if (save.onboarding) save.onboarding.lastHintAt = hintShownAt
 }
