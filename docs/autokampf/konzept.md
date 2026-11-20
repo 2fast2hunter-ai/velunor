@@ -177,7 +177,7 @@ Wächterkarte, Herausfordern-Knopf und Wetter-Vorschau werden im Fokuskampf ausg
 
 | Feld | Typ | Standard | Zweck |
 |---|---|---|---|
-| `settings.tempoWeg` | 1 \| 2 \| 3 | bisheriges `settings.speed` | Weg-Tempo |
+| `settings.tempoWeg` | 1 \| 2 \| 3 | bisheriges `settings.speed` | Weg-Tempo. Fehlt das Feld, bleibt `settings.speed` die Quelle. Der Wert liegt schon im Spielstand und hält nach dem Neuladen. Es wird dafür nichts Neues geschrieben. |
 | `settings.tempoFokus` | 1 \| 2 | 1 | letztes Fokus-Tempo (Antwort b). Überspringen ist eine einmalige Aktion und wird nicht gemerkt. |
 | `settings.showHpNumbers` | boolean | `true` | HP als Zahl (Antwort c) |
 | `roadPace` | number | 1,6 (Messung Kapitel 1) | Wegtakt-Ausgleich W (7.3) |

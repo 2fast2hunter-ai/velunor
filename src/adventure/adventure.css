@@ -354,8 +354,9 @@ textarea { width: 100%; box-sizing: border-box; background: #121a30; color: inhe
   pointer-events: none;
 }
 .wx-stack {
-  position: absolute; z-index: 7; top: 78px; left: 16px; right: 16px;
-  display: flex; flex-direction: column; align-items: center; gap: 8px;
+  position: absolute; z-index: 7; top: 12px; left: 16px; right: auto;
+  width: min(420px, 36%);
+  display: flex; flex-direction: column; align-items: flex-start; gap: 8px;
   pointer-events: none;
 }
 .wx-chip {
@@ -502,8 +503,9 @@ textarea { width: 100%; box-sizing: border-box; background: #121a30; color: inhe
 .status-chip .status-stack img { width: 40px; height: 40px; }
 .status-chip .status-stack b { position: absolute; inset: 0; display: grid; place-items: center; color: #fff; font-size: 24px; }
 .adv-chip {
-  position: absolute; z-index: 8; left: 50%; top: 46%; transform: translate(-50%, -50%);
-  display: inline-flex; align-items: center; gap: 8px; height: 72px; padding: 0 20px 0 8px;
+  position: absolute; z-index: 8; left: 50%; top: 34%; transform: translate(-50%, -50%);
+  display: inline-flex; align-items: center; gap: 8px; height: 72px; max-width: 300px; padding: 0 20px 0 8px;
+  pointer-events: none;
   color: #fff3dc; -webkit-text-stroke: 4px #4a2c17; paint-order: stroke fill; font-size: 34px; font-weight: 800;
   background: rgba(74, 44, 23, 0.35) padding-box; border-radius: 28px;
 }
@@ -637,10 +639,11 @@ textarea { width: 100%; box-sizing: border-box; background: #121a30; color: inhe
 .focus-tempo img { width: 128px; height: 128px; display: block; pointer-events: none; }
 .battle:has(#focus-bar:not([hidden])) .wx-stack {
   position: absolute;
-  z-index: 20;
-  left: 12px;
-  bottom: 430px;
-  width: min(440px, 42%);
+  z-index: 7;
+  top: 12px;
+  bottom: auto;
+  left: 16px;
+  width: min(420px, 36%);
   align-items: flex-start;
   pointer-events: none;
 }
@@ -649,17 +652,17 @@ textarea { width: 100%; box-sizing: border-box; background: #121a30; color: inhe
   bottom: 46%;
 }
 .battle:has(#focus-bar:not([hidden])) .battle-log {
-  left: 12px;
-  right: auto;
-  width: min(440px, 42%);
-  bottom: 500px;
+  left: 470px;
+  right: 180px;
+  width: auto;
+  bottom: 12px;
 }
 .battle-log {
   position: absolute;
   z-index: 8;
   left: 16px;
-  right: 16px;
-  bottom: 168px;
+  right: 180px;
+  bottom: 12px;
   min-height: 64px;
   height: auto;
   display: flex;
@@ -680,7 +683,7 @@ textarea { width: 100%; box-sizing: border-box; background: #121a30; color: inhe
   position: absolute;
   z-index: 24;
   left: 24px;
-  right: 24px;
+  right: 180px;
   top: 1760px;
   bottom: 24px;
   overflow: auto;
@@ -690,6 +693,7 @@ textarea { width: 100%; box-sizing: border-box; background: #121a30; color: inhe
   color: #fff8e1;
 }
 .battle-log-sheet[hidden] { display: none; }
+.log-close { display: block; width: 100%; min-height: 72px; margin: 0 0 12px; }
 .why-chip {
   position: absolute;
   z-index: 18;

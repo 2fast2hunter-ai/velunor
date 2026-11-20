@@ -116,7 +116,7 @@ function tagsFor(lang: Lang, hit: FightHit): string[] {
   const weather = weatherTag(lang, hit.weather)
   if (weather) tags.push(weather)
   if (hit.crit) tags.push(t(lang, 'log.tag.crit'))
-  if (hit.kind === 'status') tags.push(t(lang, 'log.tag.status'))
+  if (hit.kind === 'status' && hit.ult) tags.push(t(lang, 'log.tag.status'))
   if (hit.ko) tags.push(t(lang, 'log.tag.ko'))
   return tags
 }

@@ -29,7 +29,7 @@ import { battleLogFromTraces, lineFor, lineForFrame, logIconFile, rememberBattle
 import { hpLabel, typeEdge, weatherPct } from './battleHud'
 import { whyAutoMs, whyBattle, whyIconFile } from './battleWhy'
 import { roadPaceFromSearch, setRoadPace } from './roadPace'
-import { species, typeColor, typeMult } from '../data'
+import { species, typeColor, typeMult, typeName } from '../data'
 import { teamWeatherMarks, weatherArrow, weatherAt, WEATHER_SHIFTS } from './weather'
 import { ultName, type UltPattern } from './ult'
 import { AURA_FRAMES, AURA_MS } from './combo'
@@ -2249,7 +2249,7 @@ function openBattleLogPanel(): void {
     sheet.innerHTML = ''
     return
   }
-  sheet.innerHTML = battleLogBody(save, battleLogs)
+  sheet.innerHTML = `<button type="button" class="primary log-close" data-act="log-close">${t(save.settings.lang, 'log.close')}</button>${battleLogBody(save, battleLogs)}`
   sheet.hidden = false
 }
 
@@ -2467,6 +2467,7 @@ function play(outcome: EncounterOutcome, speed: Speed, done: () => void): void {
         if (dropped) {
           hitAt = elapsed
           const hit = shot.hits.find((row) => row.ult) ?? shot.hits.find((row) => row.kind === 'hit') ?? shot.hits[0]
+          if (hit?.ult) showUltCard(hit.ult, speed)
           if (hit && fxHost && allyActor && foeActor) {
             const allyPt = stagePoint(allyActor, fxHost)
             const foePt = stagePoint(foeActor, fxHost)
@@ -2478,7 +2479,6 @@ function play(outcome: EncounterOutcome, speed: Speed, done: () => void): void {
             const keyMove = Boolean(hit.crit || hit.ko || hit.ult || hit.kind === 'status' || hit.helper || hit.pulse)
             if ((hit.kind === 'hit' || hit.ult) && !(roadOn && !keyMove)) showMove(hit.ult ? ultName(hit.ult) : attackTitle(attackerId, hit.type), hit.from === 'ally' ? allyActor : foeActor, k)
             paintWeatherTag(hit.weather, to.x, to.y)
-            if (hit.ult) showUltCard(hit.ult, speed)
             const paintNumber = () => {
               if (gen !== playGen || !hit) return
               if ((hit.kind === 'hit' || hit.kind === 'heal') && hit.amount > 0) {
@@ -2852,7 +2852,7 @@ function announceWeather(): void {
     return
   }
   const lang = save.settings.lang
-  const bit = (shift: { type: TypeId; pct: number }, sign: string) => `${typeLabel(lang, shift.type, shift.type)} ${sign}${shift.pct} %`
+  const bit = (shift: { type: TypeId; pct: number }, sign: string) => `${typeLabel(lang, shift.type, typeName(shift.type))} ${sign}${shift.pct} %`
   const parts = [...row.up.map((shift) => bit(shift, '+')), ...row.down.map((shift) => bit(shift, '−'))]
   node.hidden = false
   node.textContent = `${weatherLabel(lang, weather)}: ${parts.join(', ')}`
@@ -3252,6 +3252,14 @@ function onClick(event: Event): void {
   }
   if (target.closest('.focus-bar')) event.stopPropagation()
   const act = node.getAttribute('data-act')
+  if (act === 'log-close') {
+    const sheet = document.getElementById('battle-log-sheet')
+    if (sheet) {
+      sheet.hidden = true
+      sheet.innerHTML = ''
+    }
+    return
+  }
   if (act === 'battle-log') {
     if (animating) {
       openBattleLogPanel()
