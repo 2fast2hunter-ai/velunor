@@ -1,6 +1,6 @@
 import { describe, expect, it } from 'vitest'
 import { beginAdventure } from './save'
-import { dueHint, goalLine, HINT_GAP_MS } from './hints'
+import { dueHint, goalLine, hintClosable, HINT_GAP_MS, HINT_HOLD_MS, noteHintReach } from './hints'
 import { gameHtml, type CodexQuery, type PcQuery } from './view'
 
 const pc: PcQuery = { q: '', type: '', rarity: '', shiny: '', sort: 'newest', dir: -1 }
@@ -60,5 +60,24 @@ describe('goal and hints', () => {
     const options = gameHtml(save, 'options', 1_000, pc, dex, null, false, false, null)
     expect(options).toContain('data-field="hints"')
     expect(options).toContain('Hinweise aus')
+  })
+
+  it('moves the goal after wins and shows the team and spring hints while the road keeps running', () => {
+    const save = fresh()
+    expect(goalLine(save, 'Wiesenpfad').key).toBe('goal.win')
+    save.stats.wins = 10
+    expect(goalLine(save, 'Wiesenpfad').key).toBe('goal.chest')
+    const shown = 5_000
+    expect(hintClosable(0, shown)).toBe(false)
+    expect(hintClosable(shown, shown + HINT_HOLD_MS - 1)).toBe(false)
+    expect(hintClosable(shown, shown + HINT_HOLD_MS)).toBe(true)
+    save.onboarding!.seen = ['speed']
+    save.onboarding!.lastHintAt = 1_000
+    expect(dueHint(save, 1_000 + HINT_GAP_MS, false)?.id).toBe('team')
+    save.onboarding!.seen = ['speed', 'team']
+    save.step = 7
+    noteHintReach(save)
+    save.step = 12
+    expect(dueHint(save, 1_000 + HINT_GAP_MS, false)?.id).toBe('spring')
   })
 })

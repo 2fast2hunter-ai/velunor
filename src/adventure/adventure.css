@@ -124,7 +124,7 @@ body.is-landscape-phone #turn { display: grid; }
 .unlock-card { margin: 12px 0; }
 .unlock-card h3 { margin: 0 0 8px; font-size: 40px; }
 .unlock-card ul { list-style: none; margin: 0; padding: 0; display: flex; flex-direction: column; gap: 8px; }
-.unlock-card li { display: flex; justify-content: space-between; gap: 12px; font-size: 32px; font-weight: 800; }
+.unlock-card li { display: flex; justify-content: space-between; gap: 12px; font-size: 40px; font-weight: 800; }
 .unlock-card li span { color: #8ea0c4; }
 .unlock-card li.open span { color: #7dcea0; }
 .lock-chip {
@@ -136,8 +136,9 @@ body.is-landscape-phone #turn { display: grid; }
   border-radius: 999px;
   background: #2a2110;
   color: #f0c14a;
-  font-size: 32px;
+  font-size: 40px;
   font-weight: 800;
+  white-space: nowrap;
 }
 .lock-line { margin: 12px 16px 0; font-size: 40px; font-weight: 800; color: #f0c14a; }
 .new-dot {
@@ -589,10 +590,10 @@ textarea { width: 100%; box-sizing: border-box; background: #121a30; color: inhe
   background: rgba(74, 44, 23, 0.35) padding-box; border-radius: 28px;
 }
 .battle:has(#focus-bar:not([hidden])) .adv-chip {
-  left: 50%;
-  right: auto;
-  top: 58%;
-  transform: translateX(-50%);
+  left: auto;
+  right: 24px;
+  top: 34%;
+  transform: none;
 }
 .adv-chip img { width: 52px; height: 52px; object-fit: contain; }
 .wx-announce {
@@ -762,19 +763,19 @@ textarea { width: 100%; box-sizing: border-box; background: #121a30; color: inhe
 }
 .battle:has(#focus-bar:not([hidden])) .battle-log {
   left: 16px;
-  right: auto;
-  width: min(440px, 40%);
+  right: 16px;
+  width: auto;
   bottom: 152px;
-  max-height: 128px;
-  overflow: hidden;
+  max-height: none;
+  overflow: visible;
 }
 .battle:has(#focus-bar:not([hidden])) .battle-log span {
-  display: -webkit-box;
-  -webkit-box-orient: vertical;
-  -webkit-line-clamp: 2;
+  display: block;
   white-space: normal;
-  overflow: hidden;
+  overflow: visible;
+  text-overflow: clip;
   overflow-wrap: anywhere;
+  line-height: 1.15;
 }
 .battle:has(#focus-bar:not([hidden])) .battle-status.is-callout {
   white-space: nowrap;
@@ -1557,11 +1558,15 @@ a.ghost { color: inherit; text-decoration: none; display: inline-block; }
   position: absolute;
   left: 16px;
   right: 16px;
-  z-index: 8;
+  z-index: 30;
   padding: 16px;
   box-sizing: border-box;
   overflow: auto;
 }
+.is-adventure:has(.more-sheet:not([hidden])) .goal-chip,
+.is-adventure:has(.more-sheet:not([hidden])) .hint-bubble,
+.is-adventure:has(.more-sheet:not([hidden])) .why-chip,
+.is-adventure:has(.more-sheet:not([hidden])) .unlock-hint { visibility: hidden; }
 .more-sheet { bottom: 192px; display: flex; flex-direction: column; gap: 12px; }
 .more-sheet button {
   border: 0;
@@ -1615,6 +1620,15 @@ a.ghost { color: inherit; text-decoration: none; display: inline-block; }
   font-weight: 800;
   line-height: 1.15;
   cursor: pointer;
+}
+.menu-dock > button:has(.lock-chip) {
+  overflow: visible;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  gap: 4px;
+  white-space: normal;
 }
 .menu-dock > .dock-primary { flex: 1 1 100%; }
 .menu-dock > button:disabled, .list-actions button:disabled { opacity: 0.45; cursor: default; }
@@ -1958,11 +1972,9 @@ a.ghost { color: inherit; text-decoration: none; display: inline-block; }
 .chest-tile button:disabled { opacity: 0.4; }
 .menu-screen { position: relative; }
 .chest-lesson {
-  position: absolute;
-  z-index: 6;
-  left: 24px;
-  right: 24px;
-  top: 24px;
+  position: relative;
+  z-index: 1;
+  margin: 0 0 16px;
   padding: 20px 24px 16px;
   border-radius: 28px;
   background: #fff8e1;
@@ -1999,6 +2011,9 @@ a.ghost { color: inherit; text-decoration: none; display: inline-block; }
 @keyframes chest-arrow {
   50% { transform: translateY(10px); }
 }
+.sheet.sheet-rates { max-height: 72%; }
+.sheet.sheet-rates .rate-scroll { overflow: auto; min-height: 0; flex: 1 1 auto; }
+.sheet.sheet-rates > .primary { flex: 0 0 auto; margin-top: 12px; }
 .rate-list { display: flex; flex-direction: column; gap: 8px; }
 .rate-list details, .rate-list li { font-size: calc(28px * var(--font-scale, 1)); }
 .rate-list summary { min-height: 132px; display: flex; align-items: center; justify-content: space-between; gap: 12px; cursor: pointer; }

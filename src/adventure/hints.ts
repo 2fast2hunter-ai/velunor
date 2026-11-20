@@ -2,6 +2,21 @@ import { ONBOARDING_V1, type OnboardingState } from './onboarding'
 import type { SaveV2 } from './types'
 
 export const HINT_GAP_MS = 90_000
+/** A hint stays up at least this long, so the first tap cannot close it before it is visible. */
+export const HINT_HOLD_MS = 3_000
+
+export function hintClosable(shownAt: number, now: number): boolean {
+  return shownAt > 0 && now - shownAt >= HINT_HOLD_MS
+}
+
+/** Remember that the spring was reached, so the hint can still appear after the 90 s gap. */
+export function noteHintReach(save: SaveV2): void {
+  const board = save.onboarding
+  if (!board || board.done) return
+  if (save.region !== 1 || save.chapter !== 1 || save.step < 6) return
+  if (board.seen.includes('reach:spring')) return
+  board.seen = [...board.seen, 'reach:spring'].slice(-64)
+}
 
 export interface GoalLine {
   key: string
@@ -36,7 +51,10 @@ export function goalLine(save: SaveV2, chapterName: string): GoalLine {
 }
 
 function ready(hint: HintDef, save: SaveV2): boolean {
-  if (hint.id === 'spring') return save.region === 1 && save.chapter === 1 && save.step >= 6 && save.step <= 8
+  if (hint.id === 'spring') {
+    const reached = save.onboarding?.seen.includes('reach:spring') === true
+    return save.region === 1 && save.chapter === 1 && reached && save.step < 20
+  }
   if (hint.id === 'team') return save.team.length >= 1
   return true
 }

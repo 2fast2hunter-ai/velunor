@@ -29,6 +29,7 @@ import { battleLogFromTraces, lineFor, lineForFrame, logIconFile, rememberBattle
 import { hpLabel, typeEdge, weatherPct } from './battleHud'
 import { whyAutoMs, whyBattle, whyIconFile } from './battleWhy'
 import { rememberTutorial, TUTORIAL_STEP } from './onboarding'
+import { dueHint, goalLine, hintClosable, noteHintReach } from './hints'
 import { CHEST_CARD_COUNT, CHEST_SEEN, chestLessonOpen } from './chestLesson'
 import { bankPlay, clearNew, dismissUnlockHint, dueUnlockHint, noteUnlocks, pathUnlocked } from './unlocks'
 import { roadPaceFromSearch, setRoadPace } from './roadPace'
@@ -177,6 +178,9 @@ let cloudLanded = false
 let cloudReplaced = false
 const tutorialPending = new Set<number>()
 let shownHint = ''
+let hintShownAt = 0
+let coachGoal = ''
+let coachHint = ''
 let cloudView: CloudView = {
   status: 'offline',
   consent: 'unset',
@@ -322,8 +326,8 @@ function cloudBlocks(): boolean {
   return cloudView.askConsent || cloudView.conflict !== null
 }
 
-function closeHint(id: string): void {
-  if (!save?.onboarding || !id) return
+function closeHint(id: string): boolean {
+  if (!save?.onboarding || !id || !hintClosable(hintShownAt, Date.now())) return false
   if (!save.onboarding.seen.includes(id)) {
     save.onboarding.seen = [...save.onboarding.seen, id].slice(-64)
     const remembered = rememberTutorial(save.onboarding.sent, TUTORIAL_STEP.hintDismiss)
@@ -331,7 +335,10 @@ function closeHint(id: string): void {
     cloud?.track('tutorial_step', { step: TUTORIAL_STEP.hintDismiss, hint: id })
   }
   if (shownHint === id) shownHint = ''
+  hintShownAt = 0
+  coachHint = ''
   try { writeSave(gameStore, save) } catch { /* the memory copy still applies */ }
+  return true
 }
 
 function finishChestLesson(): void {
@@ -1375,8 +1382,10 @@ function render(step = save?.step): void {
   const shown = document.getElementById('hint-bubble')?.getAttribute('data-hint') ?? ''
   if (!hint && save.onboarding && shown && shown !== shownHint) {
     shownHint = shown
+    hintShownAt = Date.now()
     save.onboarding.lastHintAt = Date.now()
   }
+  refreshCoach()
   if (screen === 'team') {
     pcIds = visiblePc(save, pc)
     const view = document.getElementById('pc-viewport')
@@ -1659,6 +1668,47 @@ function warmChapterArt(): void {
   if (mon) warmArt(monsterArt(mon.species, true))
 }
 
+function refreshCoach(): void {
+  if (!save || screen !== 'adventure') return
+  noteHintReach(save)
+  const chapter = chapterById(save.region, save.chapter)
+  const line = goalLine(save, chapter.name)
+  const text = t(save.settings.lang, line.key, { n: line.n ?? 0, name: line.name ?? '' })
+  if (text !== coachGoal) {
+    const chip = document.getElementById('goal-chip')
+    if (chip) chip.textContent = text
+    coachGoal = text
+  }
+  const focus = animating && pendingOutcome?.kind === 'guardian'
+  const bubble = document.getElementById('hint-bubble')
+  if (focus) {
+    if (bubble) bubble.remove()
+    coachHint = ''
+    return
+  }
+  if (bubble) {
+    coachHint = bubble.getAttribute('data-hint') ?? coachHint
+    return
+  }
+  if (coachHint) coachHint = ''
+  const next = dueHint(save, Date.now(), false)
+  if (!next) return
+  const host = document.querySelector('.anchor-mid')
+  if (!host) return
+  const button = document.createElement('button')
+  button.type = 'button'
+  button.className = 'hint-bubble'
+  button.id = 'hint-bubble'
+  button.dataset.act = 'hint-close'
+  button.dataset.hint = next.id
+  button.textContent = t(save.settings.lang, next.key)
+  host.prepend(button)
+  shownHint = next.id
+  coachHint = next.id
+  hintShownAt = Date.now()
+  if (save.onboarding) save.onboarding.lastHintAt = hintShownAt
+}
+
 function patchAdventure(step: number): void {
   if (!save) return
   const gold = document.getElementById('gold')
@@ -1668,6 +1718,7 @@ function patchAdventure(step: number): void {
     node.classList.toggle('is-here', n === step)
     node.classList.toggle('is-done', n < step)
   })
+  refreshCoach()
 }
 
 function hardwareBack(): void {
@@ -3514,10 +3565,7 @@ function onClick(event: Event): void {
   const node = target.closest('[data-act]')
   if (!node) {
     const bubble = document.getElementById('hint-bubble')
-    if (bubble && save) {
-      closeHint(bubble.getAttribute('data-hint') ?? '')
-      bubble.remove()
-    }
+    if (bubble && save && closeHint(bubble.getAttribute('data-hint') ?? '')) bubble.remove()
     const unlock = document.getElementById('unlock-hint')
     if (unlock && save) {
       closeUnlockHint(unlock.getAttribute('data-hint') ?? '')
@@ -3531,10 +3579,7 @@ function onClick(event: Event): void {
   if (act !== 'hint-close' && save?.onboarding) {
     const bubble = document.getElementById('hint-bubble')
     const id = bubble?.getAttribute('data-hint') ?? ''
-    if (id) {
-      closeHint(id)
-      bubble?.remove()
-    }
+    if (id && closeHint(id)) bubble?.remove()
   }
   if (save && act !== 'unlock-hint') {
     const bubble = document.getElementById('unlock-hint')
@@ -3571,7 +3616,7 @@ function onClick(event: Event): void {
     return
   }
   if (act === 'hint-close' && save) {
-    closeHint(node.getAttribute('data-hint') ?? '')
+    if (!closeHint(node.getAttribute('data-hint') ?? '')) return
     render()
     return
   }
