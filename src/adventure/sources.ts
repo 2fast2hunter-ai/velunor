@@ -15,6 +15,7 @@ import { makeMon, takeId } from './save'
 import { noteDaily } from './daily'
 import { takeWildShards } from './research'
 import { treeRoadCut, treeShardBonus } from './tree'
+import { bankAdd, bankRemainder, bankTake, paceChance, pacedBase } from './roadPace'
 import type { SaveV2 } from './types'
 
 const file = lootboxJson
@@ -62,13 +63,20 @@ export function claimRoad(save: SaveV2): number {
   return moved
 }
 
-export function grantFindChest(save: SaveV2): number {
-  return addChest(save, 'kiesel', 1)
+export function grantFindChest(save: SaveV2, paced = false): number {
+  if (!paced) return addChest(save, 'kiesel', 1)
+  return addChest(save, 'kiesel', bankAdd(save, 'findChest', pacedBase(save, 1, 'chest')))
 }
 
-export function grantTrainerChest(save: SaveV2, rng: () => number): boolean {
-  if (rng() >= file.trainerSilver) return false
-  return addChest(save, 'silber', 1) > 0
+export function grantTrainerChest(save: SaveV2, rng: () => number, paced = false): boolean {
+  if (!paced) {
+    if (rng() >= file.trainerSilver) return false
+    return addChest(save, 'silber', 1) > 0
+  }
+  const scaled = paceChance(save, file.trainerSilver, 'chest')
+  bankRemainder(save, 'trainerChest', scaled.overflow)
+  const hit = rng() >= scaled.roll ? 0 : 1
+  return addChest(save, 'silber', hit + bankTake(save, 'trainerChest')) > 0
 }
 
 export function grantWardenChest(save: SaveV2): number {
@@ -132,34 +140,55 @@ export function buyChestForMarks(save: SaveV2, tier: 'gold' | 'sternen'): string
   return null
 }
 
-export function rollWildShard(save: SaveV2, speciesId: string, rng: () => number, now: number): 'shard' | 'unlock' | null {
+export function rollWildShard(save: SaveV2, speciesId: string, rng: () => number, now: number, paced = false): 'shard' | 'unlock' | null {
   const rarity = species(speciesId).baseRarity
   let chance = wildShardChance(rarity) * (1 + 0.1 * (save.chestTree?.shard ?? 0))
   if (fruitActive(save, 'spuer', now)) chance *= 1.5
   chance *= 1 + treeShardBonus(save)
-  if (rng() >= chance) return null
-  const owned = Object.values(save.mons).some((mon) => mon.species === speciesId)
-  const gained = takeWildShards(save)
-  save.shards[speciesId] = (save.shards[speciesId] ?? 0) + gained
-  noteDaily(save, 'shard', gained)
-  if (owned) return 'shard'
-  const need = unlockShardCost(rarity)
-  if ((save.shards[speciesId] ?? 0) < need) return 'shard'
-  save.shards[speciesId] -= need
-  const uid = takeId(save)
-  const mon = makeMon(speciesId, 1, now, 'spur')
-  mon.stars = save.stars[speciesId] ?? 0
-  save.mons[uid] = mon
-  if (save.team.length < 6) {
-    save.team.push(uid)
-    if (!save.active) save.active = uid
-  } else save.pc.push(uid)
-  const dex = save.dex[speciesId] ?? { seen: 0, caught: 0 }
-  dex.seen += 1
-  dex.caught += 1
-  save.dex[speciesId] = dex
-  grantCodexChests(save)
-  return 'unlock'
+  let gate = chance
+  if (paced) {
+    const scaled = paceChance(save, chance, 'shard')
+    gate = scaled.roll
+    bankRemainder(save, 'shard', scaled.overflow)
+  }
+  const grant = (): 'shard' | 'unlock' => {
+    const owned = Object.values(save.mons).some((mon) => mon.species === speciesId)
+    const gained = takeWildShards(save)
+    save.shards[speciesId] = (save.shards[speciesId] ?? 0) + gained
+    noteDaily(save, 'shard', gained)
+    if (owned) return 'shard'
+    const need = unlockShardCost(rarity)
+    if ((save.shards[speciesId] ?? 0) < need) return 'shard'
+    save.shards[speciesId] -= need
+    const uid = takeId(save)
+    const mon = makeMon(speciesId, 1, now, 'spur')
+    mon.stars = save.stars[speciesId] ?? 0
+    save.mons[uid] = mon
+    if (save.team.length < 6) {
+      save.team.push(uid)
+      if (!save.active) save.active = uid
+    } else save.pc.push(uid)
+    const dex = save.dex[speciesId] ?? { seen: 0, caught: 0 }
+    dex.seen += 1
+    dex.caught += 1
+    save.dex[speciesId] = dex
+    grantCodexChests(save)
+    return 'unlock'
+  }
+  if (rng() >= gate) {
+    if (!paced) return null
+    return drainShards()
+  }
+  const first = grant()
+  if (!paced) return first
+  return drainShards() ?? first
+
+  function drainShards(): 'shard' | 'unlock' | null {
+    let last: 'shard' | 'unlock' | null = null
+    const extra = bankTake(save, 'shard')
+    for (let i = 0; i < extra; i++) last = grant()
+    return last
+  }
 }
 
 export function raiseStar(save: SaveV2, speciesId: string): string | null {

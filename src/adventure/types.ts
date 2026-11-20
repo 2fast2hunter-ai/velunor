@@ -30,6 +30,14 @@ export interface LogLine {
   text: string
 }
 
+/** Fractional road rewards. Whole units are paid out and the rest stays here. */
+export interface RewardBank {
+  mastery: number
+  findChest: number
+  trainerChest: number
+  shard: number
+}
+
 export interface AdventureSettings {
   speed: Speed
   /** Road playback tempo. Missing on older saves, which keep `speed`. */
@@ -136,6 +144,13 @@ export interface SaveV2 {
   mastery?: Record<string, number>
   /** Mastery tree. Missing on older files; the loader fills an empty tree. */
   tree?: { nodes: string[], resetDay: string, sealDay: string }
+  /**
+   * Moving average of road-node length / 2800. Missing until the pace switch runs.
+   * Rewards then start from 1.6.
+   */
+  roadPace?: number
+  /** Fractions left after W. Missing until the pace switch runs. */
+  rewardBank?: RewardBank
   /** Play time saved toward the next road chest. */
   roadMs: number
   /** Kiesel chests waiting on the road, at most 4. */

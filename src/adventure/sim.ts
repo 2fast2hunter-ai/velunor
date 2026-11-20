@@ -41,6 +41,7 @@ import {
 import { chapterCapNow, regionRoster } from './dex'
 import { enteredRegions } from './lootbox'
 import { bankRoad, grantCouncilChest, grantFindChest, grantTrainerChest, grantWardenChest, rollWildShard } from './sources'
+import { bankAdd, noteRoadNode, PACE_K, paceWeight, roadPaceLive } from './roadPace'
 import { rollShiny, shinyChance, teamBlocksShiny } from './shiny'
 import { syncAchievements } from './achievements'
 import { advanceHort, HORT_EP_RATE } from './hort'
@@ -264,9 +265,10 @@ export function awardCombatExp(
   rarity: number,
   fighter: string,
   opts: ResolveOpts,
-  now: number
+  now: number,
+  pace = 1
 ): number {
-  const base = 8 * foeLevel * (1 + RARITY_EXP * rarity)
+  const base = 8 * foeLevel * (1 + RARITY_EXP * rarity) * pace
   let fighterExp = 0
   for (const uid of save.team) {
     const mon = save.mons[uid]
@@ -399,7 +401,17 @@ function noteMastery(save: SaveV2, fighter: string | null, amount: number, opts:
   addMastery(save, speciesId, amount)
 }
 
+/** Set for the encounter that is resolving. Offline nodes do not move `roadPace`. */
+let paceOffline = false
+
+/** Null keeps today's reward. A number is clamp(W, 1, 3.5) for this node. */
+function livePace(save: SaveV2, opts: ResolveOpts): number | null {
+  if (opts.offline || !roadPaceLive()) return null
+  return paceWeight(save)
+}
+
 function finish(save: SaveV2, chapter: ChapterDef, outcome: EncounterOutcome): EncounterOutcome {
+  noteRoadNode(save, outcome.kind, outcome.traces, paceOffline)
   outcome.hold = save.hold
   outcome.scene = chapter.scene
   outcome.masteryUps = pullMasteryUps()
@@ -553,8 +565,10 @@ function fightOne(save: SaveV2, chapter: ChapterDef, speciesId: string, level: n
   storeHp(allyMon, trace.allyHp, trace.allyMax)
   if (trace.win) {
     save.stats.wins += 1
-    noteMastery(save, fighter, MASTERY_WIN, opts)
-    const exp = awardCombatExp(save, cap, level, species(speciesId).baseRarity, fighter, opts, now)
+    const pace = livePace(save, opts)
+    const mastery = pace == null ? MASTERY_WIN : bankAdd(save, 'mastery', MASTERY_WIN * pace * PACE_K.mastery)
+    noteMastery(save, fighter, mastery, opts)
+    const exp = awardCombatExp(save, cap, level, species(speciesId).baseRarity, fighter, opts, now, pace == null ? 1 : pace * PACE_K.exp)
     if (opts.summary) opts.summary.fights += 1
     return { trace, fighter, exp }
   }
@@ -597,7 +611,8 @@ function runBouts(
   const gold = goldFor(wins)
   let paid = 0
   if (gold > 0 && wins === foes.length) {
-    paid = grantGold(save, gold, now)
+    const pace = livePace(save, opts)
+    paid = grantGold(save, pace == null ? gold : gold * pace * PACE_K.gold, now)
     if (opts.summary) opts.summary.gold += paid
   }
   return { traces, wins, lastFighter, wiped: false, gold: paid, exp }
@@ -637,7 +652,7 @@ function doWild(save: SaveV2, chapter: ChapterDef, now: number, opts: ResolveOpt
   say(save, outcome, now, line(save, 'say.winGold', { gold: outcome.gold }), quiet)
   noteDaily(save, 'wild', 1, species(speciesId).type)
   if (trace.foeKo) {
-    const traceDrop = rollWildShard(save, speciesId, rngOf(save), now)
+    const traceDrop = rollWildShard(save, speciesId, rngOf(save), now, livePace(save, opts) != null)
     if (traceDrop === 'unlock') {
       outcome.unlock = speciesId
       say(save, outcome, now, line(save, 'say.spurUnlock', { name }), quiet)
@@ -682,9 +697,10 @@ function doTrainer(save: SaveV2, chapter: ChapterDef, now: number, opts: Resolve
     advance(save, chapter)
     return finish(save, chapter, outcome)
   }
-  outcome.gold = 25 * foes.reduce((sum, foe) => sum + foe.level, 0)
+  const pace = livePace(save, opts)
+  outcome.gold = pace == null ? 25 * foes.reduce((sum, foe) => sum + foe.level, 0) : bouts.gold
   outcome.exp = bouts.exp
-  if (grantTrainerChest(save, rngOf(save))) say(save, outcome, now, line(save, 'say.trainerChest'), quiet)
+  if (grantTrainerChest(save, rngOf(save), pace != null)) say(save, outcome, now, line(save, 'say.trainerChest'), quiet)
   noteFarmWin(save)
   noteDaily(save, 'trainer', 1)
   say(save, outcome, now, line(save, 'say.trainerWin', { name, gold: outcome.gold }), quiet)
@@ -948,6 +964,16 @@ function doCouncil(save: SaveV2, chapter: ChapterDef, now: number, opts: Resolve
 }
 
 export function resolveEncounter(save: SaveV2, now: number, opts: ResolveOpts): EncounterOutcome {
+  const previous = paceOffline
+  paceOffline = Boolean(opts.offline)
+  try {
+    return resolveEncounterNow(save, now, opts)
+  } finally {
+    paceOffline = previous
+  }
+}
+
+function resolveEncounterNow(save: SaveV2, now: number, opts: ResolveOpts): EncounterOutcome {
   if (opts.summary) opts.summary.encounters += 1
   const chapter = chapterById(save.region, save.chapter)
   const quiet = opts.offline
@@ -980,7 +1006,8 @@ export function resolveEncounter(save: SaveV2, now: number, opts: ResolveOpts): 
   }
   if (kind === 'find') {
     const outcome = baseOutcome('find', save.step, chapter)
-    const gold = grantGold(save, findGold(chapter.id), now)
+    const pace = livePace(save, opts)
+    const gold = grantGold(save, pace == null ? findGold(chapter.id) : findGold(chapter.id) * pace * PACE_K.gold, now)
     outcome.gold = gold
     if (opts.summary) opts.summary.gold += gold
     const found = rollFindFruit(rngOf(save))
@@ -989,7 +1016,7 @@ export function resolveEncounter(save: SaveV2, now: number, opts: ResolveOpts): 
       const label = fruitDef(found).name
       say(save, outcome, now, line(save, 'say.findFruit', { gold, fruit: label }), quiet)
     } else say(save, outcome, now, line(save, 'say.find', { gold }), quiet)
-    if (grantFindChest(save) > 0) say(save, outcome, now, line(save, 'say.findChest'), quiet)
+    if (grantFindChest(save, pace != null) > 0) say(save, outcome, now, line(save, 'say.findChest'), quiet)
     advance(save, chapter)
     return finish(save, chapter, outcome)
   }

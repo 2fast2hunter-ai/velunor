@@ -25,6 +25,7 @@ import { chatErrorKey } from './chat'
 import { t, type Lang } from './i18n'
 import { shotAt, shouldRecover } from './present'
 import { actionAt, battleQueueOn, planBattle, roadQueueFromSearch, roadTempo, setRoadQueue, shotFromAction } from './battlePlayer'
+import { roadPaceFromSearch, setRoadPace } from './roadPace'
 import { species, typeColor } from '../data'
 import { teamWeatherMarks, weatherArrow, weatherAt } from './weather'
 import { ultName } from './ult'
@@ -543,6 +544,7 @@ export function bootAdventure(shell?: { storage: ShellStorage, native: boolean, 
 
   const params = new URLSearchParams(window.location.search)
   setRoadQueue(roadQueueFromSearch(debug, window.location.search) ? true : null)
+  setRoadPace(roadPaceFromSearch(debug, window.location.search) && battleQueueOn('road') ? true : null)
   const fxDemo = params.get('fx')
   if (debug && fxDemo === 'k8') {
     showK8Demo(params.get('part'))
