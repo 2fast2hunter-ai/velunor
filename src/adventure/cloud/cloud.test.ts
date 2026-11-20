@@ -108,15 +108,14 @@ describe('sync decisions', () => {
 describe('consent gating', () => {
   it('drops every event unless consent is yes, and rejects catch, gacha and ad names', () => {
     expect(EVENT_NAMES).toHaveLength(11)
-    expect(EVENT_NAMES).toContain('chest_open')
-    expect(EVENT_NAMES).not.toContain('lootbox_open')
+    expect(EVENT_NAMES).toContain('lootbox_open')
+    expect(EVENT_NAMES).not.toContain('chest_open')
     expect(EVENT_NAMES).not.toContain('catch_attempt')
     expect(EVENT_NAMES).not.toContain('catch_success')
     expect(acceptEvent('session_start', { app_version: '0.1.0' }, 'unset')).toBeNull()
     expect(acceptEvent('session_start', { app_version: '0.1.0' }, 'no')).toBeNull()
     expect(acceptEvent('catch_attempt', { speciesId: 'm01' }, 'yes')).toBeNull()
     expect(acceptEvent('catch_success', { speciesId: 'm01' }, 'yes')).toBeNull()
-    expect(acceptEvent('lootbox_open', { tier: 'kiesel' }, 'yes')).toBeNull()
     expect(acceptEvent('gacha_pull', { tier: 'gold' }, 'yes')).toBeNull()
     expect(acceptEvent('ad_view', { placement: 'shop' }, 'yes')).toBeNull()
     for (const name of EVENT_NAMES) {
@@ -216,7 +215,7 @@ describe('play events', () => {
       { speciesId: 'm04', rarity: 2, isNew: false, pityHit: false },
       { speciesId: 'm05', rarity: 4, isNew: true, pityHit: true }
     ], {}, { m04: 3 })
-    expect(opened.map((event) => event.event)).toEqual(['chest_open', 'chest_open', 'species_unlock', 'shard_drop'])
+    expect(opened.map((event) => event.event)).toEqual(['lootbox_open', 'lootbox_open', 'species_unlock', 'shard_drop'])
     expect(opened[0].props).toEqual({ tier: 'kiesel', rarity: 2, isNew: false, pityHit: false })
     expect(opened[1].props).toEqual({ tier: 'kiesel', rarity: 4, isNew: true, pityHit: true })
     expect(opened[2].props).toEqual({ speciesId: 'm05', via: 'chest' })
@@ -235,11 +234,11 @@ describe('play events', () => {
     expect(acceptEvent('species_unlock', { speciesId: 'm12', via: 'workshop' }, 'no')).toBeNull()
     expect(starEvent('m01', 3)).toEqual({ event: 'star_up', props: { species: 'm01', star: 3 } })
     expect(starEvent('ada@example.com', 1)).toBeNull()
-    const sql = readFileSync(new URL('../../../supabase/migrations/20261120120000_chest_open_event.sql', import.meta.url), 'utf8')
+    const sql = readFileSync(new URL('../../../supabase/migrations/20261119180000_species_unlock_event.sql', import.meta.url), 'utf8')
     expect(sql).toContain('events_event_check')
-    expect(sql).toContain("'chest_open'")
     expect(sql).toContain("'lootbox_open'")
-    expect(sql).not.toMatch(/update\s+public\.events/i)
+    expect(sql).toContain("'species_unlock'")
+    expect(sql).not.toContain("'chest_open'")
   })
 })
 

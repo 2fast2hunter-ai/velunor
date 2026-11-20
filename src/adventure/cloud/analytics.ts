@@ -1,6 +1,6 @@
 import { FLUSH_MS, QUEUE_MAX } from './config'
 
-/** The eleven events this client sends. No catch, gacha, ad, or payment events. The server still accepts the old name lootbox_open. */
+/** The eleven events the server accepts. No catch, gacha, ad, or payment events. */
 export const EVENT_NAMES = [
   'session_start',
   'tutorial_step',
@@ -9,7 +9,7 @@ export const EVENT_NAMES = [
   'stage_fail',
   'guardian_win',
   'guardian_fail',
-  'chest_open',
+  'lootbox_open',
   'shard_drop',
   'star_up',
   'species_unlock'

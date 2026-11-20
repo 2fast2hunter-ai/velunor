@@ -88,7 +88,7 @@ export function eventsForLoot(tier: string, grants: readonly LootOpen[], before:
   if (CHEST_TIER.has(tier)) {
     for (const grant of grants) {
       events.push({
-        event: 'chest_open',
+        event: 'lootbox_open',
         props: {
           tier,
           rarity: Math.max(0, Math.floor(grant.rarity)),
