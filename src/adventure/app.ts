@@ -27,6 +27,7 @@ import { shotAt, shouldRecover } from './present'
 import { actionAt, battleQueueOn, focusKo, focusSide, focusTempo, hitNumberPhase, planBattle, roadQueueFromSearch, roadTempo, setRoadQueue, shotFromAction } from './battlePlayer'
 import { battleLogFromTraces, lineFor, lineForFrame, logIconFile, rememberBattleLog, type BattleFightLog, type BattleLogLine } from './battleLog'
 import { hpLabel, typeEdge, weatherPct } from './battleHud'
+import { whyAutoMs, whyBattle, whyIconFile } from './battleWhy'
 import { roadPaceFromSearch, setRoadPace } from './roadPace'
 import { species, typeColor, typeMult } from '../data'
 import { teamWeatherMarks, weatherArrow, weatherAt, WEATHER_SHIFTS } from './weather'
@@ -2140,6 +2141,42 @@ function showMastery(ups: MasteryUp[] | undefined): void {
   }, 4300)
 }
 
+function showWhyChip(outcome: EncounterOutcome): void {
+  if (!save || !outcome.traces.length) return
+  lastWhy = outcome
+  const card = whyBattle(outcome.traces, { win: outcome.win, gold: outcome.gold, exp: outcome.exp }, save.settings.lang)
+  const chip = document.getElementById('why-chip')
+  const icon = document.querySelector<HTMLImageElement>('#why-chip img')
+  const text = document.getElementById('why-chip-text')
+  if (chip) chip.hidden = false
+  if (icon) icon.src = art(whyIconFile(card.chip.icon))
+  if (text) text.textContent = card.chip.sentence
+  if (!outcome.win && card.tips[0]) {
+    const line = document.getElementById('battle-log-text')
+    if (line) line.textContent = card.tips[0]
+  }
+}
+
+function openWhy(outcome: EncounterOutcome | null, focus: boolean): void {
+  if (!save || !outcome) return
+  const card = whyBattle(outcome.traces, { win: outcome.win, gold: outcome.gold, exp: outcome.exp }, save.settings.lang)
+  overlay = { kind: 'why', card, badge: outcome.badge }
+  render()
+  window.clearTimeout(whyTimer)
+  const ms = whyAutoMs(card.win, focus)
+  whyTimer = ms > 0 ? window.setTimeout(() => closeWhy(), ms) : 0
+}
+
+function closeWhy(): void {
+  window.clearTimeout(whyTimer)
+  whyTimer = 0
+  overlay = null
+  whyArmed = false
+  if (save) save.hold = false
+  render()
+  kick()
+}
+
 function finishPresent(outcome: EncounterOutcome): void {
   animating = false
   if (pendingOutcome === outcome) pendingOutcome = null
@@ -2155,14 +2192,12 @@ function finishPresent(outcome: EncounterOutcome): void {
     return
   }
   if (outcome.kind === 'guardian') {
-    overlay = {
-      kind: 'guard',
-      win: outcome.win,
-      badge: outcome.badge,
-      gold: outcome.gold,
-      text: outcome.lines.filter(Boolean).slice(-2).join(' ')
-    }
-    render()
+    openWhy(outcome, true)
+    return
+  }
+  if (whyArmed) {
+    whyArmed = false
+    openWhy(outcome, false)
     return
   }
   if (showAwaken()) return
@@ -2192,6 +2227,9 @@ function paintSprite(img: HTMLImageElement | null, speciesId: string, shiny: boo
 }
 
 let focusCtl: { paused: boolean, stop: () => void } | null = null
+let whyArmed = false
+let whyTimer = 0
+let lastWhy: EncounterOutcome | null = null
 let battleLogs: BattleFightLog[] = []
 let liveFight: BattleFightLog | null = null
 
@@ -2312,7 +2350,7 @@ function play(outcome: EncounterOutcome, speed: Speed, done: () => void): void {
     window.clearTimeout(impactTimer)
     if (raf) cancelAnimationFrame(raf)
     raf = 0
-    if (!skipped && outcome.win && outcome.traces.length) {
+    if (!skipped && outcome.win && outcome.traces.length && !focusOn) {
       showVictory(outcome, speed, reduced, regionTint(save?.region ?? 1), outcome.badge, () => {
         clearBattleFx()
         finish()
@@ -2404,6 +2442,7 @@ function play(outcome: EncounterOutcome, speed: Speed, done: () => void): void {
       if (frozen >= 0) motion = frozen
       const elapsed = frozen >= 0 || !(scriptAt > 0) ? motion : Math.max(0, motion - scriptAt)
       const queueStep = queue ? actionAt(queue, Math.min(elapsed, queueEnd)) : null
+      if (roadOn && queueStep?.phase === 'resultat') showWhyChip(outcome)
       let armFx = false
       if (queue && queueStep) {
         const stepIndex = queue.indexOf(queueStep)
@@ -3234,6 +3273,21 @@ function onClick(event: Event): void {
     save.settings.tempoFokus = tempo
     try { writeSave(gameStore, save) } catch { /* the next warden still reads the memory copy */ }
     paintFocusTempo()
+    return
+  }
+  if (act === 'why-open' && save) {
+    save.hold = true
+    whyArmed = true
+    if (!animating) openWhy(lastWhy, false)
+    return
+  }
+  if (act === 'why-log') {
+    overlay = { kind: 'battle-log' }
+    render()
+    return
+  }
+  if (act === 'why-next') {
+    closeWhy()
     return
   }
   if (act === 'focus-skip') {

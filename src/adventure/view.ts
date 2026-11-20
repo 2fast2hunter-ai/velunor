@@ -16,6 +16,7 @@ import { baseLine, dexPlaces, dexStatus, dexStatusLabel, listCodex, regionProgre
 import { goalName, goalTitle, rarityLabel, t, typeLabel, weatherLabel, whenLabel, type Lang } from './i18n'
 import { latestLine, logIconFile, sheetLine, type BattleFightLog, type BattleLogLine } from './battleLog'
 import { hpNumbersOn } from './battleHud'
+import { whyIconFile, type WhyCard } from './battleWhy'
 import { colorHex, colorId, skinHex } from './avatar'
 import { agoParts, continueFacts } from './continue'
 import { STARTER_ART, starterBars, strongTypes, typeList, weakTypes } from './starter'
@@ -112,6 +113,7 @@ export type Overlay =
   | { kind: 'log' }
   | { kind: 'battle-log' }
   | { kind: 'guard'; win: boolean; badge: string | null; gold: number; text: string }
+  | { kind: 'why'; card: WhyCard; badge: string | null }
   | { kind: 'chest-rates'; tier: ChestTier }
   | { kind: 'chest-reveal'; grant: ChestGrant; hold?: 'seal' | 'beam' | 'card' }
   | { kind: 'chest-summary'; grants: ChestGrant[] }
@@ -546,6 +548,7 @@ function battle(save: SaveV2, now: number, fighting = false, shadow = false, log
       <b id="ult-card-name"></b>
       <span id="ult-card-pattern"></span>
     </div>
+    <button type="button" class="why-chip" id="why-chip" data-act="why-open" hidden><img id="why-chip-icon" alt=""/><span id="why-chip-text"></span></button>
     <button type="button" class="battle-log" id="battle-log" data-act="battle-log">
       <img src="${art(logIconFile(logLine?.icon ?? 'angriff'))}" alt=""/>
       <span id="battle-log-text">${esc(logLine?.sentence ?? tr(save, 'log.none'))}</span>
@@ -2048,6 +2051,26 @@ export function battleLogBody(save: SaveV2, fights: readonly BattleFightLog[]): 
   </section>`).join('') + (index < fights.length - 1 ? '<hr/>' : '')).join('')
 }
 
+function whyCard(save: SaveV2, card: WhyCard, badge: string | null): string {
+  const frame = `border-image-source:url('${art('battle_ui/summary/karte.png')}')`
+  const rowFrame = `border-image-source:url('${art('battle_ui/summary/grund_zeile.png')}')`
+  const reasons = card.reasons.map((reason) => `<div class="why-row" style="${rowFrame}"><img src="${art(whyIconFile(reason.icon))}" alt=""/><p>${esc(reason.sentence)}</p></div>`).join('')
+  const tips = card.tips.map((tip) => `<div class="why-row" style="${rowFrame}"><img src="${art('battle_ui/summary/tipp.png')}" alt=""/><p>${esc(tip)}</p></div>`).join('')
+  const shares = card.shares.map((share) => {
+    const total = share.normal + share.ult + share.status
+    const pct = (part: number) => total > 0 ? Math.round((part / total) * 100) : 0
+    return `<div class="why-share"><b>${esc(share.name)}</b><span><i class="is-normal" style="width:${pct(share.normal)}%"></i><i class="is-ult" style="width:${pct(share.ult)}%"></i><i class="is-status" style="width:${pct(share.status)}%"></i></span></div>`
+  }).join('')
+  return `<div class="why-card" style="${frame}"><h2>${tr(save, 'why.title')}</h2>
+    <p>${tr(save, card.win ? 'why.win' : 'why.loss')} · ${tr(save, 'why.ko', { n: card.ko, total: card.koMax })}</p>
+    <p>${tr(save, 'why.reward', { gold: card.gold, exp: card.exp })}</p>
+    ${badge ? `<p>${esc(badge)}</p>` : ''}
+    ${reasons}${shares}${tips}
+    <button type="button" data-act="why-log">${tr(save, 'why.log')}</button>
+    <button type="button" class="primary" data-act="why-next">${tr(save, 'why.next')}</button>
+  </div>`
+}
+
 function overlayHtml(save: SaveV2, overlay: Overlay, fights: readonly BattleFightLog[]): string {
   if (overlay.kind === 'wallet') {
     const gold = overlay.id === 'gold'
@@ -2151,6 +2174,7 @@ function overlayHtml(save: SaveV2, overlay: Overlay, fights: readonly BattleFigh
     <button type="button" class="primary" data-act="close">${tr(save, 'welcome.next')}</button>
     </div>`
   }
+  if (overlay.kind === 'why') return whyCard(save, overlay.card, overlay.badge)
   if (overlay.kind === 'guard') {
     return `<div class="sheet" data-sheet="swipe">${grab()}<div class="sheet-body"><div class="kicker">${tr(save, 'guard.title')}</div><h2>${tr(save, overlay.win ? 'guard.win' : 'guard.loss')}</h2>
       <p>${esc(overlay.text)}</p>
