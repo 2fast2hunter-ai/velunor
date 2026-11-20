@@ -1,5 +1,7 @@
-// Headless road fight at ×3, 390×844, CPU 4×.
+// Headless road fight at ×3, 390×844, CPU 4×. One sample.
 // Prints the mean of the slowest 5% of animation frames. Target: ≥ 30 fps.
+// This single run is the acceptance check. The CI tap test takes the median
+// of three samples so one wobble on the runner does not block the deploy.
 // Run from the repo root: node docs/autokampf/mess/road-fps.mjs
 import { createServer } from 'vite'
 import { chromium } from 'playwright-core'
