@@ -355,8 +355,8 @@ textarea { width: 100%; box-sizing: border-box; background: #121a30; color: inhe
 }
 .wx-stack {
   position: absolute; z-index: 7; top: 12px; left: 16px; right: auto;
-  width: min(420px, 36%);
-  display: flex; flex-direction: column; align-items: flex-start; gap: 8px;
+  width: min(640px, 58%);
+  display: flex; flex-direction: column; align-items: stretch; gap: 8px;
   pointer-events: none;
 }
 .wx-chip {
@@ -364,7 +364,7 @@ textarea { width: 100%; box-sizing: border-box; background: #121a30; color: inhe
   display: flex; align-items: center; justify-content: center; gap: 8px;
   max-width: 100%; box-sizing: border-box;
   padding: 8px 14px; border-radius: 999px; background: rgba(8, 12, 24, 0.82);
-  color: #f4efe4; font-weight: 800; font-size: 32px; white-space: nowrap;
+  color: #f4efe4; font-weight: 800; font-size: 32px; white-space: normal; max-width: 100%;
 }
 .wx-chip img { width: 36px; height: 36px; object-fit: contain; }
 .wx-arrow { width: 28px; height: 28px; margin-left: 6px; vertical-align: middle; }
@@ -485,9 +485,12 @@ textarea { width: 100%; box-sizing: border-box; background: #121a30; color: inhe
 .reduce-motion .hp .hp-fill { transition: none; }
 .hp-num { display: none; margin-top: 4px; font-size: 32px; font-weight: 800; color: #fff8e1; -webkit-text-stroke: 3px #1a1208; paint-order: stroke fill; }
 #stage.hp-nums .hp-num { display: block; }
-.ult-bar.small { display: flex; align-items: center; gap: 6px; min-height: 40px; margin-top: 6px; }
+.ult-bar.small { display: flex; align-items: center; gap: 6px; min-height: 40px; min-width: max-content; margin-top: 6px; }
 .ult-bar.small .ult-seg { width: 36px; height: 36px; }
 .ult-bar .ult-lock, .ult-bar .ult-ready { display: flex; align-items: center; gap: 6px; font-size: 32px; font-weight: 800; color: #fff8e1; }
+.ult-bar .ult-lock[hidden], .ult-bar .ult-ready[hidden] { display: none !important; }
+.ult-bar .ult-lock b, .ult-bar .ult-ready { white-space: nowrap; }
+.ult-bar .ult-ready { -webkit-text-stroke: 3px #4a2c17; paint-order: stroke fill; }
 .ult-bar .ult-lock img { width: 36px; height: 36px; }
 .ult-bar.is-locked .ult-lock { display: flex; }
 .ult-bar:not(.is-locked) .ult-lock { display: none; }
@@ -495,8 +498,10 @@ textarea { width: 100%; box-sizing: border-box; background: #121a30; color: inhe
 .ult-bar.is-ready .ult-ready { display: flex; }
 .status-chip[hidden], .adv-chip[hidden], .wx-tag[hidden], .ult-card[hidden], .wx-announce[hidden] { display: none; }
 .status-chip {
-  display: inline-flex; align-items: center; gap: 8px; min-height: 64px; margin-top: 6px; padding: 0 12px;
-  border: 0; border-radius: 18px; background: rgba(255, 250, 240, 0.92); color: #4a2c17; font-size: 32px; font-weight: 800;
+  display: inline-flex; align-items: center; gap: 8px; min-height: 64px; margin-top: 6px; padding: 0 4px;
+  border: 30px solid transparent; border-radius: 18px;
+  border-image: var(--status-chip) 30 32 32 32 fill / 30px 32px 32px 32px / 6px stretch;
+  background: #fffaf0 padding-box; color: #4a2c17; font-size: 32px; font-weight: 800;
 }
 .status-chip img:first-child { width: 40px; height: 40px; object-fit: contain; }
 .status-chip .status-stack { position: relative; width: 40px; height: 40px; }
@@ -510,7 +515,11 @@ textarea { width: 100%; box-sizing: border-box; background: #121a30; color: inhe
   background: rgba(74, 44, 23, 0.35) padding-box; border-radius: 28px;
 }
 .adv-chip img { width: 52px; height: 52px; object-fit: contain; }
-.wx-announce { margin: 0; max-width: 100%; font-size: 40px; font-weight: 800; color: #fff8e1; text-align: center; }
+.wx-announce {
+  margin: 0; max-width: 100%; padding: 8px 20px; border-radius: 18px;
+  background: rgba(8, 12, 24, 0.78); font-size: 40px; font-weight: 800; color: #fff8e1; text-align: center;
+  -webkit-text-stroke: 3px #1a1208; paint-order: stroke fill;
+}
 .wx-tag {
   position: absolute; z-index: 9; display: inline-flex; align-items: center; gap: 6px; height: 56px; padding: 0 12px;
   color: #1d3d66; font-weight: 800; font-size: 32px; background: rgba(232, 244, 255, 0.94); border-radius: 16px;
@@ -643,18 +652,23 @@ textarea { width: 100%; box-sizing: border-box; background: #121a30; color: inhe
   top: 12px;
   bottom: auto;
   left: 16px;
-  width: min(420px, 36%);
-  align-items: flex-start;
+  right: auto;
+  width: min(640px, 58%);
+  align-items: stretch;
   pointer-events: none;
 }
+.battle:has(#focus-bar:not([hidden])) .combatant.foe { margin-top: 280px; }
+.battle:has(#focus-bar:not([hidden])) .focus-bar { left: auto; right: 16px; }
+#stage:has(#focus-bar:not([hidden])) .speed,
+#stage:has(#focus-bar:not([hidden])) [data-act="challenge"] { display: none !important; }
 .battle:has(#focus-bar:not([hidden])) .name-banner {
   top: auto;
   bottom: 46%;
 }
 .battle:has(#focus-bar:not([hidden])) .battle-log {
-  left: 470px;
-  right: 180px;
-  width: auto;
+  left: 16px;
+  right: auto;
+  width: min(480px, 46%);
   bottom: 12px;
 }
 .battle-log {
@@ -662,7 +676,7 @@ textarea { width: 100%; box-sizing: border-box; background: #121a30; color: inhe
   z-index: 8;
   left: 16px;
   right: 180px;
-  bottom: 12px;
+  bottom: 168px;
   min-height: 64px;
   height: auto;
   display: flex;
@@ -689,7 +703,7 @@ textarea { width: 100%; box-sizing: border-box; background: #121a30; color: inhe
   overflow: auto;
   padding: 16px;
   border-radius: 22px;
-  background: rgba(8, 12, 24, 0.94);
+  background: #080c18;
   color: #fff8e1;
 }
 .battle-log-sheet[hidden] { display: none; }
@@ -2107,3 +2121,23 @@ a.ghost { color: inherit; text-decoration: none; display: inline-block; }
 .chat-line { border-radius: 18px; background: #121a30; padding: 10px 12px; }
 .chat-icon { width: 52px; height: 52px; vertical-align: -4px; margin-right: 4px; }
 .chat-form .chat-icon { width: 60px; height: 60px; }
+.why-card button[data-act*="log"] {
+  box-sizing: border-box;
+  background: none !important;
+  border-style: solid !important;
+  border-color: transparent !important;
+  border-width: 16px 22px 18px !important;
+  border-radius: 0 !important;
+  box-shadow: none !important;
+  border-image-source: var(--kit-button-secondary-normal) !important;
+  border-image-slice: 60 64 70 fill !important;
+  border-image-width: 28px 32px 32px !important;
+  border-image-outset: 6px !important;
+  border-image-repeat: stretch !important;
+  color: var(--ink-light) !important;
+  text-shadow: var(--ink-shadow) !important;
+  font-family: var(--ui-font);
+  font-weight: 700;
+  min-height: 88px;
+}
+.why-card .why-row.is-tip ~ .why-row.is-tip ~ .why-row.is-tip { display: none; }

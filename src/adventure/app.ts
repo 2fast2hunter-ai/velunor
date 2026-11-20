@@ -2281,6 +2281,7 @@ function showFocusChrome(): void {
   if (text) {
     text.classList.add('is-callout')
     text.setAttribute('aria-live', 'polite')
+    text.style.setProperty('--callout', `url("${art('battle_ui/callout/ansage.png')}")`)
     text.style.borderImage = `url("${art('battle_ui/callout/ansage.png')}") 48 52 52 52 fill / 48px 52px 52px 52px / 12px stretch`
   }
   paintFocusTempo()
@@ -2292,6 +2293,7 @@ function hideFocusChrome(): void {
   if (text) {
     text.classList.remove('is-callout')
     text.style.borderImage = ''
+    text.style.removeProperty('--callout')
   }
   const ally = document.getElementById('spotlight-ally')
   const foe = document.getElementById('spotlight-foe')
@@ -2645,6 +2647,7 @@ function paintMark(id: string, mark: string | null, stacks: number): void {
   }
   const spec = AILMENTS[mark as AilmentId]
   node.hidden = false
+  node.style.setProperty('--status-chip', `url("${art('battle_ui/status/chip.png')}")`)
   const img = node.querySelector('img')
   if (img instanceof HTMLImageElement) {
     img.src = art(ailmentIcon(spec.id))
@@ -2773,9 +2776,12 @@ function paintUlt(id: string, n: number, open: boolean): void {
     const file = ready ? 'seg_bereit_s' : index < filled ? 'seg_voll_s' : 'seg_leer_s'
     img.src = art(`battle_ui/ult/${file}.png`)
   })
-  const note = node.querySelector('.ult-lock b')
-  if (note) note.textContent = t(save?.settings.lang, 'battle.ultLocked')
+  const lock = node.querySelector('.ult-lock')
   const banner = node.querySelector('.ult-ready')
+  if (lock instanceof HTMLElement) lock.hidden = open
+  if (banner instanceof HTMLElement) banner.hidden = !ready
+  const note = lock?.querySelector('b')
+  if (note) note.textContent = t(save?.settings.lang, 'battle.ultLocked')
   if (banner) banner.textContent = t(save?.settings.lang, 'battle.ultReady')
 }
 

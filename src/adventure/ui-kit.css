@@ -1619,3 +1619,15 @@ button.log div { grid-column: 2; }
   min-width: 132px;
 }
 .achieve .list-actions button .ui-icon { width: 36px !important; height: 36px !important; }
+#battle-text.battle-status.is-callout {
+  border-style: solid !important;
+  border-color: transparent !important;
+  border-width: 26px !important;
+  border-radius: 36px !important;
+  border-image: var(--callout) 48 52 52 52 fill / 48px 52px 52px 52px / 12px stretch !important;
+  background-color: rgba(255, 250, 240, 0.92) !important;
+  background-clip: padding-box !important;
+  color: #4a2c17 !important;
+  text-shadow: none !important;
+  padding: 28px 36px !important;
+}

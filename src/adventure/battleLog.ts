@@ -148,7 +148,7 @@ export function battleLogFromTraces(traces: readonly FightTrace[], lang: Lang): 
       if (!hits.length) {
         const who = frame.text.includes(trace.foeName) && !frame.text.includes(trace.allyName) ? trace.foeName : trace.allyName
         lines.push({
-          icon: 'status',
+          icon: 'schild',
           sentence: t(lang, 'log.wait', { who }),
           who,
           move: t(lang, 'log.waitMove'),

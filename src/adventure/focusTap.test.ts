@@ -89,6 +89,16 @@ async function assertRoadDock(page: Page): Promise<void> {
   }, { x, y })
   expect(hit, 'tap on ×1').toBe('1')
   await page.touchscreen.tap(x, y)
+  await page.locator('.float-num').first().waitFor({ timeout: 20_000 })
+  await page.locator('#battle-log').click()
+  await page.locator('[data-act="log-close"]').waitFor({ timeout: 5000 })
+  const close = await box(page, '[data-act="log-close"]')
+  expect(close && close.height, 'close button').toBeGreaterThan(10)
+  const speed3 = await box(page, '[data-act="speed"][data-speed="3"]')
+  const sheet = await box(page, '#battle-log-sheet')
+  if (sheet && speed3) expect(overlaps(sheet, speed3), 'sheet covers ×3').toBe(false)
+  if (close) await page.touchscreen.tap(close.x + close.width / 2, close.y + close.height / 2)
+  await expect.poll(async () => page.locator('#battle-log-sheet').getAttribute('hidden')).not.toBeNull()
 }
 
 async function assertNamesFree(page: Page): Promise<void> {
@@ -118,10 +128,37 @@ async function assertClear(page: Page): Promise<void> {
   const log = await box(page, '#battle-log')
   expect(bar).toBeTruthy()
   if (bar && log && log.width > 2) expect(overlaps(bar, log), 'focus bar covers the battle log').toBe(false)
+  const allyName = await box(page, '#ally-name')
+  const allyHp = await box(page, '#ally-hp-num')
+  if (bar && allyName && allyName.width > 8) expect(overlaps(bar, allyName), 'focus bar covers the ally name').toBe(false)
+  if (bar && allyHp && allyHp.width > 8) expect(overlaps(bar, allyHp), 'focus bar covers the ally HP').toBe(false)
+  expect(await page.locator('.speed').isVisible(), 'road tempo hidden in focus').toBe(false)
+  expect(await page.locator('[data-act="challenge"]').isVisible(), 'challenge hidden in focus').toBe(false)
   if (bar && foeName && foeName.width > 2) expect(overlaps(bar, foeName), 'focus bar covers the foe name').toBe(false)
   if (bar && foeHp && foeHp.width > 2) expect(overlaps(bar, foeHp), 'focus bar covers the foe HP').toBe(false)
   if (weather && foeName && foeName.width > 2) expect(overlaps(weather, foeName), 'weather chip covers the foe name').toBe(false)
   if (weather && foeHp && foeHp.width > 2) expect(overlaps(weather, foeHp), 'weather chip covers the foe HP').toBe(false)
+  const callout = await box(page, '#battle-text')
+  const allyActor = await box(page, '#ally-actor')
+  if (callout && foeName && foeName.width > 2) expect(overlaps(callout, foeName), 'callout covers the foe name').toBe(false)
+  if (callout && foeHp && foeHp.width > 2) expect(overlaps(callout, foeHp), 'callout covers the foe HP').toBe(false)
+  if (bar && allyActor && allyActor.height > 2) expect(overlaps(bar, allyActor), 'focus bar covers the ally').toBe(false)
+  const chrome = await page.evaluate(() => {
+    const node = document.getElementById('battle-text')
+    const bar = document.getElementById('ally-ult')
+    const lock = bar?.querySelector('.ult-lock')
+    const ready = bar?.querySelector('.ult-ready')
+    return {
+      image: node ? getComputedStyle(node).borderImageSource : '',
+      locked: bar?.classList.contains('is-locked') ?? false,
+      ready: bar?.classList.contains('is-ready') ?? false,
+      lockHidden: lock instanceof HTMLElement ? lock.hidden : true,
+      readyHidden: ready instanceof HTMLElement ? ready.hidden : true
+    }
+  })
+  expect(chrome.image, 'callout frame').toContain('ansage')
+  expect(chrome.lockHidden, 'ult lock hidden').toBe(!chrome.locked)
+  expect(chrome.readyHidden, 'ult ready hidden').toBe(!chrome.ready)
   for (const tempo of ['1', '2']) {
     const button = await box(page, `[data-act="focus-tempo"][data-tempo="${tempo}"]`)
     expect(button && button.width).toBeGreaterThan(20)

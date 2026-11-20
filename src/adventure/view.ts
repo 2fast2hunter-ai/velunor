@@ -482,9 +482,9 @@ function path(save: SaveV2, here: number): string {
   return pathNodes(cells, false)
 }
 
-function ultSegments(): string {
+function ultSegments(locked: boolean, label: string): string {
   return Array.from({ length: 5 }, (_, index) => `<img class="ult-seg" data-i="${index}" src="${art('battle_ui/ult/seg_leer_s.png')}" alt=""/>`).join('')
-    + `<span class="ult-lock" hidden><img src="${art('battle_ui/ult/schloss_s.png')}" alt=""/><b></b></span><span class="ult-ready" hidden></span>`
+    + `<span class="ult-lock"${locked ? '' : ' hidden'}><img src="${art('battle_ui/ult/schloss_s.png')}" alt=""/><b>${esc(label)}</b></span><span class="ult-ready" hidden></span>`
 }
 
 function battle(save: SaveV2, now: number, fighting = false, shadow = false, logLine: BattleLogLine | null = null): string {
@@ -516,7 +516,7 @@ function battle(save: SaveV2, now: number, fighting = false, shadow = false, log
         <div class="hp"><span class="hp-ghost" id="foe-hp-ghost"></span><span class="hp-fill" id="foe-hp" style="width:100%"></span></div>
         <b class="hp-num" id="foe-hp-num"></b>
         <button type="button" class="status-chip" id="foe-status" data-act="status" data-who="foe" hidden><img alt=""/><span class="status-name"></span><span class="status-stack"><img src="${art('battle_ui/status/stapel.png')}" alt=""/><b></b></span></button>
-        <div class="ult-bar small" id="foe-ult" data-n="0">${ultSegments()}</div>
+        <div class="ult-bar small is-locked" id="foe-ult" data-n="0" data-open="0">${ultSegments(true, tr(save, 'battle.ultLocked'))}</div>
         <img class="sprite" id="foe-sprite" alt="" hidden/>
         <span class="ground-shadow"></span>
       </div>
@@ -528,7 +528,7 @@ function battle(save: SaveV2, now: number, fighting = false, shadow = false, log
         <div class="hp"><span class="hp-ghost" id="ally-hp-ghost"></span><span class="hp-fill" id="ally-hp" style="width:${(hp.hp / hp.max) * 100}%"></span></div>
         <b class="hp-num" id="ally-hp-num">${mon ? `${hp.hp} / ${hp.max}` : ''}</b>
         <button type="button" class="status-chip" id="ally-status" data-act="status" data-who="ally" hidden><img alt=""/><span class="status-name"></span><span class="status-stack"><img src="${art('battle_ui/status/stapel.png')}" alt=""/><b></b></span></button>
-        <div class="ult-bar small ${mon && mon.lvl >= 25 ? '' : 'is-locked'}" id="ally-ult" data-n="0" data-open="${mon && mon.lvl >= 25 ? '1' : '0'}">${ultSegments()}</div>
+        <div class="ult-bar small ${mon && mon.lvl >= 25 ? '' : 'is-locked'}" id="ally-ult" data-n="0" data-open="${mon && mon.lvl >= 25 ? '1' : '0'}">${ultSegments(!(mon && mon.lvl >= 25), tr(save, 'battle.ultLocked'))}</div>
         <div id="aura-flash" class="aura-flash" hidden></div>
         ${mon ? `<img class="sprite ${mon.shiny ? 'is-shiny' : ''}" id="ally-sprite" src="${monsterArt(mon.species, true)}" alt=""/>` : ''}
         <span class="ground-shadow"></span>
@@ -2055,7 +2055,7 @@ function whyCard(save: SaveV2, card: WhyCard, badge: string | null): string {
   const frame = `border-image-source:url('${art('battle_ui/summary/karte.png')}')`
   const rowFrame = `border-image-source:url('${art('battle_ui/summary/grund_zeile.png')}')`
   const reasons = card.reasons.map((reason) => `<div class="why-row" style="${rowFrame}"><img src="${art(whyIconFile(reason.icon))}" alt=""/><p>${esc(reason.sentence)}</p></div>`).join('')
-  const tips = card.tips.map((tip) => `<div class="why-row" style="${rowFrame}"><img src="${art('battle_ui/summary/tipp.png')}" alt=""/><p>${esc(tip)}</p></div>`).join('')
+  const tips = card.tips.map((tip) => `<div class="why-row is-tip" style="${rowFrame}"><img src="${art('battle_ui/summary/tipp.png')}" alt=""/><p>${esc(tip)}</p></div>`).join('')
   const shares = card.shares.map((share) => {
     const total = share.normal + share.ult + share.status
     const pct = (part: number) => total > 0 ? Math.round((part / total) * 100) : 0
@@ -2066,7 +2066,7 @@ function whyCard(save: SaveV2, card: WhyCard, badge: string | null): string {
     <p>${tr(save, 'why.reward', { gold: card.gold, exp: card.exp })}</p>
     ${badge ? `<p>${esc(badge)}</p>` : ''}
     ${reasons}${shares}${tips}
-    <button type="button" data-act="why-log">${tr(save, 'why.log')}</button>
+    <button type="button" class="why-log" data-act="why-log">${tr(save, 'why.log')}</button>
     <button type="button" class="primary" data-act="why-next">${tr(save, 'why.next')}</button>
   </div>`
 }

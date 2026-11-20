@@ -92,7 +92,7 @@ export function whyBattle(traces: readonly FightTrace[], facts: { win: boolean, 
     exp: facts.exp,
     reasons: picked,
     shares,
-    tips: tips.slice(0, 3),
+    tips: tips.slice(0, 2),
     chip: picked[0],
     wait: !facts.win
   }
