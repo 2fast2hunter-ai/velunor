@@ -14,6 +14,7 @@ import {
 import { fontFactor } from './touch'
 import { baseLine, dexPlaces, dexStatus, dexStatusLabel, listCodex, regionProgress, speciesNumber, type DexFilter } from './dex'
 import { goalName, goalTitle, rarityLabel, t, typeLabel, weatherLabel, whenLabel, type Lang } from './i18n'
+import { latestLine, logIconFile, type BattleFightLog, type BattleLogLine } from './battleLog'
 import { colorHex, colorId, skinHex } from './avatar'
 import { agoParts, continueFacts } from './continue'
 import { STARTER_ART, starterBars, strongTypes, typeList, weakTypes } from './starter'
@@ -108,6 +109,7 @@ export type Overlay =
   | { kind: 'awaken'; uid: string; level: 25 | 50 }
   | { kind: 'offline'; done: number; total: number }
   | { kind: 'log' }
+  | { kind: 'battle-log' }
   | { kind: 'guard'; win: boolean; badge: string | null; gold: number; text: string }
   | { kind: 'chest-rates'; tier: ChestTier }
   | { kind: 'chest-reveal'; grant: ChestGrant; hold?: 'seal' | 'beam' | 'card' }
@@ -140,6 +142,8 @@ export interface ShellFlags {
   trade?: TradePanel
   guild?: GuildPanel
   chat?: ChatPanel
+  /** Last fights of this session. Not part of the save. */
+  battleLog?: BattleFightLog[]
 }
 
 export interface ChatLine {
@@ -475,7 +479,7 @@ function path(save: SaveV2, here: number): string {
   return pathNodes(cells, false)
 }
 
-function battle(save: SaveV2, now: number, fighting = false, shadow = false): string {
+function battle(save: SaveV2, now: number, fighting = false, shadow = false, logLine: BattleLogLine | null = null): string {
   const chapter = chapterById(save.region, save.chapter)
   const scene = sceneFile(chapter.scene, chapter.tint)
   const wide = scene.webp.replace('_p.webp', '.webp')
@@ -527,6 +531,11 @@ function battle(save: SaveV2, now: number, fighting = false, shadow = false): st
       <button type="button" class="victory" id="victory" hidden></button>
       <img class="crest-fly" id="crest-fly" alt="" hidden/>
     </div>
+    <button type="button" class="battle-log" id="battle-log" data-act="battle-log">
+      <img src="${art(logIconFile(logLine?.icon ?? 'angriff'))}" alt=""/>
+      <span id="battle-log-text">${esc(logLine?.sentence ?? tr(save, 'log.none'))}</span>
+    </button>
+    <div class="battle-log-sheet" id="battle-log-sheet" hidden></div>
     <div class="flash" id="flash"></div>
     <img class="seal" id="seal" alt="" src="${art(SEAL_ADD)}" data-fb="${art(SEAL_FALLBACK)}" style="left:${FOE_X}%;top:${FOE_Y}%"/>
     <div class="battle-top">
@@ -1988,7 +1997,7 @@ export function gameHtml(save: SaveV2, screen: Screen, now: number, pc: PcQuery,
         ${adventure ? chapterLine(save, step, mapOpen) : ''}
         ${adventure ? path(save, step) : ''}
       </div>
-      <div class="anchor anchor-mid">${adventure ? battle(save, now, shell.fighting, cloudState(shell).flagLevel === 2) : center(save, screen, now, pc, dex, selected, debug, wheel, shell)}</div>
+      <div class="anchor anchor-mid">${adventure ? battle(save, now, shell.fighting, cloudState(shell).flagLevel === 2, latestLine(shell.battleLog ?? [])) : center(save, screen, now, pc, dex, selected, debug, wheel, shell)}</div>
       <div class="anchor anchor-bot">
         ${adventure ? teamDock(save) : ''}
         ${adventure ? logBox(save) : ''}
@@ -1998,7 +2007,7 @@ export function gameHtml(save: SaveV2, screen: Screen, now: number, pc: PcQuery,
       ${map}
       ${adventure && sideOpen ? drawerSheet(save, now) : ''}
       ${moreSheet(save, moreOpen)}
-      ${overlay ? `<div class="overlay overlay-sheet">${overlayHtml(save, overlay)}</div>` : ''}
+      ${overlay ? `<div class="overlay overlay-sheet">${overlayHtml(save, overlay, shell.battleLog ?? [])}</div>` : ''}
       ${shell.masteryNote ? `<p class="mastery-toast" role="status">${esc(shell.masteryNote)}</p>` : ''}
     </div>
     <div class="band band-bot"></div>
@@ -2009,7 +2018,18 @@ function grab(): string {
   return `<div class="sheet-grab"><span class="sheet-handle"></span></div>`
 }
 
-function overlayHtml(save: SaveV2, overlay: Overlay): string {
+export function battleLogBody(save: SaveV2, fights: readonly BattleFightLog[]): string {
+  if (!fights.length) return `<p class="muted">${tr(save, 'log.none')}</p>`
+  return fights.map((fight, index) => fight.bouts.map((bout) => `<section>
+    <h3>${esc(bout.label)}</h3>
+    ${bout.lines.map((line) => `<div class="battle-log-row">
+      <img src="${art(logIconFile(line.icon))}" alt=""/>
+      <p><b>${esc(line.sentence)}</b>${line.tags.length ? `<span class="muted"> ${esc(line.tags.join(' · '))}</span>` : ''}</p>
+    </div>`).join('')}
+  </section>`).join('') + (index < fights.length - 1 ? '<hr/>' : '')).join('')
+}
+
+function overlayHtml(save: SaveV2, overlay: Overlay, fights: readonly BattleFightLog[]): string {
   if (overlay.kind === 'wallet') {
     const gold = overlay.id === 'gold'
     const amount = (gold ? save.gold : save.marks).toLocaleString('de-DE')
@@ -2068,6 +2088,9 @@ function overlayHtml(save: SaveV2, overlay: Overlay): string {
       </div>
       <button type="button" class="primary" data-act="chest-skip">${tr(save, 'chest.next')}</button>
     </div>`
+  }
+  if (overlay.kind === 'battle-log') {
+    return `<div class="sheet log-full" data-sheet="swipe">${grab()}<h2>${tr(save, 'log.battle')}</h2><div class="log-full-body">${battleLogBody(save, fights)}</div><button type="button" class="primary" data-act="close">${tr(save, 'log.close')}</button></div>`
   }
   if (overlay.kind === 'log') {
     return `<div class="sheet log-full" data-sheet="swipe">${grab()}<h2>${tr(save, 'log.title')}</h2><div class="log-full-body">${logLines(save, 50)}</div><button type="button" class="primary" data-act="close">${tr(save, 'log.close')}</button></div>`

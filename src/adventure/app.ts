@@ -25,6 +25,7 @@ import { chatErrorKey } from './chat'
 import { t, type Lang } from './i18n'
 import { shotAt, shouldRecover } from './present'
 import { actionAt, battleQueueOn, focusKo, focusSide, focusTempo, planBattle, roadQueueFromSearch, roadTempo, setRoadQueue, shotFromAction } from './battlePlayer'
+import { battleLogFromTraces, lineFor, lineForFrame, logIconFile, rememberBattleLog, type BattleFightLog, type BattleLogLine } from './battleLog'
 import { roadPaceFromSearch, setRoadPace } from './roadPace'
 import { species, typeColor } from '../data'
 import { teamWeatherMarks, weatherArrow, weatherAt } from './weather'
@@ -115,6 +116,7 @@ import {
 import { crestArt } from './crestArt'
 import {
   art,
+  battleLogBody,
   brokenHtml,
   cloudLayerHtml,
   continueHtml,
@@ -1285,7 +1287,7 @@ function render(step = save?.step): void {
     mult: wheelMult,
     symbols: wheelSymbols,
     note: wheelNote
-  }, { mapOpen, moreOpen, pcScroll, filtersOpen, dexOpen, shopTab, shopHint: Date.now() < shopFlashUntil, fighting: animating, cloud: mergedCloud(), masteryNote: Date.now() < masteryUntil ? masteryNote : '', ranks: { ...rankView, board: rankBoard, excluded: mergedCloud().flagLevel === 2 }, treePick, arena: arenaPanel, social: socialPanel, expeditionPick, trade: tradePanel, guild: guildPanel, chat: chatPanel }))
+  }, { mapOpen, moreOpen, pcScroll, filtersOpen, dexOpen, shopTab, shopHint: Date.now() < shopFlashUntil, fighting: animating, cloud: mergedCloud(), masteryNote: Date.now() < masteryUntil ? masteryNote : '', ranks: { ...rankView, board: rankBoard, excluded: mergedCloud().flagLevel === 2 }, treePick, arena: arenaPanel, social: socialPanel, expeditionPick, trade: tradePanel, guild: guildPanel, chat: chatPanel, battleLog: battleLogs }))
   if (screen === 'team') {
     pcIds = visiblePc(save, pc)
     const view = document.getElementById('pc-viewport')
@@ -2189,6 +2191,28 @@ function paintSprite(img: HTMLImageElement | null, speciesId: string, shiny: boo
 }
 
 let focusCtl: { paused: boolean, stop: () => void } | null = null
+let battleLogs: BattleFightLog[] = []
+let liveFight: BattleFightLog | null = null
+
+function paintBattleLog(line: BattleLogLine | null): void {
+  const text = document.getElementById('battle-log-text')
+  const img = document.querySelector<HTMLImageElement>('#battle-log img')
+  if (!text) return
+  text.textContent = line?.sentence ?? (save ? t(save.settings.lang, 'log.none') : '')
+  if (img) img.src = art(logIconFile(line?.icon ?? 'angriff'))
+}
+
+function openBattleLogPanel(): void {
+  const sheet = document.getElementById('battle-log-sheet')
+  if (!sheet || !save) return
+  if (!sheet.hidden && sheet.innerHTML) {
+    sheet.hidden = true
+    sheet.innerHTML = ''
+    return
+  }
+  sheet.innerHTML = battleLogBody(save, battleLogs)
+  sheet.hidden = false
+}
 
 function tempoArt(name: string): string {
   return art(`battle_ui/tempo/${name}.png`)
@@ -2340,6 +2364,16 @@ function play(outcome: EncounterOutcome, speed: Speed, done: () => void): void {
   if (focusOn) {
     focusCtl = { paused: false, stop: () => { skipped = true; finishOnce() } }
     showFocusChrome()
+  }
+  if (save && outcome.traces.length) {
+    liveFight = battleLogFromTraces(outcome.traces, save.settings.lang)
+    battleLogs = rememberBattleLog(battleLogs, liveFight)
+    const sheet = document.getElementById('battle-log-sheet')
+    if (sheet) {
+      sheet.hidden = true
+      sheet.innerHTML = ''
+    }
+    paintBattleLog(liveFight.bouts[0]?.lines[0] ?? null)
   }
   let prevAlly: number | null = null
   let prevFoe: number | null = null
@@ -2509,6 +2543,14 @@ function play(outcome: EncounterOutcome, speed: Speed, done: () => void): void {
       if (mid) mid.style.transform = `translateX(${layers.mid}px)`
       if (near) near.style.transform = `translateX(${layers.near}px)`
       if (focusOn && queueStep && shot) paintFocusStep(outcome.traces, queueStep, shot.foeHp)
+      if (liveFight) {
+        const logged = queueStep
+          ? lineFor(liveFight, queueStep.traceIndex, queueStep.frameIndex, queueStep.hitIndex)
+          : shot
+            ? lineForFrame(liveFight, shot.allyHp, shot.foeHp, shot.text)
+            : null
+        if (logged) paintBattleLog(logged)
+      }
       if (text && shot && elapsed < battleEnd) text.textContent = shot.text
       if (allyName && shot) setActorName(allyName, shot.allyName)
       if (foeName && shot) setActorName(foeName, outcome.shiny ? `${shot.foeName} · ${t(save?.settings.lang, 'battle.shimmer')}` : shot.foeName)
@@ -3045,6 +3087,15 @@ function onClick(event: Event): void {
     return
   }
   const act = node.getAttribute('data-act')
+  if (act === 'battle-log') {
+    if (animating) {
+      openBattleLogPanel()
+      return
+    }
+    overlay = overlay?.kind === 'battle-log' ? null : { kind: 'battle-log' }
+    render()
+    return
+  }
   if (act === 'focus-tempo' && save) {
     const tempo = node.getAttribute('data-tempo') === '2' ? 2 : 1
     save.settings.tempoFokus = tempo
