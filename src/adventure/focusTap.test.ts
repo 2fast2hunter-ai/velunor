@@ -37,6 +37,7 @@ async function reachGuardian(page: Page, base: string): Promise<void> {
   await page.locator('[data-act="pick"][data-species="m01"]').click()
   await page.locator('[data-act="start"]').click()
   await page.locator('[data-screen="adventure"]').waitFor()
+  await assertRoadDock(page)
   const raw = await page.evaluate(() => localStorage.getItem('velunor_v2'))
   const save = JSON.parse(raw ?? '{}')
   save.step = 20
@@ -67,6 +68,43 @@ async function reachGuardian(page: Page, base: string): Promise<void> {
     } catch (err) {
       const text = await page.locator('#battle').innerText().catch(() => '')
       throw new Error(`${text.slice(0, 500)}\n${err}`)
+    }
+  }
+}
+
+async function assertRoadDock(page: Page): Promise<void> {
+  const log = await box(page, '#battle-log')
+  for (const speed of ['1', '2', '3']) {
+    const button = await box(page, `[data-act="speed"][data-speed="${speed}"]`)
+    expect(button && button.height, `×${speed}`).toBeGreaterThan(10)
+    if (log && button) expect(overlaps(log, button), `log covers ×${speed}`).toBe(false)
+  }
+  const at = await box(page, '[data-act="speed"][data-speed="1"]')
+  expect(at).toBeTruthy()
+  const x = at!.x + at!.width / 2
+  const y = at!.y + at!.height / 2
+  const hit = await page.evaluate(({ x, y }) => {
+    const el = document.elementFromPoint(x, y)
+    return el?.closest('[data-act="speed"]')?.getAttribute('data-speed') ?? ''
+  }, { x, y })
+  expect(hit, 'tap on ×1').toBe('1')
+  await page.touchscreen.tap(x, y)
+}
+
+async function assertNamesFree(page: Page): Promise<void> {
+  await page.locator('#ally-name').waitFor()
+  const names = ['#ally-name', '#foe-name', '#ally-hp-num', '#foe-hp-num']
+  const covers = ['#battle-log', '#wx-chip', '#wx-announce', '#adv-chip']
+  for (const name of names) {
+    const area = await box(page, name)
+    if (!area || area.width < 8 || area.height < 8) continue
+    for (const cover of covers) {
+      const node = page.locator(cover).first()
+      if (await node.count() === 0) continue
+      if (cover !== '#battle-log' && await node.getAttribute('hidden') !== null) continue
+      const other = await node.boundingBox()
+      if (!other || other.width < 4) continue
+      expect(overlaps(area, other), `${cover} covers ${name}`).toBe(false)
     }
   }
 }
@@ -131,6 +169,7 @@ describe('focus bar tap', () => {
           expect(low, `5% low ${low.toFixed(1)} fps`).toBeGreaterThanOrEqual(30)
         }
         await assertClear(page)
+        await assertNamesFree(page)
         await page.locator('#battle-log').click()
         const sheet = page.locator('#battle-log-sheet:not([hidden])')
         await sheet.waitFor({ timeout: 5000 })
@@ -140,6 +179,20 @@ describe('focus bar tap', () => {
         const challenge = await box(page, '[data-act="challenge"]')
         const tempo = await box(page, '[data-act="focus-tempo"][data-tempo="2"]')
         expect(sheetBox && sheetBox.height).toBeGreaterThan(40)
+        const close = await box(page, '[data-act="log-close"]')
+        expect(close && close.height, 'close button').toBeGreaterThan(10)
+        const speed3 = await box(page, '[data-act="speed"][data-speed="3"]')
+        if (sheetBox && speed3) expect(overlaps(sheetBox, speed3), 'sheet covers ×3').toBe(false)
+        if (speed3) {
+          const hit3 = await page.evaluate(({ x, y }) => {
+            const el = document.elementFromPoint(x, y)
+            return el?.closest('[data-act="speed"]')?.getAttribute('data-speed') ?? ''
+          }, { x: speed3.x + speed3.width / 2, y: speed3.y + speed3.height / 2 })
+          expect(hit3, 'tap on ×3').toBe('3')
+        }
+        if (close) await page.touchscreen.tap(close.x + close.width / 2, close.y + close.height / 2)
+        await expect.poll(async () => page.locator('#battle-log-sheet').getAttribute('hidden')).not.toBeNull()
+        await page.locator('#battle-log').click()
         if (sheetBox && foeActor && foeActor.height > 2) expect(overlaps(sheetBox, foeActor), 'log sheet covers the foe').toBe(false)
         if (sheetBox && allyActor && allyActor.height > 2) expect(overlaps(sheetBox, allyActor), 'log sheet covers the ally').toBe(false)
         if (sheetBox && challenge && challenge.width > 2) expect(overlaps(sheetBox, challenge), 'log sheet covers the challenge').toBe(false)
