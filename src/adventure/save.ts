@@ -37,6 +37,7 @@ function settingsFrom(raw: Partial<AdventureSettings> | undefined, shake: boolea
   return {
     speed: speed === 2 || speed === 3 ? speed : 1,
     ...(raw?.tempoWeg === 1 || raw?.tempoWeg === 2 || raw?.tempoWeg === 3 ? { tempoWeg: raw.tempoWeg } : {}),
+    ...(raw?.tempoFokus === 2 ? { tempoFokus: 2 as const } : {}),
     autoSwitch: raw?.autoSwitch !== false,
     catchCard: raw?.catchCard !== false,
     shake,

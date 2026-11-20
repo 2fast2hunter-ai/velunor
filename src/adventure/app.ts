@@ -24,7 +24,7 @@ import {
 import { chatErrorKey } from './chat'
 import { t, type Lang } from './i18n'
 import { shotAt, shouldRecover } from './present'
-import { actionAt, battleQueueOn, planBattle, roadQueueFromSearch, roadTempo, setRoadQueue, shotFromAction } from './battlePlayer'
+import { actionAt, battleQueueOn, focusKo, focusSide, focusTempo, planBattle, roadQueueFromSearch, roadTempo, setRoadQueue, shotFromAction } from './battlePlayer'
 import { roadPaceFromSearch, setRoadPace } from './roadPace'
 import { species, typeColor } from '../data'
 import { teamWeatherMarks, weatherArrow, weatherAt } from './weather'
@@ -2188,6 +2188,73 @@ function paintSprite(img: HTMLImageElement | null, speciesId: string, shiny: boo
   }
 }
 
+let focusCtl: { paused: boolean, stop: () => void } | null = null
+
+function tempoArt(name: string): string {
+  return art(`battle_ui/tempo/${name}.png`)
+}
+
+function paintFocusTempo(): void {
+  const tempo = focusTempo(save?.settings.tempoFokus)
+  const paused = Boolean(focusCtl?.paused)
+  for (const button of document.querySelectorAll<HTMLButtonElement>('[data-act="focus-tempo"]')) {
+    const on = button.getAttribute('data-tempo') === String(tempo)
+    button.setAttribute('aria-pressed', on ? 'true' : 'false')
+    const img = button.querySelector('img')
+    if (img) img.src = tempoArt(`${button.getAttribute('data-tempo')}x_${on ? 'aktiv' : 'normal'}`)
+  }
+  const pause = document.querySelector<HTMLButtonElement>('[data-act="focus-pause"]')
+  if (pause) {
+    pause.setAttribute('aria-pressed', paused ? 'true' : 'false')
+    pause.setAttribute('aria-label', t(save?.settings.lang, paused ? 'battle.resumePlay' : 'battle.pause'))
+    const img = pause.querySelector('img')
+    if (img) img.src = tempoArt(paused ? 'weiter_aktiv' : 'pause_normal')
+  }
+}
+
+function showFocusChrome(): void {
+  document.getElementById('focus-bar')?.removeAttribute('hidden')
+  const text = document.getElementById('battle-text')
+  if (text) {
+    text.classList.add('is-callout')
+    text.setAttribute('aria-live', 'polite')
+    text.style.borderImage = `url("${art('battle_ui/callout/ansage.png')}") 48 52 52 52 fill / 48px 52px 52px 52px / 12px stretch`
+  }
+  paintFocusTempo()
+}
+
+function hideFocusChrome(): void {
+  document.getElementById('focus-bar')?.setAttribute('hidden', '')
+  const text = document.getElementById('battle-text')
+  if (text) {
+    text.classList.remove('is-callout')
+    text.style.borderImage = ''
+  }
+  const ally = document.getElementById('spotlight-ally')
+  const foe = document.getElementById('spotlight-foe')
+  if (ally) ally.hidden = true
+  if (foe) foe.hidden = true
+  focusCtl = null
+}
+
+function paintFocusStep(traces: EncounterOutcome['traces'], step: NonNullable<ReturnType<typeof actionAt>>, foeHp: number): void {
+  const n = focusKo(traces, step.traceIndex, foeHp)
+  document.querySelectorAll<HTMLImageElement>('#ko-dots img').forEach((img, index) => {
+    img.src = art(index < n ? 'battle_ui/ko/voll_64.png' : 'battle_ui/ko/leer_64.png')
+  })
+  const side = focusSide(traces, step)
+  const ally = document.getElementById('spotlight-ally')
+  const foe = document.getElementById('spotlight-foe')
+  if (ally) ally.hidden = side !== 'ally'
+  if (foe) foe.hidden = side !== 'foe'
+}
+
+function toggleFocusPause(): void {
+  if (!focusCtl) return
+  focusCtl.paused = !focusCtl.paused
+  paintFocusTempo()
+}
+
 function play(outcome: EncounterOutcome, speed: Speed, done: () => void): void {
   playGen += 1
   const gen = playGen
@@ -2199,21 +2266,28 @@ function play(outcome: EncounterOutcome, speed: Speed, done: () => void): void {
     settled = true
     if (raf) cancelAnimationFrame(raf)
     raf = 0
+    hideFocusChrome()
     done()
   }
   const catching = Boolean(outcome.catch)
-  const roadOn = battleQueueOn('road') && (outcome.kind === 'wild' || outcome.kind === 'trainer')
-  const roadPlan = roadOn ? planBattle(outcome.traces, 'road', roadTempo(speed, save?.settings.tempoWeg)) : null
-  const roadEnd = roadPlan?.length ? roadPlan[roadPlan.length - 1].start + roadPlan[roadPlan.length - 1].dur : 0
+  const focusOn = battleQueueOn('focus') && outcome.kind === 'guardian'
+  const roadOn = !focusOn && battleQueueOn('road') && (outcome.kind === 'wild' || outcome.kind === 'trainer')
+  const queue = focusOn
+    ? planBattle(outcome.traces, 'focus', focusTempo(save?.settings.tempoFokus))
+    : roadOn
+      ? planBattle(outcome.traces, 'road', roadTempo(speed, save?.settings.tempoWeg))
+      : null
+  const queueEnd = queue?.length ? queue[queue.length - 1].start + queue[queue.length - 1].dur : 0
   const floor = encounterMs(speed)
-  const dur = roadPlan ? Math.max(floor, roadEnd) + (catching ? Math.round(floor * 0.46) : 0) : floor
+  const dur = focusOn ? queueEnd : queue ? Math.max(floor, queueEnd) + (catching ? Math.round(floor * 0.46) : 0) : floor
+  let skipped = false
   let backstop = 0
   const finishOnce = () => {
     window.clearTimeout(backstop)
     window.clearTimeout(impactTimer)
     if (raf) cancelAnimationFrame(raf)
     raf = 0
-    if (outcome.win && outcome.traces.length) {
+    if (!skipped && outcome.win && outcome.traces.length) {
       showVictory(outcome, speed, reduced, regionTint(save?.region ?? 1), outcome.badge, () => {
         clearBattleFx()
         finish()
@@ -2259,8 +2333,14 @@ function play(outcome: EncounterOutcome, speed: Speed, done: () => void): void {
   let shakeStart = 0
   let shakeFor = 0
   let shakePx = 0
-  const battleEnd = roadPlan ? (catching ? roadEnd : dur) : catching ? dur * 0.54 : dur
-  let roadShown = -1
+  const battleEnd = focusOn ? dur : queue ? (catching ? queueEnd : dur) : catching ? dur * 0.54 : dur
+  let queueShown = -1
+  let held = 0
+  let holdStart = -1
+  if (focusOn) {
+    focusCtl = { paused: false, stop: () => { skipped = true; finishOnce() } }
+    showFocusChrome()
+  }
   let prevAlly: number | null = null
   let prevFoe: number | null = null
   let hitAt = -1
@@ -2277,21 +2357,27 @@ function play(outcome: EncounterOutcome, speed: Speed, done: () => void): void {
     }
     drawnAt = now
     try {
-      if (roadPlan) noteProgress()
-      let motion = now - started
+      if (queue) noteProgress()
+      if (focusCtl?.paused) {
+        if (holdStart < 0) holdStart = now
+      } else if (holdStart >= 0) {
+        held += now - holdStart
+        holdStart = -1
+      }
+      let motion = now - started - held - (holdStart >= 0 ? now - holdStart : 0)
       if (frozen >= 0) motion = frozen
       const elapsed = frozen >= 0 || !(scriptAt > 0) ? motion : Math.max(0, motion - scriptAt)
-      const roadStep = roadPlan ? actionAt(roadPlan, Math.min(elapsed, roadEnd)) : null
+      const queueStep = queue ? actionAt(queue, Math.min(elapsed, queueEnd)) : null
       let armFx = false
-      if (roadPlan && roadStep) {
-        const stepIndex = roadPlan.indexOf(roadStep)
-        if (stepIndex !== roadShown) {
-          roadShown = stepIndex
+      if (queue && queueStep) {
+        const stepIndex = queue.indexOf(queueStep)
+        if (stepIndex !== queueShown) {
+          queueShown = stepIndex
           window.clearTimeout(impactTimer)
-          armFx = roadStep.fx
+          armFx = queueStep.fx
         }
       }
-      const shot = roadStep ? shotFromAction(outcome.traces, roadStep) : shotAt(outcome.traces, Math.min(elapsed, battleEnd), battleEnd)
+      const shot = queueStep ? shotFromAction(outcome.traces, queueStep) : shotAt(outcome.traces, Math.min(elapsed, battleEnd), battleEnd)
       if (holdCounter && shot?.counter) {
         if (counterAt < 0) counterAt = elapsed
         if (frozen < 0 && elapsed - counterAt >= 320) frozen = elapsed
@@ -2299,7 +2385,7 @@ function play(outcome: EncounterOutcome, speed: Speed, done: () => void): void {
       if (shot && allyHp && foeHp) {
         allyHp.style.width = `${(shot.allyHp / shot.allyMax) * 100}%`
         foeHp.style.width = `${(shot.foeHp / shot.foeMax) * 100}%`
-        const dropped = roadPlan
+        const dropped = queue
           ? armFx
           : ((prevAlly != null && shot.allyHp < prevAlly) || (prevFoe != null && shot.foeHp < prevFoe))
         if (dropped) {
@@ -2314,9 +2400,9 @@ function play(outcome: EncounterOutcome, speed: Speed, done: () => void): void {
             const attackerId = hit.from === 'ally' ? shot.allySpecies : shot.foeSpecies
             const struck = hit.from === 'ally' ? foeActor : allyActor
             const rawTravel = hit.kind === 'hit' ? effectTiming(hit.type, speed).travelMs : 0
-            const travel = roadStep?.fx ? Math.min(rawTravel, Math.max(0, Math.round(roadStep.dur * 0.45))) : rawTravel
+            const travel = queueStep?.fx ? Math.min(rawTravel, Math.max(0, Math.round(queueStep.dur * 0.45))) : rawTravel
             const keyMove = Boolean(hit.crit || hit.ko || hit.ult || hit.kind === 'status' || hit.helper || hit.pulse)
-            if ((hit.kind === 'hit' || hit.ult) && (!roadPlan || keyMove)) showMove(hit.ult ? ultName(hit.ult) : attackTitle(attackerId, hit.type), hit.from === 'ally' ? allyActor : foeActor, k)
+            if ((hit.kind === 'hit' || hit.ult) && !(roadOn && !keyMove)) showMove(hit.ult ? ultName(hit.ult) : attackTitle(attackerId, hit.type), hit.from === 'ally' ? allyActor : foeActor, k)
             window.clearTimeout(impactTimer)
             impactTimer = window.setTimeout(() => {
               if (gen !== playGen || !hit) return
@@ -2332,7 +2418,7 @@ function play(outcome: EncounterOutcome, speed: Speed, done: () => void): void {
                 const picture = struck.querySelector('img')
                 if (picture instanceof HTMLImageElement) picture.style.animationDuration = `${RECOIL_MS * k}ms`
               }
-              if (save?.settings.shake && hit.kind === 'hit' && (!roadPlan || hit.crit || hit.ult)) {
+              if (save?.settings.shake && hit.kind === 'hit' && (!queue || hit.crit || hit.ult)) {
                 const spec = hit.ult ? bossUltShake({ speed, reduced }) : cameraShake(hitGrade(hit.band, hit.crit), 'hit', { speed, reduced })
                 shakeStart = performance.now() - started
                 shakeFor = spec.ms
@@ -2422,6 +2508,7 @@ function play(outcome: EncounterOutcome, speed: Speed, done: () => void): void {
       if (far) far.style.transform = `translateX(${layers.far}px)`
       if (mid) mid.style.transform = `translateX(${layers.mid}px)`
       if (near) near.style.transform = `translateX(${layers.near}px)`
+      if (focusOn && queueStep && shot) paintFocusStep(outcome.traces, queueStep, shot.foeHp)
       if (text && shot && elapsed < battleEnd) text.textContent = shot.text
       if (allyName && shot) setActorName(allyName, shot.allyName)
       if (foeName && shot) setActorName(foeName, outcome.shiny ? `${shot.foeName} · ${t(save?.settings.lang, 'battle.shimmer')}` : shot.foeName)
@@ -2953,8 +3040,26 @@ function onClick(event: Event): void {
   const target = event.target
   if (!(target instanceof Element)) return
   const node = target.closest('[data-act]')
-  if (!node) return
+  if (!node) {
+    if (focusCtl && target.closest('#battle-world')) toggleFocusPause()
+    return
+  }
   const act = node.getAttribute('data-act')
+  if (act === 'focus-tempo' && save) {
+    const tempo = node.getAttribute('data-tempo') === '2' ? 2 : 1
+    save.settings.tempoFokus = tempo
+    try { writeSave(gameStore, save) } catch { /* the next warden still reads the memory copy */ }
+    paintFocusTempo()
+    return
+  }
+  if (act === 'focus-skip') {
+    focusCtl?.stop()
+    return
+  }
+  if (act === 'focus-pause') {
+    toggleFocusPause()
+    return
+  }
   if (act === 'name-open') {
     accountUi.nameOpen = true
     accountUi.nameError = ''
