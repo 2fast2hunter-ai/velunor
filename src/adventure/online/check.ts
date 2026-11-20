@@ -8,6 +8,12 @@ import { researchDurationMs, researchMsNeeded, researchSpend, type ResearchAudit
 
 export const PLAUSIBILITY_BUFFER = 1.2
 export const SPEED3_MS = 930
+/**
+ * Online road rewards may reach this multiple of today's per-encounter ceiling.
+ * Same number as `W_CAP` in roadPace.ts. Offline fights stay at one reward per 2800 ms.
+ * Crests, the daily shop, the road pile and the 1.2 buffer are not multiplied.
+ */
+export const REWARD_PACE_CAP = 3.5
 export const COIN_BONUS = 1.25
 export const LEARN_BONUS = 1.25
 export const TRAINER_PARTY = 3
@@ -103,23 +109,24 @@ function encounters(elapsedMs: number): number {
   return Math.max(1, Math.ceil(Math.max(0, elapsedMs) / SPEED3_MS))
 }
 
-/** Highest gold the clock allows: speed ×3, coin fruit, a full trainer party, then the 1.2 buffer. */
+/** Highest gold the clock allows: speed ×3, coin fruit, a full trainer party, road pace, then the 1.2 buffer. Crest gold stays put. */
 export function allowedGold(elapsedMs: number, region: number, chapter: number, goldMult = 1): number {
   const level = reachLevel(region, chapter)
   const per = TRAINER_GOLD_PER_LEVEL * TRAINER_PARTY * level * COIN_BONUS
   const crest = (1000 + 750 * level) * COIN_BONUS
   const mult = Math.max(1, Math.min(1.1 * 1.3, goldMult))
-  return Math.ceil((encounters(elapsedMs) * per + crest) * PLAUSIBILITY_BUFFER * mult)
+  const road = encounters(elapsedMs) * per * REWARD_PACE_CAP
+  return Math.ceil((road + crest) * PLAUSIBILITY_BUFFER * mult)
 }
 
-/** Highest EP: speed ×3, learn fruit, buddy, full bench, four hort guests, rarity 9, then the 1.2 buffer. */
+/** Highest EP: speed ×3, learn fruit, buddy, full bench, four hort guests, rarity 9, road pace, then the 1.2 buffer. */
 export function allowedEp(elapsedMs: number, region: number, chapter: number, epMult = 1): number {
   const level = reachLevel(region, chapter)
   const base = 8 * level * (1 + 0.15 * 9)
   const team = 1 * 1.3 * LEARN_BONUS + 5 * 0.5 * LEARN_BONUS
   const hort = 4 * 0.3 * LEARN_BONUS
   const mult = Math.max(1, Math.min(1.3, epMult))
-  return Math.ceil(encounters(elapsedMs) * base * (team + hort) * PLAUSIBILITY_BUFFER * mult)
+  return Math.ceil(encounters(elapsedMs) * REWARD_PACE_CAP * base * (team + hort) * PLAUSIBILITY_BUFFER * mult)
 }
 
 function countedOffline(elapsedMs: number, capMs = OFFLINE_CAP_MS): number {
@@ -127,10 +134,10 @@ function countedOffline(elapsedMs: number, capMs = OFFLINE_CAP_MS): number {
   return Math.min(Math.max(0, elapsedMs), cap)
 }
 
-/** Fights the offline catch-up can finish, capped at 8 h, or the faster online tempo. */
-function fightCeiling(elapsedMs: number, capMs = OFFLINE_CAP_MS): number {
+/** Offline stays on the 2800 ms clock. Online road rewards may stack up to the pace cap. */
+function rewardFights(elapsedMs: number, capMs = OFFLINE_CAP_MS): number {
   const offline = Math.floor(countedOffline(elapsedMs, capMs) / BASE_ENCOUNTER_MS)
-  const online = Math.ceil(Math.max(0, elapsedMs) / SPEED3_MS)
+  const online = Math.ceil(Math.max(0, elapsedMs) / SPEED3_MS) * REWARD_PACE_CAP
   return Math.max(offline, online, 1)
 }
 
@@ -141,18 +148,18 @@ function fightCeiling(elapsedMs: number, capMs = OFFLINE_CAP_MS): number {
 export function allowedChests(elapsedMs: number, capMs = OFFLINE_CAP_MS): number {
   const road = Math.floor(countedOffline(elapsedMs, capMs) / 60_000) + 5
   const shop = Math.max(1, Math.ceil(Math.max(elapsedMs, 1) / 86_400_000)) * 10
-  return Math.min(99 * 4 + 5, Math.ceil((fightCeiling(elapsedMs, capMs) + road + shop) * PLAUSIBILITY_BUFFER))
+  return Math.min(99 * 4 + 5, Math.ceil((rewardFights(elapsedMs, capMs) + road + shop) * PLAUSIBILITY_BUFFER))
 }
 
-/** One shard per fight. Offline catch-up and speed ×3 both fit, then the 1.2 buffer. */
+/** One shard per fight. Offline catch-up stays put. Online fights may reach the pace cap. Then the 1.2 buffer. */
 export function allowedShards(elapsedMs: number, capMs = OFFLINE_CAP_MS, yieldMult = 1): number {
   const mult = Math.max(1, Math.min(1.3, yieldMult))
-  return Math.ceil(fightCeiling(elapsedMs, capMs) * PLAUSIBILITY_BUFFER * mult)
+  return Math.ceil(rewardFights(elapsedMs, capMs) * PLAUSIBILITY_BUFFER * mult)
 }
 
-/** One point per won bout, a boss bonus every few bouts, and a duplicate a minute. */
+/** One point per won bout, a boss bonus every few bouts, and a duplicate a minute. Dupes stay on the clock. */
 export function allowedMastery(elapsedMs: number, capMs = OFFLINE_CAP_MS): number {
-  const fights = fightCeiling(elapsedMs, capMs)
+  const fights = rewardFights(elapsedMs, capMs)
   const bosses = Math.ceil(fights / 6)
   const dupes = Math.ceil(countedOffline(elapsedMs, capMs) / 60_000)
   return Math.ceil((fights + bosses * 5 + dupes * 10) * PLAUSIBILITY_BUFFER)

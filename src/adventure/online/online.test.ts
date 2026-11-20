@@ -5,7 +5,10 @@ import { describe, expect, it } from 'vitest'
 import { fitScale } from '../const'
 import { beginAdventure } from '../save'
 import { simulateOffline } from '../sim'
-import { CREST_PACE_MS, auditSync, mayUploadSave, saveOwesCatchUp, stickAudit } from './check'
+import { CREST_PACE_MS, REWARD_PACE_CAP, SPEED3_MS, auditSync, mayUploadSave, saveOwesCatchUp, stickAudit } from './check'
+import { W_CAP, setRoadPace } from '../roadPace'
+import { setRoadQueue } from '../battlePlayer'
+import { resolveEncounter } from '../sim'
 import { WELCOME_AFTER_MS } from '../const'
 import { clearVelunorKeys, functionFailure } from './calls'
 import { foldName, nameChangeAllowed, nameIssue, pickTag, planNameSave, publicLabel, NAME_CHANGE_MS } from './name'
@@ -96,6 +99,52 @@ describe('sync check', () => {
     expect(sql).not.toMatch(/delete from public\.profiles/i)
     expect(sql).not.toMatch(/delete from auth\.users/i)
     expect(sql).toContain('refresh materialized view public.leaderboard_rows')
+  })
+
+  it('accepts an honest speed-3 hour and still flags five times the old gold ceiling', () => {
+    expect(REWARD_PACE_CAP).toBe(3.5)
+    expect(REWARD_PACE_CAP).toBe(W_CAP)
+    const hour = 60 * 60 * 1000
+    const start = 1_700_000_000_000
+    const steps = Math.ceil(hour / SPEED3_MS)
+    const play = (paced: boolean) => {
+      const save = beginAdventure('Mira', { skin: 0, hair: 0, color: 0 }, 'm01', start)
+      save.rng = 11
+      const before = auditFromSave(save)
+      if (paced) {
+        setRoadQueue(true)
+        setRoadPace(true)
+      }
+      let now = start
+      try {
+        for (let i = 0; i < steps; i++) {
+          now += SPEED3_MS
+          try { resolveEncounter(save, now, { offline: false, trace: false }) } catch { /* a stuck gate ends the hour early */ }
+        }
+      } finally {
+        setRoadQueue(null)
+        setRoadPace(null)
+      }
+      return auditSync(before, auditFromSave(save), hour, 0, start + hour)
+    }
+    expect(play(false).flag).toBe(0)
+    expect(play(true).flag).toBe(0)
+    const level = 6
+    const per = 25 * 3 * level * 1.25
+    const crest = (1000 + 750 * level) * 1.25
+    const unpaced = Math.ceil((steps * per + crest) * 1.2)
+    const cheated = beginAdventure('Mira', { skin: 0, hair: 0, color: 0 }, 'm01', start)
+    const prior = auditFromSave(cheated)
+    cheated.gold += unpaced * 5
+    const dumped = auditSync(prior, auditFromSave(cheated), hour, 0, start + hour)
+    expect(dumped.flag).toBeGreaterThanOrEqual(1)
+    expect(dumped.reasons).toContain('gold')
+    const sql = readFileSync(new URL('../../../supabase/migrations/20261120140000_reward_pace_cap.sql', import.meta.url), 'utf8')
+    expect(sql).toContain('audit_implausible')
+    expect(sql).toContain('3.5')
+    expect(sql).not.toMatch(/set flag_level/i)
+    expect(sql).not.toMatch(/delete from/i)
+    expect(sql).not.toContain('refresh materialized view')
   })
 
   it('rejects a clock turned back and a crest taken out of order', () => {
