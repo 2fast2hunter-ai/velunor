@@ -3119,7 +3119,7 @@ function spawnFloat(host: HTMLElement | null, hit: { amount: number; crit: boole
   const style = numberStyle(hit.band, hit.crit, Boolean(hit.awaken), base)
   const label = style.label
   const text = label ? `${label} ${hit.amount}` : String(hit.amount)
-  const size = Math.round(36 * style.scale)
+  const size = Math.max(40, Math.round(36 * style.scale))
   const hostWidth = host.clientWidth || 1080
   const center = (Number.parseFloat(left) / 100) * hostWidth
   const half = text.length * size * 0.34 + 12
