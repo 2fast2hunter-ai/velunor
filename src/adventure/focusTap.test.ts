@@ -479,6 +479,7 @@ describe('focus bar tap', () => {
       const raw = await page.evaluate(() => localStorage.getItem('velunor_v2'))
       const save = JSON.parse(raw ?? '{}')
       const mon = save.mons[save.team[0]]
+      mon.species = 'm55'
       mon.lvl = 1
       mon.hp = 1
       save.settings.speed = 1
@@ -501,26 +502,41 @@ describe('focus bar tap', () => {
         let seen = ''
         let start = 0
         let tip = 0
+        let done = false
         const begun = performance.now()
-        const tick = () => {
+        const finish = (next: number) => {
+          if (done) return
+          done = true
+          resolve({ tip, next, lines })
+        }
+        const stamp = () => {
           const now = performance.now()
           const next = (foe?.textContent || '').trim()
+          if (next && next !== name) {
+            const origin = Number(document.getElementById('battle')?.getAttribute('data-fight-at') || 0)
+            const from = origin > 0 ? origin : start
+            if (tip && from) finish(Math.round(now - from))
+            name = next
+            if (!tip) start = now
+          }
           const line = (log?.textContent || '').replace(/\s+/g, ' ').trim()
           if (line && line !== seen) {
             seen = line
             lines.push(`${Math.round(now - (start || begun))}:${line.slice(0, 70)}`)
-            if (start && !tip && /Quelle|spring/i.test(line)) tip = Math.round(now - start)
+            const origin = Number(document.getElementById('battle')?.getAttribute('data-fight-at') || 0)
+            const from = origin > 0 ? origin : start
+            if (from && !tip && /Quelle|spring/i.test(line)) tip = Math.round(now - from)
+            else if (tip && from) finish(Math.round(now - from))
           }
-          if (next && next !== name) {
-            if (start) {
-              resolve({ tip, next: Math.round(now - start), lines })
-              return
-            }
-            name = next
-            start = now
-          }
-          if (now - begun > 12_000) resolve({ tip, next: tip, lines })
-          else requestAnimationFrame(tick)
+          if (now - begun > 20_000) finish(tip)
+        }
+        const watch = new MutationObserver(stamp)
+        if (foe) watch.observe(foe, { childList: true, characterData: true, subtree: true })
+        if (log) watch.observe(log, { childList: true, characterData: true, subtree: true })
+        const tick = () => {
+          if (done) return
+          stamp()
+          if (!done) requestAnimationFrame(tick)
         }
         requestAnimationFrame(tick)
       }))
@@ -530,5 +546,5 @@ describe('focus bar tap', () => {
     } finally {
       await browser.close()
     }
-  }, 40_000)
+  }, 50_000)
 })

@@ -2450,7 +2450,7 @@ function play(outcome: EncounterOutcome, speed: Speed, done: () => void): void {
   let scriptAt = auraMs > 0 ? Number.POSITIVE_INFINITY : 0
   backstop = window.setTimeout(finishOnce, dur + enterMs + auraMs + 400)
   const k = tempoScale(speed)
-  let started = performance.now()
+  let started = 0
   let counterAt = -1
   let frozen = -1
   const seal = document.getElementById('seal') as HTMLImageElement | null
@@ -2523,11 +2523,11 @@ function play(outcome: EncounterOutcome, speed: Speed, done: () => void): void {
         held += now - holdStart
         holdStart = -1
       }
-      let motion = now - started - held - (holdStart >= 0 ? now - holdStart : 0)
+      let motion = started === 0 ? 0 : now - started - held - (holdStart >= 0 ? now - holdStart : 0)
       if (frozen >= 0) motion = frozen
       const elapsed = frozen >= 0 || !(scriptAt > 0) ? motion : Math.max(0, motion - scriptAt)
       const queueStep = queue ? actionAt(queue, Math.min(elapsed, queueEnd)) : null
-      if (roadOn && queueStep?.phase === 'resultat' && (outcome.win || elapsed >= floor)) showWhyChip(outcome)
+      if (roadOn && started > 0 && queueStep?.phase === 'resultat' && (outcome.win || now - started >= floor)) showWhyChip(outcome)
       let armFx = false
       if (queue && queueStep) {
         const stepIndex = queue.indexOf(queueStep)
@@ -2692,7 +2692,11 @@ function play(outcome: EncounterOutcome, speed: Speed, done: () => void): void {
         else paintSeal(seal, age, k, outcome.catch.success)
         if (text && age >= 0) text.textContent = sealCaption(outcome, age >= 900 * k)
       }
-      if (elapsed < dur) raf = requestAnimationFrame(frame)
+      if (started === 0 && shot) {
+        started = performance.now()
+        document.getElementById('battle')?.setAttribute('data-fight-at', String(started))
+      }
+      if (started === 0 || elapsed < dur) raf = requestAnimationFrame(frame)
       else finishOnce()
     } catch (err) {
       console.error(err)
@@ -2700,7 +2704,6 @@ function play(outcome: EncounterOutcome, speed: Speed, done: () => void): void {
     }
   }
   const run = () => {
-    started = performance.now()
     raf = requestAnimationFrame(frame)
   }
   if (outcome.boss?.species && !holdCounter) showBossIntro(outcome.boss, run)
