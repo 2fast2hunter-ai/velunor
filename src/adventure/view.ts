@@ -527,7 +527,7 @@ function ultSegments(locked: boolean, label: string): string {
 
 function logSentence(sentence: string): string {
   const parts = focusLogParts(sentence)
-  return `<span id="battle-log-lead">${esc(parts.lead)}</span><span id="battle-log-tail">${esc(parts.tail)}</span>`
+  return `<span id="battle-log-lead"><span class="log-clip">${esc(parts.lead)}</span></span><span id="battle-log-tail">${esc(parts.tail)}</span>`
 }
 
 function battle(save: SaveV2, now: number, fighting = false, shadow = false, logLine: BattleLogLine | null = null): string {
