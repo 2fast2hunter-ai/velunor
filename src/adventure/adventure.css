@@ -579,8 +579,8 @@ textarea { width: 100%; box-sizing: border-box; background: #121a30; color: inhe
   z-index: 5;
   margin: 0;
 }
-.combatant.foe .status-chip { left: auto; right: calc(100% - 36px); }
-.combatant.ally .status-chip { left: calc(100% - 36px); right: auto; }
+.combatant.foe .status-chip { left: auto; right: calc(100% + 12px); }
+.combatant.ally .status-chip { left: calc(100% + 12px); right: auto; }
 .battle:has(#focus-bar:not([hidden])) .combatant.foe .status-chip { top: 210px; }
 .adv-chip {
   position: absolute; z-index: 8; left: 16px; top: calc(17% + 20px); transform: none; animation: none;
@@ -763,9 +763,9 @@ textarea { width: 100%; box-sizing: border-box; background: #121a30; color: inhe
 }
 .battle:has(#focus-bar:not([hidden])) .battle-log {
   left: 16px;
-  right: 46%;
+  right: 62%;
   width: auto;
-  bottom: 152px;
+  bottom: 168px;
   max-height: none;
   overflow: hidden;
 }

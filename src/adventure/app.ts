@@ -2458,8 +2458,16 @@ function paintBattleLog(line: BattleLogLine | null): void {
   const text = document.getElementById('battle-log-text')
   const img = document.querySelector<HTMLImageElement>('#battle-log img')
   if (!text) return
-  text.textContent = line?.sentence ?? (save ? t(save.settings.lang, 'log.none') : '')
-  if (img) img.src = art(logIconFile(line?.icon ?? 'angriff'))
+  const sentence = line?.sentence ?? (save ? t(save.settings.lang, 'log.none') : '')
+  const icon = line?.icon ?? 'angriff'
+  if (text.dataset.line !== sentence) {
+    text.dataset.line = sentence
+    text.textContent = sentence
+  }
+  if (img && img.dataset.icon !== icon) {
+    img.dataset.icon = icon
+    img.src = art(logIconFile(icon))
+  }
 }
 
 function openBattleLogPanel(): void {
@@ -2822,18 +2830,21 @@ function play(outcome: EncounterOutcome, speed: Speed, done: () => void): void {
             : null
         if (logged) paintBattleLog(logged)
       }
-      if (text && shot && elapsed < battleEnd) text.textContent = shot.text
+      if (text && shot && elapsed < battleEnd && text.textContent !== shot.text) text.textContent = shot.text
       if (allyName && shot) setActorName(allyName, shot.allyName)
       if (foeName && shot) setActorName(foeName, outcome.shiny ? `${shot.foeName} · ${t(save?.settings.lang, 'battle.shimmer')}` : shot.foeName)
       if (shot) {
         paintSprite(allyImg, shot.allySpecies, null)
         paintSprite(foeImg, shot.foeSpecies, outcome.shiny)
-      } else if (text && outcome.lines[0] && elapsed < battleEnd) text.textContent = outcome.lines[0]
+      } else if (text && outcome.lines[0] && elapsed < battleEnd && text.textContent !== outcome.lines[0]) text.textContent = outcome.lines[0]
       if (seal && catching && outcome.catch) {
         const age = elapsed - battleEnd
         if (age < 0) seal.style.opacity = '0'
         else paintSeal(seal, age, k, outcome.catch.success)
-        if (text && age >= 0) text.textContent = sealCaption(outcome, age >= 900 * k)
+        if (text && age >= 0) {
+          const caption = sealCaption(outcome, age >= 900 * k)
+          if (text.textContent !== caption) text.textContent = caption
+        }
       }
       if (started === 0 && shot) {
         started = performance.now()
@@ -2860,6 +2871,8 @@ function regionTint(region: number): number {
 }
 
 function setActorName(node: HTMLElement, name: string): void {
+  if (node.dataset.name === name) return
+  node.dataset.name = name
   const arrow = node.querySelector('img')
   node.textContent = name
   if (arrow) node.appendChild(arrow)
@@ -2868,6 +2881,9 @@ function setActorName(node: HTMLElement, name: string): void {
 function paintMark(id: string, mark: string | null, stacks: number): void {
   const node = document.getElementById(id)
   if (!(node instanceof HTMLButtonElement)) return
+  const key = `${mark ?? ''}:${Math.max(0, stacks)}`
+  if (node.dataset.mark === key) return
+  node.dataset.mark = key
   if (!mark || !(mark in AILMENTS)) {
     node.hidden = true
     return
