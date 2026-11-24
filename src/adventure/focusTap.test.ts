@@ -1,6 +1,8 @@
 import { existsSync } from 'node:fs'
 import { fileURLToPath } from 'node:url'
 import { chromium, type Page } from 'playwright-core'
+import { LUNGE_PX, LUNGE_SCALE } from '../battle/typeFx'
+import { koPose } from '../battle/stage'
 import { afterAll, beforeAll, describe, expect, it } from 'vitest'
 import { createServer, type ViteDevServer } from 'vite'
 
@@ -212,6 +214,44 @@ async function assertNamesFree(page: Page): Promise<void> {
   }
 }
 
+function allyPose(kind: 'lunge' | 'ko'): string {
+  if (kind === 'lunge') {
+    const scale = 1.05 * 1.015 * LUNGE_SCALE
+    return `translate(${LUNGE_PX}px, 3px) scale(${scale}) scaleX(-1)`
+  }
+  const pose = koPose(1)
+  const scale = 1.05 * (1 - pose.rotate / 400)
+  return `translate(0px, ${pose.drop}px) rotate(${pose.rotate}deg) scale(${scale}) scaleX(-1)`
+}
+
+async function assertPoseClear(page: Page, pose: string, motion: string): Promise<void> {
+  const boxes = await page.evaluate((value) => {
+    const sprite = document.getElementById('ally-sprite')
+    if (sprite instanceof HTMLElement) sprite.style.transform = value
+    const helper = document.getElementById('foe-helper')
+    if (helper instanceof HTMLElement) helper.style.width = '220px'
+    const read = (selector: string) => {
+      const node = document.querySelector(selector)
+      if (!(node instanceof HTMLElement)) return null
+      const box = node.getBoundingClientRect()
+      if (box.width < 2 || box.height < 2) return null
+      return { x: box.x, y: box.y, width: box.width, height: box.height }
+    }
+    return {
+      log: read('#battle-log'),
+      ally: read('#ally-sprite'),
+      foe: read('#foe-sprite'),
+      shadow: read('#foe-actor .ground-shadow'),
+      helper: read('#foe-helper')
+    }
+  }, motion)
+  expect(boxes.log && boxes.log.width, pose).toBeGreaterThan(40)
+  if (boxes.log && boxes.ally) expect(overlaps(boxes.log, boxes.ally), `${pose} log covers the ally`).toBe(false)
+  if (boxes.log && boxes.foe) expect(overlaps(boxes.log, boxes.foe), `${pose} log covers the foe`).toBe(false)
+  if (boxes.log && boxes.shadow) expect(overlaps(boxes.log, boxes.shadow), `${pose} log covers the foe shadow`).toBe(false)
+  if (boxes.log && boxes.helper) expect(overlaps(boxes.log, boxes.helper), `${pose} log covers the foe support`).toBe(false)
+}
+
 async function assertClear(page: Page): Promise<void> {
   await page.locator('#foe-sprite:not([hidden])').waitFor({ timeout: 8_000 }).catch(() => undefined)
   const nameBefore = await box(page, '#foe-name')
@@ -299,6 +339,7 @@ async function assertClear(page: Page): Promise<void> {
   if (advantage && advantage.width > 4 && helper && helper.width > 8 && helper.height > 8) {
     expect(overlaps(advantage, helper), 'advantage chip covers the foe support').toBe(false)
   }
+  for (const kind of ['lunge', 'ko'] as const) await assertPoseClear(page, kind, allyPose(kind))
   if (advantage && advantage.width > 4 && foeHp && foeHp.width > 2) expect(overlaps(advantage, foeHp), 'advantage chip covers the foe HP bar').toBe(false)
   if (advantage && advantage.width > 4 && foeHpNum && foeHpNum.width > 8) expect(overlaps(advantage, foeHpNum), 'advantage chip covers the foe HP number').toBe(false)
   await page.evaluate(() => {
