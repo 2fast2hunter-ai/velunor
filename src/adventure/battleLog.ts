@@ -121,6 +121,13 @@ function tagsFor(lang: Lang, hit: FightHit): string[] {
   return tags
 }
 
+/** Name and move stay in front. Damage, crit and KO stay in the tail so a narrow line can shorten only the front. */
+export function focusLogParts(sentence: string): { lead: string, tail: string } {
+  const mark = sentence.lastIndexOf(' – ')
+  if (mark < 0) return { lead: sentence, tail: '' }
+  return { lead: sentence.slice(0, mark), tail: sentence.slice(mark) }
+}
+
 function sentence(lang: Lang, who: string, move: string, amount: number | null, kind: FightHit['kind'], tag: string | null): string {
   if (kind === 'status' || amount == null) return t(lang, 'log.plain', { who, move })
   if (tag) return t(lang, 'log.lineTag', { who, move, n: amount, tag })

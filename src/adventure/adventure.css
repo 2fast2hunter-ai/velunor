@@ -772,13 +772,23 @@ textarea { width: 100%; box-sizing: border-box; background: #121a30; color: inhe
   overflow: hidden;
 }
 .battle:has(#focus-bar:not([hidden])) .battle-log span {
-  display: block;
+  display: flex;
+  align-items: baseline;
+  min-width: 0;
   max-height: calc(1.15em * 2);
-  white-space: normal;
   overflow: hidden;
-  text-overflow: clip;
-  overflow-wrap: anywhere;
   line-height: 1.15;
+}
+.battle:has(#focus-bar:not([hidden])) #battle-log-lead {
+  flex: 1 1 auto;
+  min-width: 0;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+.battle:has(#focus-bar:not([hidden])) #battle-log-tail {
+  flex: 0 0 auto;
+  white-space: nowrap;
 }
 .battle:has(#focus-bar:not([hidden])) .battle-status.is-callout {
   white-space: nowrap;

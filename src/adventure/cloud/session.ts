@@ -1,6 +1,6 @@
 import { acceptEvent, capQueue, enqueue, eventsToSend, validEmail, type AnalyticsEvent, type Consent } from './analytics'
 import { decideSync, previewOf, saveFromUnknown, syncDue } from './conflict'
-import { APP_VERSION } from './config'
+import { APP_VERSION, SYNC_MS } from './config'
 import { mayUploadSave } from '../online/check'
 import { auditFromSave } from '../online/snapshot'
 import { progressOf } from './progress'
@@ -9,6 +9,8 @@ import type { CloudApi, CloudNotice, CloudPorts, CloudStatus, CloudView, SyncRea
 export interface CloudController {
   start(): Promise<void>
   sync(reason: SyncReason): Promise<void>
+  /** Stops the interval. A wiped session must not upload again. */
+  stop(): void
   pause(): Promise<void>
   flush(): Promise<void>
   track(event: string, props: Record<string, unknown>): void
@@ -30,6 +32,7 @@ export function createCloud(api: CloudApi, ports: CloudPorts): CloudController {
   let notice: CloudNotice = ''
   let userId: string | null = null
   let lastSync = 0
+  let syncTimer: ReturnType<typeof setTimeout> | null = null
   let lastFlush = ports.now()
   let holding: { local: NonNullable<ReturnType<CloudPorts['loadSave']>>; remote: NonNullable<ReturnType<CloudPorts['loadSave']>> } | null = null
   let pending: Promise<void> | null = null
@@ -112,6 +115,36 @@ export function createCloud(api: CloudApi, ports: CloudPorts): CloudController {
     }
   }
 
+  function clearSyncTimer(): void {
+    if (syncTimer != null) clearTimeout(syncTimer)
+    syncTimer = null
+  }
+
+  /**
+   * The next upload is 5 minutes after the last successful one.
+   * A fixed interval started at boot fires just before that mark and then waits another 5 minutes.
+   */
+  function armSync(): void {
+    clearSyncTimer()
+    const now = ports.now()
+    let wait = SYNC_MS
+    if (lastSync > 0) {
+      const remain = SYNC_MS - (now - lastSync)
+      wait = remain > 0 ? remain : SYNC_MS
+    }
+    const handle = setTimeout(() => {
+      syncTimer = null
+      void request('interval').finally(() => armSync())
+    }, wait)
+    if (typeof handle === 'object' && handle && 'unref' in handle) handle.unref()
+    syncTimer = handle
+  }
+
+  function markSynced(): void {
+    lastSync = ports.now()
+    armSync()
+  }
+
   async function run(reason: SyncReason): Promise<void> {
     if (!ports.online()) {
       status = 'offline'
@@ -170,7 +203,7 @@ export function createCloud(api: CloudApi, ports: CloudPorts): CloudController {
       if (wrote.error) setNotice('write-fail')
       else {
         ports.clearReplace()
-        lastSync = ports.now()
+        markSynced()
         if (notice === 'write-fail') setNotice('')
         await noteFlag(local)
       }
@@ -215,7 +248,7 @@ export function createCloud(api: CloudApi, ports: CloudPorts): CloudController {
       emit()
       return
     }
-    if (synced) lastSync = ports.now()
+    if (synced) markSynced()
     status = 'online'
     emit()
     await flush(reason === 'pause')
@@ -240,9 +273,12 @@ export function createCloud(api: CloudApi, ports: CloudPorts): CloudController {
     return pending
   }
 
+  armSync()
+
   return {
     start: () => request('start'),
     sync: (reason) => request(reason),
+    stop: () => clearSyncTimer(),
     pause: () => request('pause'),
     flush: () => flush(false),
     track,
@@ -269,7 +305,7 @@ export function createCloud(api: CloudApi, ports: CloudPorts): CloudController {
         ports.storeSave(picked.remote)
       }
       holding = null
-      lastSync = ports.now()
+      markSynced()
       status = 'online'
       if (notice === 'write-fail') setNotice('')
       emit()
