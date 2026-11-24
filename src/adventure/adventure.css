@@ -592,7 +592,7 @@ textarea { width: 100%; box-sizing: border-box; background: #121a30; color: inhe
 .battle:has(#focus-bar:not([hidden])) .adv-chip {
   left: auto;
   right: 24px;
-  top: 34%;
+  top: 148px;
   transform: none;
 }
 .adv-chip img { width: 52px; height: 52px; object-fit: contain; }
@@ -763,16 +763,17 @@ textarea { width: 100%; box-sizing: border-box; background: #121a30; color: inhe
 }
 .battle:has(#focus-bar:not([hidden])) .battle-log {
   left: 16px;
-  right: 16px;
+  right: 46%;
   width: auto;
   bottom: 152px;
   max-height: none;
-  overflow: visible;
+  overflow: hidden;
 }
 .battle:has(#focus-bar:not([hidden])) .battle-log span {
   display: block;
+  max-height: calc(1.15em * 2);
   white-space: normal;
-  overflow: visible;
+  overflow: hidden;
   text-overflow: clip;
   overflow-wrap: anywhere;
   line-height: 1.15;
@@ -1450,7 +1451,7 @@ a.ghost { color: inherit; text-decoration: none; display: inline-block; }
 .hint-bubble {
   position: absolute;
   z-index: 12;
-  top: 248px;
+  top: calc(17% + 112px);
   left: 16px;
   display: block;
   width: min(520px, 62%);
