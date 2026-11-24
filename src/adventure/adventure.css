@@ -771,7 +771,7 @@ textarea { width: 100%; box-sizing: border-box; background: #121a30; color: inhe
   max-height: none;
   overflow: hidden;
 }
-.battle:has(#focus-bar:not([hidden])) .battle-log span {
+.battle:has(#focus-bar:not([hidden])) #battle-log-text {
   display: flex;
   align-items: baseline;
   min-width: 0;
@@ -783,8 +783,13 @@ textarea { width: 100%; box-sizing: border-box; background: #121a30; color: inhe
   flex: 1 1 auto;
   min-width: 0;
   overflow: hidden;
-  text-overflow: ellipsis;
+}
+.battle:has(#focus-bar:not([hidden])) #battle-log-lead .log-clip {
+  display: block;
+  min-width: 0;
+  overflow: hidden;
   white-space: nowrap;
+  text-overflow: ellipsis;
 }
 .battle:has(#focus-bar:not([hidden])) #battle-log-tail {
   flex: 0 0 auto;

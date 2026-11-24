@@ -2465,7 +2465,13 @@ function paintLogSentence(text: HTMLElement, sentence: string): void {
     tail.id = 'battle-log-tail'
     text.replaceChildren(lead, tail)
   }
-  if (lead.textContent !== parts.lead) lead.textContent = parts.lead
+  let clip = lead.querySelector('.log-clip')
+  if (!(clip instanceof HTMLElement)) {
+    clip = document.createElement('span')
+    clip.className = 'log-clip'
+    lead.replaceChildren(clip)
+  }
+  if (clip.textContent !== parts.lead) clip.textContent = parts.lead
   if (tail.textContent !== parts.tail) tail.textContent = parts.tail
 }
 

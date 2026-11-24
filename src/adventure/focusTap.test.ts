@@ -281,7 +281,7 @@ async function assertClear(page: Page): Promise<void> {
   await page.evaluate(() => {
     const text = document.getElementById('battle-log-text')
     if (!text) return
-    text.innerHTML = '<span id="battle-log-lead">Kieselkrabbe: Panzerschale</span><span id="battle-log-tail"> – 148 (Krit) (KO)</span>'
+    text.innerHTML = '<span id="battle-log-lead"><span class="log-clip">Kieselkrabbe: Panzerschale</span></span><span id="battle-log-tail"> – 148 (Krit) (KO)</span>'
   })
   const longLog = await box(page, '#battle-log')
   if (allySprite && allySprite.width > 8 && longLog && longLog.width > 2) expect(overlaps(allySprite, longLog), 'long log covers the ally').toBe(false)
@@ -292,22 +292,26 @@ async function assertClear(page: Page): Promise<void> {
   const logFit = await page.evaluate(() => {
     const text = document.getElementById('battle-log-text')
     const tail = document.getElementById('battle-log-tail')
-    const lead = document.getElementById('battle-log-lead')
-    if (!(text instanceof HTMLElement) || !(tail instanceof HTMLElement)) return { damage: false, tailCut: true, lines: 9, leadCut: false }
+    const lead = text?.querySelector('.log-clip')
+    if (!(text instanceof HTMLElement) || !(tail instanceof HTMLElement) || !(lead instanceof HTMLElement)) return { damage: false, tailCut: true, lines: 9, leadCut: false, ellipsis: '' }
     const lineHeight = parseFloat(getComputedStyle(text).lineHeight) || text.clientHeight || 1
     const lines = Math.max(1, Math.round(text.clientHeight / lineHeight))
     return {
       damage: (text.innerText || '').includes('148') && (text.innerText || '').includes('KO'),
       tailCut: tail.scrollWidth > tail.clientWidth + 1,
       lines,
-      leadCut: lead instanceof HTMLElement && lead.scrollWidth > lead.clientWidth + 1
+      leadCut: lead.scrollWidth > lead.clientWidth,
+      ellipsis: getComputedStyle(lead).textOverflow
     }
   })
   expect(logFit.damage, 'focus log keeps the damage and KO').toBe(true)
   expect(logFit.tailCut, 'focus log cuts the damage').toBe(false)
   expect(logFit.lines, 'focus log stays within two lines').toBeLessThanOrEqual(2)
   expect(logFit.lines, 'focus log still has a line').toBeGreaterThanOrEqual(1)
-  expect(logFit.leadCut, 'a long name is shortened before the damage').toBe(true)
+  if ((page.viewportSize()?.width ?? 0) === 390) {
+    expect(logFit.ellipsis, 'a long name uses an ellipsis').toBe('ellipsis')
+    expect(logFit.leadCut, 'a long name is wider than its box').toBe(true)
+  }
   if (weather && weather.width > 4) {
     const callout = await box(page, '#battle-text')
     if (callout && callout.width > 8) expect(overlaps(callout, weather), 'status line covers the weather chip').toBe(false)
