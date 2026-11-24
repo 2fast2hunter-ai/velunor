@@ -293,11 +293,26 @@ async function assertClear(page: Page): Promise<void> {
   })
   const helper = await box(page, '#foe-helper')
   const advantage = await box(page, '#adv-chip')
+  if (helper && helper.width > 8 && helper.height > 8 && longLog && longLog.width > 2) {
+    expect(overlaps(longLog, helper), 'battle log covers the foe support').toBe(false)
+  }
   if (advantage && advantage.width > 4 && helper && helper.width > 8 && helper.height > 8) {
     expect(overlaps(advantage, helper), 'advantage chip covers the foe support').toBe(false)
   }
   if (advantage && advantage.width > 4 && foeHp && foeHp.width > 2) expect(overlaps(advantage, foeHp), 'advantage chip covers the foe HP bar').toBe(false)
   if (advantage && advantage.width > 4 && foeHpNum && foeHpNum.width > 8) expect(overlaps(advantage, foeHpNum), 'advantage chip covers the foe HP number').toBe(false)
+  await page.evaluate(() => {
+    const chip = document.getElementById('ally-status')
+    if (!(chip instanceof HTMLElement)) return
+    chip.hidden = false
+    const label = chip.querySelector('.status-name')
+    if (label) label.textContent = '−15 %'
+  })
+  const allyStatus = await box(page, '#ally-status')
+  const allyLock = await box(page, '#ally-ult .ult-lock')
+  if (allyStatus && allyStatus.width > 4 && allyLock && allyLock.width > 4) {
+    expect(overlaps(allyStatus, allyLock), 'status chip covers ab Lv 25').toBe(false)
+  }
   const status = await box(page, '#foe-status')
   if (nameBefore && foeName && nameBefore.height > 8 && foeName.height > 8) {
     expect(Math.abs(foeName.y - nameBefore.y), 'status chip pushes the foe name').toBeLessThan(4)
