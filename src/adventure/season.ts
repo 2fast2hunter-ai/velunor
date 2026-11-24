@@ -7,12 +7,32 @@
  * shifts those walls by an hour when the clocks change, so this module
  * never does that.
  *
- * Not wired into the arena or the co-op beast yet.
+ * The client arena still uses its previous clocks. Edge functions read this module.
  */
+
+import type { TypeId } from '../types'
 
 const BERLIN = 'Europe/Berlin'
 
 export const SEASON_DAYS = 28
+
+/**
+ * Instants `public.arena_season(ts)` returns. `at` is UTC. `berlin` is the wall clock.
+ * E2's migration is checked against this table.
+ */
+export const ARENA_SEASON = [
+  { at: '2026-11-16T02:59:00.000Z', season: 0, berlin: '2026-11-16 03:59' },
+  { at: '2026-11-16T03:00:00.000Z', season: 1, berlin: '2026-11-16 04:00' },
+  { at: '2026-12-14T02:59:00.000Z', season: 1, berlin: '2026-12-14 03:59' },
+  { at: '2026-12-14T03:00:00.000Z', season: 2, berlin: '2026-12-14 04:00' },
+  { at: '2027-01-11T02:59:00.000Z', season: 2, berlin: '2027-01-11 03:59' },
+  { at: '2027-01-11T03:00:00.000Z', season: 3, berlin: '2027-01-11 04:00' },
+  { at: '2027-04-05T01:59:00.000Z', season: 5, berlin: '2027-04-05 03:59' },
+  { at: '2027-04-05T02:00:00.000Z', season: 6, berlin: '2027-04-05 04:00' },
+  { at: '2027-04-05T02:30:00.000Z', season: 6, berlin: '2027-04-05 04:30' },
+  { at: '2027-11-15T02:30:00.000Z', season: 13, berlin: '2027-11-15 03:30' },
+  { at: '2027-11-15T03:00:00.000Z', season: 14, berlin: '2027-11-15 04:00' }
+] as const
 
 const WEEKDAYS: Record<string, number> = { Sun: 0, Mon: 1, Tue: 2, Wed: 3, Thu: 4, Fri: 5, Sat: 6 }
 
@@ -180,8 +200,8 @@ function shiftToFriday(mondayReset: Date): Date {
 
 /** Co-op beasts in roster order. The November 2026 anchor week uses the second entry. */
 export const BEASTS = [
-  { id: 'weltenwurm', name: 'Weltenwurm' },
-  { id: 'himmelswal', name: 'Himmelswal' }
+  { id: 'weltenwurm', name: 'Weltenwurm', type: 'earth' as TypeId },
+  { id: 'himmelswal', name: 'Himmelswal', type: 'wind' as TypeId }
 ] as const
 
 /**
@@ -194,6 +214,7 @@ const BEAST_WEEK0 = 1
 export interface BeastTurn {
   id: (typeof BEASTS)[number]['id']
   name: string
+  type: TypeId
   week: number
 }
 
@@ -201,7 +222,7 @@ export function beastAt(now: Date): BeastTurn {
   const week = Math.round(calendarDays(BEAST_ANCHOR, weekWindow(now).start) / 7)
   const slot = ((week + BEAST_WEEK0) % BEASTS.length + BEASTS.length) % BEASTS.length
   const beast = BEASTS[slot]
-  return { id: beast.id, name: beast.name, week }
+  return { id: beast.id, name: beast.name, type: beast.type, week }
 }
 
 /**

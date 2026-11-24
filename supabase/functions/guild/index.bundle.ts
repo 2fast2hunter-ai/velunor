@@ -10894,15 +10894,6 @@ var COOP_ACTIONS = 60;
 var COOP_ATTEMPTS = 3;
 var GROUP_MAX = 4;
 var WEEK_ATTEMPTS = COOP_ATTEMPTS * 7 * GROUP_MAX;
-var BEASTS = [
-  { id: "weltenwurm", name: "Weltenwurm", type: "earth", egg: "m18" },
-  { id: "himmelswal", name: "Himmelswal", type: "wind", egg: "m24" }
-];
-function weeklyBeast(now) {
-  const week = boardWeek(now).getTime();
-  const beast = BEASTS[Math.floor(week / (7 * 24 * 60 * 60 * 1e3)) % BEASTS.length];
-  return { ...beast, week };
-}
 function sideFrom(fighter) {
   return {
     speciesId: fighter.speciesId,
@@ -10950,6 +10941,90 @@ function coopDamage(fighters, beastType, seed, picked) {
     total += Math.max(0, trace.foeMax - trace.foeHp);
   }
   return total;
+}
+
+// src/adventure/season.ts
+var BERLIN2 = "Europe/Berlin";
+var WEEKDAYS = { Sun: 0, Mon: 1, Tue: 2, Wed: 3, Thu: 4, Fri: 5, Sat: 6 };
+function berlinParts2(date) {
+  const fmt = new Intl.DateTimeFormat("en-US", {
+    timeZone: BERLIN2,
+    hourCycle: "h23",
+    weekday: "short",
+    year: "numeric",
+    month: "2-digit",
+    day: "2-digit",
+    hour: "2-digit",
+    minute: "2-digit"
+  });
+  const bag = {};
+  for (const part of fmt.formatToParts(date)) bag[part.type] = part.value;
+  return {
+    year: Number(bag.year),
+    month: Number(bag.month),
+    day: Number(bag.day),
+    hour: Number(bag.hour),
+    minute: Number(bag.minute),
+    weekday: WEEKDAYS[bag.weekday] ?? 1
+  };
+}
+function offsetMs2(date) {
+  const fmt = new Intl.DateTimeFormat("en-US", {
+    timeZone: BERLIN2,
+    hourCycle: "h23",
+    year: "numeric",
+    month: "2-digit",
+    day: "2-digit",
+    hour: "2-digit",
+    minute: "2-digit",
+    second: "2-digit"
+  });
+  const bag = {};
+  for (const part of fmt.formatToParts(date)) bag[part.type] = part.value;
+  const asUtc = Date.UTC(
+    Number(bag.year),
+    Number(bag.month) - 1,
+    Number(bag.day),
+    Number(bag.hour),
+    Number(bag.minute),
+    Number(bag.second)
+  );
+  return asUtc - date.getTime();
+}
+function berlinWall2(year, month, day, hour, minute = 0) {
+  const utc = new Date(Date.UTC(year, month - 1, day, hour, minute, 0));
+  const first = new Date(utc.getTime() - offsetMs2(utc));
+  return new Date(utc.getTime() - offsetMs2(first));
+}
+function addCalendarDays(origin, days) {
+  const part = berlinParts2(origin);
+  return berlinWall2(part.year, part.month, part.day + days, part.hour, part.minute);
+}
+function calendarDays(from, to) {
+  const start = berlinParts2(from);
+  const end = berlinParts2(to);
+  const ms = Date.UTC(end.year, end.month - 1, end.day) - Date.UTC(start.year, start.month - 1, start.day);
+  return Math.round(ms / 864e5);
+}
+var SEASON_1_END = berlinWall2(2026, 12, 14, 4);
+function weekWindow(now) {
+  const local = berlinParts2(now);
+  let back = (local.weekday + 6) % 7;
+  if (local.weekday === 1 && local.hour < 4) back = 7;
+  const start = berlinWall2(local.year, local.month, local.day - back, 4);
+  return { start, end: addCalendarDays(start, 7) };
+}
+var BEASTS = [
+  { id: "weltenwurm", name: "Weltenwurm", type: "earth" },
+  { id: "himmelswal", name: "Himmelswal", type: "wind" }
+];
+var BEAST_ANCHOR = berlinWall2(2026, 11, 16, 4);
+var BEAST_WEEK0 = 1;
+function beastAt(now) {
+  const week = Math.round(calendarDays(BEAST_ANCHOR, weekWindow(now).start) / 7);
+  const slot = ((week + BEAST_WEEK0) % BEASTS.length + BEASTS.length) % BEASTS.length;
+  const beast = BEASTS[slot];
+  return { id: beast.id, name: beast.name, type: beast.type, week };
 }
 
 // src/adventure/online/name.ts
@@ -11193,7 +11268,7 @@ Deno.serve(async (req) => {
     if (!adventure || rows.length !== 6) return json({ error: "team" }, 400);
     const team = teamFromRegister(rows, adventure);
     if (!team) return json({ error: "team" }, 400);
-    const beast = weeklyBeast(/* @__PURE__ */ new Date());
+    const beast = beastAt(/* @__PURE__ */ new Date());
     const damage = coopDamage(team.fighters, beast.type, Date.now() >>> 0 || 1, team.synergy);
     const hit = await db.rpc("guild_act", { p_user: user.id, p_body: { action: "beast", damage } });
     return json({ ...hit.data ?? {}, damage });

@@ -1,5 +1,6 @@
 import { describe, expect, it } from 'vitest'
 import {
+  ARENA_SEASON,
   BEASTS,
   SEASON_DAYS,
   SEASON_LEAGUES,
@@ -11,25 +12,6 @@ import {
   weekWindow,
   weekendWindow
 } from './season'
-
-/**
- * Instants `public.arena_season(ts)` has to return once E2 lands.
- * `at` is UTC. `berlin` is the wall clock the boundary is defined on.
- * A timestamp in the row belongs to `season`; the matching end instant belongs to the next one.
- */
-const ARENA_SEASON = [
-  { at: '2026-11-16T02:59:00.000Z', season: 0, berlin: '2026-11-16 03:59' },
-  { at: '2026-11-16T03:00:00.000Z', season: 1, berlin: '2026-11-16 04:00' },
-  { at: '2026-12-14T02:59:00.000Z', season: 1, berlin: '2026-12-14 03:59' },
-  { at: '2026-12-14T03:00:00.000Z', season: 2, berlin: '2026-12-14 04:00' },
-  { at: '2027-01-11T02:59:00.000Z', season: 2, berlin: '2027-01-11 03:59' },
-  { at: '2027-01-11T03:00:00.000Z', season: 3, berlin: '2027-01-11 04:00' },
-  { at: '2027-04-05T01:59:00.000Z', season: 5, berlin: '2027-04-05 03:59' },
-  { at: '2027-04-05T02:00:00.000Z', season: 6, berlin: '2027-04-05 04:00' },
-  { at: '2027-04-05T02:30:00.000Z', season: 6, berlin: '2027-04-05 04:30' },
-  { at: '2027-11-15T02:30:00.000Z', season: 13, berlin: '2027-11-15 03:30' },
-  { at: '2027-11-15T03:00:00.000Z', season: 14, berlin: '2027-11-15 04:00' }
-] as const
 
 function berlinLabel(date: Date): string {
   const fmt = new Intl.DateTimeFormat('en-GB', {
