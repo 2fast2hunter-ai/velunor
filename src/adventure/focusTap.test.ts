@@ -279,8 +279,9 @@ async function assertClear(page: Page): Promise<void> {
   }
   expect(await page.locator('#why-chip').getAttribute('hidden'), 'road reason chip stays in focus').not.toBeNull()
   await page.evaluate(() => {
-    const line = document.getElementById('battle-log-text')
-    if (line) line.textContent = 'Der Gegner hat zuerst geschlagen, und der Satz läuft über die ganze Zeile weiter.'
+    const text = document.getElementById('battle-log-text')
+    if (!text) return
+    text.innerHTML = '<span id="battle-log-lead">Kieselkrabbe: Panzerschale</span><span id="battle-log-tail"> – 148 (Krit) (KO)</span>'
   })
   const longLog = await box(page, '#battle-log')
   if (allySprite && allySprite.width > 8 && longLog && longLog.width > 2) expect(overlaps(allySprite, longLog), 'long log covers the ally').toBe(false)
@@ -289,23 +290,24 @@ async function assertClear(page: Page): Promise<void> {
   if (foeSprite && foeSprite.width > 8 && longLog && longLog.width > 2) expect(overlaps(foeSprite, longLog), 'long log covers the foe').toBe(false)
   if (foeShadow && foeShadow.width > 4 && longLog && longLog.width > 2) expect(overlaps(foeShadow, longLog), 'long log covers the foe shadow').toBe(false)
   const logFit = await page.evaluate(() => {
-    const line = document.getElementById('battle-log-text')
-    if (!(line instanceof HTMLElement)) return { ellipsis: true, lines: 0, mark: true }
-    const style = getComputedStyle(line)
+    const text = document.getElementById('battle-log-text')
+    const tail = document.getElementById('battle-log-tail')
+    const lead = document.getElementById('battle-log-lead')
+    if (!(text instanceof HTMLElement) || !(tail instanceof HTMLElement)) return { damage: false, tailCut: true, lines: 9, leadCut: false }
+    const lineHeight = parseFloat(getComputedStyle(text).lineHeight) || text.clientHeight || 1
+    const lines = Math.max(1, Math.round(text.clientHeight / lineHeight))
     return {
-      ellipsis: style.textOverflow === 'ellipsis' || style.whiteSpace === 'nowrap',
-      lines: (() => {
-        const range = document.createRange()
-        range.selectNodeContents(line)
-        const box = line.getBoundingClientRect()
-        return [...range.getClientRects()].filter((rect) => rect.width > 2 && rect.bottom > box.top + 1 && rect.top < box.bottom - 1).length
-      })(),
-      mark: line.textContent?.includes('…') === true
+      damage: (text.innerText || '').includes('148') && (text.innerText || '').includes('KO'),
+      tailCut: tail.scrollWidth > tail.clientWidth + 1,
+      lines,
+      leadCut: lead instanceof HTMLElement && lead.scrollWidth > lead.clientWidth + 1
     }
   })
-  expect(logFit.ellipsis, 'focus log cuts a line with an ellipsis').toBe(false)
-  expect(logFit.mark, 'focus log draws an ellipsis').toBe(false)
-  expect(logFit.lines, 'focus log keeps two lines').toBeGreaterThanOrEqual(2)
+  expect(logFit.damage, 'focus log keeps the damage and KO').toBe(true)
+  expect(logFit.tailCut, 'focus log cuts the damage').toBe(false)
+  expect(logFit.lines, 'focus log stays within two lines').toBeLessThanOrEqual(2)
+  expect(logFit.lines, 'focus log still has a line').toBeGreaterThanOrEqual(1)
+  expect(logFit.leadCut, 'a long name is shortened before the damage').toBe(true)
   if (weather && weather.width > 4) {
     const callout = await box(page, '#battle-text')
     if (callout && callout.width > 8) expect(overlaps(callout, weather), 'status line covers the weather chip').toBe(false)

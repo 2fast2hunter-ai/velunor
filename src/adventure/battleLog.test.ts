@@ -1,7 +1,7 @@
 import { readFileSync } from 'node:fs'
 import { describe, expect, it } from 'vitest'
 import type { FightHit, FightFrame, FightTrace } from './battle'
-import { battleLogFromTraces, latestLine, logIconFile, rememberBattleLog, sentenceWords, sheetLine } from './battleLog'
+import { battleLogFromTraces, focusLogParts, latestLine, logIconFile, rememberBattleLog, sentenceWords, sheetLine } from './battleLog'
 import { fitScale } from './const'
 import { beginAdventure, writeSave } from './save'
 import type { StorageLike } from './types'
@@ -36,6 +36,11 @@ describe('battle log', () => {
     expect(lines[1].tags).toContain('stark')
     expect(lines[1].sentence).toContain('9')
     expect(lines[1].sentence).toContain('Krit')
+    const parts = focusLogParts('Kieselkrabbe: Panzerschale – 148 (Krit) (KO)')
+    expect(parts.tail).toContain('148')
+    expect(parts.tail).toContain('Krit')
+    expect(parts.tail).toContain('KO')
+    expect(parts.lead.endsWith('–')).toBe(false)
     const shown = sheetLine(lines[1])
     expect(shown.main).toContain('9')
     expect(shown.main).not.toContain('stark')

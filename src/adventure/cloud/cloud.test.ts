@@ -1,5 +1,5 @@
 import { readFileSync } from 'node:fs'
-import { describe, expect, it } from 'vitest'
+import { describe, expect, it, vi } from 'vitest'
 import { beginAdventure } from '../save'
 import { cloudLayerHtml, gameHtml, type CodexQuery, type PcQuery } from '../view'
 import {
@@ -243,7 +243,7 @@ describe('play events', () => {
 })
 
 describe('cloud session', () => {
-  function harness(options?: { disabled?: boolean; online?: boolean }) {
+  function harness(options?: { disabled?: boolean; online?: boolean; now?: () => number }) {
     const calls = {
       users: 0,
       writes: 0,
@@ -277,7 +277,7 @@ describe('cloud session', () => {
       },
       async writeSave(_userId, save, _progress, deviceId) {
         calls.writes += 1
-        remote = { save, deviceId }
+        remote = { save: JSON.parse(JSON.stringify(save)) as SaveV2, deviceId }
         return { error: null }
       },
       async deleteSave() {
@@ -291,7 +291,7 @@ describe('cloud session', () => {
       }
     }
     const ports: CloudPorts = {
-      now: () => 10_000_000,
+      now: options?.now ?? (() => 10_000_000),
       online: () => online,
       deviceId: () => 'device-a',
       consent: () => consent,
@@ -325,6 +325,30 @@ describe('cloud session', () => {
       remoteDevice: () => remote?.deviceId ?? null
     }
   }
+
+  it('uploads again 5 minutes after the start sync, not 10', async () => {
+    vi.useFakeTimers()
+    vi.setSystemTime(0)
+    const box = harness({ now: () => Date.now() })
+    try {
+      await box.cloud.start()
+      expect(box.calls.writes).toBe(1)
+      await vi.advanceTimersByTimeAsync(2_000)
+      const played = game('Ada')
+      played.gold += 80
+      box.setCurrent(played)
+      await box.cloud.sync('online')
+      expect(box.calls.writes).toBe(2)
+      played.gold += 25
+      await vi.advanceTimersByTimeAsync(5 * 60 * 1000 - 1)
+      expect(box.calls.writes).toBe(2)
+      await vi.advanceTimersByTimeAsync(1)
+      expect(box.calls.writes).toBe(3)
+    } finally {
+      box.cloud.stop()
+      vi.useRealTimers()
+    }
+  })
 
   it('uploads the existing local save on the first online start', async () => {
     const box = harness()

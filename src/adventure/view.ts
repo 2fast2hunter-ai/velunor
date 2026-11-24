@@ -14,7 +14,7 @@ import {
 import { fontFactor } from './touch'
 import { baseLine, dexPlaces, dexStatus, dexStatusLabel, listCodex, regionProgress, speciesNumber, type DexFilter } from './dex'
 import { goalName, goalTitle, rarityLabel, t, typeLabel, weatherLabel, whenLabel, type Lang } from './i18n'
-import { latestLine, logIconFile, sheetLine, type BattleFightLog, type BattleLogLine } from './battleLog'
+import { focusLogParts, latestLine, logIconFile, sheetLine, type BattleFightLog, type BattleLogLine } from './battleLog'
 import { hpNumbersOn } from './battleHud'
 import { dueHint, goalLine } from './hints'
 import { shareLegend, whyIconFile, type WhyCard } from './battleWhy'
@@ -525,6 +525,11 @@ function ultSegments(locked: boolean, label: string): string {
     + `<span class="ult-lock"${locked ? '' : ' hidden'}><img src="${art('battle_ui/ult/schloss_s.png')}" alt=""/><b>${esc(label)}</b></span><span class="ult-ready" hidden></span>`
 }
 
+function logSentence(sentence: string): string {
+  const parts = focusLogParts(sentence)
+  return `<span id="battle-log-lead">${esc(parts.lead)}</span><span id="battle-log-tail">${esc(parts.tail)}</span>`
+}
+
 function battle(save: SaveV2, now: number, fighting = false, shadow = false, logLine: BattleLogLine | null = null): string {
   const chapter = chapterById(save.region, save.chapter)
   const scene = sceneFile(chapter.scene, chapter.tint)
@@ -589,7 +594,7 @@ function battle(save: SaveV2, now: number, fighting = false, shadow = false, log
     <button type="button" class="why-chip" id="why-chip" data-act="why-open" hidden><img id="why-chip-icon" alt=""/><span id="why-chip-text"></span></button>
     <button type="button" class="battle-log" id="battle-log" data-act="battle-log">
       <img src="${art(logIconFile(logLine?.icon ?? 'angriff'))}" alt=""/>
-      <span id="battle-log-text">${esc(logLine?.sentence ?? tr(save, 'log.none'))}</span>
+      <span id="battle-log-text">${logSentence(logLine?.sentence ?? tr(save, 'log.none'))}</span>
     </button>
     <div class="flash" id="flash"></div>
     <img class="seal" id="seal" alt="" src="${art(SEAL_ADD)}" data-fb="${art(SEAL_FALLBACK)}" style="left:${FOE_X}%;top:${FOE_Y}%"/>

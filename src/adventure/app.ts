@@ -25,7 +25,7 @@ import { chatErrorKey } from './chat'
 import { t, typeLabel, weatherLabel, type Lang } from './i18n'
 import { shouldRecover } from './present'
 import { actionAt, battleQueueOn, focusKo, focusSide, focusTempo, hitNumberPhase, planBattle, replayStepMs, roadQueueFromSearch, roadTempo, setRoadQueue, shotFromAction } from './battlePlayer'
-import { battleLogFromTraces, lineFor, lineForFrame, logIconFile, rememberBattleLog, type BattleFightLog, type BattleLogLine } from './battleLog'
+import { battleLogFromTraces, focusLogParts, lineFor, lineForFrame, logIconFile, rememberBattleLog, type BattleFightLog, type BattleLogLine } from './battleLog'
 import { hpLabel, typeEdge, weatherPct } from './battleHud'
 import { whyAutoMs, whyBattle, whyIconFile } from './battleWhy'
 import { rememberTutorial, TUTORIAL_STEP } from './onboarding'
@@ -239,14 +239,13 @@ let lastInput = Date.now()
 let timer = 0
 let autosaveTimer = 0
 let watchdogTimer = 0
-let cloudSyncTimer = 0
 let cloudFlushTimer = 0
 
 function blockSaveWrites(): void {
   window.clearInterval(autosaveTimer)
   window.clearInterval(watchdogTimer)
-  window.clearInterval(cloudSyncTimer)
   window.clearInterval(cloudFlushTimer)
+  cloud?.stop()
   window.clearTimeout(timer)
 }
 let animating = false
@@ -510,7 +509,6 @@ function attachCloud(): void {
   const minutes = existing ? Math.max(0, Math.round((Date.now() - existing.lastSeenAt) / 60000)) : 0
   cloud.noteSession(minutes)
   watchAuth(() => { void cloud?.sync('start') })
-  cloudSyncTimer = window.setInterval(() => { void cloud?.sync('interval') }, 5 * 60 * 1000)
   cloudFlushTimer = window.setInterval(() => { void cloud?.flush() }, 60 * 1000)
 }
 
@@ -2373,7 +2371,7 @@ function showWhyChip(outcome: EncounterOutcome): void {
   if (text) text.textContent = card.chip.sentence
   if (!outcome.win && card.tips[0]) {
     const line = document.getElementById('battle-log-text')
-    if (line) line.textContent = card.tips[0]
+    if (line) paintLogSentence(line, card.tips[0])
   }
 }
 
@@ -2454,16 +2452,29 @@ let lastWhy: EncounterOutcome | null = null
 let battleLogs: BattleFightLog[] = []
 let liveFight: BattleFightLog | null = null
 
+function paintLogSentence(text: HTMLElement, sentence: string): void {
+  if (text.dataset.line === sentence) return
+  text.dataset.line = sentence
+  const parts = focusLogParts(sentence)
+  let lead = text.querySelector('#battle-log-lead')
+  let tail = text.querySelector('#battle-log-tail')
+  if (!(lead instanceof HTMLElement) || !(tail instanceof HTMLElement)) {
+    lead = document.createElement('span')
+    lead.id = 'battle-log-lead'
+    tail = document.createElement('span')
+    tail.id = 'battle-log-tail'
+    text.replaceChildren(lead, tail)
+  }
+  if (lead.textContent !== parts.lead) lead.textContent = parts.lead
+  if (tail.textContent !== parts.tail) tail.textContent = parts.tail
+}
+
 function paintBattleLog(line: BattleLogLine | null): void {
   const text = document.getElementById('battle-log-text')
   const img = document.querySelector<HTMLImageElement>('#battle-log img')
   if (!text) return
-  const sentence = line?.sentence ?? (save ? t(save.settings.lang, 'log.none') : '')
+  paintLogSentence(text, line?.sentence ?? (save ? t(save.settings.lang, 'log.none') : ''))
   const icon = line?.icon ?? 'angriff'
-  if (text.dataset.line !== sentence) {
-    text.dataset.line = sentence
-    text.textContent = sentence
-  }
   if (img && img.dataset.icon !== icon) {
     img.dataset.icon = icon
     img.src = art(logIconFile(icon))
