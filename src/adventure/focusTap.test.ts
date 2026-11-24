@@ -40,6 +40,7 @@ async function reachGuardian(page: Page, base: string): Promise<void> {
   await page.locator('[data-act="pick"][data-species="m01"]').click()
   await page.locator('[data-act="start"]').click()
   await page.locator('[data-screen="adventure"]').waitFor()
+  await assertHintClearsChip(page)
   const challengePoint = await assertRoadDock(page)
   if (page.viewportSize()?.width === 390) await assertRoadFps(page)
   await page.touchscreen.tap(challengePoint.x, challengePoint.y)
@@ -150,6 +151,18 @@ async function assertRoadDock(page: Page): Promise<{ x: number, y: number }> {
   return assertChallengeTap(page)
 }
 
+async function assertHintClearsChip(page: Page): Promise<void> {
+  await page.evaluate(() => {
+    const chip = document.getElementById('adv-chip')
+    if (chip) chip.hidden = false
+  })
+  const hint = await box(page, '#hint-bubble')
+  const chip = await box(page, '#adv-chip')
+  expect(hint && hint.height, 'tempo hint is on the road').toBeGreaterThan(40)
+  expect(chip && chip.height, 'advantage chip is measurable').toBeGreaterThan(20)
+  if (hint && chip) expect(overlaps(hint, chip), 'hint covers the advantage chip').toBe(false)
+}
+
 async function assertChallengeTap(page: Page): Promise<{ x: number, y: number }> {
   const button = page.locator('[data-act="challenge"]')
   await button.waitFor()
@@ -231,6 +244,28 @@ async function assertClear(page: Page): Promise<void> {
   })
   const longLog = await box(page, '#battle-log')
   if (allySprite && allySprite.width > 8 && longLog && longLog.width > 2) expect(overlaps(allySprite, longLog), 'long log covers the ally').toBe(false)
+  const foeSprite = await box(page, '#foe-sprite')
+  const foeShadow = await box(page, '#foe-actor .ground-shadow')
+  if (foeSprite && foeSprite.width > 8 && longLog && longLog.width > 2) expect(overlaps(foeSprite, longLog), 'long log covers the foe').toBe(false)
+  if (foeShadow && foeShadow.width > 4 && longLog && longLog.width > 2) expect(overlaps(foeShadow, longLog), 'long log covers the foe shadow').toBe(false)
+  const logFit = await page.evaluate(() => {
+    const line = document.getElementById('battle-log-text')
+    if (!(line instanceof HTMLElement)) return { ellipsis: true, lines: 0, mark: true }
+    const style = getComputedStyle(line)
+    return {
+      ellipsis: style.textOverflow === 'ellipsis' || style.whiteSpace === 'nowrap',
+      lines: (() => {
+        const range = document.createRange()
+        range.selectNodeContents(line)
+        const box = line.getBoundingClientRect()
+        return [...range.getClientRects()].filter((rect) => rect.width > 2 && rect.bottom > box.top + 1 && rect.top < box.bottom - 1).length
+      })(),
+      mark: line.textContent?.includes('…') === true
+    }
+  })
+  expect(logFit.ellipsis, 'focus log cuts a line with an ellipsis').toBe(false)
+  expect(logFit.mark, 'focus log draws an ellipsis').toBe(false)
+  expect(logFit.lines, 'focus log keeps two lines').toBeGreaterThanOrEqual(2)
   if (weather && weather.width > 4) {
     const callout = await box(page, '#battle-text')
     if (callout && callout.width > 8) expect(overlaps(callout, weather), 'status line covers the weather chip').toBe(false)
@@ -245,7 +280,22 @@ async function assertClear(page: Page): Promise<void> {
   if (bar && foeHp && foeHp.width > 2) expect(overlaps(bar, foeHp), 'focus bar covers the foe HP').toBe(false)
   const foeHpNum = await box(page, '#foe-hp-num')
   if (bar && foeHpNum && foeHpNum.width > 8 && foeHpNum.height > 8) expect(overlaps(bar, foeHpNum), 'focus bar covers the foe HP number').toBe(false)
+  await page.evaluate(() => {
+    const helper = document.getElementById('foe-helper')
+    const ally = document.querySelector<HTMLImageElement>('#ally-sprite')
+    if (!(helper instanceof HTMLImageElement) || !ally) return
+    helper.hidden = false
+    helper.src = ally.currentSrc || ally.src
+  })
+  await page.waitForFunction(() => {
+    const helper = document.getElementById('foe-helper')
+    return helper instanceof HTMLImageElement && helper.naturalWidth > 8
+  })
+  const helper = await box(page, '#foe-helper')
   const advantage = await box(page, '#adv-chip')
+  if (advantage && advantage.width > 4 && helper && helper.width > 8 && helper.height > 8) {
+    expect(overlaps(advantage, helper), 'advantage chip covers the foe support').toBe(false)
+  }
   if (advantage && advantage.width > 4 && foeHp && foeHp.width > 2) expect(overlaps(advantage, foeHp), 'advantage chip covers the foe HP bar').toBe(false)
   if (advantage && advantage.width > 4 && foeHpNum && foeHpNum.width > 8) expect(overlaps(advantage, foeHpNum), 'advantage chip covers the foe HP number').toBe(false)
   const status = await box(page, '#foe-status')
@@ -277,7 +327,6 @@ async function assertClear(page: Page): Promise<void> {
     const node = document.getElementById('wx-announce')
     if (node instanceof HTMLElement) node.hidden = true
   })
-  const foeSprite = await box(page, '#foe-sprite')
   const spotlight = await box(page, '#spotlight-foe')
   if (bar && foeSprite && foeSprite.width > 8 && foeSprite.height > 8) expect(overlaps(bar, foeSprite), 'focus bar covers the foe').toBe(false)
   if (bar && spotlight && spotlight.width > 8 && spotlight.height > 8) expect(overlaps(bar, spotlight), 'focus bar covers the spotlight').toBe(false)
