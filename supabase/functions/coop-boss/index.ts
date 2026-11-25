@@ -1,6 +1,7 @@
 import { admin, caller, cors, json } from '../_shared/admin.ts'
 import { arenaDayKey, teamFromRegister } from '../../../src/adventure/arena.ts'
-import { EGG_CHANCE, coopDamage, coopRoster, coopTeamIssue, weeklyBeast } from '../../../src/adventure/coop.ts'
+import { EGG_CHANCE, coopDamage, coopRoster, coopTeamIssue } from '../../../src/adventure/coop.ts'
+import { beastAt } from '../../../src/adventure/season.ts'
 import { expeditionBusy } from '../../../src/adventure/expedition.ts'
 import { validFriendCode } from '../../../src/adventure/social.ts'
 import type { SaveV2 } from '../../../src/adventure/types.ts'
@@ -50,7 +51,7 @@ Deno.serve(async (req) => {
     const team = teamFromRegister(rows, adventure)
     if (!team) return json({ error: 'team' }, 400)
     const ensured = await db.rpc('coop_ensure', { p_user: user.id, p_day: day })
-    const beast = weeklyBeast(new Date(String(ensured.data?.week ?? Date.now())))
+    const beast = beastAt(new Date(String(ensured.data?.week ?? Date.now())))
     const seed = (Date.now() ^ user.id.length) >>> 0
     const damage = coopDamage(team.fighters, beast.type, seed || 1, team.synergy)
     const strike = await db.rpc('coop_strike', { p_user: user.id, p_day: day, p_damage: damage, p_seed: seed })
@@ -75,7 +76,7 @@ Deno.serve(async (req) => {
     fruit: sum.fruit + (Number(row.fruit) || 0),
     marks: sum.marks + (Number(row.marks) || 0)
   }), { gold: 0, fruit: 0, marks: 0 })
-  const beast = weeklyBeast(new Date(String(ensured.data.week)))
+  const beast = beastAt(new Date(String(ensured.data.week)))
   return json({
     status: 'ready',
     beast: beast.id,

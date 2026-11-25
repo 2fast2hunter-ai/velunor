@@ -3,11 +3,11 @@ import {
   arenaUnlocked,
   chargeAttacks,
   crestCount,
-  leagueOf,
   pickOpponents,
   teamFromRegister
 } from '../../../src/adventure/arena.ts'
 import { expeditionBusy } from '../../../src/adventure/expedition.ts'
+import { leagueAt } from '../../../src/adventure/season.ts'
 import type { SaveV2 } from '../../../src/adventure/types.ts'
 
 function labelOf(row: { hidden?: boolean, display?: string, name?: string, tag?: string } | null): string {
@@ -95,7 +95,7 @@ Deno.serve(async (req) => {
         practice: card.practice,
         label: card.label,
         rating: card.rating,
-        league: leagueOf(card.rating).name,
+        league: leagueAt(card.rating).name,
         species: card.species
       }))
     })
@@ -123,7 +123,7 @@ Deno.serve(async (req) => {
   return json({
     locked: !unlocked,
     rating,
-    league: leagueOf(rating).name,
+    league: leagueAt(rating).name,
     attacks: charged.attacks,
     species: Array.isArray(defense) ? defense.map((fighter: { speciesId?: string }) => fighter.speciesId ?? '') : [],
     crests: crestCount(badges),

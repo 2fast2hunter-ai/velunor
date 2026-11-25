@@ -10773,14 +10773,6 @@ var DEFENSE_LOSS_CAP = 10;
 var ARENA_LEVEL = 100;
 var PRACTICE_LABEL = "\xDCbung";
 var PRACTICE_SPECIES = ["m01", "m02", "m03", "m04", "m05", "m06"];
-var LEAGUES = [
-  { id: "kiesel", name: "Kiesel", min: 0, marks: 20 },
-  { id: "bronze", name: "Bronze", min: 1100, marks: 40 },
-  { id: "silber", name: "Silber", min: 1300, marks: 60 },
-  { id: "gold", name: "Gold", min: 1500, marks: 80 },
-  { id: "kristall", name: "Kristall", min: 1700, marks: 100 },
-  { id: "meister", name: "Velunor-Meister", min: 1900, marks: 150 }
-];
 var SEASON_ANCHOR = Date.parse("2026-11-16T03:00:00.000Z");
 function berlinParts(date) {
   const fmt = new Intl.DateTimeFormat("en-US", {
@@ -10823,13 +10815,6 @@ function lastDailyReset(now) {
 }
 function arenaDayKey(now) {
   return lastDailyReset(now).toISOString();
-}
-function leagueOf(rating) {
-  let found = LEAGUES[0];
-  for (const league of LEAGUES) {
-    if (rating >= league.min) found = league;
-  }
-  return found;
 }
 function expectedScore(own, other) {
   return 1 / (1 + 10 ** ((other - own) / 400));
@@ -11003,6 +10988,54 @@ function arenaMatch(attack, defense, seed) {
   return { seed, win: di >= defense.fighters.length && ai < attack.fighters.length, allyKos, foeKos, bouts };
 }
 
+// src/adventure/season.ts
+var BERLIN = "Europe/Berlin";
+function offsetMs2(date) {
+  const fmt = new Intl.DateTimeFormat("en-US", {
+    timeZone: BERLIN,
+    hourCycle: "h23",
+    year: "numeric",
+    month: "2-digit",
+    day: "2-digit",
+    hour: "2-digit",
+    minute: "2-digit",
+    second: "2-digit"
+  });
+  const bag = {};
+  for (const part of fmt.formatToParts(date)) bag[part.type] = part.value;
+  const asUtc = Date.UTC(
+    Number(bag.year),
+    Number(bag.month) - 1,
+    Number(bag.day),
+    Number(bag.hour),
+    Number(bag.minute),
+    Number(bag.second)
+  );
+  return asUtc - date.getTime();
+}
+function berlinWall2(year, month, day, hour, minute = 0) {
+  const utc = new Date(Date.UTC(year, month - 1, day, hour, minute, 0));
+  const first = new Date(utc.getTime() - offsetMs2(utc));
+  return new Date(utc.getTime() - offsetMs2(first));
+}
+var SEASON_1_END = berlinWall2(2026, 12, 14, 4);
+var BEAST_ANCHOR = berlinWall2(2026, 11, 16, 4);
+var SEASON_LEAGUES = [
+  { id: "kiesel", name: "Kiesel", min: 0, marks: 20 },
+  { id: "bronze", name: "Bronze", min: 1167, marks: 40 },
+  { id: "silber", name: "Silber", min: 1300, marks: 60 },
+  { id: "gold", name: "Gold", min: 1500, marks: 80 },
+  { id: "kristall", name: "Kristall", min: 1700, marks: 100 },
+  { id: "meister", name: "Velunor-Meister", min: 1900, marks: 150 }
+];
+function leagueAt(rating) {
+  let found = SEASON_LEAGUES[0];
+  for (const league of SEASON_LEAGUES) {
+    if (rating >= league.min) found = league;
+  }
+  return found;
+}
+
 // supabase/functions/arena-fight/index.ts
 function teamOf(value) {
   if (!value || typeof value !== "object") return null;
@@ -11101,7 +11134,7 @@ Deno.serve(async (req) => {
     practice,
     label: practice ? PRACTICE_LABEL : card.label,
     rating: nextRating,
-    league: leagueOf(nextRating).name,
+    league: leagueAt(nextRating).name,
     attacks: spent.attacks,
     elapsed
   });

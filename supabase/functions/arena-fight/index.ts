@@ -6,11 +6,11 @@ import {
   practiceTeam,
   readFightIndex,
   spendAttack,
-  leagueOf,
   PRACTICE_LABEL,
   type ArenaTeam,
   type OpponentCard
 } from '../../../src/adventure/arena.ts'
+import { leagueAt } from '../../../src/adventure/season.ts'
 
 function teamOf(value: unknown): ArenaTeam | null {
   if (!value || typeof value !== 'object') return null
@@ -106,7 +106,7 @@ Deno.serve(async (req) => {
     practice,
     label: practice ? PRACTICE_LABEL : card.label,
     rating: nextRating,
-    league: leagueOf(nextRating).name,
+    league: leagueAt(nextRating).name,
     attacks: spent.attacks,
     elapsed
   })
